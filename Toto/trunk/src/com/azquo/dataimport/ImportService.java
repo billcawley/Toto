@@ -652,6 +652,10 @@ public final class ImportService {
                 }
                 // if there are no standard headings, then read the file without adjustment
                 if (!standardHeadings.isEmpty()) {
+                    Set<String> standardHeadingsSet = new HashSet(standardHeadings);
+                    if (standardHeadingsSet.size() < standardHeadings.size()){
+                        throw new Exception("Standard headings have duplicates");
+                    }
                     Map<TypedPair<Integer, Integer>, String> topHeadings = new HashMap<>();
                     // specific headings on the file we're loading
                     List<List<String>> versionHeadings = new ArrayList<>();
