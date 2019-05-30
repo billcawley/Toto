@@ -85,9 +85,13 @@ public class ExcelController {
             return this.untaggedReportName;
         }
 
-        public String getDatabase() { return this.database; }
+        public String getDatabase() {
+            return this.database;
+        }
 
-        public String getCategory(){ return category; }
+        public String getCategory() {
+            return category;
+        }
     }
 
     public static class UserForm implements Serializable {
@@ -173,7 +177,7 @@ public class ExcelController {
             op = "";
         }
         // hacky, fix later todo
-        if (reportName == null){
+        if (reportName == null) {
             reportName = "";
         } else {
             reportName = reportName.trim();
@@ -429,18 +433,18 @@ public class ExcelController {
                         // will this mess up the file?? who knows!
                         OPCPackage opcPackage = OPCPackage.open(file.getAbsolutePath());
                         Workbook book = new XSSFWorkbook(opcPackage);
-                        for (int i = 0; i < book.getNumberOfNames(); i++){
+                        for (int i = 0; i < book.getNumberOfNames(); i++) {
                             Name nameAt = book.getNameAt(i);
                             try {
-                                if (!nameAt.getSheetName().isEmpty()){
-                                    if (nameAt.getSheetIndex() == -1){
+                                if (!nameAt.getSheetName().isEmpty()) {
+                                    if (nameAt.getSheetIndex() == -1) {
                                         int lookup = book.getSheetIndex(nameAt.getSheetName());
-                                        if (lookup != -1){
+                                        if (lookup != -1) {
                                             nameAt.setSheetIndex(lookup);
                                         }
                                     }
                                 }
-                            } catch (Exception ignored){ // maybe do something with it later but for the moment don't. Just want it to fix what names it can
+                            } catch (Exception ignored) { // maybe do something with it later but for the moment don't. Just want it to fix what names it can
                             }
                         }
                         ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -479,7 +483,7 @@ public class ExcelController {
                 List<DatabaseReport> databaseReports = new ArrayList<>();
                 List<OnlineReport> allowedReports = AdminService.getReportList(loggedInUser);
 
-                if (allowedReports.size()==1){
+                if (allowedReports.size() == 1) {
                     //OnlineReport or = allowedReports.get(0);
                     //String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath +
                     //        loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + or.getFilenameForDisk();
@@ -487,18 +491,18 @@ public class ExcelController {
                     //book.getInternalBook().setAttribute(LOGGED_IN_USER, loggedInUser);
                     //book.getInternalBook().setAttribute(REPORT_ID, or.getId());
                     //ReportRenderer.populateBook(book, 0);
-                    Map<String, TypedPair<Integer,Integer>>reports = loggedInUser.getReportIdDatabaseIdPermissions();
-                    for (String reportName2:reports.keySet()){
-                        TypedPair<Integer,Integer> tp = reports.get(reportName2);
+                    Map<String, TypedPair<Integer, Integer>> reports = loggedInUser.getReportIdDatabaseIdPermissions();
+                    for (String reportName2 : reports.keySet()) {
+                        TypedPair<Integer, Integer> tp = reports.get(reportName2);
                         OnlineReport or = OnlineReportDAO.findById(tp.getFirst());
                         Database db = DatabaseDAO.findById(tp.getSecond());
-                        databaseReports.add(new DatabaseReport(or.getFilename(), or.getAuthor(),or.getUntaggedReportName(),db.getName(), or.getCategory()));
+                        databaseReports.add(new DatabaseReport(or.getFilename(), or.getAuthor(), or.getUntaggedReportName(), db.getName(), or.getCategory()));
                         databaseReports.sort(Comparator.comparing(o -> (o.getCategory() + o.getSheetName())));
                     }
-                }else{
+                } else {
                     // admin
-                    for (OnlineReport or:allowedReports){
-                        databaseReports.add(new DatabaseReport(or.getFilename(),or.getAuthor(),or.getUntaggedReportName(),or.getDatabase(),or.getCategory()));
+                    for (OnlineReport or : allowedReports) {
+                        databaseReports.add(new DatabaseReport(or.getFilename(), or.getAuthor(), or.getUntaggedReportName(), or.getDatabase(), or.getCategory()));
                     }
                 }
 
@@ -507,13 +511,13 @@ public class ExcelController {
             if (op.equals("allowedforms")) {
                 List<UserForm> userForms = new ArrayList<>();
 //                List<OnlineReport> allowedReports = AdminService.getReportList(loggedInUser);
-                if (loggedInUser.getUser().isDeveloper() || loggedInUser.getUser().isAdministrator())  {
+                if (loggedInUser.getUser().isDeveloper() || loggedInUser.getUser().isAdministrator()) {
                     List<Database> databaseListForBusinessWithBasicSecurity = AdminService.getDatabaseListForBusinessWithBasicSecurity(loggedInUser);
-                    if (databaseListForBusinessWithBasicSecurity != null){
+                    if (databaseListForBusinessWithBasicSecurity != null) {
                         for (Database d : databaseListForBusinessWithBasicSecurity) {
                             if (d.getImportTemplateId() != -1) {
                                 ImportTemplate importTemplate = ImportTemplateDAO.findById(d.getImportTemplateId());
-                                if (importTemplate != null){ // a duff id could mean it is
+                                if (importTemplate != null) { // a duff id could mean it is
                                     ImportTemplateData importTemplateData = ImportService.getImportTemplateData(importTemplate, loggedInUser);
                                     for (String sheet : importTemplateData.getSheets().keySet()) {
                                         if (sheet.toLowerCase().startsWith("form")) {
@@ -532,28 +536,29 @@ public class ExcelController {
                 List<String> formFields = new ArrayList<>();
                 // so we'll want dropdowns
                 Map<String, List<String>> choices = new HashMap<>();
-                if (loggedInUser.getUser().isDeveloper() || loggedInUser.getUser().isAdministrator())  {
+                if (loggedInUser.getUser().isDeveloper() || loggedInUser.getUser().isAdministrator()) {
                     List<Database> databaseListForBusinessWithBasicSecurity = AdminService.getDatabaseListForBusinessWithBasicSecurity(loggedInUser);
-                    if (databaseListForBusinessWithBasicSecurity != null){
+                    if (databaseListForBusinessWithBasicSecurity != null) {
                         for (Database d : databaseListForBusinessWithBasicSecurity) {
                             if (d.getImportTemplateId() != -1 && d.getName().equalsIgnoreCase(database)) {
                                 // autocomplete going in here for the mo. May as well use these parameters
-                                if (choice != null && chosen != null && !choice.isEmpty()){
+                                if (choice != null && chosen != null && !choice.isEmpty()) {
                                     List<String> toReturn = new ArrayList<>();
                                     try {
                                         List<String> dropdownListForQuery = CommonReportUtils.getDropdownListForQuery(loggedInUser, choice, null);
-                                        for (String value : dropdownListForQuery){
-                                            if (value.toLowerCase().startsWith(chosen.toLowerCase())){
+                                        for (String value : dropdownListForQuery) {
+                                            if (chosen.isEmpty() || value.toLowerCase().startsWith(chosen.toLowerCase())) {
                                                 toReturn.add(value);
-                                                if (toReturn.size() > 100){
+                                                if (toReturn.size() > 30) { // arbitrary, need to test
                                                     break;
                                                 }
                                             }
                                         }
-                                    } catch (Exception e){ // maybe do something more clever later . . .
+                                    } catch (Exception e) { // maybe do something more clever later . . .
                                         e.printStackTrace();
                                     }
-
+                                    System.out.println(jacksonMapper.writeValueAsString(toReturn));
+                                    return jacksonMapper.writeValueAsString(toReturn);
                                 }
 
                                 ImportTemplate importTemplate = ImportTemplateDAO.findById(loggedInUser.getDatabase().getImportTemplateId());
@@ -562,8 +567,8 @@ public class ExcelController {
                                     if (sheet.toLowerCase().startsWith("form") && sheet.substring(4).equalsIgnoreCase(form)) {
                                         // ok are we submitting data from the form or wanting the fields?
                                         formFields = importTemplateData.getSheets().get(sheet).get(0); // top row is the field names
-                                        for (int i = formFields.size() - 1; i >= 0; i--){
-                                            if (formFields.get(i).trim().isEmpty()){
+                                        for (int i = formFields.size() - 1; i >= 0; i--) {
+                                            if (formFields.get(i).trim().isEmpty()) {
                                                 formFields.remove(i);
                                             } else {
                                                 break;
@@ -571,37 +576,40 @@ public class ExcelController {
                                         }
                                         // need to get to the parameter bits, maybe could reuse code but I'm not sure
                                         boolean hitBlank = false;
-                                        for (int row = 1; row < importTemplateData.getSheets().get(sheet).size(); row++){
-                                            if (importTemplateData.getSheets().get(sheet).get(row).isEmpty()){
+                                        for (int row = 1; row < importTemplateData.getSheets().get(sheet).size(); row++) {
+                                            if (importTemplateData.getSheets().get(sheet).get(row).isEmpty()) {
                                                 hitBlank = true;
-                                            } else if (hitBlank && importTemplateData.getSheets().get(sheet).get(row).size() >= 2){
+                                            } else if (hitBlank && importTemplateData.getSheets().get(sheet).get(row).size() >= 2) {
                                                 String name = importTemplateData.getSheets().get(sheet).get(row).get(0);
                                                 String query = importTemplateData.getSheets().get(sheet).get(row).get(1);
                                                 List<String> dropdownListForQuery = null;
                                                 try {
                                                     // todo - if the list is big we want to send a signal for autocomplete
                                                     dropdownListForQuery = CommonReportUtils.getDropdownListForQuery(loggedInUser, query, null);
-                                                    if (dropdownListForQuery.size() > 10){ // will be 100 alter, todo
-                                                        choices.put(name, Collections.singletonList("auto"));
+                                                    if (dropdownListForQuery.size() > 30) {
+                                                        List<String> autoAndChoice = new ArrayList<>();
+                                                        autoAndChoice.add("auto");
+                                                        autoAndChoice.add(query);
+                                                        choices.put(name, autoAndChoice);
                                                     } else {
                                                         choices.put(name, dropdownListForQuery);
                                                     }
-                                                } catch (Exception e){
+                                                } catch (Exception e) {
                                                     e.printStackTrace(); // might want user feedback later
                                                 }
                                             }
                                         }
 
-                                        if ("true".equalsIgnoreCase(formsubmit)){
+                                        if ("true".equalsIgnoreCase(formsubmit)) {
                                             File target = new File(SpreadsheetService.getHomeDir() + "/temp/" + System.currentTimeMillis() + "formsubmit" + form + ".tsv"); // timestamp to stop file overwriting
-                                            try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(target))){
+                                            try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(target))) {
                                                 // new logic - not going to use the import template for importing - will copy the top bits off the import template
                                                 int row = 1;
-                                                while (importTemplateData.getSheets().get(sheet).size() > row){
-                                                    if (importTemplateData.getSheets().get(sheet).get(row).isEmpty()){
+                                                while (importTemplateData.getSheets().get(sheet).size() > row) {
+                                                    if (importTemplateData.getSheets().get(sheet).get(row).isEmpty()) {
                                                         break;
                                                     }
-                                                    for (String cell : importTemplateData.getSheets().get(sheet).get(row)){
+                                                    for (String cell : importTemplateData.getSheets().get(sheet).get(row)) {
                                                         bufferedWriter.write(cell + "\t");
                                                     }
                                                     bufferedWriter.newLine();
@@ -619,7 +627,7 @@ public class ExcelController {
                                             UploadedFile uploadedFile = new UploadedFile(target.getAbsolutePath(), Collections.singletonList(target.getName()), fileNameParams, false, false);
                                             List<UploadedFile> uploadedFiles = ImportService.importTheFile(loggedInUser, uploadedFile, null, null);
                                             UploadedFile uploadedFile1 = uploadedFiles.get(0);
-                                            if (uploadedFile1.getError() != null && !uploadedFile1.getError().isEmpty()){
+                                            if (uploadedFile1.getError() != null && !uploadedFile1.getError().isEmpty()) {
                                                 return uploadedFile1.getError();
                                             }
                                             return "ok";
@@ -627,14 +635,14 @@ public class ExcelController {
                                     }
                                 }
                             }
-                            if (!formFields.isEmpty()){
+                            if (!formFields.isEmpty()) {
                                 break;
                             }
                         }
                     }
                 } // todo non admin users
-                System.out.println(jacksonMapper.writeValueAsString(new FormSpec(formFields,choices)));
-                return jacksonMapper.writeValueAsString(new FormSpec(formFields,choices));
+                System.out.println(jacksonMapper.writeValueAsString(new FormSpec(formFields, choices)));
+                return jacksonMapper.writeValueAsString(new FormSpec(formFields, choices));
             }
 
             if (op.equals("loadregion")) {
