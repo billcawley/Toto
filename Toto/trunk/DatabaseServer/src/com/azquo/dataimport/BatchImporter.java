@@ -577,6 +577,9 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
                 throw new Exception((cell.getImmutableImportHeading().heading + " no such set: " + setName));
             }
             boolean found = false;
+            String bestFrom = "";
+            double bestFromNo = 0;
+            Name bestGuess = null;
             for (Name toTest : toTestParent.getChildren()) {
                 String lowLimit = toTest.getAttribute(cell.getImmutableImportHeading().lookupFrom);
                 if (lowLimit != null) {
@@ -585,6 +588,10 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
                         Double d = Double.parseDouble(lowLimit);
                         Double d2 = Double.parseDouble(valueToTest);
                         if (d2 >= d) {
+                            if (d>bestFromNo){
+                                bestFromNo = d;
+                                bestGuess = toTest;
+                            }
                             if (cell.getImmutableImportHeading().lookupTo != null) {
                                 String highlimit = toTest.getAttribute(cell.getImmutableImportHeading().lookupTo);
                                 if (highlimit != null) {
@@ -595,14 +602,18 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
                                         break;
                                     }
                                 }
-                            } else {
-                                newCellNameValue(cell, toTest);
-                                break;
+                            }else{
+                                found = true;
                             }
                         }
+
                     } catch (Exception e) {
                         //compare strings
                         if (lowLimit.compareTo(valueToTest) <= 0) {
+                            if (lowLimit.compareTo(bestFrom)>0){
+                                bestFrom = lowLimit;
+                                bestGuess = toTest;
+                            }
                             if (cell.getImmutableImportHeading().lookupTo != null) {
                                 String highLimit = toTest.getAttribute(cell.getImmutableImportHeading().lookupTo);
                                 if (highLimit != null && highLimit.compareTo(valueToTest) >= 0) {
@@ -610,18 +621,19 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
                                     found = true;
                                     break;
                                 }
-                            } else {
-                                newCellNameValue(cell, toTest);
+                            }else{
                                 found = true;
-                                break;
                             }
+
                         }
                     }
                 }
             }
-            if (!found){
-                if(cell.getImmutableImportHeading().provisional) {
-                    cell.setLineValue("");
+            if (found){
+                newCellNameValue(cell,bestGuess);
+            }else{
+                if(cell.getImmutableImportHeading().provisional && bestGuess!=null) {
+                    newCellNameValue(cell, bestGuess);
 
                 }else{
                     throw new Exception("lookup for " + cell.getImmutableImportHeading().heading + " on " + setName + " and " + valueToTest + " not found");
