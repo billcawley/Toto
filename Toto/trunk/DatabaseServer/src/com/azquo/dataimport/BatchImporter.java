@@ -619,8 +619,13 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
                     }
                 }
             }
-            if (!found&&!cell.getImmutableImportHeading().provisional) {
-                throw new Exception("lookup for " + cell.getImmutableImportHeading().heading + " on " + setName + " and " + valueToTest + " not found");
+            if (!found){
+                if(cell.getImmutableImportHeading().provisional) {
+                    cell.setLineValue("");
+
+                }else{
+                    throw new Exception("lookup for " + cell.getImmutableImportHeading().heading + " on " + setName + " and " + valueToTest + " not found");
+                }
             }
         }
     }
