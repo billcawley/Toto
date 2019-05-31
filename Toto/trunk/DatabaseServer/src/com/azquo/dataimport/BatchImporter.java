@@ -732,7 +732,7 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
                         break;
                     } else {
                         for (Name name : identityCell.getLineNames()) {
-                            if (!cell.getImmutableImportHeading().provisional||!cell.getLineValue().equals(name.getAttribute(attribute))){
+                            if (!cell.getImmutableImportHeading().provisional||name.getAttribute(attribute)==null){
                                 name.setAttributeWillBePersisted(attribute,cell.getLineValue(),azquoMemoryDBConnection);
                             }
                             // EFC note - need to check on definition
