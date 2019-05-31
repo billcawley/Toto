@@ -197,6 +197,11 @@ public class DBCron {
                                                         if (readXML(fileKey,filesValues,rootDocumentName,builder,path,headings,lastModifiedTime)){
                                                             Files.move(path, tagged.resolve(timestamp + origName));
                                                         }
+                                                        // check the xlsx isn't still in the inbox - zap it if it is
+                                                        Path leftoverXLSX = Paths.get(SpreadsheetService.getXMLDestinationDir()).resolve(fileKey + ".xlsx");
+                                                        if (Files.exists(leftoverXLSX)){
+                                                            Files.delete(leftoverXLSX);
+                                                        }
                                                     } else {
                                                         System.out.println("file found for XML but it's only " + ((timestamp - lastModifiedTime.toMillis()) / 1_000) + " seconds old, needs to be " + (millisOldThreshold / 1_000) + " seconds old");
                                                     }

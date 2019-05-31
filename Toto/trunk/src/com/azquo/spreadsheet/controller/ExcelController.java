@@ -508,146 +508,152 @@ public class ExcelController {
 
                 return jacksonMapper.writeValueAsString(databaseReports);
             }
+            boolean adminDev = loggedInUser.getUser().isDeveloper() || loggedInUser.getUser().isAdministrator();
+            List<Database> databases;
+            if (adminDev) {
+                databases = AdminService.getDatabaseListForBusinessWithBasicSecurity(loggedInUser);
+            } else {
+                databases = new ArrayList<>();
+                Map<String, TypedPair<Integer, Integer>> reports = loggedInUser.getReportIdDatabaseIdPermissions();
+                for (TypedPair<Integer, Integer> tp : reports.values()) {
+                    databases.add(DatabaseDAO.findById(tp.getSecond()));
+                }
+            }
             if (op.equals("allowedforms")) {
                 List<UserForm> userForms = new ArrayList<>();
 //                List<OnlineReport> allowedReports = AdminService.getReportList(loggedInUser);
-                if (loggedInUser.getUser().isDeveloper() || loggedInUser.getUser().isAdministrator()) {
-                    List<Database> databaseListForBusinessWithBasicSecurity = AdminService.getDatabaseListForBusinessWithBasicSecurity(loggedInUser);
-                    if (databaseListForBusinessWithBasicSecurity != null) {
-                        for (Database d : databaseListForBusinessWithBasicSecurity) {
-                            if (d.getImportTemplateId() != -1) {
-                                ImportTemplate importTemplate = ImportTemplateDAO.findById(d.getImportTemplateId());
-                                if (importTemplate != null) { // a duff id could mean it is
-                                    ImportTemplateData importTemplateData = ImportService.getImportTemplateData(importTemplate, loggedInUser);
-                                    for (String sheet : importTemplateData.getSheets().keySet()) {
-                                        if (sheet.toLowerCase().startsWith("form")) {
+                if (databases != null) {
+                    for (Database d : databases) {
+                        if (d.getImportTemplateId() != -1) {
+                            ImportTemplate importTemplate = ImportTemplateDAO.findById(d.getImportTemplateId());
+                            if (importTemplate != null) { // a duff id could mean it is
+                                ImportTemplateData importTemplateData = ImportService.getImportTemplateData(importTemplate, loggedInUser);
+                                for (String sheet : importTemplateData.getSheets().keySet()) {
+                                    if (sheet.toLowerCase().startsWith("form") && (adminDev || (loggedInUser.getFormPermissions().contains(sheet.substring(4).toLowerCase())))) {
 //                                    List<List<String>> cellData = importTemplateData.getSheets().get(sheet);
-                                            userForms.add(new UserForm(sheet.substring(4), d.getName()));
-                                        }
+                                        userForms.add(new UserForm(sheet.substring(4), d.getName()));
                                     }
                                 }
                             }
                         }
                     }
-                } // todo non admin users, get em from the home menu?
+                }
                 return jacksonMapper.writeValueAsString(userForms);
             }
             if (form != null && !form.isEmpty() && database != null && !database.isEmpty()) {
                 List<String> formFields = new ArrayList<>();
                 // so we'll want dropdowns
                 Map<String, List<String>> choices = new HashMap<>();
-                if (loggedInUser.getUser().isDeveloper() || loggedInUser.getUser().isAdministrator()) {
-                    List<Database> databaseListForBusinessWithBasicSecurity = AdminService.getDatabaseListForBusinessWithBasicSecurity(loggedInUser);
-                    if (databaseListForBusinessWithBasicSecurity != null) {
-                        for (Database d : databaseListForBusinessWithBasicSecurity) {
-                            if (d.getImportTemplateId() != -1 && d.getName().equalsIgnoreCase(database)) {
-                                // autocomplete going in here for the mo. May as well use these parameters
-                                if (choice != null && chosen != null && !choice.isEmpty()) {
-                                    List<String> toReturn = new ArrayList<>();
-                                    try {
-                                        List<String> dropdownListForQuery = CommonReportUtils.getDropdownListForQuery(loggedInUser, choice, null, chosen);
-                                        for (String value : dropdownListForQuery) {
-                                                toReturn.add(value);
-                                                if (toReturn.size() > 30) { // arbitrary, need to test
+                if (databases != null) {
+                    for (Database d : databases) {
+                        if (d.getImportTemplateId() != -1 && d.getName().equalsIgnoreCase(database)) {
+                            // autocomplete going in here for the mo. May as well use these parameters
+                            if (choice != null && chosen != null && !choice.isEmpty()) {
+                                List<String> toReturn = new ArrayList<>();
+                                try {
+                                    List<String> dropdownListForQuery = CommonReportUtils.getDropdownListForQuery(loggedInUser, choice, null, chosen);
+                                    for (String value : dropdownListForQuery) {
+                                        toReturn.add(value);
+                                        if (toReturn.size() > 30) { // arbitrary, need to test
+                                            break;
+                                        }
+                                    }
+                                } catch (Exception e) { // maybe do something more clever later . . .
+                                    e.printStackTrace();
+                                }
+                                System.out.println(jacksonMapper.writeValueAsString(toReturn));
+                                return jacksonMapper.writeValueAsString(toReturn);
+                            }
+
+                            ImportTemplate importTemplate = ImportTemplateDAO.findById(loggedInUser.getDatabase().getImportTemplateId());
+                            ImportTemplateData importTemplateData = ImportService.getImportTemplateData(importTemplate, loggedInUser);
+                            for (String sheet : importTemplateData.getSheets().keySet()) {
+                                if (sheet.toLowerCase().startsWith("form") && sheet.substring(4).equalsIgnoreCase(form)
+                                        && (adminDev || (loggedInUser.getFormPermissions().contains(sheet.substring(4).toLowerCase())))) {
+                                    // ok are we submitting data from the form or wanting the fields?
+                                    formFields = importTemplateData.getSheets().get(sheet).get(0); // top row is the field names
+                                    for (int i = formFields.size() - 1; i >= 0; i--) {
+                                        if (formFields.get(i).trim().isEmpty()) {
+                                            formFields.remove(i);
+                                        } else {
+                                            break;
+                                        }
+                                    }
+                                    // need to get to the parameter bits, maybe could reuse code but I'm not sure
+                                    boolean hitBlank = false;
+                                    for (int row = 1; row < importTemplateData.getSheets().get(sheet).size(); row++) {
+                                        if (importTemplateData.getSheets().get(sheet).get(row).isEmpty()) {
+                                            hitBlank = true;
+                                        } else if (hitBlank && importTemplateData.getSheets().get(sheet).get(row).size() >= 2) {
+                                            String name = importTemplateData.getSheets().get(sheet).get(row).get(0);
+                                            String query = importTemplateData.getSheets().get(sheet).get(row).get(1);
+                                            List<String> dropdownListForQuery = null;
+                                            try {
+                                                // todo - if the list is big we want to send a signal for autocomplete
+                                                dropdownListForQuery = CommonReportUtils.getDropdownListForQuery(loggedInUser, query, null, null);
+                                                if (dropdownListForQuery.size() > 30) {
+                                                    List<String> autoAndChoice = new ArrayList<>();
+                                                    autoAndChoice.add("auto");
+                                                    autoAndChoice.add(query);
+                                                    choices.put(name, autoAndChoice);
+                                                } else {
+                                                    choices.put(name, dropdownListForQuery);
+                                                }
+                                            } catch (Exception e) {
+                                                e.printStackTrace(); // might want user feedback later
+                                            }
+                                        } else { // check for language date in the bit above parameters
+                                            int col = 0;
+                                            for (String cellValue : importTemplateData.getSheets().get(sheet).get(row)) {
+                                                if (cellValue.toLowerCase().contains("language date")) {
+                                                    // in theory it might index out of bounds but that would be quite odd. We've found language date - flag it up as a single choice
+                                                    choices.put(importTemplateData.getSheets().get(sheet).get(0).get(col), Collections.singletonList("date"));
+                                                }
+                                                col++;
+                                            }
+                                        }
+                                    }
+
+                                    if ("true".equalsIgnoreCase(formsubmit)) {
+                                        File target = new File(SpreadsheetService.getHomeDir() + "/temp/" + System.currentTimeMillis() + "formsubmit" + form + ".tsv"); // timestamp to stop file overwriting
+                                        try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(target))) {
+                                            // new logic - not going to use the import template for importing - will copy the top bits off the import template
+                                            int row = 1;
+                                            while (importTemplateData.getSheets().get(sheet).size() > row) {
+                                                if (importTemplateData.getSheets().get(sheet).get(row).isEmpty()) {
                                                     break;
                                                 }
-                                        }
-                                    } catch (Exception e) { // maybe do something more clever later . . .
-                                        e.printStackTrace();
-                                    }
-                                    System.out.println(jacksonMapper.writeValueAsString(toReturn));
-                                    return jacksonMapper.writeValueAsString(toReturn);
-                                }
-
-                                ImportTemplate importTemplate = ImportTemplateDAO.findById(loggedInUser.getDatabase().getImportTemplateId());
-                                ImportTemplateData importTemplateData = ImportService.getImportTemplateData(importTemplate, loggedInUser);
-                                for (String sheet : importTemplateData.getSheets().keySet()) {
-                                    if (sheet.toLowerCase().startsWith("form") && sheet.substring(4).equalsIgnoreCase(form)) {
-                                        // ok are we submitting data from the form or wanting the fields?
-                                        formFields = importTemplateData.getSheets().get(sheet).get(0); // top row is the field names
-                                        for (int i = formFields.size() - 1; i >= 0; i--) {
-                                            if (formFields.get(i).trim().isEmpty()) {
-                                                formFields.remove(i);
-                                            } else {
-                                                break;
-                                            }
-                                        }
-                                        // need to get to the parameter bits, maybe could reuse code but I'm not sure
-                                        boolean hitBlank = false;
-                                        for (int row = 1; row < importTemplateData.getSheets().get(sheet).size(); row++) {
-                                            if (importTemplateData.getSheets().get(sheet).get(row).isEmpty()) {
-                                                hitBlank = true;
-                                            } else if (hitBlank && importTemplateData.getSheets().get(sheet).get(row).size() >= 2) {
-                                                String name = importTemplateData.getSheets().get(sheet).get(row).get(0);
-                                                String query = importTemplateData.getSheets().get(sheet).get(row).get(1);
-                                                List<String> dropdownListForQuery = null;
-                                                try {
-                                                    // todo - if the list is big we want to send a signal for autocomplete
-                                                    dropdownListForQuery = CommonReportUtils.getDropdownListForQuery(loggedInUser, query, null,null);
-                                                    if (dropdownListForQuery.size() > 30) {
-                                                        List<String> autoAndChoice = new ArrayList<>();
-                                                        autoAndChoice.add("auto");
-                                                        autoAndChoice.add(query);
-                                                        choices.put(name, autoAndChoice);
-                                                    } else {
-                                                        choices.put(name, dropdownListForQuery);
-                                                    }
-                                                } catch (Exception e) {
-                                                    e.printStackTrace(); // might want user feedback later
-                                                }
-                                            } else { // check for language date in the bit above parameters
-                                                int col = 0;
-                                                for (String cellValue : importTemplateData.getSheets().get(sheet).get(row)){
-                                                    if (cellValue.toLowerCase().contains("language date")){
-                                                        // in theory it might index out of bounds but that would be quite odd. We've found language date - flag it up as a single choice
-                                                        choices.put(importTemplateData.getSheets().get(sheet).get(0).get(col), Collections.singletonList("date"));
-                                                    }
-                                                    col++;
-                                                }
-                                            }
-                                        }
-
-                                        if ("true".equalsIgnoreCase(formsubmit)) {
-                                            File target = new File(SpreadsheetService.getHomeDir() + "/temp/" + System.currentTimeMillis() + "formsubmit" + form + ".tsv"); // timestamp to stop file overwriting
-                                            try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(target))) {
-                                                // new logic - not going to use the import template for importing - will copy the top bits off the import template
-                                                int row = 1;
-                                                while (importTemplateData.getSheets().get(sheet).size() > row) {
-                                                    if (importTemplateData.getSheets().get(sheet).get(row).isEmpty()) {
-                                                        break;
-                                                    }
-                                                    for (String cell : importTemplateData.getSheets().get(sheet).get(row)) {
-                                                        bufferedWriter.write(cell + "\t");
-                                                    }
-                                                    bufferedWriter.newLine();
-                                                    row++;
-                                                }
-                                                // now put in our one line of data
-                                                bufferedWriter.newLine();
-                                                for (String name : formFields) {
-                                                    bufferedWriter.write(request.getParameter(name) + "\t");
+                                                for (String cell : importTemplateData.getSheets().get(sheet).get(row)) {
+                                                    bufferedWriter.write(cell + "\t");
                                                 }
                                                 bufferedWriter.newLine();
+                                                row++;
                                             }
-                                            final Map<String, String> fileNameParams = new HashMap<>();
-                                            ImportService.addFileNameParametersToMap(target.getName(), fileNameParams);
-                                            UploadedFile uploadedFile = new UploadedFile(target.getAbsolutePath(), Collections.singletonList(target.getName()), fileNameParams, false, false);
-                                            List<UploadedFile> uploadedFiles = ImportService.importTheFile(loggedInUser, uploadedFile, null, null);
-                                            UploadedFile uploadedFile1 = uploadedFiles.get(0);
-                                            if (uploadedFile1.getError() != null && !uploadedFile1.getError().isEmpty()) {
-                                                return uploadedFile1.getError();
+                                            // now put in our one line of data
+                                            bufferedWriter.newLine();
+                                            for (String name : formFields) {
+                                                bufferedWriter.write(request.getParameter(name) + "\t");
                                             }
-                                            return "ok";
+                                            bufferedWriter.newLine();
                                         }
+                                        final Map<String, String> fileNameParams = new HashMap<>();
+                                        ImportService.addFileNameParametersToMap(target.getName(), fileNameParams);
+                                        UploadedFile uploadedFile = new UploadedFile(target.getAbsolutePath(), Collections.singletonList(target.getName()), fileNameParams, false, false);
+                                        List<UploadedFile> uploadedFiles = ImportService.importTheFile(loggedInUser, uploadedFile, null, null);
+                                        UploadedFile uploadedFile1 = uploadedFiles.get(0);
+                                        if (uploadedFile1.getError() != null && !uploadedFile1.getError().isEmpty()) {
+                                            return uploadedFile1.getError();
+                                        }
+                                        return "ok";
                                     }
                                 }
-                            }
-                            if (!formFields.isEmpty()) {
-                                break;
                             }
                         }
+                        if (!formFields.isEmpty()) {
+                            break;
+                        }
                     }
-                } // todo non admin users
+                }
                 System.out.println(jacksonMapper.writeValueAsString(new FormSpec(formFields, choices)));
                 return jacksonMapper.writeValueAsString(new FormSpec(formFields, choices));
             }

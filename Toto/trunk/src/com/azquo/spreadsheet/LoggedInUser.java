@@ -63,6 +63,8 @@ public class LoggedInUser implements Serializable {
     // report, database, generally set from a home user menu
     private Map<String, TypedPair<Integer, Integer>> reportIdDatabaseIdPermissions; // hold them here after they're set by a "home page" report for linking
 
+    private Set<String> formPermissions; // form permissions, more simple than above
+
     private static final String defaultRegion = "default-region";
     private static final String defaultSheet = "default-sheet";
 
@@ -101,6 +103,7 @@ public class LoggedInUser implements Serializable {
             }
         }
         reportIdDatabaseIdPermissions = new ConcurrentHashMap<>();
+        formPermissions = new HashSet<>();
     }
 
     public JsonChildren.Node getFromJsTreeLookupMap(int jsTreeNodeId) {
@@ -232,6 +235,14 @@ public class LoggedInUser implements Serializable {
 
     public Map<String, TypedPair<Integer, Integer>> getReportIdDatabaseIdPermissions() {
         return reportIdDatabaseIdPermissions;
+    }
+
+    public Set<String> getFormPermissions() {
+        return formPermissions;
+    }
+
+    public void setFormPermissions(Set<String> formPermissions) {
+        this.formPermissions = formPermissions;
     }
 
     // just pop it open and closed, should be a little cleaner

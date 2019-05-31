@@ -33,6 +33,7 @@ import java.util.*;
 public class ReportService {
     // should functions like this be in another class? It's not really stateless or that low level
     static final String ALLOWABLE_REPORTS = "az_AllowableReports";
+    static final String ALLOWABLE_FORMS = "az_AllowableForms";
     private static final String REDUNDANT = "redundant";
 
     static void checkForPermissionsInSheet(LoggedInUser loggedInUser, Sheet sheet) {
@@ -41,8 +42,8 @@ public class ReportService {
         List<SName> namesForSheet = BookUtils.getNamesForSheet(sheet);
         //current report is always allowable...
         SName sReportName = sheet.getBook().getInternalBook().getNameByName(ReportRenderer.AZREPORTNAME, sheet.getSheetName());//try local to this sheet
-        if (sReportName==null){
-             sReportName = sheet.getBook().getInternalBook().getNameByName(ReportRenderer.AZREPORTNAME);//try global
+        if (sReportName == null) {
+            sReportName = sheet.getBook().getInternalBook().getNameByName(ReportRenderer.AZREPORTNAME);//try global
 
         }
         String thisReportName = BookUtils.getSnameCell(sReportName).getStringValue();
@@ -97,6 +98,20 @@ public class ReportService {
                         }
                     }
                 }
+            }
+            // a simple list for the mo
+            if (sName.getName().equalsIgnoreCase(ALLOWABLE_FORMS)) {
+                CellRegion allowable = sName.getRefersToCellRegion();
+                Set<String> formNames = new HashSet<>();
+                for (int row = allowable.getRow(); row <= allowable.getLastRow(); row++) {
+                    if (!sheet.getInternalSheet().getCell(row, allowable.getColumn()).isNull()) {
+                        final String formName = sheet.getInternalSheet().getCell(row, allowable.getColumn()).getStringValue();
+                        if (formName != null && !formName.isEmpty()){
+                            formNames.add(formName.toLowerCase());
+                        }
+                    }
+                }
+                loggedInUser.setFormPermissions(formNames);
             }
         }
         //System.out.println("permissions : " + loggedInUser.getReportIdDatabaseIdPermissions());
@@ -156,7 +171,7 @@ public class ReportService {
             if (bracketCount == 0) {
                 String calc = query.substring(0, pos + 1);
                 String remainder = query.substring(pos + 1).trim();
-                if (remainder.toLowerCase().startsWith("as ")  || remainder.toLowerCase().startsWith("asglobal ")) {
+                if (remainder.toLowerCase().startsWith("as ") || remainder.toLowerCase().startsWith("asglobal ")) {
                     String target = remainder.substring(remainder.indexOf(" ") + 1);
                     List<List<String>> rowHeadingSource = new ArrayList<>();
                     List<List<String>> colHeadingSource = new ArrayList<>();
@@ -382,7 +397,7 @@ public class ReportService {
 
     static void extractEmailInfo(Book book) {
         // EFC - it's exceptioning - going to try catch it for the mo
-        try{
+        try {
             for (SName name : book.getInternalBook().getNames()) {
                 if (name.getName().toLowerCase().startsWith(ReportRenderer.AZEMAILADDRESS)) {
                     String region = name.getName().substring(ReportRenderer.AZEMAILADDRESS.length());
@@ -394,7 +409,7 @@ public class ReportService {
                     }
                 }
             }
-        } catch (Exception e){
+        } catch (Exception e) {
             System.out.println("Email exception : " + e.getMessage());
         }
     }
