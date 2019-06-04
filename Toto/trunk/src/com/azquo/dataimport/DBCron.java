@@ -201,12 +201,19 @@ public class DBCron {
                                                         Path leftoverXLSX = Paths.get(SpreadsheetService.getXMLDestinationDir()).resolve(fileKey + ".xlsx");
                                                         if (Files.exists(leftoverXLSX)){
                                                             Files.delete(leftoverXLSX);
+                                                        } else if (fileKey.toLowerCase().startsWith("cs")){ // it was zapped (as in ok!) - in the case of CS claim settlements the original file which will be in temp now needs to go in the outbox
+                                                            Path xlsxFileToMove = Paths.get(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".xlsx");
+                                                            if (Files.exists(xlsxFileToMove)){
+                                                                System.out.println("moving file back to the out box " + fileKey + ".xlsx");
+                                                                Files.move(xlsxFileToMove, Paths.get(SpreadsheetService.getXMLScanDir()).resolve(fileKey + ".xlsx"));
+                                                            }
                                                         }
                                                     } else {
                                                         System.out.println("file found for XML but it's only " + ((timestamp - lastModifiedTime.toMillis()) / 1_000) + " seconds old, needs to be " + (millisOldThreshold / 1_000) + " seconds old");
                                                     }
                                                 } else {
-                                                    System.out.println("non XML file found?? " + origName);
+                                                    // supress this for the mo as we're putting xlsx files back in here. Todo - clarify what's going on there!
+                                                    //System.out.println("non XML file found?? " + origName);
                                                 }
                                             } catch (Exception e) {
                                                 e.printStackTrace();

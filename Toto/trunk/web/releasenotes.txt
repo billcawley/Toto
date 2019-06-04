@@ -1,3 +1,11 @@
+31-05-19
+
+Further Excel Controller form work - date picker and autocomplete
+
+Work on lookup to allow provisional lookups to use the best guess, and to use the best guess when no end is specified.
+
+Clean up xlsx files which Brokasure didn't pick up.
+
 10-05-19
 
 Tightened RMI concurrency code, Excel controller work to enable the new manual entry forms in plugin
