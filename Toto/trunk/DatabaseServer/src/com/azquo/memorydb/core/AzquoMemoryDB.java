@@ -320,6 +320,19 @@ public final class AzquoMemoryDB {
         //setCache.clear();
     }
 
+    // maybe should be moved, need to think about it. Used to count the number of names modified by an upload
+    private static AtomicInteger countNamesForProvenance = new AtomicInteger(0);
+    public int countNamesForProvenance(Provenance p) {
+        countNamesForProvenance.incrementAndGet();
+        int toReturn = 0;
+        for (Name name : nameByIdMap.values()){
+            if (name.getProvenance() == p){
+                toReturn++;
+            }
+        }
+        return toReturn;
+    }
+
     // trying for a basic count and set cache
 
     public Provenance getProvenanceById(final int id) {

@@ -725,6 +725,10 @@ public class PendingUploadController {
             row = sheet.createRow(rowIndex++);
             row.createCell(cellIndex++).setCellValue("Number of values adjusted");
             row.createCell(cellIndex).setCellValue(uploadedFile.getNoValuesAdjusted().get());
+            cellIndex = 0;
+            row = sheet.createRow(rowIndex++);
+            row.createCell(cellIndex++).setCellValue("Number of names adjusted");
+            row.createCell(cellIndex).setCellValue(uploadedFile.getNoNamesAdjusted());
 
             cellIndex = 0;
             sheet.createRow(rowIndex++);

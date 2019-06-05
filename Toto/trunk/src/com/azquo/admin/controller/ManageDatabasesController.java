@@ -508,7 +508,8 @@ public class ManageDatabasesController {
             toReturn.append("<br/>\n");
             toReturn.append("Time to process : ").append(uploadedFile.getProcessingDuration()).append(" ms, ");
             toReturn.append("Number of lines imported : ").append(uploadedFile.getNoLinesImported()).append(", ");
-            toReturn.append("Number of values adjusted: ").append(uploadedFile.getNoValuesAdjusted()).append("\n<br/>");
+            toReturn.append("Number of values adjusted: ").append(uploadedFile.getNoValuesAdjusted()).append(", ");
+            toReturn.append("Number of names adjusted: ").append(uploadedFile.getNoNamesAdjusted()).append("\n<br/>");
 
             if (uploadedFile.getTopHeadings() != null && !uploadedFile.getTopHeadings().isEmpty()) {
                 if (noClickableHeadings) {

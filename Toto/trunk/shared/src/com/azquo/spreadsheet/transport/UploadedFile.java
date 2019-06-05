@@ -45,6 +45,8 @@ public class UploadedFile implements Serializable {
 
     private int noLinesImported;
     private final AtomicInteger noValuesAdjusted;
+    // new, don't need to be atomic as it will be derived from provenance
+    private int noNamesAdjusted;
     private final ArrayList<RejectedLine> linesRejected;
     private int noLinesRejected;
     private final ArrayList<WarningLine> warningLines;
@@ -185,6 +187,7 @@ public class UploadedFile implements Serializable {
         processingDuration = 0;
         noLinesImported = 0;
         noValuesAdjusted = new AtomicInteger(0);
+        noNamesAdjusted = 0;
         linesRejected = new ArrayList<>();
         noLinesRejected = 0;
         warningLines = new ArrayList<>();
@@ -274,6 +277,14 @@ public class UploadedFile implements Serializable {
 
     public AtomicInteger getNoValuesAdjusted() {
         return noValuesAdjusted;
+    }
+
+    public int getNoNamesAdjusted() {
+        return noNamesAdjusted;
+    }
+
+    public void setNoNamesAdjusted(int noNamesAdjusted) {
+        this.noNamesAdjusted = noNamesAdjusted;
     }
 
     public List<RejectedLine> getLinesRejected() {
