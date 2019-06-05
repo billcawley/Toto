@@ -218,7 +218,8 @@ public class DSImportService {
                                 if (i == 0) {
                                     headingsFromTheFile.add(new ArrayList<>());
                                 }
-                                String lineHeading = lineCells[j].replace("\\\\n", "\n").replace("\\\\t", "\t").trim();
+                                // NOTE, we want case insensitive on heading names in the file look up, hence this which corresponds to to .toLowerCases in ImportService.readPreparedFile
+                                String lineHeading = lineCells[j].replace("\\\\n", "\n").replace("\\\\t", "\t").trim().toLowerCase();
                                 if (!lineHeading.isEmpty()){ // not having blanks
                                     headingsFromTheFile.get(j).add(lineHeading);
                                 }

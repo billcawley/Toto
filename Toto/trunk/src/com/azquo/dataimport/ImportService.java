@@ -650,7 +650,7 @@ public final class ImportService {
                         break;
                     }
                 }
-                // if there are no standard headings, then read the file without adjustment
+                // without standard headings then there's nothing to work with
                 if (!standardHeadings.isEmpty()) {
                     Map<TypedPair<Integer, Integer>, String> topHeadings = new HashMap<>();
                     // specific headings on the file we're loading
@@ -712,7 +712,7 @@ public final class ImportService {
                             }
                             uploadedFile.setSimpleHeadings(simpleHeadings);
                         } else {
-                            // we assume the first line are file headings and anything below needs to be joined together into an Azquo heading
+                            // we assume the first lines are file headings and anything below needs to be joined together into an Azquo heading
                             // we now support headingsNoFileHeadingsWithInterimLookup in a non - version context
                             List<TypedPair<String, String>> headingsNoFileHeadingsWithInterimLookup = new ArrayList<>();
                             Map<List<String>, TypedPair<String, String>> headingsByLookupWithInterimLookup = new HashMap<>();
@@ -722,7 +722,7 @@ public final class ImportService {
                                     StringBuilder azquoHeading = new StringBuilder();
                                     for (int i = 0; i < headings.size(); i++) {
                                         if (i == 0) {
-                                            fileHeading = headings.get(i);
+                                            fileHeading = headings.get(i).toLowerCase(); // note tolower case - we want the file headings to be case insensitive
                                         } else {
                                             if (i > 1) {
                                                 azquoHeading.append(";");
@@ -1026,7 +1026,7 @@ public final class ImportService {
                             while (customHeadings.size() <= (cellIndex + 1)) { // make sure there are enough lists to represent the heading columns were adding to
                                 customHeadings.add(new ArrayList<>());
                             }
-                            customHeadings.get(cellIndex).add(cellValue);
+                            customHeadings.get(cellIndex).add(cellValue.toLowerCase()); // NOTE! We want the looking up fo file headings to be case insensetive, hence the lower case here
                         }
                     } else if (mode == ImportSheetScanMode.STANDARDHEADINGS) { // build headings
                         // make sure there are enough lists to represent the heading columns we're adding to. Uses "while" as blank columns could make the cellIndex increase more than one

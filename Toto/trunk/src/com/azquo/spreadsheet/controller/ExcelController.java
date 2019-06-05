@@ -134,10 +134,12 @@ public class ExcelController {
     public static class FormSpec {
         public List<String> formFields;
         public Map<String, List<String>> formChoices;
+        public Map<String, String> formDefaults;
 
-        public FormSpec(List<String> formFields, Map<String, List<String>> formChoices) {
+        public FormSpec(List<String> formFields, Map<String, List<String>> formChoices, Map<String, String> formDefaults) {
             this.formFields = formFields;
             this.formChoices = formChoices;
+            this.formDefaults = formDefaults;
         }
     }
 
@@ -544,6 +546,7 @@ public class ExcelController {
                 List<String> formFields = new ArrayList<>();
                 // so we'll want dropdowns
                 Map<String, List<String>> choices = new HashMap<>();
+                Map<String, String> defaultValues = new HashMap<>();
                 if (databases != null) {
                     for (Database d : databases) {
                         if (d.getImportTemplateId() != -1 && d.getName().equalsIgnoreCase(database)) {
@@ -587,17 +590,20 @@ public class ExcelController {
                                         } else if (hitBlank && importTemplateData.getSheets().get(sheet).get(row).size() >= 2) {
                                             String name = importTemplateData.getSheets().get(sheet).get(row).get(0);
                                             String query = importTemplateData.getSheets().get(sheet).get(row).get(1);
-                                            List<String> dropdownListForQuery = null;
+                                            List<String> dropdownListForQuery;
                                             try {
-                                                // todo - if the list is big we want to send a signal for autocomplete
-                                                dropdownListForQuery = CommonReportUtils.getDropdownListForQuery(loggedInUser, query, null, null);
-                                                if (dropdownListForQuery.size() > 30) {
-                                                    List<String> autoAndChoice = new ArrayList<>();
-                                                    autoAndChoice.add("auto");
-                                                    autoAndChoice.add(query);
-                                                    choices.put(name, autoAndChoice);
+                                                if (query.equalsIgnoreCase("textarea")){ // I feel this is a bit hacky, maybe
+                                                    choices.put(name, Collections.singletonList("textarea"));
                                                 } else {
-                                                    choices.put(name, dropdownListForQuery);
+                                                    dropdownListForQuery = CommonReportUtils.getDropdownListForQuery(loggedInUser, query, null, null);
+                                                    if (dropdownListForQuery.size() > 30) {
+                                                        List<String> autoAndChoice = new ArrayList<>();
+                                                        autoAndChoice.add("auto");
+                                                        autoAndChoice.add(query);
+                                                        choices.put(name, autoAndChoice);
+                                                    } else {
+                                                        choices.put(name, dropdownListForQuery);
+                                                    }
                                                 }
                                             } catch (Exception e) {
                                                 e.printStackTrace(); // might want user feedback later
@@ -608,6 +614,16 @@ public class ExcelController {
                                                 if (cellValue.toLowerCase().contains("language date")) {
                                                     // in theory it might index out of bounds but that would be quite odd. We've found language date - flag it up as a single choice
                                                     choices.put(importTemplateData.getSheets().get(sheet).get(0).get(col), Collections.singletonList("date"));
+                                                }
+                                                if (cellValue.toLowerCase().contains("default ")) {
+                                                    String defaultValue;
+                                                    int defaultIndex = cellValue.toLowerCase().indexOf("default ") + "default ".length();
+                                                    if (cellValue.indexOf(";", defaultIndex) > 0){
+                                                        defaultValue = cellValue.substring(defaultIndex, cellValue.indexOf(";", defaultIndex));
+                                                    } else {
+                                                        defaultValue = cellValue.substring(defaultIndex).trim();
+                                                    }
+                                                    defaultValues.put(importTemplateData.getSheets().get(sheet).get(0).get(col), defaultValue);
                                                 }
                                                 col++;
                                             }
@@ -654,8 +670,9 @@ public class ExcelController {
                         }
                     }
                 }
-                System.out.println(jacksonMapper.writeValueAsString(new FormSpec(formFields, choices)));
-                return jacksonMapper.writeValueAsString(new FormSpec(formFields, choices));
+                String toReturn = jacksonMapper.writeValueAsString(new FormSpec(formFields, choices, defaultValues));
+                System.out.println(toReturn);
+                return toReturn;
             }
 
             if (op.equals("loadregion")) {
@@ -779,8 +796,7 @@ public class ExcelController {
             double d2 = Double.parseDouble(s2);
             double diff = (d1 - d2);
             if (diff < .0000000001 && diff > -.0000000001) return true;
-        } catch (Exception e) {
-
+        } catch (Exception ignored) {
         }
         return false;
     }
