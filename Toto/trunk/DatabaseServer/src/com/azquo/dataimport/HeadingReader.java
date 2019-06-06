@@ -151,13 +151,11 @@ todo - add classification here
             }
         }
         // further processing of the Mutable headings - the bits where headings interact with each other
-        resolvePeersAttributesAndParentOf(azquoMemoryDBConnection, headings);
-        //set 'isAttributeSubject for date headings if there is not already an attribute subject or a heading with no attribute
         for (MutableImportHeading heading:headings){
-            if (heading.attribute!=null && (heading.attribute.equals(USDATELANG) || heading.attribute.equals(DATELANG))){
+            if (heading.attribute!=null && (heading.attribute.equalsIgnoreCase(USDATELANG) || heading.attribute.equalsIgnoreCase(DATELANG))){
                 boolean hasAttributeSubject=false;
                 for (MutableImportHeading heading2:headings){
-                    if (heading2.isAttributeSubject || heading2.attribute==null){
+                    if (heading2.heading.equalsIgnoreCase(heading.heading) && (heading2.isAttributeSubject || heading2.attribute==null)){
                         hasAttributeSubject = true;
                         break;
                     }
@@ -167,7 +165,9 @@ todo - add classification here
                 }
             }
         }
-        // convert to immutable. Not strictly necessary, as much for my sanity as anything (EFC) - we do NOT want this info changed by actual data loading
+        resolvePeersAttributesAndParentOf(azquoMemoryDBConnection, headings);
+        //set 'isAttributeSubject for date headings if there is not already an attribute subject or a heading with no attribute
+           // convert to immutable. Not strictly necessary, as much for my sanity as anything (EFC) - we do NOT want this info changed by actual data loading
 
         return headings.stream().map(ImmutableImportHeading::new).collect(Collectors.toList());
     }
