@@ -154,7 +154,7 @@ todo - add classification here
         resolvePeersAttributesAndParentOf(azquoMemoryDBConnection, headings);
         //set 'isAttributeSubject for date headings if there is not already an attribute subject or a heading with no attribute
         for (MutableImportHeading heading:headings){
-            if (heading.attribute.equals(USDATELANG) || heading.attribute.equals(DATELANG)){
+            if (heading.attribute!=null && (heading.attribute.equals(USDATELANG) || heading.attribute.equals(DATELANG))){
                 boolean hasAttributeSubject=false;
                 for (MutableImportHeading heading2:headings){
                     if (heading2.isAttributeSubject || heading2.attribute==null){
