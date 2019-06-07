@@ -155,7 +155,7 @@ todo - add classification here
             if (heading.attribute!=null && (heading.attribute.equalsIgnoreCase(USDATELANG) || heading.attribute.equalsIgnoreCase(DATELANG))){
                 boolean hasAttributeSubject=false;
                 for (MutableImportHeading heading2:headings){
-                    if (heading2.heading.equalsIgnoreCase(heading.heading) && (heading2.isAttributeSubject || heading2.attribute==null)){
+                    if (heading2.heading!=null && heading2.heading.equalsIgnoreCase(heading.heading) && (heading2.isAttributeSubject || heading2.attribute==null)){
                         hasAttributeSubject = true;
                         break;
                     }
