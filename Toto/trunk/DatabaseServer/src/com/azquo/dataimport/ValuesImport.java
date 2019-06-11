@@ -35,7 +35,7 @@ public class ValuesImport {
         try {
             long track = System.currentTimeMillis();
             // now, since this will be multi threaded need to make line objects to batch up. Cannot be completely immutable due to the current logic e.g. composite values
-            ArrayList<TypedPair<Integer, List<ImportCellWithHeading>>> linesBatched = new ArrayList<>(batchSize);
+            ArrayList<LineDataWithLineNumber> linesBatched = new ArrayList<>(batchSize);
             List<Future> futureBatches = new ArrayList<>();
             // Local cache of names just to speed things up, a name could be referenced millions of times in one file
             final Map<String, Name> namesFoundCache = new ConcurrentHashMap<>();
@@ -95,13 +95,13 @@ public class ValuesImport {
                         columnIndex++;
                     }
                     if (!corrupt && !blankLine) {
-                        linesBatched.add(new TypedPair<>(lineIterator.getCurrentLocation().getLineNr() - 1, importCellsWithHeading)); // line no - 1 as we want where it was, not where it's waiting now
+                        linesBatched.add(new LineDataWithLineNumber(importCellsWithHeading, lineIterator.getCurrentLocation().getLineNr() - 1)); // line no - 1 as we want where it was, not where it's waiting now
                         // Start processing this batch. As the file is read the active threads will rack up to the maximum number allowed rather than starting at max. Store the futures to confirm all are done after all lines are read.
                         // batch size is derived by getLineIteratorAndBatchSize
                         if (linesBatched.size() == batchSize) {
                             futureBatches.add(ThreadPools.getMainThreadPool().submit(
                                     new BatchImporter(connection
-                                            , uploadedFile.getNoValuesAdjusted(), linesBatched
+                                            , linesBatched
                                             , namesFoundCache, uploadedFile.getLanguages()
                                             , linesRejected, noLinesRejected, uploadedFile.getParameter("cleardata") != null, compositeIndexResolver))// line no should be the start
 
@@ -116,7 +116,7 @@ public class ValuesImport {
                 }
             }
             futureBatches.add(ThreadPools.getMainThreadPool().submit(new BatchImporter(connection
-                    , uploadedFile.getNoValuesAdjusted(), linesBatched, namesFoundCache, uploadedFile.getLanguages(), linesRejected, noLinesRejected, uploadedFile.getParameter("cleardata") != null, compositeIndexResolver)));
+                    , linesBatched, namesFoundCache, uploadedFile.getLanguages(), linesRejected, noLinesRejected, uploadedFile.getParameter("cleardata") != null, compositeIndexResolver)));
             // check all work is done and memory is in sync
             for (Future<?> futureBatch : futureBatches) {
                 futureBatch.get(1, TimeUnit.HOURS);

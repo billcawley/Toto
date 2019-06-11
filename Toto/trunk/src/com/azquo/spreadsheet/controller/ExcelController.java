@@ -237,7 +237,7 @@ public class ExcelController {
 
                     if (op.equals("logon")) {
                         LoginInfo li = new LoginInfo(request.getSession().getId(), loggedInUser.getUser().getStatus());
-                        System.out.println("login response : " + jacksonMapper.writeValueAsString(li));
+                        //System.out.println("login response : " + jacksonMapper.writeValueAsString(li));
                         return jacksonMapper.writeValueAsString(li);
                     }
                 }
@@ -557,7 +557,7 @@ public class ExcelController {
                                     List<String> dropdownListForQuery = CommonReportUtils.getDropdownListForQuery(loggedInUser, choice, null, chosen);
                                     for (String value : dropdownListForQuery) {
                                         toReturn.add(value);
-                                        if (toReturn.size() > 30) { // arbitrary, need to test
+                                        if (toReturn.size() > 260) { // arbitrary, need to test
                                             break;
                                         }
                                     }
@@ -596,7 +596,7 @@ public class ExcelController {
                                                     choices.put(name, Collections.singletonList("textarea"));
                                                 } else {
                                                     dropdownListForQuery = CommonReportUtils.getDropdownListForQuery(loggedInUser, query, null, null);
-                                                    if (dropdownListForQuery.size() > 30) {
+                                                    if (dropdownListForQuery.size() > 260) {
                                                         List<String> autoAndChoice = new ArrayList<>();
                                                         autoAndChoice.add("auto");
                                                         autoAndChoice.add(query);

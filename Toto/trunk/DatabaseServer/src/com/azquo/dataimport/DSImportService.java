@@ -48,6 +48,7 @@ public class DSImportService {
         toReturn.setDataModified(!azquoMemoryDBConnection.isUnusedProvenance());
         toReturn.setProvenanceId(azquoMemoryDBConnection.getProvenance().getId());
         toReturn.setNoNamesAdjusted(azquoMemoryDBConnection.getAzquoMemoryDB().countNamesForProvenance(azquoMemoryDBConnection.getProvenance()));
+        toReturn.setNoValuesAdjusted(azquoMemoryDBConnection.getAzquoMemoryDB().countValuesForProvenance(azquoMemoryDBConnection.getProvenance()));
         return toReturn;
     }
     // Called by above but also directly from SSpreadsheet service when it has prepared a CSV from data entered ad-hoc into a sheet

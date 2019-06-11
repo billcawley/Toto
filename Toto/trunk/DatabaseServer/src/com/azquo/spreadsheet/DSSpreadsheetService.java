@@ -254,7 +254,7 @@ public class DSSpreadsheetService {
         if (!temp.delete()) {// see no harm in this here. Delete on exit has a problem with Tomcat being killed from the command line. Why is intelliJ shirty about this?
             System.out.println("Unable to delete " + temp.getPath());
         }
-        return uploadedFile.getNoValuesAdjusted().get();
+        return uploadedFile.getNoValuesAdjusted();
     }
 
     public static void persistDatabase(DatabaseAccessToken databaseAccessToken) {

@@ -61,13 +61,12 @@ public final class ValueService {
 
     private static AtomicInteger storeValueWithProvenanceAndNamesCount = new AtomicInteger(0);
 
-    public static boolean storeValueWithProvenanceAndNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, String valueString, final Set<Name> names) throws Exception {
-        return storeValueWithProvenanceAndNames(azquoMemoryDBConnection, valueString, names, false);
+    public static void storeValueWithProvenanceAndNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, String valueString, final Set<Name> names) throws Exception {
+        storeValueWithProvenanceAndNames(azquoMemoryDBConnection, valueString, names, false);
     }
 
 
-    public static boolean storeValueWithProvenanceAndNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, String valueString, final Set<Name> names, boolean override) throws Exception {
-        boolean dataChanged = false;
+    public static void storeValueWithProvenanceAndNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, String valueString, final Set<Name> names, boolean override) throws Exception {
         storeValueWithProvenanceAndNamesCount.incrementAndGet();
         // ok there's an issue of numbers with "," in them, in that case I should remove on the way in
         if (valueString.contains(",")) {
@@ -90,12 +89,11 @@ public final class ValueService {
                     Double existingDouble = Double.parseDouble(existingValue.getText());
                     Double newValue = Double.parseDouble(valueString);
                     if (override) {
-                        if (newValue.equals(existingDouble)) return false;
+                        if (newValue.equals(existingDouble)) return;
                     } else {
                         valueString = (existingDouble + newValue) + "";
                     }
                     existingValue.setText(valueString);
-                    dataChanged = true;
                 } catch (Exception e) {
                     // use the latest value
                 }
@@ -115,7 +113,6 @@ public final class ValueService {
         //addToTimesForConnection(azquoMemoryDBConnection, "storeValueWithProvenanceAndNames4", marker - System.currentTimeMillis());
         //marker = System.currentTimeMillis();
         if (!alreadyInDatabase) {
-            dataChanged = true;
             // create
             Value value = createValue(azquoMemoryDBConnection, azquoMemoryDBConnection.getProvenance(), valueString);
             // and link to names
@@ -123,7 +120,6 @@ public final class ValueService {
         }
         //addToTimesForConnection(azquoMemoryDBConnection, "storeValueWithProvenanceAndNames5", marker - System.currentTimeMillis());
         //marker = System.currentTimeMillis();
-        return dataChanged;
     }
 
     // called when altering values in a spreadsheet
