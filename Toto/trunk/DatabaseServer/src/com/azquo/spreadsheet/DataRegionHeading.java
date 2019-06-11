@@ -62,7 +62,7 @@ public class DataRegionHeading {
     private Collection<Name> valueFunctionSet; // just used for valueparentcount and valueset
     private final double doubleParameter; // initially used for percentile, could be others. I think this needs to be rearranged at some point but for the moment make percentile work.
     private final Collection<Name> attributeSet;
-    private final String calculation; //the description having passed through the preparation routines
+    private String calculation; //the description having passed through the preparation routines
 
     DataRegionHeading(Name name, boolean writeAllowed, FUNCTION function, SUFFIX suffix, String description, Set<Name> valueFunctionSet) {
         this(name, writeAllowed,function,suffix, description, null, valueFunctionSet, 0, null);
@@ -211,6 +211,8 @@ public class DataRegionHeading {
     }
 
     public String getCalculation() { return calculation; }
+
+    public void setCalculation(String calculation){ this.calculation = calculation; }
 
 
 }

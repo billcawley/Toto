@@ -21,12 +21,16 @@ import org.zkoss.zss.api.model.Sheet;
 import org.zkoss.zss.model.CellRegion;
 import org.zkoss.zss.model.SCell;
 import org.zkoss.zss.model.SName;
+import sun.net.spi.nameservice.NameService;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.StringTokenizer;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Created by edward on 09/01/17.
@@ -109,6 +113,8 @@ public class ReportExecutor {
     // we assume cleansed of blank lines
     // now can return the outcome if there's an az_Outcome cell. Assuming a loop or list of "do"s then the String returned is the last.
     private static TypedPair<String, Double> executeCommands(LoggedInUser loggedInUser, List<String> commands, StringBuilder loopsLog, List<List<List<String>>> systemData2DArrays, AtomicInteger count, int provenanceId) throws Exception {
+        String filterContext = null;
+        String filterItems = null;
         TypedPair<String, Double> toReturn = null;
         if (commands.size() > 0 && commands.get(0) != null) {
             String firstLine = commands.get(0);
@@ -313,10 +319,56 @@ public class ReportExecutor {
                     RMIClient.getServerInterface(loggedInUser.getDatabaseServer().getIp())
                             .getJsonChildren(loggedInUser.getDataAccessToken(), 0, 0, false, "edit:zapdata " + trimmedLine.substring(7), StringLiterals.DEFAULT_DISPLAY_NAME, 0);
 
+                }else if (trimmedLine.toLowerCase().startsWith("filtercontext")){
+                    filterContext = trimmedLine.substring("filtercontext".length()).trim();
+
+
+                }else if (trimmedLine.toLowerCase().startsWith("filteritems")){
+                    filterItems = trimmedLine.substring("filteritems".length()).trim();
+
                 } else if (trimmedLine.toLowerCase().startsWith("set ")) {
-                    String result = CommonReportUtils.resolveQuery(loggedInUser, trimmedLine.substring(4));
-                    if (result.toLowerCase().startsWith("error")) {
-                        throw (new Exception(result));
+                    /*
+                    there are now two versions:
+                    1) Set <expression> as[global]  name  -     this is creating a set
+                    2) set `<name>` = <expresssion>
+                        this calculates <name> from <expression> using filterItems and filterContext.
+                        in <expression> if '|' is used in a term, that term is considered to be a constant.
+                        e.g  filtercontext = Jan-19|`Affiliate Items` children
+                             filterItems = `All orders` children
+                             set `commission` = `Price` * `Commission %`|Affiliate Items`
+
+                        in the instance above, the system first calculates the `Commission %`|`Affiliate Items` as a constant, then applies this formula to `commission` which is saved. `
+
+                     */
+                    Pattern p = Pattern.compile("" + StringLiterals.QUOTE + "[^" + StringLiterals.QUOTE +"]*" + StringLiterals.QUOTE + " ="); //`name`=
+                    Matcher m = p.matcher(trimmedLine.substring(4));
+                    if (m.find() && m.start()==0){
+                        List<List<String>> colHeadings = makeNewListList("");
+                        colHeadings.get(0).set(0,trimmedLine);
+                        List<List<String>> rowHeadings = makeNewListList(filterItems);
+                        List<List<String>> context = makeNewListList(filterContext);
+                        String region = "autoexecute";
+                        //note that this routine gets the data twice - once here, and once before saving.  This is unnecessary, but quicker to program for the moment.
+                        UserRegionOptions userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), 0, "", "execute");//must have userRegionOptions
+                        CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = SpreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser, region, 0, rowHeadings, colHeadings,
+                                context, userRegionOptions, true, null);
+                        loggedInUser.setSentCells(loggedInUser.getOnlineReport().getId(), region, region, cellsAndHeadingsForDisplay);
+                        for (List<CellForDisplay> row:cellsAndHeadingsForDisplay.getData()){
+                            row.get(0).setNewStringValue(row.get(1).getStringValue());
+                            row.get(0).setChanged();
+                            row.get(0).setNewDoubleValue(row.get(1).getDoubleValue());
+                        }
+
+                        System.out.println("saving for : " + region);
+                        OnlineReport onlineReport = loggedInUser.getOnlineReport();
+                        SpreadsheetService.saveData(loggedInUser, onlineReport.getId(), onlineReport.getReportName(), region, region.toLowerCase(), true); // to not persist right now
+
+
+                    }else {
+                        String result = CommonReportUtils.resolveQuery(loggedInUser, trimmedLine.substring(4));
+                        if (result.toLowerCase().startsWith("error")) {
+                            throw (new Exception(result));
+                        }
                     }
                 } else if (trimmedLine.toLowerCase().startsWith("if ")) {
                     String result = CommonReportUtils.resolveQuery(loggedInUser, trimmedLine.substring(4));
@@ -362,6 +414,13 @@ public class ReportExecutor {
             }
         }
         loopsLog.append("\r\n");
+        return toReturn;
+    }
+
+    private static List<List<String>> makeNewListList(String source){
+         List<List<String>> toReturn = new ArrayList<>();
+       if (source==null) return toReturn;
+        toReturn.add(Arrays.asList(source.split("\\|")));
         return toReturn;
     }
 

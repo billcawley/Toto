@@ -88,6 +88,7 @@ public class ReportRenderer {
 
     // todo - is it possible to extract some of this to a pre importer? Can't put it all in there . . .
     private static boolean populateBook(Book book, int valueId, boolean useSavedValuesOnFormulae, boolean executeMode, StringBuilder errors, boolean useRepeats) { // todo - make more elegant? error hack . . .
+
         BookUtils.removeNamesWithNoRegion(book); // should protect against some errors.
 
 
@@ -107,6 +108,7 @@ public class ReportRenderer {
             e.printStackTrace();
         }
         int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
+        loggedInUser.setOnlineReport(OnlineReportDAO.findById(reportId));
         Map<Sheet, String> sheetsToRename = new HashMap<>(); // the repeat sheet can require renaming the first "template" sheet but this seems to trip up ZK so do it at the end after all the expanding etc
         //String context = "";
         // why a sheet loop at the outside, why not just run all the names? Need to have a think . . .
@@ -294,7 +296,7 @@ public class ReportRenderer {
                         }
                         loggedInUser.setDatabaseWithServer(origServer, origDatabase);
                     } else {
-                        String error = populateRegionSet(sheet, reportId, sheet.getSheetName(), region, valueId, userRegionOptions, loggedInUser, executeMode, repeatRegionTracker);
+                         String error = populateRegionSet(sheet, reportId, sheet.getSheetName(), region, valueId, userRegionOptions, loggedInUser, executeMode, repeatRegionTracker);
                         if (errors != null && error != null) {
                             if (errors.length() > 0) {
                                 errors.append("\n");
@@ -441,7 +443,6 @@ public class ReportRenderer {
         SName contextDescription = BookUtils.getNameByName(AZCONTEXT + region, sheet);
         if (queryRegion!=null){
             List<List<String>> contextList = BookUtils.nameToStringLists(contextDescription);
-            loggedInUser.setOnlineReport(OnlineReportDAO.findById(reportId));
 
             ReportService.resolveQuery(loggedInUser,sheet,queryRegion, contextList);
         }

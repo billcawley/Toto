@@ -1,11 +1,10 @@
 package com.azquo.spreadsheet;
 
-import com.azquo.MultidimensionalListUtils;
-import com.azquo.ThreadPools;
-import com.azquo.TypedPair;
+import com.azquo.*;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.Value;
+import com.azquo.memorydb.service.MutableBoolean;
 import com.azquo.memorydb.service.NameService;
 import com.azquo.memorydb.service.ValueCalculationService;
 import com.azquo.memorydb.service.ValueService;
@@ -13,6 +12,7 @@ import com.azquo.spreadsheet.transport.RegionOptions;
 import net.openhft.koloboke.collect.map.hash.HashIntDoubleMaps;
 import net.openhft.koloboke.collect.map.hash.HashIntObjMaps;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
+import org.apache.commons.lang.mutable.Mutable;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -24,6 +24,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Extracted from DSSpreadsheetService by edward on 28/10/16.
@@ -116,6 +118,8 @@ class AzquoCellService {
         }
         List<String> languages = NameService.getDefaultLanguagesList(user);
         long track = System.currentTimeMillis();
+        String calcExpression = null;
+
         long start = track;
         long threshold = 1000;
         // the context is changing to data region headings to support name function permutations - unlike the column and row headings it has to be flat, a resultant one dimensional list from createHeadingArraysFromSpreadsheetRegion
@@ -150,12 +154,29 @@ class AzquoCellService {
             languages = new ArrayList<>();
             languages.add(regionOptions.columnLanguage);
         }
+        String firstColumnHeading = colHeadingsSource.get(0).get(0);
+        Pattern p = Pattern.compile("" + StringLiterals.QUOTE + "[^" + StringLiterals.QUOTE +"]*" + StringLiterals.QUOTE + " ="); //`name`=
+        Matcher matcher = p.matcher(firstColumnHeading);
+        if (matcher.find()) {
+            calcExpression = firstColumnHeading.substring(matcher.end()).trim();
+            calcExpression = extractConstantsFromCalcExpression(azquoMemoryDBConnection, calcExpression,contextHeadings);
+            String target = matcher.group();
+            target = target.substring(0, target.length() - 2);//remove ' ='
+            colHeadingsSource.get(0).set(0,target);
+
+        }
         final List<List<List<DataRegionHeading>>> columnHeadingLists = DataRegionHeadingService.createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBConnection, colHeadingsSource, languages, AzquoCellService.COL_HEADINGS_NAME_QUERY_LIMIT, contextSuffix, regionOptions.ignoreHeadingErrors);
         languages = defaultLanguages;
         time = (System.currentTimeMillis() - track);
         if (time > threshold) System.out.println("Column headings parsed in " + time + "ms");
         track = System.currentTimeMillis();
         final List<List<DataRegionHeading>> columnHeadings = DataRegionHeadingService.expandHeadings(MultidimensionalListUtils.transpose2DList(columnHeadingLists), sharedNames, regionOptions.noPermuteTotals);
+        if (calcExpression!=null) {
+            //add another column for the calcExpression
+            List<DataRegionHeading> calcItem = new ArrayList<>();
+            calcItem.add(new DataRegionHeading(null, false, null, null, null, null, null, 0, calcExpression));
+            columnHeadings.add(calcItem);
+        }
         time = (System.currentTimeMillis() - track);
         if (time > threshold) System.out.println("Column headings expanded in " + time + "ms");
         track = System.currentTimeMillis();
@@ -202,6 +223,67 @@ class AzquoCellService {
     }
 
     // used by the pivot permute function, really it's building a set of shared names based on all the children of names specified in context
+
+
+    private static String extractConstantsFromCalcExpression(AzquoMemoryDBConnection azquoMemoryDBConnection, String expression, List<DataRegionHeading> context) throws  Exception{
+        String error = expression + " not understood";
+        String[] elements = expression.split("\\|");
+        if (elements.length==1) return expression;
+        String toReturn = "";
+        List<String> constant = new ArrayList<>();
+        for (String element:elements) {
+            while (element.length() > 0) {
+                int quotePos = element.lastIndexOf(StringLiterals.QUOTE + "");
+                if (quotePos < 0) {
+                    throw new Exception(error);
+                }
+                quotePos = element.lastIndexOf(StringLiterals.QUOTE + "", quotePos - 1);
+                if (quotePos < 0) {
+                    throw new Exception(error);
+                }
+                if (quotePos > 0) {
+                    if (constant.size() != 0){
+                        toReturn += resolveConstant(azquoMemoryDBConnection, constant, context);
+                    }
+                    toReturn += element.substring(0, quotePos);
+                    element = element.substring(quotePos);
+                }
+                if (!element.startsWith(StringLiterals.QUOTE + "") || element.length() < 3) {
+                    throw new Exception(error);
+                }
+                quotePos = element.indexOf(StringLiterals.QUOTE + "",1);
+                if (quotePos < 0) {
+                    throw new Exception(error);
+                }
+                constant.add(element.substring(0, ++quotePos));
+                element = element.substring(quotePos);
+            }
+        }
+        if (constant.size() > 0){
+            toReturn += resolveConstant(azquoMemoryDBConnection, constant, context);
+        }
+        return toReturn;
+
+    }
+
+    private static String resolveConstant(AzquoMemoryDBConnection azquoMemoryDBConnection, List<String> constant, List<DataRegionHeading>context)throws Exception{
+         List<Name> cellNames = new ArrayList<>();
+        for (String nameString:constant){
+            cellNames.add(NameService.findByName(azquoMemoryDBConnection,nameString));
+
+        }
+        cellNames.addAll(DataRegionHeadingService.namesFromDataRegionHeadings(context));
+        AzquoCellResolver.ValuesHook valuesHook = new AzquoCellResolver.ValuesHook();
+        MutableBoolean locked = new MutableBoolean();
+        double d = ValueService.findValueForNames(azquoMemoryDBConnection,cellNames,null,locked,valuesHook,null,null,null,null,null);
+        if (d !=0){
+            return d + "";
+        }
+        if (valuesHook.values.size() ==1){
+            return valuesHook.values.get(0).getText();
+        }
+        return "";
+    }
 
     static Collection<Name> getSharedNames(List<DataRegionHeading> headingList) {
         //long startTime = System.currentTimeMillis();
