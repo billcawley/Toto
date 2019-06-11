@@ -604,7 +604,7 @@ public final class ImportService {
     private static final String PRE_PROCESSOR = "pre-processor";
     private static final String PREPROCESSOR = "preprocessor";
     private static final String ADDITIONALDATAPROCESSOR = "additionaldataprocessor";
-    private static final String POSTPROCESSOR = "postprocessor";
+    public static final String POSTPROCESSOR = "postprocessor";
     private static final String VALIDATION = "validation";
     private static final String NOFILEHEADINGS = "nofileheadings";
     private static final String LANGUAGE = "language";

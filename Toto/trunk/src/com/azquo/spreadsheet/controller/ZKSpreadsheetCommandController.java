@@ -7,10 +7,7 @@ import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.dataimport.ImportService;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
-import com.azquo.spreadsheet.zk.ChoicesService;
-import com.azquo.spreadsheet.zk.ReportRenderer;
-import com.azquo.spreadsheet.zk.BookUtils;
-import com.azquo.spreadsheet.zk.ReportService;
+import com.azquo.spreadsheet.zk.*;
 import org.apache.commons.lang.StringUtils;
 import org.apache.pdfbox.util.PDFMergerUtility;
 import org.springframework.stereotype.Controller;
@@ -86,11 +83,6 @@ public class ZKSpreadsheetCommandController {
         return s;
     }
 
-    static DecimalFormat df = new DecimalFormat("00000000");
-    private static String eightCharInt(int input){
-        return df.format(input);
-    }
-
 
     @RequestMapping
     public void handleRequest(final HttpServletRequest req, HttpServletResponse resp) throws Exception {
@@ -112,7 +104,7 @@ public class ZKSpreadsheetCommandController {
         JsonUpdateBridge bridge = new JsonUpdateBridge(req.getServletContext(), req, resp,
                 desktopId) {
             @Override
-            protected void process(Desktop desktop) throws IOException {
+            protected void process(Desktop desktop) {
                 Spreadsheet ss = (Spreadsheet) desktop.getComponentByUuidIfAny(zssUuid);
                 LoggedInUser loggedInUser = (LoggedInUser) req.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
                 try {
@@ -226,11 +218,6 @@ public class ZKSpreadsheetCommandController {
                         Clients.evalJavaScript("postAjax('ActuallyXMLZIP');");
                     }
                     if (action != null && action.startsWith("ActuallyXML")) {
-                        int fileCount = 0;
-                        // ok try to find the relevant regions
-                        List<SName> namesForSheet = BookUtils.getNamesForSheet(ss.getSelectedSheet());
-                        Path azquoTempDir = Paths.get(SpreadsheetService.getHomeDir() + "/temp"); // do xml initially in here then copy across, we may need a capy of the file later to match back to errors
-
                         Path destdir;
                         boolean zipMode = true;
                         if (SpreadsheetService.getXMLDestinationDir() != null && !SpreadsheetService.getXMLDestinationDir().isEmpty() && !action.contains("ZIP")){
@@ -239,299 +226,7 @@ public class ZKSpreadsheetCommandController {
                         } else {
                             destdir = Files.createTempDirectory("zipforxmlfiles");
                         }
-                        for (SName name : namesForSheet) {
-                            if (name.getName().toLowerCase().startsWith(ReportRenderer.AZDATAREGION)) { // then we have a data region to deal with here
-                                String region = name.getName().substring(ReportRenderer.AZDATAREGION.length()); // might well be an empty string
-                                // we don't actually need to do anything with this now but we need to switch on the XML button
-                                SName xmlHeadings = BookUtils.getNameByName(ReportRenderer.AZXML + region, ss.getSelectedSheet());
-                                Map<String,Integer> xmlToColMap = new HashMap<>();
-                                if (xmlHeadings != null) {
-                                    Map<String,Integer> reportSelectionsColMap = new HashMap<>();
-                                    SName filePrefixName = BookUtils.getNameByName(ReportRenderer.AZXMLFILENAME + region, ss.getSelectedSheet());
-
-                                    String filePrefix = null;
-                                    boolean multiRowPrefix = false; // a multi row prefix means the prefix will be different for each line
-                                    if (filePrefixName != null){
-                                        if ((filePrefixName.getRefersToCellRegion().lastRow - filePrefixName.getRefersToCellRegion().row) > 0){ // only one row normally
-                                            multiRowPrefix = true;
-                                        } else {
-                                            SCell snameCell = BookUtils.getSnameCell(filePrefixName);
-                                            if (snameCell != null){
-                                                // dash not allowed
-                                                filePrefix = snameCell.getStringValue().replace("-","");
-                                            }
-                                        }
-                                    }
-
-                                    for (int col = xmlHeadings.getRefersToCellRegion().column; col <= xmlHeadings.getRefersToCellRegion().lastColumn; col++){
-                                        CellData cellData = Ranges.range(ss.getSelectedSheet(), xmlHeadings.getRefersToCellRegion().row,col).getCellData();
-//                                        String dataFormat = sheet.getInternalSheet().getCell(r, c).getCellStyle().getDataFormat();
-                                        //if (colCount++ > 0) bw.write('\t');
-                                        if (cellData != null && cellData.getFormatText().length() > 0) {
-                                            xmlToColMap.put(cellData.getFormatText(), col);// I assume means formatted text
-                                        }
-                                    }
-
-                                    String reportName = null;
-                                    // the name of the xlsx file generated
-                                    SName supportReportName = BookUtils.getNameByName(ReportRenderer.AZSUPPORTREPORTNAME + region, ss.getSelectedSheet());
-                                    SName supportReportSelections = BookUtils.getNameByName(ReportRenderer.AZSUPPORTREPORTSELECTIONS + region, ss.getSelectedSheet());
-                                    SName supportReportFileXMLTag = BookUtils.getNameByName(ReportRenderer.AZSUPPORTREPORTFILEXMLTAG + region, ss.getSelectedSheet());
-                                    final int reportFileXMLTagIndex = -1;
-                                    if (supportReportName != null && supportReportSelections != null){
-                                        // then we have xlsx files to generate along side the XML files
-                                        SCell snameCell = BookUtils.getSnameCell(supportReportName);
-                                        if (snameCell != null){
-                                            reportName = snameCell.getStringValue();
-                                        }
-                                        for (int col = supportReportSelections.getRefersToCellRegion().column; col <= supportReportSelections.getRefersToCellRegion().lastColumn; col++){
-                                            CellData cellData = Ranges.range(ss.getSelectedSheet(), supportReportSelections.getRefersToCellRegion().row,col).getCellData();
-//                                        String dataFormat = sheet.getInternalSheet().getCell(r, c).getCellStyle().getDataFormat();
-                                            //if (colCount++ > 0) bw.write('\t');
-                                            if (cellData != null && cellData.getFormatText().length() > 0) {
-                                                reportSelectionsColMap.put(cellData.getFormatText(), col);// I assume means formatted text
-                                            }
-                                        }
-                                        if (supportReportFileXMLTag != null){
-                                            SCell cell = BookUtils.getSnameCell(supportReportFileXMLTag);
-                                            // essentially a special case XML mapping. Doesn't match to a column, it will have the path to the generated report in it
-                                            if (cell != null){
-                                                xmlToColMap.put(cell.getStringValue(), reportFileXMLTagIndex);// I assume means formatted text
-                                            }
-                                        }
-                                    }
-                                    // if there's extra info e.g. EdIT Section (not brokasure section) that needs to be hung on to to help identify data on the way back in.
-                                    // Adding extra fields to the XML sent to Brokasure would do this but I want to stick as closely to the spec as possible
-                                    SName xmlExtraInfo = BookUtils.getNameByName(ReportRenderer.AZXMLEXTRAINFO + region, ss.getSelectedSheet());
-                                    Map<String,Integer> xmlExtraInfoColMap = new HashMap<>();
-                                    if (xmlExtraInfo != null){
-                                        for (int col = xmlExtraInfo.getRefersToCellRegion().column; col <= xmlExtraInfo.getRefersToCellRegion().lastColumn; col++){
-                                            CellData cellData = Ranges.range(ss.getSelectedSheet(), xmlExtraInfo.getRefersToCellRegion().row,col).getCellData();
-//                                        String dataFormat = sheet.getInternalSheet().getCell(r, c).getCellStyle().getDataFormat();
-                                            //if (colCount++ > 0) bw.write('\t');
-                                            if (cellData != null && cellData.getFormatText().length() > 0) {
-                                                xmlExtraInfoColMap.put(cellData.getFormatText(), col);// I assume means formatted text
-                                            }
-                                        }
-                                    }
-
-
-                                    boolean rootInSheet = true;
-
-                                    String rootCandidate = null;
-
-                                    for (String xmlName : xmlToColMap.keySet()){
-                                        String test;
-                                        if (xmlName.indexOf("/", 1) > 0){
-                                            test = xmlName.substring(0, xmlName.indexOf("/", 1));
-                                        } else {
-                                            test = xmlName;
-                                        }
-                                        if (rootCandidate == null){
-                                            rootCandidate = test;
-                                        } else if (!rootCandidate.equals(test)){
-                                            rootInSheet = false;
-                                        }
-                                    }
-
-                                    if (rootInSheet){ // then strip off the first tag, it will be used as root
-                                        for (String xmlName : new ArrayList<>(xmlToColMap.keySet())) { // copy the keys, I'm going to modify them!
-                                            Integer remove = xmlToColMap.remove(xmlName);
-                                            xmlToColMap.put(xmlName.substring(xmlName.indexOf("/", 1)), remove);
-                                        }
-                                    }
-
-                                    List<String> xmlNames = new ArrayList<>(xmlToColMap.keySet());
-                                    Collections.sort(xmlNames);
-                                    // then sort again jamming those with nested elements at the bottom
-                                    //xmlNames.sort(Comparator.comparingInt(s -> StringUtils.countMatches(s, "/")));
-                                    DocumentBuilderFactory docFactory = DocumentBuilderFactory.newInstance();
-                                    DocumentBuilder docBuilder = docFactory.newDocumentBuilder();
-                                    TransformerFactory transformerFactory = TransformerFactory.newInstance();
-                                    Transformer transformer = transformerFactory.newTransformer();
-                                    // matching brekasure example
-                                    transformer.setOutputProperty(OutputKeys.STANDALONE, "yes");
-                                    transformer.setOutputProperty(OutputKeys.INDENT, "yes");
-                                    transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4");
-                                    // going for one file per line as per brokersure, zip at the end
-                                    // tracking where we are in the xml, what elements we're in
-                                    // new criteria for filenames - do a base 64 hash
-                                    LocalDateTime start = LocalDateTime.of(2019, Month.JANUARY, 1,0,0);
-                                    LocalDateTime now = LocalDateTime.now();
-                                    int filePointer = (int) (now.toEpochSecond(ZoneOffset.UTC) - start.toEpochSecond(ZoneOffset.UTC));
-                                    for (int row = name.getRefersToCellRegion().row; row <= name.getRefersToCellRegion().lastRow; row++) {
-
-                                        //String fileName = base64int(filePointer) + ".xml";
-                                        // if multi row try and find a prefix value in the range
-                                        if (multiRowPrefix){
-                                            CellRegion refersToCellRegion = filePrefixName.getRefersToCellRegion();
-                                            if (row >= refersToCellRegion.row && row <= refersToCellRegion.getLastRow()){
-                                                SCell cell = ss.getSelectedSheet().getInternalSheet().getCell(row, refersToCellRegion.column);
-                                                if (cell != null){
-                                                    // dash not allowed
-                                                    filePrefix = cell.getStringValue().replace("-","");
-                                                }
-                                            }
-                                        }
-
-                                        /* check the file pointer is fit for purpose for xml
-                                         note! I have to make the xml in azquo temp (which is not automatically cleared up - it may be manually periodically)
-                                         this is because in case of an error Brokasure is NOT currently returning the original file and will have zapped it from the
-                                         inbox. Hence I need a copy in temp, I'll use temp to check xml files are not duplicate names.
-                                         A moot point in the case of zips but no harm
-                                         */
-                                        String fileName = eightCharInt(filePointer) + ".xml";
-                                        while (azquoTempDir.resolve(fileName).toFile().exists()){
-                                            filePointer++;
-//                                            fileName = base64int(filePointer) + ".xml";
-                                            fileName = eightCharInt(filePointer) + ".xml";
-                                            if (filePrefix != null){
-                                                fileName = filePrefix + fileName;
-                                            }
-                                        }
-
-
-                                        String reportFileName = "";
-                                        // we now do reports first as if a file is produced then the path to that file might be used by the XML
-                                        if (reportName != null && !reportSelectionsColMap.isEmpty()){ // I can't see how the reportSelectionsColMap could be empty and valid
-                                            for (String choiceName : reportSelectionsColMap.keySet()) {
-                                                CellData cellData = Ranges.range(ss.getSelectedSheet(), row, reportSelectionsColMap.get(choiceName)).getCellData();
-                                                String value = "";
-                                                if (cellData != null) {
-                                                    value = cellData.getFormatText();// I assume means formatted text
-                                                }
-                                                if (!value.isEmpty()){
-                                                    SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choiceName, value);
-                                                }
-                                            }
-                                            OnlineReport onlineReport;
-                                            Database oldDatabase = null;
-                                            if (loggedInUser.getPermission(reportName.toLowerCase()) != null) {
-                                                TypedPair<OnlineReport, Database> permission = loggedInUser.getPermission(reportName.toLowerCase());
-                                                onlineReport = permission.getFirst();
-                                                if (permission.getSecond() != null) {
-                                                    oldDatabase = loggedInUser.getDatabase();
-                                                    loggedInUser.setDatabaseWithServer(loggedInUser.getDatabaseServer(), permission.getSecond());
-                                                }
-                                            } else { // otherwise try a straight lookup - stick on whatever db we're currently on
-                                                onlineReport = OnlineReportDAO.findForDatabaseIdAndName(loggedInUser.getDatabase().getId(), reportName);
-                                                if (onlineReport == null){
-                                                    onlineReport = OnlineReportDAO.findForNameAndBusinessId(reportName, loggedInUser.getUser().getBusinessId());
-                                                }
-                                            }
-                                            if (onlineReport != null) { // need to prepare it as in the controller todo - factor?
-                                                reportFileName = (filePrefix != null ? filePrefix : "") + eightCharInt(filePointer) + ".xlsx";
-                                                // check that the xlsx doesn't already exist - if it does then bump the pointer, also need to check xml for existing files at this point
-                                                while (azquoTempDir.resolve(reportFileName).toFile().exists() || azquoTempDir.resolve(fileName).toFile().exists()){
-                                                    filePointer++;
-                                                    reportFileName = (filePrefix != null ? filePrefix : "") + eightCharInt(filePointer) + ".xlsx";
-                                                    fileName = eightCharInt(filePointer) + ".xml";
-                                                    if (filePrefix != null){
-                                                        fileName = filePrefix + fileName;
-                                                    }
-                                                }
-
-                                                String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + onlineReport.getFilenameForDisk();
-                                                final Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
-                                                book.getInternalBook().setAttribute(OnlineController.BOOK_PATH, bookPath);
-                                                book.getInternalBook().setAttribute(OnlineController.LOGGED_IN_USER, loggedInUser);
-                                                book.getInternalBook().setAttribute(OnlineController.REPORT_ID, onlineReport.getId());
-                                                StringBuilder errorLog = new StringBuilder();
-                                                ReportRenderer.populateBook(book, 0, false, true, errorLog); // note true at the end here - keep on logging so users can see changes as they happen
-                                                Exporter exporter = Exporters.getExporter();
-//                                                File file = zipforxmlfiles.resolve((filePrefix != null ? filePrefix : "") + base64int(filePointer) + ".xlsx").toFile();
-                                                // like the xml files we now want these to have  a copy in temp too
-                                                File file = azquoTempDir.resolve(reportFileName).toFile();
-                                                try (FileOutputStream fos = new FileOutputStream(file)) {
-                                                    exporter.export(book, fos);
-                                                    fileCount++;
-                                                }
-                                                // now copy from the azquo temp dir
-                                                Files.copy(azquoTempDir.resolve(reportFileName), destdir.resolve(reportFileName));
-                                                if (oldDatabase != null) {
-                                                    loggedInUser.setDatabaseWithServer(loggedInUser.getDatabaseServer(), oldDatabase);
-                                                }
-                                            }
-                                        }
-                                        // then I need to create a simple properties file with the extra info
-                                        if (!xmlExtraInfoColMap.isEmpty()){
-                                            try (OutputStream output = new FileOutputStream(azquoTempDir.resolve((filePrefix != null ? filePrefix : "") + eightCharInt(filePointer) + ".properties").toString())) {
-                                                Properties properties = new Properties();
-                                                for (String propertyName : xmlExtraInfoColMap.keySet()) {
-                                                    CellData cellData = Ranges.range(ss.getSelectedSheet(), row, xmlExtraInfoColMap.get(propertyName)).getCellData();
-                                                    String value = "";
-                                                    if (cellData != null) {
-                                                        value = cellData.getFormatText();// I assume means formatted text
-                                                    }
-                                                    if (!value.isEmpty()){
-                                                        properties.put(propertyName, value);
-                                                    }
-                                                }
-                                                properties.store(output, null);
-                                            } catch (IOException io) {
-                                                io.printStackTrace();
-                                            }
-                                        }
-
-
-                                        if (filePrefix != null){
-                                            fileName = filePrefix + fileName;
-                                        }
-                                        //System.out.println("file name : " + fileName);
-                                        Document doc = docBuilder.newDocument();
-                                        doc.setXmlStandalone(true);
-                                        Element rootElement = doc.createElement(rootInSheet ? rootCandidate.replace("/","") : "ROOT");
-                                        doc.appendChild(rootElement);
-                                        List<Element> xmlContext = new ArrayList<>();
-                                        for (String xmlName : xmlNames){
-                                            int col = xmlToColMap.get(xmlName);
-                                            String value = "";
-                                            if (col == reportFileXMLTagIndex){
-                                                // the path seems hacky but i can't see a way around that at the mo
-                                                value = reportFileName;
-                                            } else {
-                                                CellData cellData = Ranges.range(ss.getSelectedSheet(), row, col).getCellData();
-                                                if (cellData != null) {
-                                                    value = cellData.getFormatText();// I assume means formatted text
-                                                }
-                                            }
-                                            // note - this logic assumes he mappings are sorted
-                                            StringTokenizer st = new StringTokenizer(xmlName, "/");
-                                            int i = 0;
-                                            while (st.hasMoreTokens()){
-                                                String nameElement = st.nextToken();
-                                                if (i >= xmlContext.size() || !xmlContext.get(i).getTagName().equals(nameElement)){
-                                                    if (i < xmlContext.size()){ // it didn't match, need to chop
-                                                        xmlContext = xmlContext.subList(0,i);// trim the list of bits we don't need
-                                                    }
-                                                    Element element = doc.createElement(nameElement);
-                                                    if (xmlContext.isEmpty()){
-                                                        rootElement.appendChild(element);
-                                                    } else {
-                                                        xmlContext.get(xmlContext.size() - 1).appendChild(element);
-                                                    }
-                                                    xmlContext.add(element);
-                                                }
-                                                i++;
-                                            }
-                                            xmlContext.get(xmlContext.size() - 1).appendChild(doc.createTextNode(value));
-                                        }
-                                        DOMSource source = new DOMSource(doc);
-                                        BufferedWriter bufferedWriter = Files.newBufferedWriter(azquoTempDir.resolve(fileName));
-                                        StreamResult result = new StreamResult(bufferedWriter);
-                                        transformer.transform(source, result);
-                                        bufferedWriter.close();
-                                        // now copy from the azquo temp dir
-                                        Files.copy(azquoTempDir.resolve(fileName), destdir.resolve(fileName));
-                                        fileCount++;
-                                        filePointer++;
-/*                                        if (fileCount > 8){
-                                            break;
-                                        }*/
-                                    }
-                                }
-                            }
-                        }
+                        int fileCount = ReportExecutor.generateXMLFilesAndSupportingReports(loggedInUser,ss.getSelectedSheet(), destdir);
                         // it was building a zip, compress and set for download
                         if (zipMode){
                             ZipUtil.unexplode(destdir.toFile());

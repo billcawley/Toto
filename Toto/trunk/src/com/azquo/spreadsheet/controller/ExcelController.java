@@ -18,6 +18,7 @@ import com.azquo.spreadsheet.transport.*;
 import com.azquo.spreadsheet.transport.json.CellsAndHeadingsForExcel;
 import com.azquo.spreadsheet.transport.json.ExcelJsonRequest;
 import com.azquo.spreadsheet.zk.ChoicesService;
+import com.azquo.spreadsheet.zk.ReportExecutor;
 import com.azquo.spreadsheet.zk.ReportRenderer;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -584,6 +585,7 @@ public class ExcelController {
                                     }
                                     // need to get to the parameter bits, maybe could reuse code but I'm not sure
                                     boolean hitBlank = false;
+                                    String postProcessor = null;
                                     for (int row = 1; row < importTemplateData.getSheets().get(sheet).size(); row++) {
                                         if (importTemplateData.getSheets().get(sheet).get(row).isEmpty()) {
                                             hitBlank = true;
@@ -592,7 +594,10 @@ public class ExcelController {
                                             String query = importTemplateData.getSheets().get(sheet).get(row).get(1);
                                             List<String> dropdownListForQuery;
                                             try {
-                                                if (query.equalsIgnoreCase("textarea")){ // I feel this is a bit hacky, maybe
+                                                // hacky. Many more hacks and I'll need to rethink this
+                                                if (name.equalsIgnoreCase(ImportService.POSTPROCESSOR)) {
+                                                    postProcessor = query;
+                                                } else if (query.equalsIgnoreCase("textarea")) { // I feel this is a bit hacky, maybe
                                                     choices.put(name, Collections.singletonList("textarea"));
                                                 } else {
                                                     dropdownListForQuery = CommonReportUtils.getDropdownListForQuery(loggedInUser, query, null, null);
@@ -618,7 +623,7 @@ public class ExcelController {
                                                 if (cellValue.toLowerCase().contains("default ")) {
                                                     String defaultValue;
                                                     int defaultIndex = cellValue.toLowerCase().indexOf("default ") + "default ".length();
-                                                    if (cellValue.indexOf(";", defaultIndex) > 0){
+                                                    if (cellValue.indexOf(";", defaultIndex) > 0) {
                                                         defaultValue = cellValue.substring(defaultIndex, cellValue.indexOf(";", defaultIndex));
                                                     } else {
                                                         defaultValue = cellValue.substring(defaultIndex).trim();
@@ -659,6 +664,14 @@ public class ExcelController {
                                         UploadedFile uploadedFile1 = uploadedFiles.get(0);
                                         if (uploadedFile1.getError() != null && !uploadedFile1.getError().isEmpty()) {
                                             return uploadedFile1.getError();
+                                        } else if (postProcessor != null) { // deal with execute. More specifically execute needs to be used by the claims header thing
+                                            // set user choices to submitted fields
+                                            for (String name : formFields) {
+                                                System.out.println(name + " : " + request.getParameter(name));
+                                                SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), name, request.getParameter(name));
+                                            }
+                                            // should we bother to report on the post processing result?
+                                            uploadedFile.setPostProcessingResult(ReportExecutor.runExecute(loggedInUser, uploadedFile.getPostProcessor(), null, uploadedFile.getProvenanceId(), false).toString());
                                         }
                                         return "ok";
                                     }
