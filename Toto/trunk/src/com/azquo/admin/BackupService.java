@@ -9,6 +9,7 @@ Report server logic for creating and restoring backups
 
 import com.azquo.admin.controller.ManageDatabasesController;
 import com.azquo.admin.database.*;
+import com.azquo.admin.onlinereport.DatabaseReportLinkDAO;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.user.User;
@@ -41,6 +42,9 @@ import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.util.*;
 
+import static com.azquo.dataimport.ImportService.dbPath;
+import static com.azquo.dataimport.ImportService.importTemplatesDir;
+
 
 public class BackupService {
 
@@ -48,19 +52,26 @@ public class BackupService {
     public static final String CATEGORYBREAKOLD = "|||"; // tripped up windows
     public static final String TYPEBREAK = "~~T~~"; // I'm not proud of this
 
-    public static File createDBandReportsAndTemplateBackup(LoggedInUser loggedInUser) throws Exception {
+    public static File createDBandReportsAndTemplateBackup(LoggedInUser loggedInUser, boolean justReports) throws Exception {
         // ok, new code to dump a database and all reports. The former being the more difficult bit.
         String dname = loggedInUser.getDatabase().getName();
         if (dname.length() < 3){
             dname += "---";
         }
-        File temp = File.createTempFile(dname, ".db");
-        String tempPath = temp.getPath();
-        createDBBackupFile(loggedInUser.getDatabase().getName(), loggedInUser.getDataAccessToken(), tempPath, loggedInUser.getDatabaseServer().getIp());
-        temp.deleteOnExit();
+        File dbFile = null;
+        if (!justReports){
+            dbFile = File.createTempFile(dname, ".db");
+            String tempPath = dbFile.getPath();
+            createDBBackupFile(loggedInUser.getDatabase().getName(), loggedInUser.getDataAccessToken(), tempPath, loggedInUser.getDatabaseServer().getIp());
+            dbFile.deleteOnExit();
+        }
         // so we've got the DB backup - now gather the reports and zip 'em up
         List<OnlineReport> onlineReports = OnlineReportDAO.findForDatabaseId(loggedInUser.getDatabase().getId());
-        int filesToPackSize = onlineReports.size() + 1;// +1 as it's the reports + the db . . .
+        int filesToPackSize = onlineReports.size();
+        if (dbFile != null){
+            // +1 as it's the reports + the db . . .
+            filesToPackSize++;
+        }
         ImportTemplate importTemplate = loggedInUser.getDatabase().getImportTemplateId() != -1 ? ImportTemplateDAO.findById(loggedInUser.getDatabase().getImportTemplateId()) : null;
         if (importTemplate != null){
             filesToPackSize++; // we'll have the import template too!
@@ -88,9 +99,12 @@ public class BackupService {
             }
             filesToPackSize += forType.size();
         }
+        int index = 0;
         ZipEntrySource[] filesToPack = new ZipEntrySource[filesToPackSize];
-        filesToPack[0] = new FileSource(temp.getName(), temp);
-        int index = 1;
+        if (dbFile != null){
+            filesToPack[0] = new FileSource(dbFile.getName(), dbFile);
+            index++;
+        }
         for (OnlineReport onlineReport : onlineReports) {
             String category = null;
             if (onlineReport.getCategory() != null && !onlineReport.getCategory().isEmpty()){
@@ -126,11 +140,36 @@ public class BackupService {
         File zipDir = new File(file.getPath());
         File[] files = zipDir.listFiles();
         // need to load the database first
+        boolean dbRestored = false;
         for (File f : files) {
             if (f.getName().endsWith(".db")) {
                 loadDBBackup(loggedInUser, f, database, toReturn, false);
+                dbRestored = true;
             }
         }
+        // I'm going to allow backup restores on just the reports, as we're trying to enable batch report versioning
+        if (!dbRestored){
+            // some copying from Admin service
+            Database db = DatabaseDAO.findForNameAndBusinessId(database, loggedInUser.getUser().getBusinessId());
+            if (db != null){
+                final List<OnlineReport> reports = OnlineReportDAO.findForDatabaseId(db.getId());
+                DatabaseReportLinkDAO.unLinkDatabase(db.getId());
+                for (OnlineReport or : reports) {
+                    if (DatabaseReportLinkDAO.getDatabaseIdsForReportId(or.getId()).isEmpty() && UserDAO.findForReportId(or.getId()).isEmpty()) { // then this report no longer has any databases
+                        AdminService.removeReportByIdWithBasicSecurity(loggedInUser, or.getId());
+                    }
+                }
+                // if there is a template associated with this database and no others then zap it
+                ImportTemplate importTemplate = db.getImportTemplateId() != -1 ? ImportTemplateDAO.findById(db.getImportTemplateId()) : null;
+                if (importTemplate != null) {
+                    if (DatabaseDAO.findForImportTemplateId(importTemplate.getId()).size() == 1) {
+                        ImportTemplateDAO.removeById(importTemplate);
+                        Files.deleteIfExists(Paths.get(SpreadsheetService.getHomeDir() + dbPath + loggedInUser.getBusinessDirectory() + importTemplatesDir + importTemplate.getFilenameForDisk()));
+                    }
+                }
+            }
+        }
+
         // now reports
         for (File f : files) {
             if (!f.getName().endsWith(".db")) {

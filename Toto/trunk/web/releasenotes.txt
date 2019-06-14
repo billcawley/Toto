@@ -1,3 +1,20 @@
+11-06-19
+
+Move generated claim settlement files to the outbox as per Ed Broking instructions (on success message from Brokasure)
+
+Textarea and defaults on Excel forms, first try at case insensitivity on file heading lookups
+
+Number of names adjusted, derived from provenance after uploading the file
+
+Altered search for a definitive header. Old logic - if no 'attributesubject' (i.e. heading with 'language' other than date defined), then look for hading with no attribute OR heading with language date.
+New logic = after defining all headings, check all those with language 'date'. If those headings are not matched with a heading which 'isAttributeSubject' or has no attribute, then they become 'isAttributeSubject'
+
+More efficient values modified count, start of work to remove typed pair, more properties for new Ed Broking servers
+
+Work to enable executing 'set' instruction to 'set' values as well as sets.
+
+Enabling execute and XML on form submit in Excel
+
 31-05-19
 
 Further Excel Controller form work - date picker and autocomplete

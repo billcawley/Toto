@@ -653,7 +653,7 @@ public class ExcelController {
                                             // now put in our one line of data
                                             bufferedWriter.newLine();
                                             for (String name : formFields) {
-                                                bufferedWriter.write(request.getParameter(name) + "\t");
+                                                bufferedWriter.write(request.getParameter(name) != null ? request.getParameter(name)  : "" + "\t");
                                             }
                                             bufferedWriter.newLine();
                                         }
@@ -667,11 +667,13 @@ public class ExcelController {
                                         } else if (postProcessor != null) { // deal with execute. More specifically execute needs to be used by the claims header thing
                                             // set user choices to submitted fields
                                             for (String name : formFields) {
-                                                System.out.println(name + " : " + request.getParameter(name));
-                                                SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), name, request.getParameter(name));
+                                                if (request.getParameter(name) != null){
+                                                    System.out.println(name + " : " + request.getParameter(name));
+                                                    SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), name, request.getParameter(name));
+                                                }
                                             }
                                             // should we bother to report on the post processing result?
-                                            uploadedFile.setPostProcessingResult(ReportExecutor.runExecute(loggedInUser, uploadedFile.getPostProcessor(), null, uploadedFile.getProvenanceId(), false).toString());
+                                            uploadedFile.setPostProcessingResult(ReportExecutor.runExecute(loggedInUser, postProcessor, null, uploadedFile.getProvenanceId(), false).toString());
                                         }
                                         return "ok";
                                     }
