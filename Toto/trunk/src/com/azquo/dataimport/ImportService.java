@@ -45,7 +45,9 @@ import org.zkoss.poi.xssf.eventusermodel.XSSFReader;
 import org.zkoss.poi.xssf.usermodel.XSSFWorkbook;
 import org.zkoss.zss.api.Range;
 import org.zkoss.zss.api.Ranges;
+import org.zkoss.zss.api.model.Book;
 import org.zkoss.zss.api.model.CellData;
+import org.zkoss.zss.model.SName;
 
 import javax.servlet.http.HttpSession;
 import javax.xml.parsers.*;
@@ -195,7 +197,6 @@ public final class ImportService {
         try {
             // so, the try catches are there in case the file extension is incorrect. This has happened!
             if (uploadedFile.getFileName().toLowerCase().endsWith("xlsx")) {
-                long quicktest = System.currentTimeMillis();
                 OPCPackage opcPackage = OPCPackage.open(new FileInputStream(new File(uploadedFile.getPath())));
                 book = new XSSFWorkbook(opcPackage);
                 //System.out.println("book open time " + (System.currentTimeMillis() - quicktest));
@@ -309,6 +310,12 @@ public final class ImportService {
                 Sheet sheet = book.getSheetAt(sheetNo);
                 if (sheet.getSheetName().equalsIgnoreCase("Import Model")) {
                     if ((loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
+                        return Collections.singletonList(uploadImportTemplate(uploadedFile, loggedInUser, true));
+                    }
+                }
+                // Import Model is one way to detect a template but it's not always there - names beginning az_Headings are a sign also
+                for (Name name : BookUtils.getNamesForSheet(sheet)){
+                    if (name.getNameName().startsWith(AZHEADINGS)){
                         return Collections.singletonList(uploadImportTemplate(uploadedFile, loggedInUser, true));
                     }
                 }
@@ -609,6 +616,7 @@ public final class ImportService {
     private static final String NOFILEHEADINGS = "nofileheadings";
     private static final String LANGUAGE = "language";
     private static final String SKIPLINES = "skiplines";
+    public static final String AZHEADINGS = "az_Headings";
 
 
     // copy the file to the database server if it's on a different physical machine then tell the database server to process it
@@ -661,7 +669,7 @@ public final class ImportService {
                     for (String sheetName : importTemplateData.getSheets().keySet()) {
                         if (sheetName.equalsIgnoreCase(uploadedFile.getParameter(IMPORTVERSION))) {
                             // unlike the "default" mode there can be a named range for the headings here so
-                            AreaReference headingsName = importTemplateData.getName("az_Headings" + sheetName);
+                            AreaReference headingsName = importTemplateData.getName(AZHEADINGS + sheetName);
                             if (headingsName != null) { // we have to have it or don't bother!
                                 uploadedFile.setSkipLines(headingsName.getFirstCell().getRow());
                                 // parameters and lookups are cumulative, pass through the same maps
@@ -1354,8 +1362,8 @@ public final class ImportService {
                     return "Import version required";
                 }
                 if (sheetNames.contains(version.toLowerCase())) {
-                    if (!nameNames.contains("az_Headings".toLowerCase() + version.toLowerCase())) {
-                        return "az_Headings" + version + "not found for sheet";
+                    if (!nameNames.contains(AZHEADINGS.toLowerCase() + version.toLowerCase())) {
+                        return AZHEADINGS + version + "not found for sheet";
                     }
                 } else {
                     return "Import version not found in template";
