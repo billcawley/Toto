@@ -888,6 +888,10 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
                                 if (childCellParent == parent) {
                                     needsAdding = false;
                                 } else if (childCellParent == exclusiveName || exclusiveName.getChildren().contains(childCellParent)) {
+                                    if (cellWithHeading.getImmutableImportHeading().provisional){
+                                        needsAdding=false;
+                                        break;
+                                    }
                                     childCellParent.removeFromChildrenWillBePersisted(childCellName, azquoMemoryDBConnection);
                                 }
                             }
