@@ -141,7 +141,7 @@ public class DBCron {
                         // need to do try with resources or it leaks file handlers
                         try (Stream<Path> list1 = Files.list(p)){
                             Optional<Path> lastFilePath = list1    // here we get the stream with full directory listing
-                                .filter(f -> !Files.isDirectory(f))  // exclude subdirectories from listing
+                                .filter(f -> (!Files.isDirectory(f) && f.getFileName().endsWith("xml")))  // exclude subdirectories and non xml files from listing
                                     .max(Comparator.comparingLong(f -> f.toFile().lastModified()));  // finally get the last file using simple comparator by lastModified field
                             // 300 seconds, 5 minutes, I want the most recent file to be at least that old before I start doing things to them
                             if (lastFilePath.isPresent() && !Files.isDirectory(lastFilePath.get()) && (System.currentTimeMillis() - Files.getLastModifiedTime(lastFilePath.get()).toMillis()) > millisOldThreshold) {
