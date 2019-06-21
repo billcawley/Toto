@@ -190,7 +190,7 @@ public class ChoicesService {
                             String userChoice = userChoices.get(choiceName.startsWith("az_") ? choiceName.substring(3) : choiceName);
                             LocalDate date = ReportUtils.isADate(userChoice);
                             // todo - tidy after the valid motpions ower case thing
-                            if (validOptions != null) {
+                            if (validOptions != null && validOptions.size() > 0 && validOptions.get(0)!=null) {//a single null element returned when list consists of an attribute that does not exis
                                 if (SpreadsheetService.FIRST_PLACEHOLDER.equals(userChoice)) {
                                     userChoice = validOptions.get(0);
                                 }
