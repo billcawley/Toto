@@ -1,5 +1,6 @@
 package com.azquo.spreadsheet.zk;
 
+import com.azquo.StringLiterals;
 import com.azquo.admin.user.UserRegionOptions;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.CommonReportUtils;
@@ -7,6 +8,7 @@ import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.transport.CellForDisplay;
 import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
+import javassist.compiler.ast.StringL;
 import org.zkoss.zss.api.CellOperationUtil;
 import org.zkoss.zss.api.Range;
 import org.zkoss.zss.api.Ranges;
@@ -141,11 +143,19 @@ class RegionFillerService {
                 int hrow = displayRowHeadings.getRow() - 1;
                 int hcol = rowHeadingsColumn;
                 for (String rowHeading : rowHeadings) {
-                    rowHeading = rowHeading.replace("`", "").trim();
-                    if (rowHeading.contains(" sorted")) { // maybe factor the string literal? Need to make it work for the mo
+                       if (rowHeading.contains(" sorted")) { // maybe factor the string literal? Need to make it work for the mo
                         rowHeading = rowHeading.substring(0, rowHeading.indexOf(" sorted")).trim();
                     }
                     // create the filter set, it may not exist which would error below
+                    //first check if permute has used a temporary set...
+                    if (rowHeading.toLowerCase().contains(" as ")){
+                        String tempFilterName = rowHeading.substring(rowHeading.toLowerCase().indexOf(" as ")+ 4).trim();
+                        if (tempFilterName.startsWith(StringLiterals.QUOTE+"")&& tempFilterName.endsWith(StringLiterals.QUOTE + "")){
+                            rowHeading = tempFilterName;
+                        }
+                    }
+                    rowHeading = rowHeading.replace(StringLiterals.QUOTE + "", "").trim();
+
                     RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).createFilterSet(loggedInUser.getDataAccessToken(), "az_" + rowHeading, loggedInUser.getUser().getEmail(), new ArrayList<>());
                     String colHeading = ChoicesService.multiList(loggedInUser, "az_" + rowHeading, "`" + rowHeading + "` children");
                     if (colHeading == null || colHeading.equals("[all]")) colHeading = rowHeading;
