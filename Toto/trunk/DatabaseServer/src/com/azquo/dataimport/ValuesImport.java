@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.MappingIterator;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.math.BigDecimal;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -199,10 +200,7 @@ public class ValuesImport {
             try {
 
                 double d = Double.parseDouble(lineValue.replace(",", ""));
-                lineValue = d + "";
-                if (lineValue.endsWith(".0")) {
-                    lineValue = lineValue.substring(0, lineValue.length() - 2);
-                }
+                lineValue = new BigDecimal(d).toPlainString();
             } catch (Exception ignored) {
 
             }
