@@ -49,19 +49,19 @@ public class AzquoCellResolver {
             debugInfo.append("Row Headings\n\n");
             for (DataRegionHeading rowHeading : rowHeadings) {
                 if (rowHeading != null) {
-                    debugInfo.append("\t" + rowHeading.getDebugInfo() + "\n");
+                    debugInfo.append("\t").append(rowHeading.getDebugInfo()).append("\n");
                 }
             }
             debugInfo.append("\nColumn Headings\n\n");
             for (DataRegionHeading columnHeading : columnHeadings) {
                 if (columnHeading != null) {
-                    debugInfo.append("\t" + columnHeading.getDebugInfo() + "\n");
+                    debugInfo.append("\t").append(columnHeading.getDebugInfo()).append("\n");
                 }
             }
             debugInfo.append("\nContext\n\n");
             for (DataRegionHeading context : contextHeadings) {
                 if (context != null) {
-                    debugInfo.append("\t" + context.getDebugInfo() + "\n");
+                    debugInfo.append("\t").append(context.getDebugInfo()).append("\n");
                 }
             }
         }

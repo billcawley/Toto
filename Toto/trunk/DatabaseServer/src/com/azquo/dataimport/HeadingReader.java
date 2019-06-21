@@ -429,8 +429,6 @@ todo - add classification here
                     }
                     heading.lookupTo = result.substring(startTo + 1, result.indexOf("`", startTo + 1)).trim();
                 }
-
-
                 break;
             case CHECK:
                 String[] checks = result.split(";");

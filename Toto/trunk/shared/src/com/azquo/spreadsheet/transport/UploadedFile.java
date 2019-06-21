@@ -70,8 +70,6 @@ public class UploadedFile implements Serializable {
     private String postProcessingResult;
     // like post processor but only called when validating and no post processing result - results of validation are in system data
     private String validation;
-    // todo - actually use this! It's been checked but not set . . .
-    private String fileEncoding;
     // heading definitions. At its most simple it would be a list of strings but it can be a lookup based on file headings and there could be multiple headingss so
     private List<String> simpleHeadings;
 
@@ -205,7 +203,6 @@ public class UploadedFile implements Serializable {
         postProcessor = null;
         validation = null;
         postProcessingResult = null;
-        fileEncoding = null;
         simpleHeadings = null;
         fileHeadings = null;
         headingsByFileHeadingsWithInterimLookup = null;
@@ -420,10 +417,6 @@ public class UploadedFile implements Serializable {
 
     public void setPostProcessingResult(String postProcessingResult) {
         this.postProcessingResult = postProcessingResult;
-    }
-
-    public String getFileEncoding() {
-        return fileEncoding;
     }
 
     public List<String> getSimpleHeadings() {

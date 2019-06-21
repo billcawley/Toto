@@ -543,6 +543,7 @@ public class ExcelController {
                 }
                 return jacksonMapper.writeValueAsString(userForms);
             }
+            int autoCompleteThreshold = 270;
             if (form != null && !form.isEmpty() && database != null && !database.isEmpty()) {
                 List<String> formFields = new ArrayList<>();
                 // so we'll want dropdowns
@@ -558,7 +559,7 @@ public class ExcelController {
                                     List<String> dropdownListForQuery = CommonReportUtils.getDropdownListForQuery(loggedInUser, choice, null, chosen);
                                     for (String value : dropdownListForQuery) {
                                         toReturn.add(value);
-                                        if (toReturn.size() > 260) { // arbitrary, need to test
+                                        if (toReturn.size() > autoCompleteThreshold) { // arbitrary, need to test
                                             break;
                                         }
                                     }
@@ -601,7 +602,7 @@ public class ExcelController {
                                                     choices.put(name, Collections.singletonList("textarea"));
                                                 } else {
                                                     dropdownListForQuery = CommonReportUtils.getDropdownListForQuery(loggedInUser, query, null, null);
-                                                    if (dropdownListForQuery.size() > 260) {
+                                                    if (dropdownListForQuery.size() > autoCompleteThreshold) {
                                                         List<String> autoAndChoice = new ArrayList<>();
                                                         autoAndChoice.add("auto");
                                                         autoAndChoice.add(query);

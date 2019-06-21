@@ -35,6 +35,8 @@ import java.util.*;
  */
 public class DSImportService {
 
+    public static final String FILEENCODING = "fileencoding";
+
     // called by RMIImplementation, the entry point from the report server
     public static UploadedFile readPreparedFile(final DatabaseAccessToken databaseAccessToken, UploadedFile uploadedFile, final String user) throws Exception {
         System.out.println("Reading file " + uploadedFile.getPath());
@@ -81,7 +83,6 @@ public class DSImportService {
                 e.printStackTrace();
                 throw new Exception("Groovy error " + uploadedFile.getFileName() + ": " + e.getMessage() + "\n");
             }
-
 
             // checks the first few lines to sort batch size and get a hopefully correctly configured line iterator. Nothing to do with heading interpretation
             int batchSize = 100_000;
@@ -135,9 +136,9 @@ public class DSImportService {
    Charset charset = new AutoDetectReader(new FileInputStream(file)).getCharset();
          */
             MappingIterator<String[]> lineIterator;
-            if (uploadedFile.getFileEncoding() != null) {
+            if (uploadedFile.getParameter(FILEENCODING) != null) {
                 // so override file encoding.
-                lineIterator = csvMapper.readerFor(String[].class).with(schema).readValues(new InputStreamReader(new FileInputStream(uploadedFile.getPath()), uploadedFile.getFileEncoding()));
+                lineIterator = csvMapper.readerFor(String[].class).with(schema).readValues(new InputStreamReader(new FileInputStream(uploadedFile.getPath()), uploadedFile.getParameter(FILEENCODING)));
             } else {
                 lineIterator = (csvMapper.readerFor(String[].class).with(schema).readValues(new File(uploadedFile.getPath())));
             }
@@ -263,7 +264,7 @@ public class DSImportService {
                     headingsNoFileHeadingsWithInterimLookup.addAll(headingsByLookupCopy.values());
                     // ok now we add the headings with no file headings or where the file headings couldn't be found
                     for (TypedPair<String, String> leftOver : headingsNoFileHeadingsWithInterimLookup) {
-                        // pasted and modified from old code to exeption on required as necessary
+                        // pasted and modified from old code to exception on required as necessary
                         String headingToAdd = leftOver.getFirst();
 
                         // most of the time top headings will be jammed in below as a simple default but that default might be against an existing heading in which case
@@ -462,6 +463,7 @@ public class DSImportService {
     // top chunk pasted from above and modified, check factoring. Todo
 
     // return line number, the thing we were looking for and the line
+    // for the pending upload warnings I believe - need to look up lines by values as we won't at this point have a line number to use
     public static Map<Integer, TypedPair<String, String>> getLinesWithValuesInColumn(UploadedFile uploadedFile, int columnIndex, Set<String> valuesToCheck) throws IOException {
         char delimiter = ',';
 //        System.out.println("get lines with values and column, col index : " + columnIndex);
@@ -485,9 +487,9 @@ public class DSImportService {
             schema = schema.withoutQuoteChar();
         }
         MappingIterator<String[]> lineIterator;
-        if (uploadedFile.getFileEncoding() != null) {
+        if (uploadedFile.getParameter(FILEENCODING) != null) {
             // so override file encoding.
-            lineIterator = csvMapper.readerFor(String[].class).with(schema).readValues(new InputStreamReader(new FileInputStream(uploadedFile.getPath()), uploadedFile.getFileEncoding()));
+            lineIterator = csvMapper.readerFor(String[].class).with(schema).readValues(new InputStreamReader(new FileInputStream(uploadedFile.getPath()), uploadedFile.getParameter(FILEENCODING)));
         } else {
             lineIterator = (csvMapper.readerFor(String[].class).with(schema).readValues(new File(uploadedFile.getPath())));
         }

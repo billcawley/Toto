@@ -1,3 +1,15 @@
+18-06-19
+
+Attempts to detect an import template when there's no import model sheet
+
+fixed provisional so as not to change 'exclusive' set elements
+
+bug fix to stop non xml files tripping the scanning
+
+14-06-19
+
+Option to restore just the reports, untested. Properties for new windows servers added.
+
 11-06-19
 
 Move generated claim settlement files to the outbox as per Ed Broking instructions (on success message from Brokasure)

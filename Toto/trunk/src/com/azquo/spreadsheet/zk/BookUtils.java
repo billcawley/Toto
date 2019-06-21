@@ -240,8 +240,12 @@ java.lang.IllegalStateException: is ERROR, not the one of [STRING, BLANK]
         List<Name> names = new ArrayList<>();
         for (int i = 0; i < sheet.getWorkbook().getNumberOfNames(); i++) {
             Name name = sheet.getWorkbook().getNameAt(i);
-            if (sheet.getSheetName().equals(name.getSheetName())) {
-                names.add(name);
+            try {
+                if (sheet.getSheetName().equals(name.getSheetName())) {
+                    names.add(name);
+                }
+            } catch (Exception ignored){
+                // name.getSheetName() can throw an exception, ignore it
             }
         }
         names.sort(Comparator.comparing(o -> o.getNameName().toUpperCase()));
