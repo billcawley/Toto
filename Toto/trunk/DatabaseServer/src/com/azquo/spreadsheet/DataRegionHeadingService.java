@@ -145,6 +145,12 @@ class DataRegionHeadingService {
                                 // now need try catch - might get an error if other users made the name but this one didn't thus the lookup is ambiguous
                                 try{
                                     pName = NameService.findByName(azquoMemoryDBConnection, "az_" + permutedName.replace("`", "").trim(), attributeNames);
+                                    if (pName == null){
+                                        Collection<Name> names = NameQueryParser.parseQuery(azquoMemoryDBConnection, permutedName, attributeNames, false);
+                                        if (names!=null&&names.size()==1){
+                                            pName = names.iterator().next();
+                                        }
+                                    }
                                 } catch (Exception e){
                                     System.out.println("permute lookup error " + e.getMessage());
                                 }
