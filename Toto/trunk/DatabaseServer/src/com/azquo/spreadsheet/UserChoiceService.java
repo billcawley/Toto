@@ -146,7 +146,7 @@ public class UserChoiceService {
         if (dotPos > 0) {//todo check that it's not part of a name
             Name possibleName = NameService.findByName(AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken), query.substring(0, dotPos));
             if (possibleName != null) {
-                String result = possibleName.getAttribute(query.substring(dotPos + 1));
+                String result = possibleName.getAttribute(query.substring(dotPos + 1).replace(StringLiterals.QUOTE+"",""));
                 List<String> toReturn = new ArrayList<>();
                 toReturn.add(result);
                 return toReturn;
