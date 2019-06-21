@@ -210,7 +210,16 @@ public class ReportRenderer {
                         }
                         sheetPosition++;
                     }
+                    if (firstItem==null){
+                        firstItem = sheet.getSheetName();//the repeat list is void
+                    }
                     sheetsToRename.put(sheet, firstItem);
+                    //need to rename current sheet now before data is loaded
+                    //book.getInternalBook().setSheetName(sheet.getInternalSheet(), suggestSheetName(book, firstItem));
+
+
+                    choiceOptionsMap = ChoicesService.resolveAndSetChoiceOptions(loggedInUser, sheet, regionsToWatchForMerge);
+                    ReportService.resolveQueries(sheet.getBook(), loggedInUser); // after all options sorted should be ok
                 }
             }
 
