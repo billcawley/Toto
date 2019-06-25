@@ -218,6 +218,13 @@ public class ChoicesService {
                                 BookUtils.setValue(sCell, userChoice);
                                 Ranges.range(sheet, sCell.getRowIndex(), sCell.getColumnIndex()).notifyChange(); // might well be formulae related to the choice setting
                                 context += choiceName + " = " + userChoice + ";";
+                                if (choiceName.startsWith("az_")) {
+                                    choiceName = choiceName.substring(3);
+                                }
+                                choiceName = choiceName.toLowerCase();
+                                if (!userChoice.equals(userChoices.get(choiceName))){
+                                    SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(),choiceName,userChoice);
+                                }
                             }
                         }
                         regionsToWatchForMerge.add(chosen);
