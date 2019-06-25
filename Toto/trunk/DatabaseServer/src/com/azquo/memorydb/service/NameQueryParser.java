@@ -474,7 +474,7 @@ public class NameQueryParser {
         }
     }
 
-    static String replaceAttributes(AzquoMemoryDBConnection azquoMemoryDBConnection,String statement)throws Exception{
+    public static String replaceAttributes(AzquoMemoryDBConnection azquoMemoryDBConnection,String statement)throws Exception{
         StringBuilder modifiedStatement = new StringBuilder();
         Pattern p = Pattern.compile("" + StringLiterals.QUOTE + "[^" + StringLiterals.QUOTE +"]*" + StringLiterals.QUOTE + "\\."+StringLiterals.QUOTE + "[^" + StringLiterals.QUOTE +"]*"+StringLiterals.QUOTE); //`name`.`attribute`
         Matcher matcher = p.matcher(statement);
@@ -494,7 +494,7 @@ public class NameQueryParser {
             if (name!=null){
                 String attVal = name.getAttribute(attributeString);
                 if (attVal!=null) {
-                    attribute = StringLiterals.QUOTE+ attVal + StringLiterals.QUOTE;//replaces with a name (an element of a string
+                    attribute = attVal;//replaces with a name (an element of a string
                 }
             }
             modifiedStatement.append(attribute);
