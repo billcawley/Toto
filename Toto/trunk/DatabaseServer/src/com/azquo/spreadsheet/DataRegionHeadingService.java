@@ -33,6 +33,7 @@ class DataRegionHeadingService {
         return createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBConnection, headingRegion, attributeNames, 0, defaultSuffix, ignoreHeadingErrors);
     }
 
+
     // now has the option to exception based on large sets being returned by parse query. Used currently on columns, if these name sets are more than a few hundred then that's clearly unworkable - you wouldn't want more than a few hundred columns
     static List<List<List<DataRegionHeading>>> createHeadingArraysFromSpreadsheetRegion(final AzquoMemoryDBConnection azquoMemoryDBConnection, final List<List<String>> headingRegion, List<String> attributeNames, int namesQueryLimit, DataRegionHeading.SUFFIX defaultSuffix, boolean ignoreHeadingErrors) throws Exception {
         List<List<List<DataRegionHeading>>> nameLists = new ArrayList<>(headingRegion.size());
@@ -41,7 +42,7 @@ class DataRegionHeadingService {
             List<List<DataRegionHeading>> row = new ArrayList<>(sourceRow.size());
             nameLists.add(row);
             for (String sourceCell : sourceRow) {
-                sourceCell = sourceCell.trim();
+                sourceCell = NameQueryParser.replaceAttributes(azquoMemoryDBConnection,sourceCell.trim());
                 //ignore 'editable' at this stage
                 if (sourceCell.toLowerCase().endsWith(StringLiterals.EDITABLE)){
                     sourceCell = sourceCell.substring(0,sourceCell.length()-StringLiterals.EDITABLE.length()).trim();
