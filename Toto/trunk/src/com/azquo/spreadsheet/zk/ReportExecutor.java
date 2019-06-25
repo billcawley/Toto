@@ -386,9 +386,12 @@ public class ReportExecutor {
 
 
                     }else {
-                        String result = CommonReportUtils.resolveQuery(loggedInUser, trimmedLine.substring(4));
-                        if (result.toLowerCase().startsWith("error")) {
-                            throw (new Exception(result));
+                        if (!ReportService.resolveFilterQuery(loggedInUser, trimmedLine.substring(4), makeNewListList(filterContext))) {
+                            String result = CommonReportUtils.resolveQuery(loggedInUser, trimmedLine.substring(4));
+                            RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).addToLog(loggedInUser.getDataAccessToken(), result);
+                            if (result.toLowerCase().startsWith("error")) {
+                                throw (new Exception(result));
+                            }
                         }
                     }
                 } else if (trimmedLine.toLowerCase().startsWith("if ")) {
