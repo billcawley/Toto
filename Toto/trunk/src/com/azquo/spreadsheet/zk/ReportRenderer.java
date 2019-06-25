@@ -451,7 +451,7 @@ public class ReportRenderer {
         CellRegion queryRegion = BookUtils.getCellRegionForSheetAndName(sheet,"az_query"+region);
         SName contextDescription = BookUtils.getNameByName(AZCONTEXT + region, sheet);
         if (queryRegion!=null){
-            List<List<String>> contextList = BookUtils.nameToStringLists(contextDescription);
+            List<List<String>> contextList = replaceUserChoicesInRegionDefinition(loggedInUser,contextDescription);
 
             ReportService.resolveQuery(loggedInUser,sheet,queryRegion, contextList);
         }
@@ -464,8 +464,8 @@ public class ReportRenderer {
         String errorMessage = null;
         // make a blank area for data to be populated from, an upload in the sheet so to speak (ad hoc)
         if ((columnHeadingsDescription != null && rowHeadingsDescription == null)||(rowHeadingsDescription !=null && columnHeadingsDescription==null)) {
-            List<List<String>> colHeadings = BookUtils.nameToStringLists(columnHeadingsDescription);
-            List<List<String>> rowHeadings= BookUtils.nameToStringLists(rowHeadingsDescription);
+            List<List<String>> colHeadings = replaceUserChoicesInRegionDefinition(loggedInUser,columnHeadingsDescription);
+            List<List<String>> rowHeadings= replaceUserChoicesInRegionDefinition(loggedInUser,rowHeadingsDescription);
             List<List<CellForDisplay>> dataRegionCells = new ArrayList<>();
             CellRegion dataRegion = BookUtils.getCellRegionForSheetAndName(sheet, AZDATAREGION + region);
             for (int rowNo = 0; rowNo < dataRegion.getRowCount(); rowNo++) {
@@ -508,9 +508,9 @@ public class ReportRenderer {
                     }
                 }
 
-                List<List<String>> contextList = BookUtils.nameToStringLists(contextDescription);
+                List<List<String>> contextList = replaceUserChoicesInRegionDefinition(loggedInUser,contextDescription);
                 // can it sort out the formulae issues?
-                List<List<String>> rowHeadingList = BookUtils.nameToStringLists(rowHeadingsDescription);
+                List<List<String>> rowHeadingList = replaceUserChoicesInRegionDefinition(loggedInUser,rowHeadingsDescription);
                 //check if this is a pivot - if so, then add in any additional filter needed
                 SName contextFilters = BookUtils.getNameByName(AZCONTEXTFILTERS, sheet);
                 if (contextFilters == null) {
@@ -549,7 +549,7 @@ public class ReportRenderer {
                     }
                 }
 
-                CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = SpreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser, region, valueId, rowHeadingList, BookUtils.nameToStringLists(columnHeadingsDescription),
+                CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = SpreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser, region, valueId, rowHeadingList, replaceUserChoicesInRegionDefinition(loggedInUser,columnHeadingsDescription),
                         contextList, userRegionOptions, quiet,null);
                 loggedInUser.setSentCells(reportId, sheetName, region, cellsAndHeadingsForDisplay);
                 // now, put the headings into the sheet!
@@ -753,6 +753,16 @@ public class ReportRenderer {
                 }
             }
         }
+    }
+
+    private static List<List<String>> replaceUserChoicesInRegionDefinition(LoggedInUser loggedInUser, SName rangeName){
+        List<List<String>> region = BookUtils.nameToStringLists(rangeName);
+        for (int row=0;row < region.size();row++){
+            for(int col=0;col < region.get(row).size();col++){
+                region.get(row).set(col, CommonReportUtils.replaceUserChoicesInQuery(loggedInUser,region.get(row).get(col)));
+            }
+        }
+        return region;
     }
 
     /*  THIS MAY BE USEFUL FOR CREATING 'EXCEL STYLE' RANGES  (e.g. $AB$99)
