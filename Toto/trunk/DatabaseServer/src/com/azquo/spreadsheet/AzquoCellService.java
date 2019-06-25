@@ -4,10 +4,7 @@ import com.azquo.*;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.Value;
-import com.azquo.memorydb.service.MutableBoolean;
-import com.azquo.memorydb.service.NameService;
-import com.azquo.memorydb.service.ValueCalculationService;
-import com.azquo.memorydb.service.ValueService;
+import com.azquo.memorydb.service.*;
 import com.azquo.spreadsheet.transport.RegionOptions;
 import net.openhft.koloboke.collect.map.hash.HashIntDoubleMaps;
 import net.openhft.koloboke.collect.map.hash.HashIntObjMaps;
@@ -154,16 +151,18 @@ class AzquoCellService {
             languages = new ArrayList<>();
             languages.add(regionOptions.columnLanguage);
         }
-        String firstColumnHeading = colHeadingsSource.get(0).get(0);
-        Pattern p = Pattern.compile("" + StringLiterals.QUOTE + "[^" + StringLiterals.QUOTE +"]*" + StringLiterals.QUOTE + " ="); //`name`=
-        Matcher matcher = p.matcher(firstColumnHeading);
-        if (matcher.find()) {
-            calcExpression = firstColumnHeading.substring(matcher.end()).trim();
-            calcExpression = extractConstantsFromCalcExpression(azquoMemoryDBConnection, calcExpression,contextHeadings);
-            String target = matcher.group();
-            target = target.substring(0, target.length() - 2);//remove ' ='
-            colHeadingsSource.get(0).set(0,target);
+          if (filterTargetName==null) {
+             String firstColumnHeading = colHeadingsSource.get(0).get(0);
+             Pattern p = Pattern.compile("" + StringLiterals.QUOTE + "[^" + StringLiterals.QUOTE + "]*" + StringLiterals.QUOTE + " ="); //`name`=
+            Matcher matcher = p.matcher(firstColumnHeading);
+            if (matcher.find()) {
+                calcExpression = firstColumnHeading.substring(matcher.end()).trim();
+                calcExpression = extractConstantsFromCalcExpression(azquoMemoryDBConnection, calcExpression, contextHeadings);
+                String target = matcher.group();
+                target = target.substring(0, target.length() - 2);//remove ' ='
+                colHeadingsSource.get(0).set(0, target);
 
+            }
         }
         final List<List<List<DataRegionHeading>>> columnHeadingLists = DataRegionHeadingService.createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBConnection, colHeadingsSource, languages, AzquoCellService.COL_HEADINGS_NAME_QUERY_LIMIT, contextSuffix, regionOptions.ignoreHeadingErrors);
         languages = defaultLanguages;
@@ -202,6 +201,7 @@ class AzquoCellService {
         dataToShow = sortAndFilterCells(dataToShow, rowHeadings
                 , regionOptions, permute);
         // todo EFC understand properly
+        //a set being built as a result of an expression being true.
         if (filterTargetName!=null){
             Name target = NameService.findByName(azquoMemoryDBConnection, filterTargetName);
             target.setChildrenWillBePersisted(new ArrayList<>(), azquoMemoryDBConnection);
