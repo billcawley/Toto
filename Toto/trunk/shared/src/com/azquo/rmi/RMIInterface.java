@@ -61,7 +61,7 @@ public interface RMIInterface extends Remote {
 
     void createFilterSet(DatabaseAccessToken databaseAccessToken, String setName, String userName, String query) throws RemoteException;
 
-    boolean resolveQuery(DatabaseAccessToken databaseAccessToken, String query, String user) throws RemoteException;
+    String resolveQuery(DatabaseAccessToken databaseAccessToken, String query, String user) throws RemoteException;
 
     ProvenanceDetailsForDisplay getProvenanceDetailsForDisplay(DatabaseAccessToken databaseAccessToken, String user, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource, RegionOptions regionOptionsForTransport, int unsortedRow, int unsortedCol, int maxSize) throws RemoteException;

@@ -262,7 +262,7 @@ class RMIImplementation implements RMIInterface {
     }
 
     @Override
-    public boolean resolveQuery(DatabaseAccessToken databaseAccessToken, String query, String user) throws RemoteException {
+    public String resolveQuery(DatabaseAccessToken databaseAccessToken, String query, String user) throws RemoteException {
         try {
             return UserChoiceService.resolveQuery(databaseAccessToken, query, user);
         } catch (Exception e) {
