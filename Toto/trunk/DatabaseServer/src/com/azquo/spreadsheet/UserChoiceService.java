@@ -142,15 +142,13 @@ public class UserChoiceService {
 
     public static List<String> getDropDownListForQuery(DatabaseAccessToken databaseAccessToken, String query, String user, String searchTerm, boolean justUser, int provenanceId) throws Exception {
         //HACKING A CHECK FOR NAME.ATTRIBUTE (for default choices) - EFC, where is this used?
-        int dotPos = query.indexOf(".");
-        if (dotPos > 0) {//todo check that it's not part of a name
-            Name possibleName = NameService.findByName(AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken), query.substring(0, dotPos));
-            if (possibleName != null) {
-                String result = possibleName.getAttribute(query.substring(dotPos + 1).replace(StringLiterals.QUOTE+"",""));
-                List<String> toReturn = new ArrayList<>();
-                toReturn.add(result);
-                return toReturn;
-            }
+        AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
+        query = NameQueryParser.replaceAttributes(azquoMemoryDBConnection, query);
+        Name possibleName = NameService.findByName(AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken), query);
+        if (possibleName != null) {
+            List<String> toReturn = new ArrayList<>();
+            toReturn.add(possibleName.getDefaultDisplayName());
+            return toReturn;
         }
         boolean forceFirstLevel = false;
         if (query.toLowerCase().trim().endsWith("showparents")) { // a hack to force simple showing of parents regardless
@@ -259,9 +257,22 @@ public class UserChoiceService {
     }
 
     // it doesn't return anything, for things like setting up "as" criteria
-    public static boolean resolveQuery(DatabaseAccessToken databaseAccessToken, String query, String user) throws Exception {
+    public static String resolveQuery(DatabaseAccessToken databaseAccessToken, String query, String user) throws Exception {
         List<String> languages = NameService.getDefaultLanguagesList(user);
         Collection<Name> names = NameQueryParser.parseQuery(AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken), query, languages, true);
-        return names != null && names.size() != 0;
+
+        if (names != null && names.size() != 0){
+            if (names.size()==1) {
+                Name name = names.iterator().next();
+                String nameString = name.getDefaultDisplayName();
+                if (nameString==null) {
+                    Map<String, String> atts = name.getAttributes();
+                    nameString = "temporary name " + atts.get(atts.keySet().iterator().next());
+                }
+                return nameString + "- elements:" + name.getChildren().size();
+            }
+            return names.size() + " elements";
+         };
+        return "error";
     }
 }
