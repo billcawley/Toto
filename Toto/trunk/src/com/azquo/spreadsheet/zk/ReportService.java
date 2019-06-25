@@ -153,7 +153,7 @@ public class ReportService {
         }
     }
 
-    private static boolean resolveFilterQuery(LoggedInUser loggedInUser, String query, List<List<String>> contextSource) {
+    public static boolean resolveFilterQuery(LoggedInUser loggedInUser, String query, List<List<String>> contextSource) {
         int wherePos = query.toLowerCase().indexOf(" where (");
         if (wherePos < 0) return false;
         String filterSet = query.substring(0, wherePos).trim();
