@@ -5,12 +5,9 @@ import java.io.Serializable;
 /**
  * Created by edward on 15/09/16.
  *
- * Edd after a generic pair, could be useful in a few places
+ * Edd after a generic pair, could be useful in a few places but I don't want to over use
  *
- * Is being serializeable a problem?
- *
- * Notably I need to check that this is not used in places where a more defined function would be better todo
- */
+ **/
 public class TypedPair<F,S> implements Serializable {
     private final F first;
     private final S second;

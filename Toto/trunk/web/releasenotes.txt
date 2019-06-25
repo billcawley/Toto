@@ -1,6 +1,8 @@
 21-06-19
 
+Number standardiseation bug fix (there was a problem with contract line refs)
 
+can accept 'as' expressions in permute terms when creating temporary multi-choice sets
 
 18-06-19
 

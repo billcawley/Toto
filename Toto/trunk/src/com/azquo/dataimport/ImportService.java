@@ -1,5 +1,7 @@
 package com.azquo.dataimport;
 
+import com.azquo.RowColumn;
+import com.azquo.spreadsheet.transport.HeadingWithInterimLookup;
 import com.azquo.util.CommandLineCalls;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
@@ -658,7 +660,7 @@ public final class ImportService {
                 }
                 // without standard headings then there's nothing to work with
                 if (!standardHeadings.isEmpty()) {
-                    Map<TypedPair<Integer, Integer>, String> topHeadings = new HashMap<>();
+                    Map<RowColumn, String> topHeadings = new HashMap<>();
                     // specific headings on the file we're loading
                     List<List<String>> versionHeadings = new ArrayList<>();
                     // this *should* be single line, used to lookup information from the Import Model
@@ -720,8 +722,8 @@ public final class ImportService {
                         } else {
                             // we assume the first lines are file headings and anything below needs to be joined together into an Azquo heading
                             // we now support headingsNoFileHeadingsWithInterimLookup in a non - version context
-                            List<TypedPair<String, String>> headingsNoFileHeadingsWithInterimLookup = new ArrayList<>();
-                            Map<List<String>, TypedPair<String, String>> headingsByLookupWithInterimLookup = new HashMap<>();
+                            List<HeadingWithInterimLookup> headingsNoFileHeadingsWithInterimLookup = new ArrayList<>();
+                            Map<List<String>, HeadingWithInterimLookup> headingsByLookupWithInterimLookup = new HashMap<>();
                             for (List<String> headings : standardHeadings) {
                                 if (!headings.isEmpty()) {
                                     String fileHeading = null;
@@ -738,9 +740,9 @@ public final class ImportService {
                                     }
                                     // there is no second value to the typed pair - that's only used when there's a version. The field says "WithInterimLookup" but there is no interim lookup where there's one sheet
                                     if (fileHeading.isEmpty()) {
-                                        headingsNoFileHeadingsWithInterimLookup.add(new TypedPair<>(azquoHeading.toString(), null));
+                                        headingsNoFileHeadingsWithInterimLookup.add(new HeadingWithInterimLookup(azquoHeading.toString(), null));
                                     } else {
-                                        headingsByLookupWithInterimLookup.put(Collections.singletonList(fileHeading), new TypedPair<>(azquoHeading.toString(), null));
+                                        headingsByLookupWithInterimLookup.put(Collections.singletonList(fileHeading), new HeadingWithInterimLookup(azquoHeading.toString(), null));
                                     }
                                 }
                             }
@@ -750,9 +752,9 @@ public final class ImportService {
                     } else {
 
                         // the thing here is to add the version headings as file headings looking up the Azquo headings from the Import Model
-                        Map<List<String>, TypedPair<String, String>> headingsByFileHeadingsWithInterimLookup = new HashMap<>();
+                        Map<List<String>, HeadingWithInterimLookup> headingsByFileHeadingsWithInterimLookup = new HashMap<>();
                         // and the headings without reference to the
-                        List<TypedPair<String, String>> headingsNoFileHeadingsWithInterimLookup = new ArrayList<>();
+                        List<HeadingWithInterimLookup> headingsNoFileHeadingsWithInterimLookup = new ArrayList<>();
                         /* There may be references without headings but not the other way around (as in we'd just ignore the headings)
                          * hence references needs to be the outer loop adding version headings where it can find them
                          * */
@@ -784,9 +786,9 @@ public final class ImportService {
                                 }
                                 // finally get the file headings if applicable
                                 if (versionHeadings.size() > index && !versionHeadings.get(index).isEmpty()) {
-                                    headingsByFileHeadingsWithInterimLookup.put(versionHeadings.get(index), new TypedPair<>(azquoHeadingsAsString.toString(), reference));
+                                    headingsByFileHeadingsWithInterimLookup.put(versionHeadings.get(index), new HeadingWithInterimLookup(azquoHeadingsAsString.toString(), reference));
                                 } else {
-                                    headingsNoFileHeadingsWithInterimLookup.add(new TypedPair<>(azquoHeadingsAsString.toString(), reference));
+                                    headingsNoFileHeadingsWithInterimLookup.add(new HeadingWithInterimLookup(azquoHeadingsAsString.toString(), reference));
                                 }
                             }
                             index++;
@@ -815,7 +817,7 @@ public final class ImportService {
                                     }
                                 }
                                 // no headings but it has the other bits - will be jammed on the end after file
-                                headingsNoFileHeadingsWithInterimLookup.add(new TypedPair<>(azquoHeadingsAsString.toString(), standardHeadingsColumn.get(0)));
+                                headingsNoFileHeadingsWithInterimLookup.add(new HeadingWithInterimLookup(azquoHeadingsAsString.toString(), standardHeadingsColumn.get(0)));
                             }
                         }
                         uploadedFile.setHeadingsByFileHeadingsWithInterimLookup(headingsByFileHeadingsWithInterimLookup);
@@ -910,7 +912,6 @@ public final class ImportService {
             // then we had some validation results, need to identify lines in the file with problems
             // ok leaving this for the mo. I have all the data I need it's just a question of the structure to store it, as we have rejected lines in Uploaded file so we'll have warning lines and possibly
             // error descriptions. Leaving the warning lines as a map as they may not be added in order, will sort the lines and repackage after
-            // todo - typedpair is being used too much - it's causing obscurity. Roll more small classes . . .
             Map<Integer, UploadedFile.WarningLine> warningLineMap = new HashMap<>();
             //System.out.println("system 2d arrays : " + systemData2DArrays);
             for (List<List<String>> systemData2DArray : systemData2DArrays) {
@@ -947,10 +948,9 @@ public final class ImportService {
                             int index = 0;
                             for (List<String> fileHeading : uploadedFile.getFileHeadings()) {
 //                            for (String subHeading : fileHeading) { // currently looking up against the model reference not the file reference
-                                TypedPair<String, String> stringStringTypedPair = uploadedFile.getHeadingsByFileHeadingsWithInterimLookup().get(fileHeading);
-                                // so the current criteria - it's a heading which looked up something on the model and it's the lookup which is the name we're interested in. Import Model having the canonical name for there purposes
-                                // that lookup name is the second of the typed pair
-                                if (stringStringTypedPair != null && stringStringTypedPair.getSecond() != null && stringStringTypedPair.getSecond().equalsIgnoreCase(keyColumn.trim())) {
+                                HeadingWithInterimLookup headingWithInterimLookup = uploadedFile.getHeadingsByFileHeadingsWithInterimLookup().get(fileHeading);
+                                // so the current criteria - it's a heading which looked up something on the model and it's the lookup which is the name we're interested in. Import Model having the canonical name for their purposes
+                                if (headingWithInterimLookup != null && headingWithInterimLookup.getInterimLookup() != null && headingWithInterimLookup.getInterimLookup().equalsIgnoreCase(keyColumn.trim())) {
                                     // we have a winner
                                     break;
                                 }
@@ -989,7 +989,7 @@ public final class ImportService {
     enum ImportSheetScanMode {OFF, TOPHEADINGS, CUSTOMHEADINGS, STANDARDHEADINGS, PARAMETERS}
 
     private static void importSheetScan(List<List<String>> sheet
-            , Map<TypedPair<Integer, Integer>, String> topHeadings
+            , Map<RowColumn, String> topHeadings
             , List<List<String>> standardHeadings
             , List<List<String>> customHeadings
             , Map<String, String> templateParameters
@@ -1025,7 +1025,7 @@ public final class ImportService {
                     if (mode == ImportSheetScanMode.TOPHEADINGS) {
                         // pretty simple really - jam any values found in the map!
                         if (!topHeadings.values().contains(cellValue)) { // not allowing multiple identical top headings. Typically can happen from a merge spreading across cells
-                            topHeadings.put(new TypedPair<>(rowIndex, cellIndex), cellValue);
+                            topHeadings.put(new RowColumn(rowIndex, cellIndex), cellValue);
                         }
                     } else if (mode == ImportSheetScanMode.CUSTOMHEADINGS) { // custom headings to be used for lookup on files - I'll watch for limiting by column though it hasn't been used yet
                         if (customHeadingsRange.getFirstCell().getCol() == -1 || (cellIndex >= customHeadingsRange.getFirstCell().getCol() && cellIndex <= customHeadingsRange.getLastCell().getCol())) {

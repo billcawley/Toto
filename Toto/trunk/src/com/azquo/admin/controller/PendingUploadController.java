@@ -1,5 +1,6 @@
 package com.azquo.admin.controller;
 
+import com.azquo.RowColumn;
 import com.azquo.TypedPair;
 import com.azquo.admin.AdminService;
 import com.azquo.admin.database.*;
@@ -9,6 +10,7 @@ import com.azquo.spreadsheet.CommonReportUtils;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.controller.LoginController;
+import com.azquo.spreadsheet.transport.HeadingWithInterimLookup;
 import com.azquo.spreadsheet.transport.UploadedFile;
 import com.azquo.spreadsheet.zk.BookUtils;
 import org.apache.commons.lang.math.NumberUtils;
@@ -736,11 +738,11 @@ public class PendingUploadController {
 
             if (uploadedFile.getTopHeadings() != null && !uploadedFile.getTopHeadings().isEmpty()) {
                 row.createCell(cellIndex).setCellValue("Top headings");
-                for (TypedPair<Integer, Integer> key : uploadedFile.getTopHeadings().keySet()) {
+                for (RowColumn rowColumn : uploadedFile.getTopHeadings().keySet()) {
                     cellIndex = 0;
                     row = sheet.createRow(rowIndex++);
-                    row.createCell(cellIndex++).setCellValue(BookUtils.rangeToText(key.getFirst(), key.getSecond()));
-                    row.createCell(cellIndex).setCellValue(uploadedFile.getTopHeadings().get(key));
+                    row.createCell(cellIndex++).setCellValue(BookUtils.rangeToText(rowColumn.getRow(), rowColumn.getColumn()));
+                    row.createCell(cellIndex).setCellValue(uploadedFile.getTopHeadings().get(rowColumn));
                 }
                 cellIndex = 0;
                 row = sheet.createRow(rowIndex++);
@@ -761,12 +763,12 @@ public class PendingUploadController {
                     for (String subHeading : fileHeading) {
                         row.createCell(cellIndex++).setCellValue(subHeading);
                     }
-                    TypedPair<String, String> stringStringTypedPair = uploadedFile.getHeadingsByFileHeadingsWithInterimLookup().get(fileHeading);
-                    if (stringStringTypedPair != null) {
-                        if (stringStringTypedPair.getSecond() != null) {
-                            row.createCell(cellIndex++).setCellValue(stringStringTypedPair.getSecond());
+                    HeadingWithInterimLookup headingWithInterimLookup = uploadedFile.getHeadingsByFileHeadingsWithInterimLookup().get(fileHeading);
+                    if (headingWithInterimLookup != null) {
+                        if (headingWithInterimLookup.getInterimLookup() != null) {
+                            row.createCell(cellIndex++).setCellValue(headingWithInterimLookup.getInterimLookup());
                         }
-                        row.createCell(cellIndex).setCellValue(stringStringTypedPair.getFirst());
+                        row.createCell(cellIndex).setCellValue(headingWithInterimLookup.getInterimLookup());
                     } else {
                         row.createCell(cellIndex).setCellValue("** UNUSED **");
                     }
@@ -780,11 +782,11 @@ public class PendingUploadController {
                 row.createCell(cellIndex).setCellValue("Headings without file headings");
                 cellIndex = 0;
                 row = sheet.createRow(rowIndex++);
-                for (TypedPair<String, String> stringStringTypedPair : uploadedFile.getHeadingsNoFileHeadingsWithInterimLookup()) {
-                    if (stringStringTypedPair.getSecond() != null) { // it could be null now as we support a non file heading azquo heading on the Import Model sheet
-                        row.createCell(cellIndex++).setCellValue(stringStringTypedPair.getSecond());
+                for (HeadingWithInterimLookup headingWithInterimLookup : uploadedFile.getHeadingsNoFileHeadingsWithInterimLookup()) {
+                    if (headingWithInterimLookup.getInterimLookup() != null) { // it could be null now as we support a non file heading azquo heading on the Import Model sheet
+                        row.createCell(cellIndex++).setCellValue(headingWithInterimLookup.getInterimLookup());
                     }
-                    row.createCell(cellIndex).setCellValue(stringStringTypedPair.getFirst());
+                    row.createCell(cellIndex).setCellValue(headingWithInterimLookup.getHeading());
                     cellIndex = 0;
                     row = sheet.createRow(rowIndex++);
                 }

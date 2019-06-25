@@ -18,13 +18,13 @@ New import template functionality means information extracted from the import te
  */
 
 import com.azquo.StringLiterals;
-import com.azquo.TypedPair;
+import com.azquo.RowColumn;
 
 import java.io.Serializable;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class UploadedFile implements Serializable {
+
 
     private String path; // the physical location
     /*
@@ -82,18 +82,18 @@ public class UploadedFile implements Serializable {
       Azquo clauses. The interim  Risk Address 1 wasn't being sent to the database server as I thought it irrelevant BUT it can be referenced in compositions
       Also it might not be the worst thing for users to see as feedback on the import
      */
-    private Map<List<String>, TypedPair<String, String>> headingsByFileHeadingsWithInterimLookup;
+    private Map<List<String>, HeadingWithInterimLookup> headingsByFileHeadingsWithInterimLookup;
 
     // ok so the above is where the headings have headings on the file to reference but there might be quite a few headings e.g. with defaults or composite with no
     // file headings. They go in here.
-    private List<TypedPair<String, String>> headingsNoFileHeadingsWithInterimLookup;
+    private List<HeadingWithInterimLookup> headingsNoFileHeadingsWithInterimLookup;
     // ok, so, we need to resolve composite on the report server and send it over which means we need a way to reference headings
 
     // top headings will be the location on the sheet and the name of a value to check for or a value to put aside for the import
     // as in "do we have 'Cover Note' in a given cell" vs "take the value in a given cell and store it under 'Cover Note' to use later"
     // the latter signified by quotes
     // row + col starting index 0. Need to think a little about what to do if they're not found
-    private Map<TypedPair<Integer, Integer>, String> topHeadings;
+    private Map<RowColumn, String> topHeadings;
     // languages now set in the template or perhaps overriden by parameters - not sure how necessary this will be
     private List<String> languages;
     // the provenanceId attached to the data in the file
@@ -435,27 +435,27 @@ public class UploadedFile implements Serializable {
         this.fileHeadings = fileHeadings;
     }
 
-    public Map<List<String>, TypedPair<String, String>> getHeadingsByFileHeadingsWithInterimLookup() {
+    public Map<List<String>, HeadingWithInterimLookup> getHeadingsByFileHeadingsWithInterimLookup() {
         return headingsByFileHeadingsWithInterimLookup;
     }
 
-    public void setHeadingsByFileHeadingsWithInterimLookup(Map<List<String>, TypedPair<String, String>> headingsByFileHeadingsWithInterimLookup) {
+    public void setHeadingsByFileHeadingsWithInterimLookup(Map<List<String>, HeadingWithInterimLookup> headingsByFileHeadingsWithInterimLookup) {
         this.headingsByFileHeadingsWithInterimLookup = headingsByFileHeadingsWithInterimLookup;
     }
 
-    public List<TypedPair<String, String>> getHeadingsNoFileHeadingsWithInterimLookup() {
+    public List<HeadingWithInterimLookup> getHeadingsNoFileHeadingsWithInterimLookup() {
         return headingsNoFileHeadingsWithInterimLookup;
     }
 
-    public void setHeadingsNoFileHeadingsWithInterimLookup(List<TypedPair<String, String>> headingsNoFileHeadingsWithInterimLookup) {
+    public void setHeadingsNoFileHeadingsWithInterimLookup(List<HeadingWithInterimLookup> headingsNoFileHeadingsWithInterimLookup) {
         this.headingsNoFileHeadingsWithInterimLookup = headingsNoFileHeadingsWithInterimLookup;
     }
 
-    public Map<TypedPair<Integer, Integer>, String> getTopHeadings() {
+    public Map<RowColumn, String> getTopHeadings() {
         return topHeadings;
     }
 
-    public void setTopHeadings(Map<TypedPair<Integer, Integer>, String> topHeadings) {
+    public void setTopHeadings(Map<RowColumn, String> topHeadings) {
         this.topHeadings = topHeadings;
     }
 
@@ -502,9 +502,9 @@ public class UploadedFile implements Serializable {
 
     public String getFullFileName(){
         List<String> fileNames = getFileNames();
-        String fullFileName = "";
+        StringBuilder fullFileName = new StringBuilder();
         for (String fileName:fileNames){
-            fullFileName+=":" + fileName;
+            fullFileName.append(":").append(fileName);
         }
         return fullFileName.substring(1);
 

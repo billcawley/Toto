@@ -1,17 +1,17 @@
 package com.azquo.admin.controller;
 
-import com.azquo.TypedPair;
+import com.azquo.RowColumn;
 import com.azquo.admin.AdminService;
 import com.azquo.admin.BackupService;
 import com.azquo.admin.business.Business;
 import com.azquo.admin.business.BusinessDAO;
 import com.azquo.admin.database.*;
 import com.azquo.dataimport.*;
+import com.azquo.spreadsheet.transport.HeadingWithInterimLookup;
 import com.azquo.spreadsheet.transport.UploadedFile;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.SpreadsheetService;
-import com.azquo.spreadsheet.controller.ExcelController;
 import com.azquo.spreadsheet.controller.LoginController;
 import com.azquo.spreadsheet.CommonReportUtils;
 import com.azquo.spreadsheet.zk.BookUtils;
@@ -517,8 +517,8 @@ public class ManageDatabasesController {
                 } else {
                     toReturn.append("<a href=\"#\" onclick=\"showHideDiv('topHeadings").append(id).append("'); return false;\">Top headings</a> : \n<br/><div id=\"topHeadings").append(id).append("\" style=\"display : none\">");
                 }
-                for (TypedPair<Integer, Integer> key : uploadedFile.getTopHeadings().keySet()) {
-                    toReturn.append(BookUtils.rangeToText(key.getFirst(), key.getSecond())).append("\t->\t").append(uploadedFile.getTopHeadings().get(key)).append("\n<br/>");
+                for (RowColumn rowColumn : uploadedFile.getTopHeadings().keySet()) {
+                    toReturn.append(BookUtils.rangeToText(rowColumn.getRow(), rowColumn.getColumn())).append("\t->\t").append(uploadedFile.getTopHeadings().get(rowColumn)).append("\n<br/>");
                 }
                 if (!noClickableHeadings) {
                     toReturn.append("</div>");
@@ -543,12 +543,12 @@ public class ManageDatabasesController {
                     for (String subHeading : fileHeading) {
                         toReturn.append(subHeading.replaceAll("\n", " ")).append(" ");
                     }
-                    TypedPair<String, String> stringStringTypedPair = uploadedFile.getHeadingsByFileHeadingsWithInterimLookup().get(fileHeading);
-                    if (stringStringTypedPair != null) {
-                        if (stringStringTypedPair.getSecond() != null) {
-                            toReturn.append("\t->\t").append(stringStringTypedPair.getSecond().replaceAll("\n", " "));
+                    HeadingWithInterimLookup headingWithInterimLookup = uploadedFile.getHeadingsByFileHeadingsWithInterimLookup().get(fileHeading);
+                    if (headingWithInterimLookup != null) {
+                        if (headingWithInterimLookup.getInterimLookup() != null) {
+                            toReturn.append("\t->\t").append(headingWithInterimLookup.getInterimLookup().replaceAll("\n", " "));
                         }
-                        toReturn.append("\t->\t").append(stringStringTypedPair.getFirst().replaceAll("\n", " ")).append("\n<br/>");
+                        toReturn.append("\t->\t").append(headingWithInterimLookup.getHeading().replaceAll("\n", " ")).append("\n<br/>");
                     } else {
                         toReturn.append("\t->\t").append(" ** UNUSED ** \n<br/>");
                     }
@@ -565,12 +565,12 @@ public class ManageDatabasesController {
                 } else {
                     toReturn.append("<a href=\"#\" onclick=\"showHideDiv('noFileHeadings" + id + "'); return false;\">Headings without file headings</a>\n<br/><div id=\"noFileHeadings" + id + "\" style=\"display : none\">");
                 }
-                for (TypedPair<String, String> stringStringTypedPair : uploadedFile.getHeadingsNoFileHeadingsWithInterimLookup()) {
-                    if (stringStringTypedPair.getSecond() != null) { // it could be null now as we support a non file heading azquo heading on the Import Model sheet
-                        toReturn.append(stringStringTypedPair.getSecond());
+                for (HeadingWithInterimLookup headingWithInterimLookup : uploadedFile.getHeadingsNoFileHeadingsWithInterimLookup()) {
+                    if (headingWithInterimLookup.getInterimLookup() != null) { // it could be null now as we support a non file heading azquo heading on the Import Model sheet
+                        toReturn.append(headingWithInterimLookup.getInterimLookup());
                         toReturn.append(" -> ");
                     }
-                    toReturn.append(stringStringTypedPair.getFirst()).append("\n<br/>");
+                    toReturn.append(headingWithInterimLookup.getHeading()).append("\n<br/>");
                 }
                 if (!noClickableHeadings) {
                     toReturn.append("</div>");

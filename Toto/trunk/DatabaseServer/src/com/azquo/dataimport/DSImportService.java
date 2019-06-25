@@ -1,11 +1,13 @@
 package com.azquo.dataimport;
 
+import com.azquo.RowColumn;
 import com.azquo.TypedPair;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.core.AzquoMemoryDB;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.service.NameService;
+import com.azquo.spreadsheet.transport.HeadingWithInterimLookup;
 import com.azquo.spreadsheet.transport.UploadedFile;
 import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.dataformat.csv.CsvMapper;
@@ -35,7 +37,7 @@ import java.util.*;
  */
 public class DSImportService {
 
-    public static final String FILEENCODING = "fileencoding";
+    private static final String FILEENCODING = "fileencoding";
 
     // called by RMIImplementation, the entry point from the report server
     public static UploadedFile readPreparedFile(final DatabaseAccessToken databaseAccessToken, UploadedFile uploadedFile, final String user) throws Exception {
@@ -167,7 +169,7 @@ public class DSImportService {
                     for (int colIndex = 0; colIndex < row.length; colIndex++) {
                         // as mentioned above, run through a bunch of offests here in case the topheadings have been shifted to the right - note they still have to have the same configuration
                         for (int offset = 0; offset < offsetLimit; offset++){
-                            String topHeading = uploadedFile.getTopHeadings().get(new TypedPair<>(rowIndex, colIndex - offset)); // yes can be a negative col at least at first - no harm it just won't find anything
+                            String topHeading = uploadedFile.getTopHeadings().get(new RowColumn(rowIndex, colIndex - offset)); // yes can be a negative col at least at first - no harm it just won't find anything
                             if (topHeading != null && row[colIndex].length() > 0) { // we found the cell
                                 if (topHeading.startsWith("`") && topHeading.endsWith("`")) { // we grab the value and store it
                                     topHeadingsValuesByOffset.get(offset).put(topHeading.replace("`", ""), row[colIndex]);
@@ -236,15 +238,15 @@ public class DSImportService {
 
                     // ok now we get to the actual lookup
                     // copy it as we're going to remove things - need to leave the original intact as it's part of feedback to the user
-                    Map<List<String>, TypedPair<String, String>> headingsByLookupCopy = new HashMap<>(uploadedFile.getHeadingsByFileHeadingsWithInterimLookup());
+                    Map<List<String>, HeadingWithInterimLookup> headingsByLookupCopy = new HashMap<>(uploadedFile.getHeadingsByFileHeadingsWithInterimLookup());
                     int currentFileCol = 0;
                     for (List<String> headingsForAColumn : headingsFromTheFile) {// generally headingsForAColumn will just just have one element
                         if (headingsByLookupCopy.get(headingsForAColumn) != null) {
                             lastColumnToActuallyRead = currentFileCol;
-                            TypedPair<String, String> removed = headingsByLookupCopy.remove(headingsForAColumn);// take the used one out - after running through the file we need to add the remainder on to the end
-                            headings.add(removed.getFirst());
-                            if (removed.getSecond() != null) {
-                                interimCompositeLookup.put(removed.getSecond().toUpperCase(), headings.size() - 1);
+                            HeadingWithInterimLookup removed = headingsByLookupCopy.remove(headingsForAColumn);// take the used one out - after running through the file we need to add the remainder on to the end
+                            headings.add(removed.getHeading());
+                            if (removed.getInterimLookup() != null) {
+                                interimCompositeLookup.put(removed.getInterimLookup().toUpperCase(), headings.size() - 1);
                             }
                         } else {
                             headings.add("");
@@ -260,22 +262,22 @@ public class DSImportService {
                         }
                         currentFileCol++;
                     }
-                    List<TypedPair<String, String>> headingsNoFileHeadingsWithInterimLookup = uploadedFile.getHeadingsNoFileHeadingsWithInterimLookup() != null ? uploadedFile.getHeadingsNoFileHeadingsWithInterimLookup() : new ArrayList<>();
+                    List<HeadingWithInterimLookup> headingsNoFileHeadingsWithInterimLookup = uploadedFile.getHeadingsNoFileHeadingsWithInterimLookup() != null ? uploadedFile.getHeadingsNoFileHeadingsWithInterimLookup() : new ArrayList<>();
                     headingsNoFileHeadingsWithInterimLookup.addAll(headingsByLookupCopy.values());
                     // ok now we add the headings with no file headings or where the file headings couldn't be found
-                    for (TypedPair<String, String> leftOver : headingsNoFileHeadingsWithInterimLookup) {
+                    for (HeadingWithInterimLookup leftOver : headingsNoFileHeadingsWithInterimLookup) {
                         // pasted and modified from old code to exception on required as necessary
-                        String headingToAdd = leftOver.getFirst();
+                        String headingToAdd = leftOver.getHeading();
 
                         // most of the time top headings will be jammed in below as a simple default but that default might be against an existing heading in which case
                         // add the default here and knock it off the list so it's not added again later
                         // note - if a default top heading matched a heading on file the default won't get set
                         if (!topHeadingsValues.isEmpty()){
-                            String toCheckAgainstTopHeadings = leftOver.getFirst();
+                            String toCheckAgainstTopHeadings = leftOver.getHeading();
                             if (toCheckAgainstTopHeadings.contains(";")){
                                 toCheckAgainstTopHeadings = toCheckAgainstTopHeadings.substring(0, toCheckAgainstTopHeadings.indexOf(";"));
                                 if (topHeadingsValues.containsKey(toCheckAgainstTopHeadings) && !"FOUND".equals(topHeadingsValues.get(toCheckAgainstTopHeadings))){
-                                    headingToAdd = leftOver.getFirst() + ";default " + topHeadingsValues.remove(toCheckAgainstTopHeadings);
+                                    headingToAdd = leftOver.getHeading() + ";default " + topHeadingsValues.remove(toCheckAgainstTopHeadings);
                                 }
                             }
                         }
@@ -288,18 +290,18 @@ public class DSImportService {
                             *then* we exception. Note that this isn't talking about the value on a line it's asking if the heading itself exists
                             so a problem in here is a heading config problem I think rather than a data problem */
                                 if (!headingToAdd.toLowerCase().contains(HeadingReader.DEFAULT)
-                                        && !leftOver.getFirst().toLowerCase().contains(HeadingReader.COMPOSITION)
+                                        && !leftOver.getHeading().toLowerCase().contains(HeadingReader.COMPOSITION)
                                         && uploadedFile.getParameter(clauses[0].trim().toLowerCase()) == null
                                 ) {
-                                    throw new Exception("headings missing required heading: " + leftOver.getFirst());
+                                    throw new Exception("headings missing required heading: " + leftOver.getHeading());
                                 }
                                 break;
                             }
                         }
 
                         headings.add(headingToAdd);
-                        if (leftOver.getSecond() != null) {
-                            interimCompositeLookup.put(leftOver.getSecond().toUpperCase(), headings.size() - 1);
+                        if (leftOver.getInterimLookup() != null) {
+                            interimCompositeLookup.put(leftOver.getInterimLookup().toUpperCase(), headings.size() - 1);
                         }
                     }
                 } else { // both null, we want azquo import stuff directly off the file, it might be multi level clauses
