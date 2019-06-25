@@ -131,10 +131,8 @@ public class CommonReportUtils {
     public static String resolveQuery(LoggedInUser loggedInUser, String query) {
         query = replaceUserChoicesInQuery(loggedInUser, query);
         try {
-            boolean result = RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
+            return RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
                     .resolveQuery(loggedInUser.getDataAccessToken(), query, loggedInUser.getUser().getEmail());// sending the same as choice but the goal here is execute server side. Generally to set an "As"
-            if (result) return "true";
-            return "false";
         } catch (Exception e) {
             e.printStackTrace();
             return "Error executing: " + query + " -  : " + getErrorFromServerSideException(e);
