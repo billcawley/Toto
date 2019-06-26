@@ -33,23 +33,23 @@ public class ReportRenderer {
     // all case insensetive now so make these lower case and make the names from the reports .toLowerCase().startsWith().
     public static final String AZDATAREGION = "az_dataregion";
     public static final String AZLISTSTART = "az_ListStart";
-    public static final String AZDISPLAY = "az_display";
-    public static final String AZDRILLDOWN = "az_drilldown";
+    static final String AZDISPLAY = "az_display";
+    static final String AZDRILLDOWN = "az_drilldown";
     static final String AZOPTIONS = "az_options";
     public static final String AZREPEATREGION = "az_repeatregion";
     public static final String AZREPEATSCOPE = "az_repeatscope";
     static final String AZREPEATITEM = "az_repeatitem";
     static final String AZREPEATLIST = "az_repeatlist";
     public static final String AZDISPLAYROWHEADINGS = "az_displayrowheadings";
-    public static final String AZDISPLAYCOLUMNHEADINGS = "az_displaycolumnheadings";
+    static final String AZDISPLAYCOLUMNHEADINGS = "az_displaycolumnheadings";
     public static final String AZCOLUMNHEADINGS = "az_columnheadings";
     public static final String AZROWHEADINGS = "az_rowheadings";
-    public static final String AZXML = "az_xml";
-    public static final String AZXMLEXTRAINFO = "az_xmlextrainfo";
-    public static final String AZXMLFILENAME = "az_xmlfilename";
-    public static final String AZSUPPORTREPORTNAME = "az_supportreportname";
-    public static final String AZSUPPORTREPORTFILEXMLTAG = "az_supportreportfilexmltag";
-    public static final String AZSUPPORTREPORTSELECTIONS = "az_supportreportselections";
+    static final String AZXML = "az_xml";
+    static final String AZXMLEXTRAINFO = "az_xmlextrainfo";
+    static final String AZXMLFILENAME = "az_xmlfilename";
+    static final String AZSUPPORTREPORTNAME = "az_supportreportname";
+    static final String AZSUPPORTREPORTFILEXMLTAG = "az_supportreportfilexmltag";
+    static final String AZSUPPORTREPORTSELECTIONS = "az_supportreportselections";
     private static final String AZCONTEXT = "az_context";
     static final String AZPIVOTFILTERS = "az_pivotfilters";//old version - not to be continued
     static final String AZCONTEXTFILTERS = "az_contextfilters";
@@ -63,12 +63,12 @@ public class ReportRenderer {
     static final String AZSAVE = "az_save";
     static final String AZREPEATSHEET = "az_repeatsheet";
     public static final String AZPDF = "az_pdf";
-    public static final String AZTOTALFORMAT = "az_totalformat";
+    static final String AZTOTALFORMAT = "az_totalformat";
     private static final String AZFASTLOAD = "az_fastload";
-    public static final String AZEMAILADDRESS = "az_emailaddress";
-    public static final String AZEMAILSUBJECT = "az_emailsubject";
-    public static final String AZEMAILTEXT = "az_emailtext";
-    static final String AZCURRENTUSER = "az_currentuser";
+    static final String AZEMAILADDRESS = "az_emailaddress";
+    static final String AZEMAILSUBJECT = "az_emailsubject";
+    static final String AZEMAILTEXT = "az_emailtext";
+    private static final String AZCURRENTUSER = "az_currentuser";
     // on an upload file, should this file be flagged as one that moves with backups and is available for non admin users to download
     public static final String AZFILETYPE = "az_filetype";
 

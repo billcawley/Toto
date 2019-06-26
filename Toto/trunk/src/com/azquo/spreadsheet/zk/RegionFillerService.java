@@ -41,6 +41,7 @@ class RegionFillerService {
         for (List<String> rowHeading : cellsAndHeadingsForDisplay.getRowHeadings()) {
             int col = displayRowHeadings.getColumn();
             int startCol = col;
+            // this is, I believe, simply code to stop duplicates on multi level headings. E.g. 2019 and months you don't want to say 2019 12 times just once
             for (String heading : rowHeading) {
                 if (heading != null && !heading.equals(".") && (sheet.getInternalSheet().getCell(row, col).getType() != SCell.CellType.STRING || sheet.getInternalSheet().getCell(row, col).getStringValue().isEmpty())) { // as with AzquoBook don't overwrite existing cells when it comes to headings
                     SCell cell = sheet.getInternalSheet().getCell(row, col);
@@ -64,6 +65,7 @@ class RegionFillerService {
                     }
                 }
                 //format the row headings for hierarchy.  Each total level has sa different format.   clear visible names in all but on heading
+                // as in is there more than one difference between these headings and the one above? If so it's a total - highlight bold or a more complex option if the AZTOTALFORMAT named region is there
                 if (sameValues < rowHeading.size() - 1) {
                     int totalCount = rowHeading.size() - sameValues - 1;
                     //this is a total line
@@ -158,7 +160,7 @@ class RegionFillerService {
 
                     RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).createFilterSet(loggedInUser.getDataAccessToken(), "az_" + rowHeading, loggedInUser.getUser().getEmail(), new ArrayList<>());
                     String colHeading = ChoicesService.multiList(loggedInUser, "az_" + rowHeading, "`" + rowHeading + "` children");
-                    if (colHeading == null || colHeading.equals("[all]")) colHeading = rowHeading;
+                    if (colHeading.equals("[all]")) colHeading = rowHeading;
                     BookUtils.setValue(sheet.getInternalSheet().getCell(hrow, hcol++), colHeading);
                 }
             }

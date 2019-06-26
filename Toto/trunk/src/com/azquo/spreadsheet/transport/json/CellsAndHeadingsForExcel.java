@@ -2,7 +2,6 @@ package com.azquo.spreadsheet.transport.json;
 
 import com.azquo.spreadsheet.transport.CellForDisplay;
 import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
-import com.azquo.spreadsheet.transport.RegionOptions;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -19,8 +18,8 @@ import java.util.List;
  */
 public class CellsAndHeadingsForExcel implements Serializable {
 
-    private final List<List<String>> columnHeadingsSource;
     private final List<List<String>> rowHeadingsSource;
+    private final List<List<String>> columnHeadingsSource;
     private final List<List<String>> columnHeadings;
     private final List<List<String>> rowHeadings;
     private final List<List<String>> context;
@@ -30,9 +29,9 @@ public class CellsAndHeadingsForExcel implements Serializable {
     private final String options;
     private final String lockResult;
 
-    public CellsAndHeadingsForExcel(CellsAndHeadingsForDisplay source) {
-        this.rowHeadingsSource = null;
-        this.columnHeadingsSource = null;
+    public CellsAndHeadingsForExcel(ExcelJsonRequest excelJsonRequest, CellsAndHeadingsForDisplay source) {
+        this.rowHeadingsSource = excelJsonRequest != null ? excelJsonRequest.rowHeadings : null;
+        this.columnHeadingsSource = excelJsonRequest != null ? excelJsonRequest.columnHeadings : null;
         this.columnHeadings = source.getColumnHeadings();
         this.rowHeadings = source.getRowHeadings();
         this.context = source.getContextSource();
@@ -67,12 +66,12 @@ public class CellsAndHeadingsForExcel implements Serializable {
         this.lockResult = source.getLockResult();
     }
 
-    public List<List<String>> getColumnHeadings() {
-        return columnHeadings;
-    }
-
     public List<List<String>> getRowHeadings() {
         return rowHeadings;
+    }
+
+    public List<List<String>> getColumnHeadings() {
+        return columnHeadings;
     }
 
     public List<List<String>> getContext() {return context; }
@@ -91,5 +90,15 @@ public class CellsAndHeadingsForExcel implements Serializable {
         return comments;
     }
 
+    public List<List<String>> getRowHeadingsSource() {
+        return rowHeadingsSource;
+    }
 
+    public List<List<String>> getColumnHeadingsSource() {
+        return columnHeadingsSource;
+    }
+
+    public String getOptions() {
+        return options;
+    }
 }

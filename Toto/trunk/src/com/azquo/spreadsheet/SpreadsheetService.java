@@ -103,8 +103,6 @@ public class SpreadsheetService {
         return properties.get(key);
     }
 
-
-
     public static String getHomeDir() {
         return getProperty(AZQUOHOME);
     }

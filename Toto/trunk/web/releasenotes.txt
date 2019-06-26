@@ -1,3 +1,9 @@
+26-06-19
+
+all headings are now checked to see if there are any user choices specified by [] to be changed to the equivalent value
+
+DataRegionHeadings are checked to see if they have explicit attribute names to be converted to the equivalent value (e.g. `This Year`.`Yearstart` -> 2019-01-01
+
 21-06-19
 
 Number standardiseation bug fix (there was a problem with contract line refs)

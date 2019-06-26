@@ -8,7 +8,9 @@ Trying to move away from the generic typed pair
 
  */
 
-public class HeadingWithInterimLookup {
+import java.io.Serializable;
+
+public class HeadingWithInterimLookup implements Serializable {
     private final String heading;
     private final String interimLookup;
 

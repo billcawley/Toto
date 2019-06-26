@@ -735,7 +735,7 @@ public class ExcelController {
                         System.out.println("NPE checking : " + loggedInUser.getOnlineReport());
                         System.out.println("NPE checking : " + excelJsonRequest);
                         loggedInUser.setSentCells(loggedInUser.getOnlineReport().getId(), excelJsonRequest.sheetName, excelJsonRequest.region, cellsAndHeadingsForDisplay);
-                        result = jacksonMapper.writeValueAsString(new CellsAndHeadingsForExcel(cellsAndHeadingsForDisplay));
+                        result = jacksonMapper.writeValueAsString(new CellsAndHeadingsForExcel(excelJsonRequest, cellsAndHeadingsForDisplay));
                         cellsAndHeadingsForDisplay.setOptions(holdOptions);
                         System.out.println("About to return result which is " + result.length() + " long in " + (System.currentTimeMillis() - time));
                         return result;
@@ -754,7 +754,7 @@ public class ExcelController {
                     );
                     data.add(row);
                     errorHeading.add(error);
-                    return jacksonMapper.writeValueAsString(new CellsAndHeadingsForExcel(new CellsAndHeadingsForDisplay(
+                    return jacksonMapper.writeValueAsString(new CellsAndHeadingsForExcel( null, new CellsAndHeadingsForDisplay(
                             excelJsonRequest.region,
                             errorHeading,
                             errorHeading,
