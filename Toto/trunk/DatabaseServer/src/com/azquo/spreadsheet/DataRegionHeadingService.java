@@ -146,21 +146,21 @@ class DataRegionHeadingService {
                                 // now need try catch - might get an error if other users made the name but this one didn't thus the lookup is ambiguous
                                 try{
                                     pName = NameService.findByName(azquoMemoryDBConnection, "az_" + permutedName.replace("`", "").trim(), attributeNames);
-                                    if (pName == null){
-                                        Collection<Name> names = NameQueryParser.parseQuery(azquoMemoryDBConnection, permutedName, attributeNames, false);
-                                        if (names!=null&&names.size()==1){
-                                            pName = names.iterator().next();
+                                    // if no set chosen, find the original set
+                                    if (pName == null || pName.getChildren().size() == 0) {
+                                        // in new logic keep the attribute names in the search - otherwise inconsistent with above, will break on temporary names populated wth "as"
+                                        // I don't think I need to zap the quotes
+                                        pName = NameService.findByName(azquoMemoryDBConnection, permutedName, attributeNames);
+                                        if (pName == null) {
+                                            Collection<Name> names = NameQueryParser.parseQuery(azquoMemoryDBConnection, permutedName, attributeNames, false);
+                                            if (names != null && names.size() == 1) {
+                                                pName = names.iterator().next();
+                                            }
                                         }
                                     }
                                 } catch (Exception e){
-                                    System.out.println("permute lookup error " + e.getMessage());
-                                }
-                                // if no set chosen, find the original set
-                                if (pName == null || pName.getChildren().size() == 0) {
-                                    // in new logic keep the attribute names in the search - otherwise inconsistent with above, will break on temporary names populated wth "as"
-                                    // I don't think I need to zap the quotes
-                                    pName = NameService.findByName(azquoMemoryDBConnection, permutedName, attributeNames);
-                                    //pName = NameService.findByName(azquoMemoryDBConnection, permutedName);
+                                        System.out.println("permute lookup error " + e.getMessage());
+                                     //pName = NameService.findByName(azquoMemoryDBConnection, permutedName);
                                 }
                                 // ok now we are using sorted heare we can't use dataRegionHeadingsFromNames, this is similar to the check internally
                                 // I'm going to jam sorted in the description, hopefully won't be a problem
@@ -763,9 +763,13 @@ class DataRegionHeadingService {
                 }
                 returnRow.add(cellValue != null ? cellValue : "");
                 // can index out of bounde here with duff inputs better error? todo
-                int extraColsForThisRow = maxColOffsets.get(colIndex);
-                for (int i = 0; i < extraColsForThisRow - (heading != null && heading.getOffsetHeadings() != null ? heading.getOffsetHeadings().size() : 0); i++) {
-                    returnRow.add("");
+                try {
+                    int extraColsForThisRow = maxColOffsets.get(colIndex);
+                    for (int i = 0; i < extraColsForThisRow - (heading != null && heading.getOffsetHeadings() != null ? heading.getOffsetHeadings().size() : 0); i++) {
+                        returnRow.add("");
+                    }
+                }catch(Exception e){
+                    //spurious heading with function PERMUTE
                 }
                 colIndex++;
             }
