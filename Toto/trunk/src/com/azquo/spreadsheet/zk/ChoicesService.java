@@ -301,7 +301,9 @@ public class ChoicesService {
                         }
                         toReturn.put(name.getName().toLowerCase(), choiceOptions);
                     }
-                } // do anything in case of an error?
+                } else {
+                    System.out.println("Error trying to resolve choice option - error on cell " + choiceCell.getReferenceString() + " " + choiceCell.getErrorValue().getMessage());
+                }
             }
         }
         return toReturn;

@@ -15,8 +15,10 @@ import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.controller.OnlineController;
 import com.azquo.spreadsheet.transport.CellForDisplay;
 import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
+import com.csvreader.CsvWriter;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.zkoss.poi.ss.util.AreaReference;
 import org.zkoss.zss.api.Exporter;
 import org.zkoss.zss.api.Exporters;
 import org.zkoss.zss.api.Importers;
@@ -36,6 +38,8 @@ import javax.xml.transform.*;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import java.io.*;
+import java.nio.charset.Charset;
+import java.nio.charset.MalformedInputException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -60,6 +64,10 @@ public class ReportExecutor {
     // worth explaining. One use of executing is to gather information e.g. for Ed Broking Query Validation
     // in simple terms if we see this region grab its contents
     private static final String SYSTEMDATA = "az_SystemData";
+
+    // export data from the report. A region where the data is and a region which holds the destination path
+    // not so sold on the second but can write then modify
+    private static final String EXPORT = "az_Export";
 
     // now returns a book as it will need to be reloaded at the end
     // provenance id means when you select choices they will be constrained to
@@ -116,9 +124,9 @@ public class ReportExecutor {
         //RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).clearTemporaryNames(loggedInUser.getDataAccessToken());
         RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).addToLog(loggedInUser.getDataAccessToken(), "Starting execute");
         StringBuilder loops = new StringBuilder();
-        executeCommands(loggedInUser, commands, loops, systemData2DArrays, new AtomicInteger(0), provenanceId);
+        executeCommands(loggedInUser, commands, null, loops, systemData2DArrays, new AtomicInteger(0), provenanceId);
         // it won't have cleared while executing
-        if (persist){
+        if (persist) {
             RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).clearSessionLog(loggedInUser.getDataAccessToken());
             SpreadsheetService.databasePersist(loggedInUser);
         }
@@ -128,7 +136,7 @@ public class ReportExecutor {
 
     // we assume cleansed of blank lines
     // now can return the outcome if there's an az_Outcome cell. Assuming a loop or list of "do"s then the String returned is the last.
-    private static TypedPair<String, Double> executeCommands(LoggedInUser loggedInUser, List<String> commands, StringBuilder loopsLog, List<List<List<String>>> systemData2DArrays, AtomicInteger count, int provenanceId) throws Exception {
+    private static TypedPair<String, Double> executeCommands(LoggedInUser loggedInUser, List<String> commands, String exportPath, StringBuilder loopsLog, List<List<List<String>>> systemData2DArrays, AtomicInteger count, int provenanceId) throws Exception {
         String filterContext = null;
         String filterItems = null;
         TypedPair<String, Double> toReturn = null;
@@ -162,7 +170,7 @@ public class ReportExecutor {
                         for (String choiceValue : dropdownListForQuery) { // run the "for" :)
                             RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).addToLog(loggedInUser.getDataAccessToken(), choiceName + " : " + choiceValue);
                             SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choiceName.replace("`", ""), choiceValue);
-                            toReturn = executeCommands(loggedInUser, subCommands, loopsLog, systemData2DArrays, count, provenanceId);
+                            toReturn = executeCommands(loggedInUser, subCommands, exportPath, loopsLog, systemData2DArrays, count, provenanceId);
                         }
                     }
                     // if not a for each I guess we just execute? Will check for "do"
@@ -181,7 +189,7 @@ public class ReportExecutor {
                         }
                     } else { // otherwise try a straight lookup - stick on whatever db we're currently on
                         onlineReport = OnlineReportDAO.findForDatabaseIdAndName(loggedInUser.getDatabase().getId(), reportToRun);
-                        if (onlineReport == null){
+                        if (onlineReport == null) {
                             onlineReport = OnlineReportDAO.findForNameAndBusinessId(reportToRun, loggedInUser.getUser().getBusinessId());
                         }
                     }
@@ -248,10 +256,55 @@ public class ReportExecutor {
                             systemData2DArrays.add(BookUtils.nameToStringLists(systemDataName));
                         }
                         // check for XML, in the context of execute we run it automatically
-                        if (book.getInternalBook().getAttribute(OnlineController.XML) != null){
+                        if (book.getInternalBook().getAttribute(OnlineController.XML) != null) {
                             Path destdir = Paths.get(SpreadsheetService.getXMLDestinationDir());
                             // note - I'm just grabbing the first sheet at the moment - this may need changing later
                             ReportExecutor.generateXMLFilesAndSupportingReports(loggedInUser, book.getSheetAt(0), destdir);
+                        }
+                        // and now check new export criteria
+                        if (exportPath != null) {
+                            SName export = book.getInternalBook().getNameByName(EXPORT);
+                            if (export != null) { // then we have some data to read
+                                boolean existsAlready = Files.exists(Paths.get(exportPath));
+                                String exportFirstLine = null;
+                                if (existsAlready) {
+                                    try (BufferedReader br = Files.newBufferedReader(Paths.get(exportPath), Charset.forName("UTF-8"))) {
+                                        // grab the first line to check on delimiters
+                                        exportFirstLine = br.readLine();
+                                    }
+                                }
+                                Sheet sheet = book.getSheet(export.getRefersToSheetName());
+                                try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(exportPath, existsAlready))) {
+                                    CellRegion refersToCellRegion = export.getRefersToCellRegion();
+                                    for (int rNo = refersToCellRegion.row; rNo <= refersToCellRegion.lastRow; rNo++) {
+                                        if (exportFirstLine != null && rNo == refersToCellRegion.row){
+                                            StringBuilder test = new StringBuilder();
+                                            for (int cNo = refersToCellRegion.column; cNo <= refersToCellRegion.lastColumn; cNo++) {
+                                                String val = "";
+                                                if (sheet.getInternalSheet().getRow(rNo) != null) {
+                                                    val = ImportService.getCellValue(sheet, rNo, cNo).getSecond();
+                                                }
+                                                test.append(val).append("\t");
+                                            }
+                                            if (test.toString().equals(exportFirstLine)){
+                                                if (rNo < refersToCellRegion.lastRow){
+                                                    rNo++;// skip the first line if it's already on file
+                                                } else { // break if there's no second line to skip to
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                        for (int cNo = refersToCellRegion.column; cNo <= refersToCellRegion.lastColumn; cNo++) {
+                                            String val = "";
+                                            if (sheet.getInternalSheet().getRow(rNo) != null) {
+                                                val = ImportService.getCellValue(sheet, rNo, cNo).getSecond();
+                                            }
+                                            bufferedWriter.write(val + "\t");
+                                        }
+                                        bufferedWriter.newLine();
+                                    }
+                                }
+                            }
                         }
                     }
                 } else if (trimmedLine.toLowerCase().startsWith("repeat until outcome")) { // new conditional logic
@@ -284,7 +337,7 @@ public class ReportExecutor {
                             boolean stop = true; // make the default be to stop e.g. in the case of bad syntax or whatever . . .
                             do {
                                 counter++;
-                                final TypedPair<String, Double> stringDoubleTypedPair = executeCommands(loggedInUser, subCommands, loopsLog, systemData2DArrays, count, provenanceId);
+                                final TypedPair<String, Double> stringDoubleTypedPair = executeCommands(loggedInUser, subCommands, exportPath, loopsLog, systemData2DArrays, count, provenanceId);
                                 if (stringDoubleTypedPair != null) {
                                     // ok I'm going to assume type matching - if the types don't match then forget the comparison
                                     if ((stringDoubleTypedPair.getFirst() != null && constant != null)) { // string, equals not equals comparison
@@ -340,13 +393,21 @@ public class ReportExecutor {
                     RMIClient.getServerInterface(loggedInUser.getDatabaseServer().getIp())
                             .getJsonChildren(loggedInUser.getDataAccessToken(), 0, 0, false, "edit:zapdata " + trimmedLine.substring(7), StringLiterals.DEFAULT_DISPLAY_NAME, 0);
 
-                }else if (trimmedLine.toLowerCase().startsWith("filtercontext")){
+                } else if (trimmedLine.toLowerCase().startsWith("filtercontext")) {
                     filterContext = trimmedLine.substring("filtercontext".length()).trim();
-
-
-                }else if (trimmedLine.toLowerCase().startsWith("filteritems")){
+                } else if (trimmedLine.toLowerCase().startsWith("filteritems")) {
                     filterItems = trimmedLine.substring("filteritems".length()).trim();
-
+                } else if (trimmedLine.toLowerCase().startsWith("exportpath")) { // note unlike filtercontext and filteritems this goes down the recursive levels, it's not just at this level
+                    // when this is set then zap the file if it exists
+                    String checkPath = trimmedLine.substring("exportpath".length()).trim();
+                    Path path = Paths.get(checkPath);
+                    if (Files.exists(path)) {
+                        Files.delete(path);
+                        // if it existed then we know it's a reasonable path
+                        exportPath = checkPath;
+                    } else if (Files.isDirectory(path.getParent())) { // does the directory exist
+                            exportPath = checkPath;
+                    }
                 } else if (trimmedLine.toLowerCase().startsWith("set ")) {
                     /*
                     there are now two versions:
@@ -361,11 +422,11 @@ public class ReportExecutor {
                         in the instance above, the system first calculates the `Commission %`|`Affiliate Items` as a constant, then applies this formula to `commission` which is saved. `
 
                      */
-                    Pattern p = Pattern.compile("" + StringLiterals.QUOTE + "[^" + StringLiterals.QUOTE +"]*" + StringLiterals.QUOTE + " ="); //`name`=
+                    Pattern p = Pattern.compile("" + StringLiterals.QUOTE + "[^" + StringLiterals.QUOTE + "]*" + StringLiterals.QUOTE + " ="); //`name`=
                     Matcher m = p.matcher(trimmedLine.substring(4));
-                    if (m.find() && m.start()==0){
+                    if (m.find() && m.start() == 0) {
                         List<List<String>> colHeadings = makeNewListList("");
-                        colHeadings.get(0).set(0,trimmedLine);
+                        colHeadings.get(0).set(0, trimmedLine);
                         List<List<String>> rowHeadings = makeNewListList(filterItems);
                         List<List<String>> context = makeNewListList(filterContext);
                         String region = "autoexecute";
@@ -374,7 +435,7 @@ public class ReportExecutor {
                         CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = SpreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser, region, 0, rowHeadings, colHeadings,
                                 context, userRegionOptions, true, null);
                         loggedInUser.setSentCells(loggedInUser.getOnlineReport().getId(), region, region, cellsAndHeadingsForDisplay);
-                        for (List<CellForDisplay> row:cellsAndHeadingsForDisplay.getData()){
+                        for (List<CellForDisplay> row : cellsAndHeadingsForDisplay.getData()) {
                             row.get(0).setNewStringValue(row.get(1).getStringValue());
                             row.get(0).setChanged();
                             row.get(0).setNewDoubleValue(row.get(1).getDoubleValue());
@@ -385,7 +446,7 @@ public class ReportExecutor {
                         SpreadsheetService.saveData(loggedInUser, onlineReport.getId(), onlineReport.getReportName(), region, region.toLowerCase(), true); // to not persist right now
 
 
-                    }else {
+                    } else {
                         if (!ReportService.resolveFilterQuery(loggedInUser, trimmedLine.substring(4), makeNewListList(filterContext))) {
                             String result = CommonReportUtils.resolveQuery(loggedInUser, trimmedLine.substring(4));
                             RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).addToLog(loggedInUser.getDataAccessToken(), result);
@@ -411,7 +472,7 @@ public class ReportExecutor {
 
                     if (result.equals("true")) {
                         if (!subCommands.isEmpty()) {
-                            toReturn = executeCommands(loggedInUser, subCommands, loopsLog, systemData2DArrays, count, provenanceId);
+                            toReturn = executeCommands(loggedInUser, subCommands, exportPath, loopsLog, systemData2DArrays, count, provenanceId);
 
                         }
                         if (lastLine.toLowerCase().equals("else")) {
@@ -429,7 +490,7 @@ public class ReportExecutor {
                         }
                         lineNo--; // put line back to where it is now
                         if (!subCommands.isEmpty()) {
-                            toReturn = executeCommands(loggedInUser, subCommands, loopsLog, systemData2DArrays, count, provenanceId);
+                            toReturn = executeCommands(loggedInUser, subCommands, exportPath, loopsLog, systemData2DArrays, count, provenanceId);
                         }
                     }
                 } else {
@@ -441,9 +502,9 @@ public class ReportExecutor {
         return toReturn;
     }
 
-    private static List<List<String>> makeNewListList(String source){
-         List<List<String>> toReturn = new ArrayList<>();
-       if (source==null) return toReturn;
+    private static List<List<String>> makeNewListList(String source) {
+        List<List<String>> toReturn = new ArrayList<>();
+        if (source == null) return toReturn;
         toReturn.add(Arrays.asList(source.split("\\|")));
         return toReturn;
     }
@@ -516,26 +577,26 @@ public class ReportExecutor {
                 String region = name.getName().substring(ReportRenderer.AZDATAREGION.length()); // might well be an empty string
                 // we don't actually need to do anything with this now but we need to switch on the XML button
                 SName xmlHeadings = BookUtils.getNameByName(ReportRenderer.AZXML + region, selectedSheet);
-                Map<String,Integer> xmlToColMap = new HashMap<>();
+                Map<String, Integer> xmlToColMap = new HashMap<>();
                 if (xmlHeadings != null) {
-                    Map<String,Integer> reportSelectionsColMap = new HashMap<>();
+                    Map<String, Integer> reportSelectionsColMap = new HashMap<>();
                     SName filePrefixName = BookUtils.getNameByName(ReportRenderer.AZXMLFILENAME + region, selectedSheet);
                     String filePrefix = null;
                     boolean multiRowPrefix = false; // a multi row prefix means the prefix will be different for each line
-                    if (filePrefixName != null){
-                        if ((filePrefixName.getRefersToCellRegion().lastRow - filePrefixName.getRefersToCellRegion().row) > 0){ // only one row normally
+                    if (filePrefixName != null) {
+                        if ((filePrefixName.getRefersToCellRegion().lastRow - filePrefixName.getRefersToCellRegion().row) > 0) { // only one row normally
                             multiRowPrefix = true;
                         } else {
                             SCell snameCell = BookUtils.getSnameCell(filePrefixName);
-                            if (snameCell != null){
+                            if (snameCell != null) {
                                 // dash not allowed
-                                filePrefix = snameCell.getStringValue().replace("-","");
+                                filePrefix = snameCell.getStringValue().replace("-", "");
                             }
                         }
                     }
 
-                    for (int col = xmlHeadings.getRefersToCellRegion().column; col <= xmlHeadings.getRefersToCellRegion().lastColumn; col++){
-                        CellData cellData = Ranges.range(selectedSheet, xmlHeadings.getRefersToCellRegion().row,col).getCellData();
+                    for (int col = xmlHeadings.getRefersToCellRegion().column; col <= xmlHeadings.getRefersToCellRegion().lastColumn; col++) {
+                        CellData cellData = Ranges.range(selectedSheet, xmlHeadings.getRefersToCellRegion().row, col).getCellData();
 //                                        String dataFormat = sheet.getInternalSheet().getCell(r, c).getCellStyle().getDataFormat();
                         //if (colCount++ > 0) bw.write('\t');
                         if (cellData != null && cellData.getFormatText().length() > 0) {
@@ -549,24 +610,24 @@ public class ReportExecutor {
                     SName supportReportSelections = BookUtils.getNameByName(ReportRenderer.AZSUPPORTREPORTSELECTIONS + region, selectedSheet);
                     SName supportReportFileXMLTag = BookUtils.getNameByName(ReportRenderer.AZSUPPORTREPORTFILEXMLTAG + region, selectedSheet);
                     final int reportFileXMLTagIndex = -1;
-                    if (supportReportName != null && supportReportSelections != null){
+                    if (supportReportName != null && supportReportSelections != null) {
                         // then we have xlsx files to generate along side the XML files
                         SCell snameCell = BookUtils.getSnameCell(supportReportName);
-                        if (snameCell != null){
+                        if (snameCell != null) {
                             reportName = snameCell.getStringValue();
                         }
-                        for (int col = supportReportSelections.getRefersToCellRegion().column; col <= supportReportSelections.getRefersToCellRegion().lastColumn; col++){
-                            CellData cellData = Ranges.range(selectedSheet, supportReportSelections.getRefersToCellRegion().row,col).getCellData();
+                        for (int col = supportReportSelections.getRefersToCellRegion().column; col <= supportReportSelections.getRefersToCellRegion().lastColumn; col++) {
+                            CellData cellData = Ranges.range(selectedSheet, supportReportSelections.getRefersToCellRegion().row, col).getCellData();
 //                                        String dataFormat = sheet.getInternalSheet().getCell(r, c).getCellStyle().getDataFormat();
                             //if (colCount++ > 0) bw.write('\t');
                             if (cellData != null && cellData.getFormatText().length() > 0) {
                                 reportSelectionsColMap.put(cellData.getFormatText(), col);// I assume means formatted text
                             }
                         }
-                        if (supportReportFileXMLTag != null){
+                        if (supportReportFileXMLTag != null) {
                             SCell cell = BookUtils.getSnameCell(supportReportFileXMLTag);
                             // essentially a special case XML mapping. Doesn't match to a column, it will have the path to the generated report in it
-                            if (cell != null){
+                            if (cell != null) {
                                 xmlToColMap.put(cell.getStringValue(), reportFileXMLTagIndex);// I assume means formatted text
                             }
                         }
@@ -574,10 +635,10 @@ public class ReportExecutor {
                     // if there's extra info e.g. EdIT Section (not brokasure section) that needs to be hung on to to help identify data on the way back in.
                     // Adding extra fields to the XML sent to Brokasure would do this but I want to stick as closely to the spec as possible
                     SName xmlExtraInfo = BookUtils.getNameByName(ReportRenderer.AZXMLEXTRAINFO + region, selectedSheet);
-                    Map<String,Integer> xmlExtraInfoColMap = new HashMap<>();
-                    if (xmlExtraInfo != null){
-                        for (int col = xmlExtraInfo.getRefersToCellRegion().column; col <= xmlExtraInfo.getRefersToCellRegion().lastColumn; col++){
-                            CellData cellData = Ranges.range(selectedSheet, xmlExtraInfo.getRefersToCellRegion().row,col).getCellData();
+                    Map<String, Integer> xmlExtraInfoColMap = new HashMap<>();
+                    if (xmlExtraInfo != null) {
+                        for (int col = xmlExtraInfo.getRefersToCellRegion().column; col <= xmlExtraInfo.getRefersToCellRegion().lastColumn; col++) {
+                            CellData cellData = Ranges.range(selectedSheet, xmlExtraInfo.getRefersToCellRegion().row, col).getCellData();
 //                                        String dataFormat = sheet.getInternalSheet().getCell(r, c).getCellStyle().getDataFormat();
                             //if (colCount++ > 0) bw.write('\t');
                             if (cellData != null && cellData.getFormatText().length() > 0) {
@@ -591,21 +652,21 @@ public class ReportExecutor {
 
                     String rootCandidate = null;
 
-                    for (String xmlName : xmlToColMap.keySet()){
+                    for (String xmlName : xmlToColMap.keySet()) {
                         String test;
-                        if (xmlName.indexOf("/", 1) > 0){
+                        if (xmlName.indexOf("/", 1) > 0) {
                             test = xmlName.substring(0, xmlName.indexOf("/", 1));
                         } else {
                             test = xmlName;
                         }
-                        if (rootCandidate == null){
+                        if (rootCandidate == null) {
                             rootCandidate = test;
-                        } else if (!rootCandidate.equals(test)){
+                        } else if (!rootCandidate.equals(test)) {
                             rootInSheet = false;
                         }
                     }
 
-                    if (rootInSheet){ // then strip off the first tag, it will be used as root
+                    if (rootInSheet) { // then strip off the first tag, it will be used as root
                         for (String xmlName : new ArrayList<>(xmlToColMap.keySet())) { // copy the keys, I'm going to modify them!
                             Integer remove = xmlToColMap.remove(xmlName);
                             xmlToColMap.put(xmlName.substring(xmlName.indexOf("/", 1)), remove);
@@ -627,20 +688,20 @@ public class ReportExecutor {
                     // going for one file per line as per brokersure, zip at the end
                     // tracking where we are in the xml, what elements we're in
                     // new criteria for filenames - do a base 64 hash
-                    LocalDateTime start = LocalDateTime.of(2019, Month.JANUARY, 1,0,0);
+                    LocalDateTime start = LocalDateTime.of(2019, Month.JANUARY, 1, 0, 0);
                     LocalDateTime now = LocalDateTime.now();
                     int filePointer = (int) (now.toEpochSecond(ZoneOffset.UTC) - start.toEpochSecond(ZoneOffset.UTC));
                     for (int row = name.getRefersToCellRegion().row; row <= name.getRefersToCellRegion().lastRow; row++) {
 
                         //String fileName = base64int(filePointer) + ".xml";
                         // if multi row try and find a prefix value in the range
-                        if (multiRowPrefix){
+                        if (multiRowPrefix) {
                             CellRegion refersToCellRegion = filePrefixName.getRefersToCellRegion();
-                            if (row >= refersToCellRegion.row && row <= refersToCellRegion.getLastRow()){
+                            if (row >= refersToCellRegion.row && row <= refersToCellRegion.getLastRow()) {
                                 SCell cell = selectedSheet.getInternalSheet().getCell(row, refersToCellRegion.column);
-                                if (cell != null){
+                                if (cell != null) {
                                     // dash not allowed
-                                    filePrefix = cell.getStringValue().replace("-","");
+                                    filePrefix = cell.getStringValue().replace("-", "");
                                 }
                             }
                         }
@@ -652,11 +713,11 @@ public class ReportExecutor {
                                          A moot point in the case of zips but no harm
                                          */
                         String fileName = eightCharInt(filePointer) + ".xml";
-                        while (azquoTempDir.resolve(fileName).toFile().exists()){
+                        while (azquoTempDir.resolve(fileName).toFile().exists()) {
                             filePointer++;
 //                                            fileName = base64int(filePointer) + ".xml";
                             fileName = eightCharInt(filePointer) + ".xml";
-                            if (filePrefix != null){
+                            if (filePrefix != null) {
                                 fileName = filePrefix + fileName;
                             }
                         }
@@ -664,14 +725,14 @@ public class ReportExecutor {
 
                         String reportFileName = "";
                         // we now do reports first as if a file is produced then the path to that file might be used by the XML
-                        if (reportName != null && !reportSelectionsColMap.isEmpty()){ // I can't see how the reportSelectionsColMap could be empty and valid
+                        if (reportName != null && !reportSelectionsColMap.isEmpty()) { // I can't see how the reportSelectionsColMap could be empty and valid
                             for (String choiceName : reportSelectionsColMap.keySet()) {
                                 CellData cellData = Ranges.range(selectedSheet, row, reportSelectionsColMap.get(choiceName)).getCellData();
                                 String value = "";
                                 if (cellData != null) {
                                     value = cellData.getFormatText();// I assume means formatted text
                                 }
-                                if (!value.isEmpty()){
+                                if (!value.isEmpty()) {
                                     SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choiceName, value);
                                 }
                             }
@@ -686,18 +747,18 @@ public class ReportExecutor {
                                 }
                             } else { // otherwise try a straight lookup - stick on whatever db we're currently on
                                 onlineReport = OnlineReportDAO.findForDatabaseIdAndName(loggedInUser.getDatabase().getId(), reportName);
-                                if (onlineReport == null){
+                                if (onlineReport == null) {
                                     onlineReport = OnlineReportDAO.findForNameAndBusinessId(reportName, loggedInUser.getUser().getBusinessId());
                                 }
                             }
                             if (onlineReport != null) { // need to prepare it as in the controller todo - factor?
                                 reportFileName = (filePrefix != null ? filePrefix : "") + eightCharInt(filePointer) + ".xlsx";
                                 // check that the xlsx doesn't already exist - if it does then bump the pointer, also need to check xml for existing files at this point
-                                while (azquoTempDir.resolve(reportFileName).toFile().exists() || azquoTempDir.resolve(fileName).toFile().exists()){
+                                while (azquoTempDir.resolve(reportFileName).toFile().exists() || azquoTempDir.resolve(fileName).toFile().exists()) {
                                     filePointer++;
                                     reportFileName = (filePrefix != null ? filePrefix : "") + eightCharInt(filePointer) + ".xlsx";
                                     fileName = eightCharInt(filePointer) + ".xml";
-                                    if (filePrefix != null){
+                                    if (filePrefix != null) {
                                         fileName = filePrefix + fileName;
                                     }
                                 }
@@ -725,7 +786,7 @@ public class ReportExecutor {
                             }
                         }
                         // then I need to create a simple properties file with the extra info
-                        if (!xmlExtraInfoColMap.isEmpty()){
+                        if (!xmlExtraInfoColMap.isEmpty()) {
                             try (OutputStream output = new FileOutputStream(azquoTempDir.resolve((filePrefix != null ? filePrefix : "") + eightCharInt(filePointer) + ".properties").toString())) {
                                 Properties properties = new Properties();
                                 for (String propertyName : xmlExtraInfoColMap.keySet()) {
@@ -734,7 +795,7 @@ public class ReportExecutor {
                                     if (cellData != null) {
                                         value = cellData.getFormatText();// I assume means formatted text
                                     }
-                                    if (!value.isEmpty()){
+                                    if (!value.isEmpty()) {
                                         properties.put(propertyName, value);
                                     }
                                 }
@@ -745,19 +806,19 @@ public class ReportExecutor {
                         }
 
 
-                        if (filePrefix != null){
+                        if (filePrefix != null) {
                             fileName = filePrefix + fileName;
                         }
                         //System.out.println("file name : " + fileName);
                         Document doc = docBuilder.newDocument();
                         doc.setXmlStandalone(true);
-                        Element rootElement = doc.createElement(rootInSheet ? rootCandidate.replace("/","") : "ROOT");
+                        Element rootElement = doc.createElement(rootInSheet ? rootCandidate.replace("/", "") : "ROOT");
                         doc.appendChild(rootElement);
                         List<Element> xmlContext = new ArrayList<>();
-                        for (String xmlName : xmlNames){
+                        for (String xmlName : xmlNames) {
                             int col = xmlToColMap.get(xmlName);
                             String value = "";
-                            if (col == reportFileXMLTagIndex){
+                            if (col == reportFileXMLTagIndex) {
                                 // the path seems hacky but i can't see a way around that at the mo
                                 value = reportFileName;
                             } else {
@@ -769,14 +830,14 @@ public class ReportExecutor {
                             // note - this logic assumes he mappings are sorted
                             StringTokenizer st = new StringTokenizer(xmlName, "/");
                             int i = 0;
-                            while (st.hasMoreTokens()){
+                            while (st.hasMoreTokens()) {
                                 String nameElement = st.nextToken();
-                                if (i >= xmlContext.size() || !xmlContext.get(i).getTagName().equals(nameElement)){
-                                    if (i < xmlContext.size()){ // it didn't match, need to chop
-                                        xmlContext = xmlContext.subList(0,i);// trim the list of bits we don't need
+                                if (i >= xmlContext.size() || !xmlContext.get(i).getTagName().equals(nameElement)) {
+                                    if (i < xmlContext.size()) { // it didn't match, need to chop
+                                        xmlContext = xmlContext.subList(0, i);// trim the list of bits we don't need
                                     }
                                     Element element = doc.createElement(nameElement);
-                                    if (xmlContext.isEmpty()){
+                                    if (xmlContext.isEmpty()) {
                                         rootElement.appendChild(element);
                                     } else {
                                         xmlContext.get(xmlContext.size() - 1).appendChild(element);
@@ -807,7 +868,8 @@ public class ReportExecutor {
     }
 
     static DecimalFormat df = new DecimalFormat("00000000");
-    private static String eightCharInt(int input){
+
+    private static String eightCharInt(int input) {
         return df.format(input);
     }
 

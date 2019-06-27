@@ -33,6 +33,7 @@ import org.zeroturnaround.zip.FileSource;
 import org.zeroturnaround.zip.ZipEntrySource;
 import org.zeroturnaround.zip.ZipUtil;
 
+import javax.swing.text.html.HTMLDocument;
 import java.io.*;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -65,17 +66,11 @@ public class BackupService {
             createDBBackupFile(loggedInUser.getDatabase().getName(), loggedInUser.getDataAccessToken(), tempPath, loggedInUser.getDatabaseServer().getIp());
             dbFile.deleteOnExit();
         }
+        // rather than guessing the size of the array just do this
+        List<ZipEntrySource> toZip = new ArrayList<>();
         // so we've got the DB backup - now gather the reports and zip 'em up
         List<OnlineReport> onlineReports = OnlineReportDAO.findForDatabaseId(loggedInUser.getDatabase().getId());
-        int filesToPackSize = onlineReports.size();
-        if (dbFile != null){
-            // +1 as it's the reports + the db . . .
-            filesToPackSize++;
-        }
         ImportTemplate importTemplate = loggedInUser.getDatabase().getImportTemplateId() != -1 ? ImportTemplateDAO.findById(loggedInUser.getDatabase().getImportTemplateId()) : null;
-        if (importTemplate != null){
-            filesToPackSize++; // we'll have the import template too!
-        }
         // ok now need to check for uploads with file types
         List<UploadRecord> forDatabaseIdWithFileType = UploadRecordDAO.findForDatabaseIdWithFileType(loggedInUser.getDatabase().getId());
         Map<String, List<UploadRecord>> groupedByFileType = new HashMap<>();
@@ -83,51 +78,60 @@ public class BackupService {
             groupedByFileType.computeIfAbsent(uploadRecord.getFileType(), t->new ArrayList<>()).add(uploadRecord);
         }
         int limit = 4;
-        for (List<UploadRecord> forType : groupedByFileType.values()){
+        for (String type : groupedByFileType.keySet()){
+            List<UploadRecord> forType = groupedByFileType.get(type);
             // check each file exists!
             for (UploadRecord uploadRecord : forType){
                 if (!Files.exists(Paths.get(uploadRecord.getTempPath()))){
                     forType.remove(uploadRecord);
                 }
             }
-            // if greater than a certain length trim to the most recent
+            // date sort for dedupe and trimming
+            forType.sort((uploadRecord, t1) -> {
+                return -uploadRecord.getDate().compareTo(t1.getDate()); // - as we want descending
+            });
+
             if (forType.size() > limit){
-                forType.sort((uploadRecord, t1) -> {
-                    return -uploadRecord.getDate().compareTo(t1.getDate()); // - as we want descending
-                });
-                forType = forType.subList(0, limit);
+                forType = forType.subList(0,limit);
             }
-            filesToPackSize += forType.size();
+            // iterator can remove
+            Iterator<UploadRecord> uploadRecordIterator = forType.iterator();
+            String lastName = null;
+            while (uploadRecordIterator.hasNext()){
+                UploadRecord check = uploadRecordIterator.next();
+                if (check.getFileName().equalsIgnoreCase(lastName)){
+                    uploadRecordIterator.remove();
+                } else {
+                    lastName = check.getFileName();
+                }
+            }
+            groupedByFileType.put(type, forType); // re set it as forType may have been reassigned by sublist
         }
-        int index = 0;
-        ZipEntrySource[] filesToPack = new ZipEntrySource[filesToPackSize];
         if (dbFile != null){
-            filesToPack[0] = new FileSource(dbFile.getName(), dbFile);
-            index++;
+            toZip.add(new FileSource(dbFile.getName(), dbFile));
         }
         for (OnlineReport onlineReport : onlineReports) {
             String category = null;
             if (onlineReport.getCategory() != null && !onlineReport.getCategory().isEmpty()){
                 category = onlineReport.getCategory();
             }
-            filesToPack[index] = new FileSource((category != null ? category + CATEGORYBREAK : "") + onlineReport.getFilename(), new File(SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + onlineReport.getFilenameForDisk()));
-            index++;
+            toZip.add(new FileSource((category != null ? category + CATEGORYBREAK : "") + onlineReport.getFilename(), new File(SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + onlineReport.getFilenameForDisk())));
         }
         if (importTemplate != null){
-            filesToPack[index] = new FileSource(importTemplate.getFilenameForDisk(), new File(SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.importTemplatesDir + importTemplate.getFilenameForDisk()));
-            index++;
+            toZip.add(new FileSource(importTemplate.getFilenameForDisk(), new File(SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.importTemplatesDir + importTemplate.getFilenameForDisk())));
         }
         // now the typed uploads, need to clearly mark them as such
         for (List<UploadRecord> forType : groupedByFileType.values()){
             for (UploadRecord uploadRecord : forType){
-                filesToPack[index] = new FileSource(uploadRecord.getFileType() + TYPEBREAK + uploadRecord.getFileName(), new File(uploadRecord.getTempPath()));
-                index++;
+                toZip.add(new FileSource(uploadRecord.getFileType() + TYPEBREAK + uploadRecord.getFileName(), new File(uploadRecord.getTempPath())));
             }
         }
 
         File tempzip = File.createTempFile(loggedInUser.getDatabase().getName(), ".zip");
         System.out.println("temp zip " + tempzip.getPath());
-        ZipUtil.pack(filesToPack, tempzip);
+        ZipEntrySource[] zes = new ZipEntrySource[toZip.size()];
+        toZip.toArray(zes);
+        ZipUtil.pack(zes, tempzip);
         tempzip.deleteOnExit();
         return tempzip;
     }
