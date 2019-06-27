@@ -276,13 +276,12 @@ public class ChoicesService {
                 // new lines from edd to try to resolve choice stuff
                 SCell choiceCell = BookUtils.getSnameCell(name);
                 //System.out.println("Choice cell : " + choiceCell);
+                // check to make it work for Darren after some recent changes - todo - address what's actually going on here
+                if (choiceCell.getType() == SCell.CellType.FORMULA) {
+                    choiceCell.clearFormulaResultCache();
+                }
                 if (choiceCell.getType() != SCell.CellType.ERROR && (choiceCell.getType() != SCell.CellType.FORMULA || choiceCell.getFormulaResultType() != SCell.CellType.ERROR)) {
                     String query;
-                    // check to make it work for Darren after some recent changes - todo - address what's actually going on here
-                    if (choiceCell.getType() == SCell.CellType.FORMULA) {
-                        choiceCell.clearFormulaResultCache();
-
-                    }
                     query = choiceCell.getStringValue();
                     if (!query.toLowerCase().contains(CONTENTS)) {//FIRST PASS - MISS OUT ANY QUERY CONTAINING 'contents('
                         if (query.toLowerCase().contains(" default")) {
