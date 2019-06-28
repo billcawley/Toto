@@ -67,6 +67,17 @@ public class ManageReportSchedulesController {
             return "redirect:/api/Login";
         } else {
             final List<Database> databaseListForBusiness = AdminService.getDatabaseListForBusinessWithBasicSecurity(loggedInUser);
+            if (request.getParameter("deleteId") != null){
+                // todo - move to admin service
+                try{
+                    ReportSchedule rs = ReportScheduleDAO.findById(Integer.parseInt(request.getParameter("deleteId")));
+                    Database d = DatabaseDAO.findById(rs.getDatabaseId());
+                    if (d.getBusinessId() == loggedInUser.getUser().getBusinessId()){
+                        ReportScheduleDAO.removeById(rs);
+                    }
+                } catch (Exception ignored){
+                }
+            }
             if (request.getParameter("new") != null && databaseListForBusiness != null) {
                 // note, this will fail with no reports or databases
                 ReportSchedule reportSchedule = new ReportSchedule(0, "DAILY", "", LocalDateTime.now().plusYears(30)
@@ -211,16 +222,6 @@ public class ManageReportSchedulesController {
                     }
                     // this chunk moved from ImportService - perhaps it could be moved from here but
                     model.put("error", "Report schedules file uploaded");
-
-
-
-
-
-
-
-
-
-
                 } catch (Exception e) { // now the import has it's on exception catching
                     String exceptionError = e.getMessage();
                     e.printStackTrace();

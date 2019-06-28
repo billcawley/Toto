@@ -1,3 +1,9 @@
+27-06-19
+
+fixed bug in permuted temporary set headings
+
+Export from an execute work - for BI data export
+
 26-06-19
 
 all headings are now checked to see if there are any user choices specified by [] to be changed to the equivalent value

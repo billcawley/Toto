@@ -15,6 +15,7 @@ import com.azquo.spreadsheet.controller.OnlineController;
 import com.azquo.spreadsheet.transport.CellForDisplay;
 import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
 import com.azquo.spreadsheet.transport.ProvenanceDetailsForDisplay;
+import com.azquo.spreadsheet.zk.ReportExecutor;
 import com.azquo.spreadsheet.zk.ReportRenderer;
 import com.azquo.util.AzquoMailer;
 import org.apache.commons.lang.math.NumberUtils;
@@ -447,8 +448,12 @@ public class SpreadsheetService {
                 // todo, address allowing multiple books open for one user. I think this could be possible. Might mean passing a DB connection not a logged in one
                 book.getInternalBook().setAttribute(OnlineController.REPORT_ID, reportSchedule.getReportId());
                 ReportRenderer.populateBook(book, 0);
-                // so, can I have my PDF or XLS? Very similar to other the download code in the spreadsheet command controller
-                if ("PDF".equals(reportSchedule.getType())) {
+                // execute ignores the email unless it should send
+                if ("Execute".equalsIgnoreCase(reportSchedule.getType())){
+                    System.out.println("execute from report scheduler");
+                    ReportExecutor.runExecuteCommandForBook(book, ReportRenderer.EXECUTE); // standard, there's the option to execute the contents of a different names
+                    // so, can I have my PDF or XLS? Very similar to other the download code in the spreadsheet command controller
+                } else if ("PDF".equals(reportSchedule.getType())) {
                     Exporter exporter = Exporters.getExporter("pdf");
                     File file = File.createTempFile(onlineReport.getReportName(), ".pdf");
                     exporter.export(book, file);
@@ -456,9 +461,8 @@ public class SpreadsheetService {
                     for (String email : reportSchedule.getRecipients().split(",")) {
                         filesToSendForEachEmail.computeIfAbsent(email, t -> new ArrayList<>()).add(file);
                     }
-                }
-                // again copied and only modified slightly - todo, factor these?
-                if ("XLS".equals(reportSchedule.getType())) {
+                    // again copied and only modified slightly - todo, factor these?
+                }else if ("XLS".equals(reportSchedule.getType())) {
                     Exporter exporter = Exporters.getExporter();
                     File file = File.createTempFile(Long.toString(System.currentTimeMillis()), "temp");
                     try (FileOutputStream fos = new FileOutputStream(file)) {

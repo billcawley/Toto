@@ -53,10 +53,11 @@
 						<select name="type${reportSchedule.id}">
 							<option<c:if test="${reportSchedule.type == 'PDF'}"> selected</c:if>>PDF</option>
 							<option<c:if test="${reportSchedule.type == 'XLS'}"> selected</c:if>>XLS</option>
+							<option<c:if test="${reportSchedule.type == 'Execute'}"> selected</c:if>>Execute</option>
 						</select>
 					</td>
 					<td><textarea name="parameters${reportSchedule.id}" rows="3">${reportSchedule.parameters}</textarea></td>
-					<td><a href="" class="button small alt"><span class="fa fa-trash"></span></a></td>
+					<td><a href="/api/ManageReportSchedules?deleteId=${reportSchedule.id}" class="button small alt"><span class="fa fa-trash"></span></a></td>
 					</tr>
 			</c:forEach>
 			</tbody>
