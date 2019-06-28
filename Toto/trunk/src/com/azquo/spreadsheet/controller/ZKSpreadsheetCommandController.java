@@ -259,8 +259,11 @@ public class ZKSpreadsheetCommandController {
                     if ("RestoreSavedValues".equals(action) || saveMessage.startsWith("Success")) {
                         final Book book = ss.getBook();
                         final Book newBook = Importers.getImporter().imports(new File((String) book.getInternalBook().getAttribute(OnlineController.BOOK_PATH)), "Report name");
-                        for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes overt
-                            newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
+                        for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes over
+                            // don't move zss internal stuff, it might interfere
+                            if (!key.toLowerCase().contains("zss")){
+                                newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
+                            }
                         }
                         ReportRenderer.populateBook(newBook, 0, true, false, null);
                         ss.setBook(newBook); // and set to the ui. I think if I set to the ui first it becomes overwhelmed trying to track modifications (lots of unhelpful null pointers)
@@ -316,8 +319,11 @@ public class ZKSpreadsheetCommandController {
         }
         // ok the options are set, run the book to find our choices
         Book newBook = Importers.getImporter().imports(new File((String) book.getInternalBook().getAttribute(OnlineController.BOOK_PATH)), "Report name");
-        for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes overt
-            newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
+        for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes over
+            // don't move zss internal stuff, it might interfere
+            if (!key.toLowerCase().contains("zss")){
+                newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
+            }
         }
         ReportRenderer.populateBook(newBook, 0);
         // here should be the list we're after
@@ -331,8 +337,11 @@ public class ZKSpreadsheetCommandController {
                     SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choices.get(choices.size() - 1), selectedChoice);
                     // ok ALL the choices are set, run the book
                     newBook = Importers.getImporter().imports(new File((String) book.getInternalBook().getAttribute(OnlineController.BOOK_PATH)), "Report name");
-                    for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes overt
-                        newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
+                    for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes over
+                        // don't move zss internal stuff, it might interfere
+                        if (!key.toLowerCase().contains("zss")){
+                            newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
+                        }
                     }
                     ReportRenderer.populateBook(newBook, 0);
                     // and render to PDF

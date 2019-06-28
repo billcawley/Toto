@@ -20,7 +20,8 @@ public class CommonReportUtils {
     public static List<String> getDropdownListForQuery(LoggedInUser loggedInUser, String query, String user, boolean justUser, int provenenceId) {
         return getDropdownListForQuery(loggedInUser, query, user, null, justUser, provenenceId);
     }
-        // provenance as in only show choices with this provenance
+
+    // provenance as in only show choices with this provenance
     public static List<String> getDropdownListForQuery(LoggedInUser loggedInUser, String query, String user, String searchTerm, boolean justUser, int provenenceId) {
         //hack to discover a database name
         query = replaceUserChoicesInQuery(loggedInUser, query);
@@ -37,7 +38,7 @@ public class CommonReportUtils {
             }
             return RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
 
-                    .getDropDownListForQuery(loggedInUser.getDataAccessToken(), query, user,searchTerm, justUser, provenenceId);
+                    .getDropDownListForQuery(loggedInUser.getDataAccessToken(), query, user, searchTerm, justUser, provenenceId);
         } catch (Exception e) {
             //e.printStackTrace();
             List<String> error = new ArrayList<>();
@@ -61,9 +62,8 @@ public class CommonReportUtils {
     }
 
     public static List<String> getDropdownListForQuery(LoggedInUser loggedInUser, String querye) {
-        return getDropdownListForQuery(loggedInUser, querye, null,null);
+        return getDropdownListForQuery(loggedInUser, querye, null, null);
     }
-
 
     public static List<String> getDropdownListForQuery(LoggedInUser loggedInUser, String query, String fieldName, String searchTerm) {// WFC added fieldname taken from the spreadsheet (<fieldName>Choice) to pick chosen values from user selection list
         if (fieldName != null) {
@@ -82,9 +82,7 @@ public class CommonReportUtils {
                 }
             }
         }
-
-
-        return getDropdownListForQuery(loggedInUser, query, loggedInUser.getUser().getEmail(),searchTerm, false, -1);
+        return getDropdownListForQuery(loggedInUser, query, loggedInUser.getUser().getEmail(), searchTerm, false, -1);
     }
 
     public static Map<String, String> getUserChoicesMap(LoggedInUser loggedInUser) {

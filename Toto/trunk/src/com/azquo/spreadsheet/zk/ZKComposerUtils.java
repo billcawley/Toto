@@ -25,7 +25,10 @@ class ZKComposerUtils {
             // new book from same source
             final Book newBook = Importers.getImporter().imports(new File((String) book.getInternalBook().getAttribute(OnlineController.BOOK_PATH)), "Report name");
             for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes over
-                newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
+                // don't move zss internal stuff, it might interfere
+                if (!key.toLowerCase().contains("zss")){
+                    newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
+                }
             }
             newBook.getInternalBook().setAttribute(OnlineController.LOCKED_RESULT, null); // zap the locked result, it will be checked below and we only want it there if  populate book put it there
             if (ReportRenderer.populateBook(newBook, 0)) { // check if formulae made saveable data

@@ -1,3 +1,9 @@
+28-06-19
+
+fixed bug in permuted temporary set headings
+
+Bug fixing schedules and adding execute
+
 27-06-19
 
 fixed bug in permuted temporary set headings
