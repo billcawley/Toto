@@ -145,6 +145,19 @@ public final class Value extends AzquoMemoryDBEntity {
         setNeedsPersisting();
     }
 
+    // I think that's all that's needed now we're not saving deleted info
+    private static AtomicInteger deleteNoHistoryCount = new AtomicInteger(0);
+
+    public void deleteNoHistory() throws Exception {
+        // ok this is hacky but I don't want to spare the memory on another boolean
+        // this will tell the persist NOT to put this value in value history
+        // relevant initially as when a name is zapped and the associated values are then those values are not to be put in value history
+        // might NPE let's see . . .
+        text = null;
+        delete();
+        deleteNoHistoryCount.incrementAndGet();
+    }
+
     @Override
     protected void setNeedsPersisting() {
         getAzquoMemoryDB().setValueNeedsPersisting(this);

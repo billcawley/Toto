@@ -151,7 +151,7 @@ public class ValueDAO {
         for (Value value : values) {
             if (!value.getNeedsDeleting()) {
                 insertCount++;
-            } else {
+            } else if (value.getText() != null){ // a crude way to detect if there should be a value history for this
                 insertHistoryCount++;
             }
         }
@@ -168,7 +168,7 @@ public class ValueDAO {
                     futureBatches.add(executor.submit(new BulkValuesInserter(persistenceName, toInsert, FASTVALUE, insertCount, false)));
                     toInsert = new ArrayList<>(FastDAO.UPDATELIMIT); // I considered using clear here but of course the object has been passed into the bulk inserter, bad idea!
                 }
-            } else {
+            } else if (value.getText() != null){ // a crude way to detect if there should be a value history for this{
                 toHistory.add(value);
                 if (toHistory.size() == FastDAO.UPDATELIMIT) {
                     insertHistoryCount -= FastDAO.UPDATELIMIT;

@@ -1112,9 +1112,9 @@ public final class Name extends AzquoMemoryDBEntity {
                 setAttributeWillBePersisted(attribute, null, azquoMemoryDBConnection); // simple way to clear it from the indexes
             }
         }
-        // then the actions on other objects - we now delete such values
+        // then the actions on other objects - we now delete such values and don't have history, without the name it makes no sense
         for (Value v : values) {
-            v.delete();
+            v.deleteNoHistory();
         }
         // remove from parents
         for (Name parent : parents) {
