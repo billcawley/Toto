@@ -96,8 +96,8 @@
         }
         return false;
     }
-
-    var skipSetting = 0;
+/*
+var skipSetting = 0;
 var skipMarker = 0;
     // how to stop this hammering? I reckon add a second every time between checks if the data hasn't changed.
 function updateStatus(){
@@ -127,7 +127,7 @@ function updateStatus(){
     }
 }
 
-setInterval(function(){ updateStatus(); }, 1000);
+setInterval(function(){ updateStatus(); }, 1000);*/
 
 </script>
 
@@ -139,7 +139,7 @@ setInterval(function(){ updateStatus(); }, 1000);
                         maxrows="500" maxcolumns="200"
                         showSheetbar="true" showToolbar="false" showFormulabar="true" showContextMenu="true"/>
     
-    <div id="serverStatus"></div>
+<!--    <div id="serverStatus"></div> -->
 </div>
 <style>
     /* remove dash borders of the auto filter */
