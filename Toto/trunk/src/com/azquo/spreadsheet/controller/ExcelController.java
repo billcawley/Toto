@@ -697,6 +697,16 @@ public class ExcelController {
                 ExcelJsonRequest excelJsonRequest = jacksonMapper.readValue(json, ExcelJsonRequest.class);
                 try {
                     long time = System.currentTimeMillis();
+                    if (excelJsonRequest.query != null){
+                        for (List<String> strings: excelJsonRequest.query){
+                            for (String string:strings){
+                                if (string!=null && string.length() > 0) {
+                                    string = CommonReportUtils.replaceUserChoicesInQuery(loggedInUser, string);
+                                    CommonReportUtils.getDropdownListForQuery(loggedInUser, string);
+                                }
+                            }
+                        }
+                    }
                     // ok this will have to be moved
                     //ExcelJsonRequest excelJsonRequest = jacksonMapper.readValue(json.replace("\\\"", "\""), ExcelJsonRequest.class);
                     // maybe it shouldn't be replaced!
@@ -773,6 +783,7 @@ public class ExcelController {
             if (op.equals("saveregion")) {
                 ExcelJsonRequest excelJsonRequest = jacksonMapper.readValue(json, ExcelJsonRequest.class);
                 loggedInUser.setContext(excelJsonRequest.userContext);
+                //excelJsonRequest.query =
                 CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(loggedInUser.getUser().getReportId(), excelJsonRequest.sheetName, excelJsonRequest.region);
                 List<List<String>> data = excelJsonRequest.data;
                 List<List<CellForDisplay>> oldData = cellsAndHeadingsForDisplay.getData();
@@ -816,7 +827,6 @@ public class ExcelController {
         }
         return false;
     }
-
 
     private String jsonError(String error) {
         return "{\"error\":\"" + error + "\"}";
