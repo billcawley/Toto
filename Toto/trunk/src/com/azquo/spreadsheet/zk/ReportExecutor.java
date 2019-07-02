@@ -610,11 +610,17 @@ public class ReportExecutor {
                     SName supportReportSelections = BookUtils.getNameByName(ReportRenderer.AZSUPPORTREPORTSELECTIONS + region, selectedSheet);
                     SName supportReportFileXMLTag = BookUtils.getNameByName(ReportRenderer.AZSUPPORTREPORTFILEXMLTAG + region, selectedSheet);
                     final int reportFileXMLTagIndex = -1;
+                    boolean multipleReports = false;
                     if (supportReportName != null && supportReportSelections != null) {
-                        // then we have xlsx files to generate along side the XML files
-                        SCell snameCell = BookUtils.getSnameCell(supportReportName);
-                        if (snameCell != null) {
-                            reportName = snameCell.getStringValue();
+                        // new logic - supportReportName can be one cell as it was before *or* it can be multiple in which case I look for a matching row in it
+                        if (supportReportName.getRefersToCellRegion().row == supportReportName.getRefersToCellRegion().lastRow){
+                            // then we have xlsx files to generate along side the XML files
+                            SCell snameCell = BookUtils.getSnameCell(supportReportName);
+                            if (snameCell != null) {
+                                reportName = snameCell.getStringValue();
+                            }
+                        } else {
+                            multipleReports = true;
                         }
                         for (int col = supportReportSelections.getRefersToCellRegion().column; col <= supportReportSelections.getRefersToCellRegion().lastColumn; col++) {
                             CellData cellData = Ranges.range(selectedSheet, supportReportSelections.getRefersToCellRegion().row, col).getCellData();
@@ -721,7 +727,17 @@ public class ReportExecutor {
                                 fileName = filePrefix + fileName;
                             }
                         }
-
+                        // will be similar to file prefix lookup
+                        if (multipleReports){
+                            CellRegion refersToCellRegion = supportReportName.getRefersToCellRegion();
+                            if (row >= refersToCellRegion.row && row <= refersToCellRegion.getLastRow()) {
+                                SCell cell = selectedSheet.getInternalSheet().getCell(row, refersToCellRegion.column);
+                                if (cell != null) {
+                                    // dash not allowed
+                                    reportName = cell.getStringValue();
+                                }
+                            }
+                        }
 
                         String reportFileName = "";
                         // we now do reports first as if a file is produced then the path to that file might be used by the XML
