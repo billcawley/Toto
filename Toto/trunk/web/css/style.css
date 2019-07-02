@@ -51,7 +51,7 @@ h4 {text-transform:none;}
 hr {border: none; height: 1px; margin: 20px auto; padding: 0px !important; color:#FFF; clear:both; border-top:#CCC dotted 1px; }
 pre {display: inline; white-space: pre-wrap; word-wrap: break-word;}
 p{margin:0px 0px 20px 0px;}
-div{position:relative; min-width:0px} /* IE 6/7 Picaboo bug fix */
+/*div{position:relative; min-width:0px} /* IE 6/7 Picaboo bug fix EDD NOTE - commenting as it interferes with ZK. If it's a fix for IE6/7 frankly I don't care . . .*/
 
 i, em {font-family: georgia, times, times new roman, serif;}
 b. strong{font-weight:700;}
