@@ -29,6 +29,7 @@ public class UserChoiceService {
         justUserNameLanguages.add(userName);
         Name filterSets = NameService.findOrCreateNameInParent(connectionFromAccessToken, "Filter sets", null, false); // no languages - typically the set will exist
         Name set = NameService.findOrCreateNameInParent(connectionFromAccessToken, setName, filterSets, true, justUserNameLanguages);//must be a local name in 'Filter sets' and be for this user
+        set.setAttributeWillBePersisted(StringLiterals.DEFAULT_DISPLAY_NAME, null, connectionFromAccessToken);
         if (childrenIds != null) { // it may be if we're just confirming sets exist, in that case don't modify contents
             set.setChildrenWillBePersisted(Collections.emptyList(), connectionFromAccessToken); // easiest way to clear them
             for (Integer childId : childrenIds) {
@@ -48,6 +49,7 @@ public class UserChoiceService {
         justUserNameLanguages.add(userName);
         Name filterSets = NameService.findOrCreateNameInParent(connectionFromAccessToken, "Filter sets", null, false); // no languages - typically the set will exist
         Name set = NameService.findOrCreateNameInParent(connectionFromAccessToken, setName, filterSets, true, justUserNameLanguages);//must be a local name in 'Filter sets' and be for this user
+        set.setAttributeWillBePersisted(StringLiterals.DEFAULT_DISPLAY_NAME, null, connectionFromAccessToken);
         set.setChildrenWillBePersisted(NameQueryParser.parseQuery(connectionFromAccessToken, query), connectionFromAccessToken);
     }
 
@@ -234,6 +236,7 @@ public class UserChoiceService {
         Name filterSets = NameService.findOrCreateNameInParent(connectionFromAccessToken, "Filter sets", null, false); // no languages - typically the set will exist
         //must be a local name in 'Filter sets' and be for this user,  start with just the username in the languages
         Name filterSet = NameService.findOrCreateNameInParent(connectionFromAccessToken, filterName, filterSets, true, languages);
+        filterSet.setAttributeWillBePersisted(StringLiterals.DEFAULT_DISPLAY_NAME, null, connectionFromAccessToken);
         // now add in the default display name for a more typical languages list
         languages.add(StringLiterals.DEFAULT_DISPLAY_NAME);
         if (filterSet.getChildren() == null || filterSet.getChildren().size() == 0) {
