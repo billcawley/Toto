@@ -118,11 +118,12 @@ class NameEditFunctions {
                 for (String child:children){
                     newChildren.add(NameService.findOrCreateNameInParent(azquoMemoryDBConnection,child,set,true));//make local name
                 }
-                Collection<Name> redundantNames = new ArrayList<>(set.getChildren());
-                redundantNames.removeAll(newChildren);
-                newChildren.addAll(redundantNames);//must ensure that there are no 'floating names'
+                //Collection<Name> redundantNames = new ArrayList<>(set.getChildren());
+                //redundantNames.removeAll(newChildren);
+                //newChildren.addAll(redundantNames);//must ensure that there are no 'floating names'
                 set.setChildrenWillBePersisted(newChildren,azquoMemoryDBConnection);
                 set.setAttributeWillBePersisted("DISPLAYROWS",dRows,azquoMemoryDBConnection);
+                toReturn.add(set);
             }
             return toReturn;
         }
