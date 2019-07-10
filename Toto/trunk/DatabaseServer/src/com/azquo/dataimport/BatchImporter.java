@@ -574,7 +574,7 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
             Name toTestParent = NameService.findByName(azquoMemoryDBConnection, setName);
 
             if (toTestParent == null) {
-                throw new Exception((cell.getImmutableImportHeading().heading + " no such set: " + setName));
+                throw new Exception((cell.getImmutableImportHeading().heading + " no such name: " + setName));
             }
             boolean found = false;
             String bestFrom = "";
