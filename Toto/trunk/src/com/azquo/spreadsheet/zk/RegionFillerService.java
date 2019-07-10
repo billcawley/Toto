@@ -47,7 +47,7 @@ class RegionFillerService {
                     SCell cell = sheet.getInternalSheet().getCell(row, col);
                     cell.setValue(heading);
                     if (!userRegionOptions.getNoPermuteTotals()) {
-                        if (lineNo > 0 && lastRowHeadings.get(col - startCol) != null && lastRowHeadings.get(col - startCol).equals(heading)) {
+                        if (lineNo > 0 && lastRowHeadings.size() > col - startCol && lastRowHeadings.get(col - startCol) != null && lastRowHeadings.get(col - startCol).equals(heading)) {
                             //disguise the heading by making foreground colour = background colour
                             Range selection = Ranges.range(sheet, row, col, row, col);
                             CellOperationUtil.applyFontColor(selection, sheet.getInternalSheet().getCell(row, col).getCellStyle().getBackColor().getHtmlColor());
