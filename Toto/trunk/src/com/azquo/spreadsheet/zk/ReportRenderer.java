@@ -393,6 +393,13 @@ public class ReportRenderer {
                 }
                 name.setRefersToFormula(newFormula);
             }
+            //and the sent cells maps to realign them to the renamed sheets
+            for (CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay: loggedInUser.getSentForReportAndSheet(reportId,oldName)){
+                String region = cellsAndHeadingsForDisplay.getRegion();
+                loggedInUser.setSentCells(reportId, newName, region, cellsAndHeadingsForDisplay);
+                //should we zap the old map?  does not do any harm?
+
+            }
         }
         //
         loggedInUser.setImageStoreName(imageStoreName);
