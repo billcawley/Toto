@@ -3,6 +3,9 @@ package com.azquo.dataimport;
 import com.azquo.RowColumn;
 import com.azquo.spreadsheet.transport.HeadingWithInterimLookup;
 import com.azquo.util.CommandLineCalls;
+import org.apache.commons.lang.SystemUtils;
+import org.apache.log4j.Logger;
+import org.apache.log4j.Priority;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
@@ -189,6 +192,9 @@ public final class ImportService {
         return processedUploadedFiles;
     }
 
+    private static final Logger logger = Logger.getLogger(ImportService.class);
+
+
     // a book will be a report to upload or a workbook which has to be converted into a csv for each sheet
     private static List<UploadedFile> readBook(LoggedInUser loggedInUser, UploadedFile uploadedFile, PendingUploadConfig pendingUploadConfig, HashMap<String, ImportTemplateData> templateCache) throws Exception {
         long time = System.currentTimeMillis();
@@ -205,11 +211,12 @@ public final class ImportService {
                     book = new HSSFWorkbook(new FileInputStream(new File(uploadedFile.getPath())));
                 } catch (Exception problem) {
                     try {
-                        System.out.println("POI can't read that " + uploadedFile.getPath() + ", attempting conversion with libre office . . .");
-                        System.out.println("libreoffice --headless --convert-to xlsx:\"Calc MS Excel 2007 XML\" --outdir \"" + Paths.get(uploadedFile.getPath()).getParent().toString() + "\" \"" + uploadedFile.getPath() + "\"");
+                        String libreofficecommand = SystemUtils.IS_OS_WINDOWS ? "C:\\Program Files\\LibreOffice\\program\\soffice.exe" : "libreoffice";
+                        logger.warn("POI can't read that " + uploadedFile.getPath() + ", attempting conversion with libre office . . .");
+                        logger.warn(libreofficecommand + " --headless --convert-to xlsx:\"Calc MS Excel 2007 XML\" --outdir \"" + Paths.get(uploadedFile.getPath()).getParent().toString() + "\" \"" + uploadedFile.getPath() + "\"");
                         // so, the xls could be non standard, try to get libre office to convert it - requires of course that libre office is installed!
                         String[] commandArray = new String[]{
-                                "libreoffice"
+                                libreofficecommand
                                 , "--headless"
                                 , "--convert-to"
                                 , "xlsx:Calc MS Excel 2007 XML"
@@ -1287,6 +1294,7 @@ public final class ImportService {
             importTemplate = new ImportTemplate(0, LocalDateTime.now(), businessId, loggedInUser.getUser().getId(), uploadedFile.getFileName(), uploadedFile.getFileName(), ""); // default to ZK now
         }
         ImportTemplateDAO.store(importTemplate);
+        // right here is a problem - what about other users currently logged in with that database? todo
         if (assignToLoggedInUserDB) {
             Database database = loggedInUser.getDatabase();
             database.setImportTemplateId(importTemplate.getId());

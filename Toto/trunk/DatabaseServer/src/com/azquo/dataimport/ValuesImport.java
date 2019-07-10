@@ -1,7 +1,6 @@
 package com.azquo.dataimport;
 
 import com.azquo.ThreadPools;
-import com.azquo.TypedPair;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.core.Name;
 import com.azquo.spreadsheet.transport.UploadedFile;
@@ -26,7 +25,6 @@ The cell on a line can be a value or an attribute or a name - or a part of anoth
 
  */
 public class ValuesImport {
-
 
     static void valuesImport(AzquoMemoryDBConnection connection, MappingIterator<String[]> lineIterator
             , UploadedFile uploadedFile, List<ImmutableImportHeading> importHeadings
@@ -54,7 +52,7 @@ public class ValuesImport {
                     // while as rejected lines could well be sequential!
                     while (uploadedFile.getIgnoreLines() != null && uploadedFile.getIgnoreLines().keySet().contains(lineIterator.getCurrentLocation().getLineNr() - 1) && lineIterator.hasNext()) {
                         StringBuilder sb = new StringBuilder();
-                        sb.append("Deliberately skipping line " + (lineIterator.getCurrentLocation().getLineNr() - 1) + ", ");
+                        sb.append("Deliberately skipping line ").append(lineIterator.getCurrentLocation().getLineNr() - 1).append(", ");
                         for (String cell : lineValues) {
                             sb.append("\t").append(cell);
                         }

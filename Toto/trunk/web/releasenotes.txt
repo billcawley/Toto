@@ -1,3 +1,13 @@
+02-07-19
+
+shows the choices selected by loops in the execute upload results feedback
+
+zapped a css bug that was interfering with ZK
+
+01-07-19
+
+don't store value history when values are deleted because names are deleted
+
 28-06-19-2
 
 Bug fix on repeat sheet

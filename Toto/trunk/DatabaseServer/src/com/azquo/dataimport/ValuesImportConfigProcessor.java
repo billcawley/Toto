@@ -8,10 +8,7 @@ import java.util.List;
 
 Will process a ValuesImportConfig until it's ready to be used by Values import.
 
-Complex stuff such as finding headings which can be in a name or names in the db or attached to the uploaded file
-and then resolving these headings is done or called from here.
-
-Headings are often found in the DB, put there by setup files, to enable importing of client files "as is".
+Used to look up names for headers but we now do this through an import template - only two static functions left, could perhaps be folded into other functions
 
  */
 
