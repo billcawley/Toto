@@ -35,6 +35,7 @@ import org.zkoss.poi.ss.usermodel.Workbook;
 import org.zkoss.poi.xssf.usermodel.XSSFWorkbook;
 import org.zkoss.zss.api.Importers;
 import org.zkoss.zss.api.model.Book;
+import sun.rmi.runtime.Log;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -738,8 +739,12 @@ public class ExcelController {
                         loggedInUser.setSentCells(loggedInUser.getUser().getReportId(), excelJsonRequest.sheetName, excelJsonRequest.region, cellsAndHeadingsForDisplay);
                         return "Empty space set to ad hoc data : " + excelJsonRequest.region;
                     } else {
-                        CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = SpreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser, excelJsonRequest.region, 0, excelJsonRequest.rowHeadings, excelJsonRequest.columnHeadings,
-                                excelJsonRequest.context, userRegionOptions, true, null);
+                        CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = SpreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser,
+                                excelJsonRequest.region, 0,
+                                replaceUserChoicesInHeadings(loggedInUser,excelJsonRequest.rowHeadings),
+                                replaceUserChoicesInHeadings(loggedInUser,excelJsonRequest.columnHeadings),
+                                replaceUserChoicesInHeadings(loggedInUser,excelJsonRequest.context),
+                                userRegionOptions, true, null);
                         RegionOptions holdOptions = cellsAndHeadingsForDisplay.getOptions();//don't want to send these to Excel
                         cellsAndHeadingsForDisplay.setOptions(null);
                         System.out.println("NPE checking : " + loggedInUser.getOnlineReport());
@@ -814,6 +819,19 @@ public class ExcelController {
             result = e.getMessage();
         }
         return jsonError(result);
+    }
+
+    private static List<List<String>>replaceUserChoicesInHeadings(LoggedInUser loggedInUser,List<List<String>>headings){
+        List<List<String>>toReturn = new ArrayList<>();
+        for (List<String>row:headings){
+            List<String>newRow = new ArrayList<>();
+            for (String heading:row){
+                newRow.add(CommonReportUtils.replaceUserChoicesInQuery(loggedInUser,heading));
+
+            }
+            toReturn.add(newRow);
+        }
+        return toReturn;
     }
 
     private boolean isEqual(String s1, String s2) {
