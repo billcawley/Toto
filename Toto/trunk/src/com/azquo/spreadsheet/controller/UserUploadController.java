@@ -169,8 +169,9 @@ public class UserUploadController {
                             Workbook book;
                             UploadedFile uploadedFile = new UploadedFile(moved.getAbsolutePath(), Collections.singletonList(fileName), new HashMap<>(), false, false);
                             FileInputStream fs = new FileInputStream(new File(uploadedFile.getPath()));
+                            OPCPackage opcPackage = null;
                             if (uploadedFile.getFileName().endsWith("xlsx")) {
-                                OPCPackage opcPackage = OPCPackage.open(fs);
+                                opcPackage = OPCPackage.open(fs);
                                 book = new XSSFWorkbook(opcPackage);
                             } else {
                                 book = new HSSFWorkbook(fs);
@@ -193,6 +194,10 @@ public class UserUploadController {
                             Name importName = BookUtils.getName(book, ReportRenderer.AZIMPORTNAME);
                             if (importName != null) {
                                 isImportTemplate = true;
+                            }
+                            // windows file write locking paranoia
+                            if (opcPackage != null){
+                                opcPackage.close();
                             }
                             boolean assignTemplateToDatabase = false;
                             if (database != null && !database.isEmpty()) {

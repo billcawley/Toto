@@ -437,22 +437,27 @@ public class ExcelController {
                         // will this mess up the file?? who knows!
                         OPCPackage opcPackage = OPCPackage.open(file.getAbsolutePath());
                         Workbook book = new XSSFWorkbook(opcPackage);
-                        for (int i = 0; i < book.getNumberOfNames(); i++) {
-                            Name nameAt = book.getNameAt(i);
-                            try {
-                                if (!nameAt.getSheetName().isEmpty()) {
-                                    if (nameAt.getSheetIndex() == -1) {
-                                        int lookup = book.getSheetIndex(nameAt.getSheetName());
-                                        if (lookup != -1) {
-                                            nameAt.setSheetIndex(lookup);
+                        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                        // adding the try catch here so we always close the OPC package which I think causes a problem under windows
+                        try {
+                            for (int i = 0; i < book.getNumberOfNames(); i++) {
+                                Name nameAt = book.getNameAt(i);
+                                try {
+                                    if (!nameAt.getSheetName().isEmpty()) {
+                                        if (nameAt.getSheetIndex() == -1) {
+                                            int lookup = book.getSheetIndex(nameAt.getSheetName());
+                                            if (lookup != -1) {
+                                                nameAt.setSheetIndex(lookup);
+                                            }
                                         }
                                     }
+                                } catch (Exception ignored) { // maybe do something with it later but for the moment don't. Just want it to fix what names it can
                                 }
-                            } catch (Exception ignored) { // maybe do something with it later but for the moment don't. Just want it to fix what names it can
                             }
+                            book.write(baos);
+                        } catch (Exception ignored){
                         }
-                        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                        book.write(baos);
+                        opcPackage.close();
                         byte[] encodedBytes = Base64.getEncoder().encode(baos.toByteArray());
                         baos.close();
                         String string64 = new String(encodedBytes);

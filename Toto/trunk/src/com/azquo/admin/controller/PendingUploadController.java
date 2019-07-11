@@ -356,45 +356,51 @@ public class PendingUploadController {
                         OPCPackage opcPackage = OPCPackage.open(amendmentsFile.getInputStream());
                         Workbook book = new XSSFWorkbook(opcPackage);
                         Sheet warnings = book.getSheet("Warnings");
-                        if (warnings != null) {
-                            boolean inData = false;
-                            // first two always load and comment, look up the other two
-                            int fileIndexIndex = 0;
-                            int lineIndexIndex = 0;
-                            int identifierIndex = 0;
-                            for (Row row : warnings) {
-                                if (inData) {
-                                    int fileIndex = Integer.parseInt(ImportService.getCellValue(row.getCell(fileIndexIndex)));
-                                    int lineIndex = Integer.parseInt(ImportService.getCellValue(row.getCell(lineIndexIndex)));
-                                    String identifier = ImportService.getCellValue(row.getCell(identifierIndex));
-                                    // load and comment will always be the first and second cells
-                                    String load = ImportService.getCellValue(row.getCell(0));
-                                    String comment = ImportService.getCellValue(row.getCell(1));
-                                    // ok first deal with the comment
-                                    dealWithComment(pu, identifier, comment);
-                                    // now the line, the question being whether it's to be rejected
-                                    if (load.isEmpty()) {
-                                        fileRejectLines.computeIfAbsent(fileIndex, HashMap::new).put(lineIndex, identifier);
-                                    }
-                                } else if (row.getCell(0).getStringCellValue().equalsIgnoreCase("load")) {
-                                    for (Cell cell : row) {
-                                        if (ImportService.getCellValue(cell).equalsIgnoreCase("file index")) {
-                                            fileIndexIndex = cell.getColumnIndex();
+                        // try catch as I need to make sure the package is closed under windows
+                        try{
+                            if (warnings != null) {
+                                boolean inData = false;
+                                // first two always load and comment, look up the other two
+                                int fileIndexIndex = 0;
+                                int lineIndexIndex = 0;
+                                int identifierIndex = 0;
+                                for (Row row : warnings) {
+                                    if (inData) {
+                                        int fileIndex = Integer.parseInt(ImportService.getCellValue(row.getCell(fileIndexIndex)));
+                                        int lineIndex = Integer.parseInt(ImportService.getCellValue(row.getCell(lineIndexIndex)));
+                                        String identifier = ImportService.getCellValue(row.getCell(identifierIndex));
+                                        // load and comment will always be the first and second cells
+                                        String load = ImportService.getCellValue(row.getCell(0));
+                                        String comment = ImportService.getCellValue(row.getCell(1));
+                                        // ok first deal with the comment
+                                        dealWithComment(pu, identifier, comment);
+                                        // now the line, the question being whether it's to be rejected
+                                        if (load.isEmpty()) {
+                                            fileRejectLines.computeIfAbsent(fileIndex, HashMap::new).put(lineIndex, identifier);
                                         }
-                                        if (ImportService.getCellValue(cell).equalsIgnoreCase("line no")) {
-                                            lineIndexIndex = cell.getColumnIndex();
+                                    } else if (row.getCell(0).getStringCellValue().equalsIgnoreCase("load")) {
+                                        for (Cell cell : row) {
+                                            if (ImportService.getCellValue(cell).equalsIgnoreCase("file index")) {
+                                                fileIndexIndex = cell.getColumnIndex();
+                                            }
+                                            if (ImportService.getCellValue(cell).equalsIgnoreCase("line no")) {
+                                                lineIndexIndex = cell.getColumnIndex();
+                                            }
+                                            if (ImportService.getCellValue(cell).equalsIgnoreCase("identifier")) {
+                                                identifierIndex = cell.getColumnIndex();
+                                            }
                                         }
-                                        if (ImportService.getCellValue(cell).equalsIgnoreCase("identifier")) {
-                                            identifierIndex = cell.getColumnIndex();
+                                        if (lineIndexIndex == 0 || fileIndexIndex == 0) {
+                                            throw new Exception("couldn't find line no and file index headings in amended warnings upload");
                                         }
+                                        inData = true;
                                     }
-                                    if (lineIndexIndex == 0 || fileIndexIndex == 0) {
-                                        throw new Exception("couldn't find line no and file index headings in amended warnings upload");
-                                    }
-                                    inData = true;
                                 }
                             }
+                        } catch (Exception e){
+                            e.printStackTrace();
                         }
+                        opcPackage.close();
                     }
                     int maxCounter = Integer.parseInt(maxcounter);
                     for (int i = 0; i <= maxCounter; i++) {

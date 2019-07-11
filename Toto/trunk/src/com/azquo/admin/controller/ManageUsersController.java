@@ -298,6 +298,7 @@ public class ManageUsersController {
                             row++;
                         }
                     }
+                    opcPackage.close();
                     StringBuilder message = new StringBuilder("User file uploaded.");
                     if (rejected.size() > 0) {
                         message.append("  Some users rejected: ");
@@ -306,16 +307,6 @@ public class ManageUsersController {
                         }
                     }
                     model.put("error", message);
-
-
-
-
-
-
-
-
-
-
                 } catch (Exception e) { // now the import has it's on exception catching
                     String exceptionError = e.getMessage();
                     e.printStackTrace();

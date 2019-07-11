@@ -1,3 +1,7 @@
+10-07-19
+
+Work on Windows Deployment - more specifically changes to the libreoffice file conversion (fix certain xls files) and use of the log4j since under Windows Tomcat seems to deal with System.out.printlns in a different way
+
 02-07-19
 
 shows the choices selected by loops in the execute upload results feedback

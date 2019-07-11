@@ -308,6 +308,7 @@ public class ManageDatabasesController {
                             uploadFile.transferTo(moved);
                             Workbook book;
                             UploadedFile uploadedFile = new UploadedFile(moved.getAbsolutePath(), Collections.singletonList(fileName), new HashMap<>(), false, false);
+                            // wary of windows locking files, need to see how it goes
                             FileInputStream fs = new FileInputStream(new File(uploadedFile.getPath()));
                             if (uploadedFile.getFileName().endsWith("xlsx")) {
                                 OPCPackage opcPackage = OPCPackage.open(fs);

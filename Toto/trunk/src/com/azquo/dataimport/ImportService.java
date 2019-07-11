@@ -203,6 +203,7 @@ public final class ImportService {
         try {
             // so, the try catches are there in case the file extension is incorrect. This has happened!
             if (uploadedFile.getFileName().toLowerCase().endsWith("xlsx")) {
+                // is the opcpackage dangerous under windows - holding a file lock? Not sure . . . .
                 OPCPackage opcPackage = OPCPackage.open(new FileInputStream(new File(uploadedFile.getPath())));
                 book = new XSSFWorkbook(opcPackage);
                 //System.out.println("book open time " + (System.currentTimeMillis() - quicktest));
@@ -297,6 +298,7 @@ public final class ImportService {
 
 */
 // ok try to read the converted file!
+                        // opcpackage dangerous for filehandling under windows??
                         OPCPackage opcPackage = OPCPackage.open(new File(uploadedFile.getPath() + "x"));
                         book = new XSSFWorkbook(opcPackage);
                     } catch (Exception e) {
@@ -1467,6 +1469,8 @@ fr.close();
                     //System.out.println("address : " + eElement.getTextContent());
                 }
             }
+            // due to windows paranoia, keep an eye on this. Might cause files to be write locked
+            opcPackage.close();
             return importTemplateData;
         }
         return null;
@@ -1508,6 +1512,8 @@ fr.close();
                 //System.out.println("address : " + eElement.getTextContent());
             }
         }
+        // worried about write locking the file in windows . . .
+        opcPackage.close();
 
     }
 

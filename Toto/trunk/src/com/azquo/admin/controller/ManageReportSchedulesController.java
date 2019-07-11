@@ -176,7 +176,7 @@ public class ManageReportSchedulesController {
                     File moved = new File(SpreadsheetService.getHomeDir() + "/temp/" + System.currentTimeMillis() + fileName); // timestamp to stop file overwriting
                     uploadFile.transferTo(moved);
 
-                    // as with the users upload this has been moved in from IMport service.
+                    // as with the users upload this has been moved in from Import service.
                     // Maybe it shouldn't be in a controller but it does make more sense in there than mixed with the import logic
 
                     FileInputStream fs = new FileInputStream(moved);
@@ -220,6 +220,7 @@ public class ManageReportSchedulesController {
                             row++;
                         }
                     }
+                    opcPackage.close();
                     // this chunk moved from ImportService - perhaps it could be moved from here but
                     model.put("error", "Report schedules file uploaded");
                 } catch (Exception e) { // now the import has it's on exception catching
