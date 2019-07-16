@@ -221,7 +221,9 @@ public class AzquoMemoryDBIndex {
         final Set<Name> names = HashObjSets.newMutableSet();
         if (attributeName.length() == 0) { // odd that it might be
             for (String attName : nameByAttributeMap.keySet()) {
-                names.addAll(getNamesByAttributeValueWildcards(attName, attributeValueSearch, startsWith, endsWith)); // and when attribute name is blank we don't return for all attribute names, just the first that contains this
+                if (attName.length() > 0){//not sure how a blank attribute name was created!
+                    names.addAll(getNamesByAttributeValueWildcards(attName, attributeValueSearch, startsWith, endsWith)); // and when attribute name is blank we don't return for all attribute names, just the first that contains this
+                }
                 if (names.size() > 0) {
                     return names;
                 }
@@ -300,6 +302,9 @@ public class AzquoMemoryDBIndex {
     private static AtomicInteger setAttributeForNameInAttributeNameMapCount = new AtomicInteger(0);
 
     void setAttributeForNameInAttributeNameMap(String attributeName, String attributeValue, Name name) {
+        if (attributeName.length()==0){
+            return;//there should never be a zero length attribute name
+        }
         setAttributeForNameInAttributeNameMapCount.incrementAndGet();
         // upper and lower seems a bit arbitrary, I need a way of making it case insensitive.
         // these interns have been tested as helping memory usage.

@@ -25,6 +25,8 @@ import org.zkoss.zssex.ui.widget.WidgetCtrl;
 import org.zkoss.zul.*;
 
 import java.net.URLEncoder;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 /**
@@ -173,6 +175,12 @@ public class ZKComposer extends SelectorComposer<Component> {
     @Listen("onStopEditing = #myzss")
     public void onStopEditing(StopEditingEvent event) {
         String chosen = (String) event.getEditingValue();
+        LocalDate date = ReportUtils.isADate(chosen);
+        if (date!=null){
+            DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+            chosen = dateTimeFormatter.format(date);
+
+        }
         final Book book = event.getSheet().getBook();
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
         int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
