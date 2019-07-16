@@ -728,15 +728,17 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
                     linesRejected.computeIfAbsent(importLine, t -> new ArrayList<>()).add("No name for attribute " + cell.getImmutableImportHeading().attribute + " of " + cell.getImmutableImportHeading().heading);
                     break;
                 } else {
-                    for (Name name : identityCell.getLineNames()) {
-                        // provisional means if there's a value there already don't change it
-                        if (!cell.getImmutableImportHeading().provisional || name.getAttribute(attribute) == null) {
-                            name.setAttributeWillBePersisted(attribute, cell.getLineValue(), azquoMemoryDBConnection);
-                        }
-                        // EFC note - need to check on definition
-                        if (attribute.toLowerCase().equals("definition")) {
-                            //work it out now!
-                            name.setChildrenWillBePersisted(NameQueryParser.parseQuery(azquoMemoryDBConnection, cell.getLineValue()), azquoMemoryDBConnection);
+                    if (!cell.equals(identityCell)){//IF THIS IS THE IDENTITY CELL THE SYSTEM MIGHT OVERRIDE ALTERNATIVE ATTRIBUTES (a||b||c)
+                        for (Name name : identityCell.getLineNames()) {
+                            // provisional means if there's a value there already don't change it
+                            if (!cell.getImmutableImportHeading().provisional || name.getAttribute(attribute) == null) {
+                                name.setAttributeWillBePersisted(attribute, cell.getLineValue(), azquoMemoryDBConnection);
+                            }
+                            // EFC note - need to check on definition
+                            if (attribute.toLowerCase().equals("definition")) {
+                                //work it out now!
+                                name.setChildrenWillBePersisted(NameQueryParser.parseQuery(azquoMemoryDBConnection, cell.getLineValue()), azquoMemoryDBConnection);
+                            }
                         }
                     }
                 }
