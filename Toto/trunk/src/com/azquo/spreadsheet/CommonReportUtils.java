@@ -109,7 +109,7 @@ public class CommonReportUtils {
                 if (userChoice.toLowerCase().startsWith("az_")) {
                     userChoiceBasic = userChoice.substring(3);
                 }
-                String replacement = userChoices.get(userChoiceBasic.toLowerCase());
+                String replacement = userChoices.get(userChoiceBasic.toLowerCase().replace(" ",""));//remove any blanks.
                 if (replacement != null) {
                     query = query.substring(0, pos) + replacement + query.substring(endPos + 1);
                     pos = pos + replacement.length();
