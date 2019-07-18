@@ -82,6 +82,7 @@ class ValuesImportConfigProcessor {
                 || heading.startsWith(HeadingReader.EXISTING)
                 || heading.startsWith(HeadingReader.LINEHEADING)
                 || heading.startsWith(HeadingReader.LINEDATA)
+                || heading.startsWith(HeadingReader.DICTIONARY)
                 || heading.startsWith(HeadingReader.CLASSIFICATION)
                 || heading.startsWith(HeadingReader.SPLIT);
     }}

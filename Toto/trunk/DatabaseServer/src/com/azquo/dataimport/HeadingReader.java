@@ -79,7 +79,7 @@ class HeadingReader {
     e.g  if an element of 'Synonyms' is 'car'    then 'car' may have an attribute 'synonyms' consisting of 'motor, auto, vehicle'  which DICTIONARY  would consider to mean the same as 'car'
     todo : change to be report functionality
      */
-    private static final String DICTIONARY = "dictionary";
+    public static final String DICTIONARY = "dictionary";
     /*
     LOOKUP FROM  `<start attribute>` {TO `<end attribute>`}
     used in conjunction with 'child of' or 'classification'
