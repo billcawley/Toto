@@ -200,7 +200,7 @@ public class ChoicesService {
                                 String first = !validOptions.isEmpty() ? validOptions.get(0) : null; // before lower case
                                 // hack - valid options needs to be case insensitive. Allow dec-18 for Dec-18
                                 for (int i = 0; i < validOptions.size(); i++){
-                                    validOptions.set(i, validOptions.get(i).toLowerCase());
+                                    validOptions.set(i, validOptions.get(i).toLowerCase().trim());
                                 }
                                 while (userChoice != null && !validOptions.contains(userChoice.toLowerCase()) && userChoice.contains("->")) {
                                     //maybe the user choice is over -specified. (e.g from drilldown or removal of conflicting names)  Try removing the super-sets
