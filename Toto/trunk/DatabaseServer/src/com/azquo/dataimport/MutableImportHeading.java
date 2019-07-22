@@ -69,6 +69,8 @@ class MutableImportHeading {
     List<String> ignoreList = null;
     // don't import zero values
     boolean blankZeroes = false;
+    //interpret strings as numbers
+    boolean isNumber = false;
     // remove spaces from the cell value
     boolean removeSpaces = false;
     boolean required = false;

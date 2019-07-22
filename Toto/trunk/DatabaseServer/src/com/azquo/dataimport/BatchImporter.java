@@ -703,6 +703,10 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
             } else if (!namesForValue.isEmpty()) { // no point storing if peers not ok or no names for value (the latter shouldn't happen, braces and a belt I suppose)
                 // now we have the set of names for that name with peers get the value from that headingNo it's a heading for
                 String value = cell.getLineValue();
+                if (cell.getImmutableImportHeading().isNumber){
+                    double d = Double.parseDouble(value.replace(",","").replace("$","").replace("£",""));// needs a dedicated routine
+                    value = d + "";
+                }
                 if (!(cell.getImmutableImportHeading().blankZeroes && isZero(value)) && value.trim().length() > 0) { // don't store if blank or zero and blank zeroes
                     // finally store our value and names for it - only increment the value count if something actually changed in the DB
                     ValueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, value, namesForValue, cell.getImmutableImportHeading().replace);
