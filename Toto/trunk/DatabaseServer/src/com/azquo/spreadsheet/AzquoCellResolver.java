@@ -395,6 +395,7 @@ public class AzquoCellResolver {
                 if (!DataRegionHeadingService.headingsHaveAttributes(headingsForThisCell)) { // we go the value route (as it was before allowing attributes), need the headings as names,
                     ValuesHook valuesHook = new ValuesHook(); // todo, can we use this only when necessary?
                     // now , get the function from the headings
+                    // should EXACT also be exempt from locking?
                     if (function != null && !function.equals(DataRegionHeading.FUNCTION.ALLEXACT)) {
                         locked.isTrue = true;
                     }

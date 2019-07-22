@@ -201,7 +201,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                 }
             }
             // We may add row heading later but it's not a requirement currently
-            if (name.getName().startsWith(ReportRenderer.AZDISPLAYCOLUMNHEADINGS)) { // ok going to try for a sorting on column heading detect
+            if (name.getName().toLowerCase().startsWith(ReportRenderer.AZDISPLAYCOLUMNHEADINGS)) { // ok going to try for a sorting on column heading detect
                 String region = name.getName().substring(ReportRenderer.AZDISPLAYCOLUMNHEADINGS.length());
                 UserRegionOptions userRegionOptions = UserRegionOptionsDAO.findForUserIdReportIdAndRegion(loggedInUser.getUser().getId(), reportId, region);
                 if (userRegionOptions == null) {

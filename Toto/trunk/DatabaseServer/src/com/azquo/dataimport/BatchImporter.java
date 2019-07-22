@@ -11,7 +11,6 @@ import com.azquo.memorydb.service.ValueService;
 
 import java.text.DecimalFormat;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -32,7 +31,6 @@ import java.util.regex.Pattern;
 public class BatchImporter implements Callable<Void> {
 
     private final AzquoMemoryDBConnection azquoMemoryDBConnection;
-    // just to give a little feedback on the number imported
     private final List<LineDataWithLineNumber> dataToLoad;
     private final Map<String, Name> namesFoundCache;
     private final List<String> attributeNames;
@@ -64,15 +62,16 @@ public class BatchImporter implements Callable<Void> {
         Long time = System.currentTimeMillis();
         for (LineDataWithLineNumber lineDataWithLineNumber : dataToLoad) {
             List<ImportCellWithHeading> lineToLoad = lineDataWithLineNumber.getLineData();
+            int lineNumber = lineDataWithLineNumber.getLineNumber();
+            try {
+                ImportCellWithHeading first = lineToLoad.get(0);
             /*
-            There's a thought that this should be a whole line check rather than the first column
+            There's a thought that this should be a whole line check rather than the first column.
 
-            skip any line that has a blank in the first column unless the first column had no heading or it's composite
+            Skip any line that has a blank in the first column unless the first column had no heading or it's composite
             happy for the check to remain in here - more stuff for the multi threaded bit
             blank attribute allowed as it's not structural, a blank attribute won't break anything
             */
-            try {
-                ImportCellWithHeading first = lineToLoad.get(0);
                 if (first.getLineValue().length() > 0 || first.getImmutableImportHeading().heading == null
                         || first.getImmutableImportHeading().compositionPattern != null || first.getImmutableImportHeading().attribute != null) {
                     //check dates before resolving composite values
@@ -94,14 +93,14 @@ public class BatchImporter implements Callable<Void> {
                     }
                     // composite might do things that affect only and existing hence do it before
                     if (rejectionReason == null) {
-                        resolveCompositeValues(azquoMemoryDBConnection, namesFoundCache, attributeNames, lineToLoad, lineDataWithLineNumber.getLineNumber(), compositeIndexResolver);
+                        resolveCompositeValues(azquoMemoryDBConnection, namesFoundCache, attributeNames, lineToLoad, lineNumber, compositeIndexResolver);
                         rejectionReason = checkOnlyAndExisting(azquoMemoryDBConnection, lineToLoad, attributeNames);
                     }
                     if (rejectionReason == null) {
                         try {
                             // dictionary stuff, need to remove when it's confirmed working in reports - todo
                             resolveCategories(azquoMemoryDBConnection, namesFoundCache, lineToLoad);
-                            interpretLine(azquoMemoryDBConnection, lineToLoad, namesFoundCache, attributeNames, lineDataWithLineNumber.getLineNumber(), linesRejected, clearData);
+                            interpretLine(azquoMemoryDBConnection, lineToLoad, namesFoundCache, attributeNames, lineNumber, linesRejected, clearData);
                         } catch (Exception e) {
                             azquoMemoryDBConnection.addToUserLogNoException(e.getMessage(), true);
                             e.printStackTrace();
@@ -109,20 +108,20 @@ public class BatchImporter implements Callable<Void> {
                         }
                         Long now = System.currentTimeMillis();
                         if (now - time > 10) { // 10ms a bit arbitrary
-                            System.out.println("line no " + lineDataWithLineNumber.getLineNumber() + " time = " + (now - time) + "ms");
+                            System.out.println("line no " + lineNumber + " time = " + (now - time) + "ms");
                         }
                         time = now;
                     } else if (!"ignored".equalsIgnoreCase(rejectionReason)) {
                         noLinesRejected.incrementAndGet();
                         if (linesRejected.size() < 1000) {
-                            linesRejected.computeIfAbsent(lineDataWithLineNumber.getLineNumber(),
+                            linesRejected.computeIfAbsent(lineNumber,
                                     t -> new ArrayList<>()).add(rejectionReason);
                         }
                     }
                 }
             } catch (Exception e) {
                 if (linesRejected.size() < 1000) {
-                    linesRejected.computeIfAbsent(lineDataWithLineNumber.getLineNumber()
+                    linesRejected.computeIfAbsent(lineNumber
                             , t -> new ArrayList<>()).add(e.getMessage());
                 }
                 noLinesRejected.incrementAndGet();
@@ -134,13 +133,13 @@ public class BatchImporter implements Callable<Void> {
         return null;
     }
 
+    /*
+    interpret the date and change to standard form
+    todo consider other date formats on import - these may  be covered in setting up dates, but I'm not sure - WFC
+    HeaadingReader defines DATELANG and USDATELANG
+    */
     private static void checkDate(ImportCellWithHeading importCellWithHeading) {
         if (importCellWithHeading.getImmutableImportHeading().attribute != null && importCellWithHeading.getImmutableImportHeading().dateForm > 0) {
-                            /*
-                            interpret the date and change to standard form
-                            todo consider other date formats on import - these may  be covered in setting up dates, but I'm not sure - WFC
-                            HeaadingReader defines DATELANG and USDATELANG
-                            */
             LocalDate date;
             if (importCellWithHeading.getImmutableImportHeading().dateForm == StringLiterals.UKDATE) {
                 date = DateUtils.isADate(importCellWithHeading.getLineValue());
@@ -216,23 +215,16 @@ public class BatchImporter implements Callable<Void> {
         int timesLineIsModified = 0;
         // first pass, sort overrides and flag what might need resolving
         for (ImportCellWithHeading cell : cells) {
+            // we try to resolve if there's a composition pattern *and* no value in the cell. If there's a value in the cell we don't override it with a composite value
             if (cell.getImmutableImportHeading().compositionPattern == null || (cell.getLineValue() != null && !cell.getLineValue().isEmpty())) {
                 cell.needsResolving = false;
             }
             if (cell.getImmutableImportHeading().override != null) {
-                List<String> languages = setLocalLanguage(cell.getImmutableImportHeading().attribute, attributeNames);
-                // moved the hack over from the heading reader
-                if (cell.getImmutableImportHeading().override.equals("NOW")) {
-                    cell.setLineValue(LocalDateTime.now() + "");
-                } else {
-                    cell.setLineValue(cell.getImmutableImportHeading().override);
-                    languages = new ArrayList<>();
-                    languages.add(StringLiterals.DEFAULT_DISPLAY_NAME);
-                }
+                cell.setLineValue(cell.getImmutableImportHeading().override);
                 cell.needsResolving = false;
                 if (cell.getImmutableImportHeading().lineNameRequired) {
                     Name compName = includeInParents(azquoMemoryDBConnection, namesFoundCache, cell.getLineValue().trim()
-                            , cell.getImmutableImportHeading().parentNames, cell.getImmutableImportHeading().isLocal, languages);
+                            , cell.getImmutableImportHeading().parentNames, cell.getImmutableImportHeading().isLocal, StringLiterals.DEFAULT_DISPLAY_NAME_AS_LIST);
                     cell.addToLineNames(compName);
                 }
             }
@@ -258,9 +250,9 @@ public class BatchImporter implements Callable<Void> {
                 }
             }
             timesLineIsModified++;
-        }
-        if (timesLineIsModified == loopLimit) {
-            throw new Exception("Circular composite references in headings!");
+            if (timesLineIsModified == loopLimit) {
+                throw new Exception("Circular composite references in headings!");
+            }
         }
     }
 
@@ -296,21 +288,26 @@ public class BatchImporter implements Callable<Void> {
 
     }
 
+    // this routine uses cell.lineValue to store interim results...
+    // comma as opposed to ? : as that syntax is what is used in Excel
+
     private static boolean resolveIf(AzquoMemoryDBConnection azquoMemoryDBConnection, ImportCellWithHeading cell, String compositionPattern, List<ImportCellWithHeading> cells, CompositeIndexResolver compositeIndexResolver, Map<String, Name> namesFoundCache, List<String> attributeNames) throws Exception {
-        //this routine uses cell.lineValue to store interim results...
-        // comma as opposed to ? : as that syntax is what is used in Excel
         int commaPos = compositionPattern.indexOf(",");
-        if (commaPos < 0) return false;
+        if (commaPos < 0)
+            return false;
         int secondComma = compositionPattern.indexOf(",", commaPos + 1);
-        if (secondComma < 0) return false;
+        if (secondComma < 0)
+            return false;
         String condition = compositionPattern.substring(3, commaPos).trim();
         String trueTerm = compositionPattern.substring(commaPos + 1, secondComma).trim();
         String falseTerm = compositionPattern.substring(secondComma + 1, compositionPattern.length() - 1);
         String conditionTerm = findEquals(condition);
-        if (conditionTerm == null) return false;
+        if (conditionTerm == null)
+            return false;
         int conditionPos = condition.indexOf(conditionTerm);
         if (!resolveComposition(azquoMemoryDBConnection, cell, condition.substring(0, conditionPos).trim(), cells, compositeIndexResolver, namesFoundCache, attributeNames))
             return false;
+        // as mentioned above - composition jams the result into line value so need to get it out of there
         String leftTerm = cell.getLineValue();
         if (!resolveComposition(azquoMemoryDBConnection, cell, condition.substring(conditionPos + conditionTerm.length()).trim(), cells, compositeIndexResolver, namesFoundCache, attributeNames))
             return false;
@@ -332,9 +329,6 @@ public class BatchImporter implements Callable<Void> {
     }
 
     private static boolean resolveComposition(AzquoMemoryDBConnection azquoMemoryDBConnection, ImportCellWithHeading cell, String compositionPattern, List<ImportCellWithHeading> cells, CompositeIndexResolver compositeIndexResolver, Map<String, Name> namesFoundCache, List<String> attributeNames) throws Exception {
-        if (compositionPattern.equals("NOW")) {
-            compositionPattern = LocalDateTime.now() + "";
-        }
         int headingMarker = compositionPattern.indexOf("`");
         while (headingMarker >= 0) {
             boolean doublequotes = false;
@@ -344,6 +338,7 @@ public class BatchImporter implements Callable<Void> {
             }
             int headingEnd = compositionPattern.indexOf("`", headingMarker + 1);
             if (headingEnd > 0) {
+                // note : this means functions mid left right etc are in the quotes `left (4, col name)`
                 String nameAttribute = null;
                 String function = null;
                 int funcInt = 0;
@@ -400,7 +395,7 @@ public class BatchImporter implements Callable<Void> {
                 // skip until the referenced cell has been resolved - the loop outside checking for dependencies will send us back here
                 if (compCell != null && compCell.getLineValue() != null && !compCell.needsResolving) {
                     String sourceVal;
-                    // we have a name attribute and it is a column with a name, we resolve and
+                    // we have a name attribute and it is a column with a name, we resolve the name if necessary and get the attribute
                     if (nameAttribute != null && compCell.getImmutableImportHeading().lineNameRequired) {
                         if (compCell.getLineNames() == null && compCell.getLineValue().length() > 0) {
                             Name compName = includeInParents(azquoMemoryDBConnection, namesFoundCache, compCell.getLineValue().trim()
@@ -451,6 +446,7 @@ public class BatchImporter implements Callable<Void> {
             headingMarker = compositionPattern.indexOf("`", ++headingMarker);
         }
         // todo - investigate third party libraries to exvaluate expressions
+        // after all the column/string function/attribute still is done there may yet be some basic numeric stuff to do
         // single operator calculation after resolving the column names. 1*4.5, 76+345 etc. trim?
         if (compositionPattern.toLowerCase().startsWith("calc")) {
             compositionPattern = compositionPattern.substring(5);
@@ -483,6 +479,7 @@ public class BatchImporter implements Callable<Void> {
                 compositionPattern = dresult + "";
             }
         }
+        // this is being done in here as well as later as it may affect dependencies when resolving composite, can't wait until later
         if (cell.getImmutableImportHeading().removeSpaces) {
             compositionPattern = compositionPattern.replace(" ", "");
         }
@@ -562,6 +559,7 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
     // from/to are different attributes to check against in the set
     // lookup used for finding a contract year off a date . . .
     // todo - remove after WFC has converted to an execute
+    // aparently can't remove. I was up to here in checking - July 2019
 
     private static void checkLookup(AzquoMemoryDBConnection azquoMemoryDBConnection, ImportCellWithHeading cell) throws Exception {
         if (cell.getLineValue() != null && cell.getLineValue().length() > 0 && cell.getImmutableImportHeading().lookupFrom != null && cell.getLineNames() == null) {
@@ -728,7 +726,7 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
                     linesRejected.computeIfAbsent(importLine, t -> new ArrayList<>()).add("No name for attribute " + cell.getImmutableImportHeading().attribute + " of " + cell.getImmutableImportHeading().heading);
                     break;
                 } else {
-                    if (!cell.equals(identityCell)){//IF THIS IS THE IDENTITY CELL THE SYSTEM MIGHT OVERRIDE ALTERNATIVE ATTRIBUTES (a||b||c)
+                    if (!cell.equals(identityCell)) {//IF THIS IS THE IDENTITY CELL THE SYSTEM MIGHT OVERRIDE ALTERNATIVE ATTRIBUTES (a||b||c)
                         for (Name name : identityCell.getLineNames()) {
                             // provisional means if there's a value there already don't change it
                             if (!cell.getImmutableImportHeading().provisional || name.getAttribute(attribute) == null) {
@@ -890,8 +888,8 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
                                 if (childCellParent == parent) {
                                     needsAdding = false;
                                 } else if (childCellParent == exclusiveName || exclusiveName.getChildren().contains(childCellParent)) {
-                                    if (cellWithHeading.getImmutableImportHeading().provisional){
-                                        needsAdding=false;
+                                    if (cellWithHeading.getImmutableImportHeading().provisional) {
+                                        needsAdding = false;
                                         break;
                                     }
                                     childCellParent.removeFromChildrenWillBePersisted(childCellName, azquoMemoryDBConnection);

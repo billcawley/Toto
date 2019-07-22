@@ -38,7 +38,7 @@ class AzquoCellService {
     static final int COL_HEADINGS_NAME_QUERY_LIMIT = 500;
 
     private static List<Integer> sortOnMultipleValues(Map<Integer, List<TypedPair<Double, String>>> sortListsMap, final boolean sortRowsUp) {
-        int sortCount = sortListsMap.get(0).size();
+        int sortCount = sortListsMap.values().iterator().next().size();
         List<Boolean> doubleSort = new ArrayList<>();
         for (int i = 0; i < sortCount; i++) doubleSort.add(true);
         // ok I can't see a way around this, I'm going to have to check all doubles for a null and if I find one abandon the doublesort
@@ -90,6 +90,9 @@ class AzquoCellService {
             //not sure what to do if there are null values in the list that needs to be sorted
         }
         for (Map.Entry<Integer, List<TypedPair<Double, String>>> entry : list) {
+            for (int i = 0; i < sortCount; i++) {
+                TypedPair<Double, String> value = entry.getValue().get(i);
+            }
             sortedValues.add(entry.getKey());
         }
         return sortedValues;
@@ -384,7 +387,6 @@ class AzquoCellService {
     // also deals with highlighting
     // I've tried to make parameter names useful but they can be a bit confusing as we have for example a column index to sort on but the values will be row values or totals for that row
 
-
     private static List<List<AzquoCell>> sortAndFilterCells(List<List<AzquoCell>> sourceData, List<List<DataRegionHeading>> rowHeadings
             , RegionOptions regionOptions, boolean permute) {
         final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("dd-MMM-yy");
@@ -507,19 +509,30 @@ class AzquoCellService {
                     int totalHeading = rowHeadings.get(0).size() - 2;
                     int lastId = rowHeadings.get(0).get(totalHeading).getName().getId();
                     int topRow = 0;
+                    // we need to sort the chunks based on the totals, initially for just one level, put the totals in here
+                    Map<Integer, List<TypedPair<Double, String>>> totalSortRowValues = new HashMap<>();
+                    Map<Integer, List<Integer>> sortedRowsForTotal = new HashMap<>();
                     for (int row = 0; row < sortRowValuesMap.size(); row++) {
                         int thisId = rowHeadings.get(row).get(totalHeading).getName().getId();
                         if (thisId != lastId) {
                             Map<Integer, List<TypedPair<Double, String>>> subTotalSortRowValues = new HashMap<>();
                             for (int sectionRow = topRow; sectionRow < row - 1; sectionRow++) {
-                                subTotalSortRowValues.put(sectionRow - topRow, sortRowValuesMap.get(sectionRow));
+                                subTotalSortRowValues.put(sectionRow, sortRowValuesMap.get(sectionRow));
                             }
-                            sortedRows.addAll(sortOnMultipleValues(subTotalSortRowValues, sortColAsc));
-                            sortedRows.add(row - 1);
+                            sortedRowsForTotal.put(row - 1, sortOnMultipleValues(subTotalSortRowValues, sortColAsc));
+                            totalSortRowValues.put(row - 1,sortRowValuesMap.get(row - 1));
                             topRow = row;
                             lastId = thisId;
                         }
                     }
+                    // sort the totals
+                    List<Integer> totalIndexesInOrder = sortOnMultipleValues(totalSortRowValues, sortColAsc);
+                    for (Integer totalIndex : totalIndexesInOrder){
+                        sortedRows.addAll(sortedRowsForTotal.get(totalIndex));
+                        sortedRows.add(totalIndex);
+                    }
+
+                    // final total is always at the bottom
                     sortedRows.add(sortRowValuesMap.size() - 1);
                 } else {
                     sortedRows = sortOnMultipleValues(sortRowValuesMap, sortColAsc);
