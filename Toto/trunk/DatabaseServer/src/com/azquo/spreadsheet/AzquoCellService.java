@@ -505,11 +505,12 @@ class AzquoCellService {
             List<Integer> sortedRows = new ArrayList<>();
             if (!sortOnColIndexes.isEmpty() || sortOnRowTotals) { // then we need to sort the rows
                 if (permute) {
-                    // ok we need this to work on multiple levels. Logic needn't be complex. Start on the right and sort everything except totals
-                    // , then progress left sorting totals which means moving blocks around
+                    // ok we need this to work on multiple levels. Start on the right and sort everything except totals
                     boolean first = true;
                     for (int sortingHeadingIndex = rowHeadings.get(0).size() - 1; sortingHeadingIndex >= 0; sortingHeadingIndex--){
                         if (first){
+                            // the right column, quite simple - batch up each little section in subTotalSortRowValues,
+                            // when you hit a total (permute) sort the lines and jam them and the total into sorted rows
                             Map<Integer, List<TypedPair<Double, String>>> subTotalSortRowValues = new HashMap<>();
                             for (int row = 0; row < sortRowValuesMap.size(); row++) {
                                 if (rowHeadings.get(row).get(sortingHeadingIndex).getFunction() == DataRegionHeading.FUNCTION.PERMUTE) { // means it's a total line
@@ -523,24 +524,28 @@ class AzquoCellService {
                                 }
                             }
                             first = false;
-                            // sort totals, need to move things around in blocks
                         } else {
-                            // stores the chunks of rows associated with each total
+                            // sort totals, need to move things around in chunks, a little more complex
+                            // stores the chunks of rows associated with each total that we're sorting, the key for this map and the next is the row the total is on
                             Map<Integer, List<Integer>> rowsForTotal = new HashMap<>();
+                            // the totals themselves that we want to sort
                             Map<Integer, List<TypedPair<Double, String>>> totalsToSort = new HashMap<>();
-                            // by this point there will have been sorting so need to go through like this rather than a straight for loop as above
                             List<Integer> newSortedRows = new ArrayList<>();
+                            // lastId and thisId are simply used to tell when the name at this level changes
                             int lastId = rowHeadings.get(sortedRows.get(0)).get(sortingHeadingIndex).getName().getId();
                             ArrayList<Integer> currentChunk = new ArrayList<>();
+                            // by this point there will have been sorting so need to go through like this rather than a straight for loop as above
                             for (Integer row : sortedRows) {
                                 int thisId = rowHeadings.get(row).get(sortingHeadingIndex).getName().getId();
-                                if (thisId != lastId){
-                                    if (!currentChunk.isEmpty()){
-                                        int totalRowIndex = currentChunk.get(currentChunk.size() - 1);
+                                if (thisId != lastId){ // end of the current chunk
+                                    if (!currentChunk.isEmpty()){// it might be empty if there were higher level totals
+                                        int totalRowIndex = currentChunk.get(currentChunk.size() - 1); // total is the one before this row, the last in that chunk
+                                        // so put the chunk and total in the maps and clear the chunk
                                         totalsToSort.put(totalRowIndex,sortRowValuesMap.get(totalRowIndex));
                                         rowsForTotal.put(totalRowIndex, currentChunk);
                                         currentChunk = new ArrayList<>();
                                     }
+                                    // not only the end of the chunk but the end of the set of chunks we want to sort
                                     if (rowHeadings.get(row).get(sortingHeadingIndex).getFunction() == DataRegionHeading.FUNCTION.PERMUTE){
                                         if (!totalsToSort.isEmpty()){
                                             // sort the totals
@@ -552,7 +557,7 @@ class AzquoCellService {
                                             rowsForTotal.clear();
                                         }
                                         newSortedRows.add(row); // the permute lines stay where they are - we're sorting the stuff between tham
-                                    } else { // put the chunk in the map and also grab the last line which is the total which will be used for sorting
+                                    } else { // new chunk
                                         currentChunk.add(row);
                                     }
                                     lastId = thisId;
@@ -560,38 +565,10 @@ class AzquoCellService {
                                     currentChunk.add(row);
                                 }
                             }
-                            newSortedRows.addAll(currentChunk); // any leftovers, totals
+                            newSortedRows.addAll(currentChunk); // any leftovers, totals probably
                             sortedRows = newSortedRows;
                         }
                     }
-/*                    int totalHeading = rowHeadings.get(0).size() - 2;
-                    int lastId = rowHeadings.get(0).get(totalHeading).getName().getId();
-                    int topRow = 0;
-                    // we need to sort the chunks based on the totals, initially for just one level, put the totals in here
-                    Map<Integer, List<TypedPair<Double, String>>> totalSortRowValues = new HashMap<>();
-                    Map<Integer, List<Integer>> sortedRowsForTotal = new HashMap<>();
-                    for (int row = 0; row < sortRowValuesMap.size(); row++) {
-                        int thisId = rowHeadings.get(row).get(totalHeading).getName().getId();
-                        if (thisId != lastId) {
-                            Map<Integer, List<TypedPair<Double, String>>> subTotalSortRowValues = new HashMap<>();
-                            for (int sectionRow = topRow; sectionRow < row - 1; sectionRow++) {
-                                subTotalSortRowValues.put(sectionRow, sortRowValuesMap.get(sectionRow));
-                            }
-                            sortedRowsForTotal.put(row - 1, sortOnMultipleValues(subTotalSortRowValues, sortColAsc));
-                            totalSortRowValues.put(row - 1,sortRowValuesMap.get(row - 1));
-                            topRow = row;
-                            lastId = thisId;
-                        }
-                    }
-                    // sort the totals
-                    List<Integer> totalIndexesInOrder = sortOnMultipleValues(totalSortRowValues, sortColAsc);
-                    for (Integer totalIndex : totalIndexesInOrder){
-                        sortedRows.addAll(sortedRowsForTotal.get(totalIndex));
-                        sortedRows.add(totalIndex);
-                    }
-
-                    // final total is always at the bottom
-                    sortedRows.add(sortRowValuesMap.size() - 1);*/
                 } else {
                     sortedRows = sortOnMultipleValues(sortRowValuesMap, sortColAsc);
                 }
