@@ -771,7 +771,8 @@ public final class ImportService {
                         for (List<String> headingReferenceColumn : headingReference) {
                             if (headingReferenceColumn.size() > 0 && !headingReferenceColumn.get(0).isEmpty()) {// we fill gaps when parsing the standard headings so there may be blanks in here, ignore them!
                                 String reference = headingReferenceColumn.get(0); // the reference is the top one
-                                List<String> azquoClauses = new ArrayList<>(); // in here will go the Azquo clauses both looked up from the Import Model and any that might have been added here
+                                List<String> azquoClauses = new ArrayList<>(); // in here will go the Azquo clauses looked up from the Import Model, the extra ones will now have to dealt with in a different way due to context - comments below
+                                List<String> extraVersionClauses = new ArrayList<>();
                                 // ok now we're going to look for this in the standard headings by the "top" heading
                                 Iterator<List<String>> standardHeadingsIterator = standardHeadings.iterator();
                                 while (standardHeadingsIterator.hasNext()) {
@@ -781,10 +782,11 @@ public final class ImportService {
                                         azquoClauses.addAll(standardHeadingsColumn.subList(1, standardHeadingsColumn.size()));
                                     }
                                 }
+
                                 if (azquoClauses.isEmpty()) {
                                     throw new Exception("On import version sheet " + uploadedFile.getParameter(ImportService.IMPORTVERSION) + " no headings on Import Model found for " + reference + " - was this referenced twice?");
                                 } else if (headingReference.get(index).size() > 1) { // add the extra ones
-                                    azquoClauses.addAll(headingReference.get(index).subList(1, headingReference.get(index).size()));
+                                    extraVersionClauses.addAll(headingReference.get(index).subList(1, headingReference.get(index).size()));
                                 }
                                 StringBuilder azquoHeadingsAsString = new StringBuilder();
                                 for (String clause : azquoClauses) {
@@ -792,6 +794,27 @@ public final class ImportService {
                                         azquoHeadingsAsString.append(";");
                                     }
                                     azquoHeadingsAsString.append(clause);
+                                }
+                                // ok the extraVersionClauses were part of azquoClauses but there was a problem - what happens if the import model has context headings - a pipe then another heading?
+                                // The extra clauses would only apply to the last context heading when they should apply to all or rather the first heading before pipe so then the others all inherit
+                                if (azquoHeadingsAsString.indexOf("|") != -1){
+                                    String secondHalf = azquoHeadingsAsString.substring(azquoHeadingsAsString.indexOf("|"), azquoHeadingsAsString.length());
+                                    azquoHeadingsAsString.setLength(azquoHeadingsAsString.indexOf("|"));
+                                    // so, as mentioned in the previous comment, jam the extra clauses before the first pipe if it exists
+                                    for (String clause : extraVersionClauses) {
+                                        if (azquoHeadingsAsString.length() > 0 && !clause.startsWith(".")) {
+                                            azquoHeadingsAsString.append(";");
+                                        }
+                                        azquoHeadingsAsString.append(clause);
+                                    }
+                                    azquoHeadingsAsString.append(secondHalf);
+                                } else {
+                                    for (String clause : extraVersionClauses) {
+                                        if (azquoHeadingsAsString.length() > 0 && !clause.startsWith(".")) {
+                                            azquoHeadingsAsString.append(";");
+                                        }
+                                        azquoHeadingsAsString.append(clause);
+                                    }
                                 }
                                 // finally get the file headings if applicable
                                 if (versionHeadings.size() > index && !versionHeadings.get(index).isEmpty()) {

@@ -231,32 +231,37 @@ public class ReportService {
                                         book.getInternalBook().setAttribute(OnlineController.CELL_SELECT, row + "," + col);
                                     }
                                     if (sCell.getType() == SCell.CellType.FORMULA) {
-                                        if (sCell.getFormulaResultType() == SCell.CellType.NUMBER) { // then check it's value against the DB one . . .
-                                            // zerosaved means that if the heading  name has the relevant attribute
-                                            if ((sCell.getNumberValue() == 0 && (sentCells.getZeroSavedRowIndexes() != null && sentCells.getZeroSavedRowIndexes().contains(row - startRow))
-                                                    || (sentCells.getZeroSavedColumnIndexes() != null && sentCells.getZeroSavedColumnIndexes().contains(col - startCol)))
-                                                    || sCell.getNumberValue() != cellForDisplay.getDoubleValue()) {
-                                                if (useSavedValuesOnFormulae && !cellForDisplay.getIgnored()) { // override formula from DB, only if not ignored
-                                                    sCell.setNumberValue(cellForDisplay.getDoubleValue());
-                                                } else { // the formula overrode the DB, get the value ready of saving if the user wants that
-                                                    cellForDisplay.setNewDoubleValue(sCell.getNumberValue()); // should flag as changed
-                                                    showSave = true;
+                                        try {
+                                            if (sCell.getFormulaResultType() == SCell.CellType.NUMBER) { // then check it's value against the DB one . . .
+                                                // zerosaved means that if the heading  name has the relevant attribute
+                                                if ((sCell.getNumberValue() == 0 && (sentCells.getZeroSavedRowIndexes() != null && sentCells.getZeroSavedRowIndexes().contains(row - startRow))
+                                                        || (sentCells.getZeroSavedColumnIndexes() != null && sentCells.getZeroSavedColumnIndexes().contains(col - startCol)))
+                                                        || sCell.getNumberValue() != cellForDisplay.getDoubleValue()) {
+                                                    if (useSavedValuesOnFormulae && !cellForDisplay.getIgnored()) { // override formula from DB, only if not ignored
+                                                        sCell.setNumberValue(cellForDisplay.getDoubleValue());
+                                                    } else { // the formula overrode the DB, get the value ready of saving if the user wants that
+                                                        cellForDisplay.setNewDoubleValue(sCell.getNumberValue()); // should flag as changed
+                                                        showSave = true;
+                                                    }
+                                                }
+                                                if (sCell.getCellStyle().getDataFormat().toLowerCase().contains("m") && cellForDisplay.getStringValue().length() == 0) {
+                                                    if (sCell.getNumberValue() > 0) {
+                                                        cellForDisplay.setNewStringValue(df.format(DateUtils.getLocalDateTimeFromDate(sCell.getDateValue())));//set a string value as our date for saving purposes
+                                                    }
+                                                }
+                                            } else if (sCell.getFormulaResultType() == SCell.CellType.STRING) {
+                                                if (!sCell.getStringValue().equals(cellForDisplay.getStringValue())) {
+                                                    if (useSavedValuesOnFormulae && !cellForDisplay.getIgnored()) { // override formula from DB
+                                                        BookUtils.setValue(sCell, cellForDisplay.getStringValue());
+                                                    } else { // the formula overrode the DB, get the value ready of saving if the user wants that
+                                                        cellForDisplay.setNewStringValue(sCell.getStringValue());
+                                                        showSave = true;
+                                                    }
                                                 }
                                             }
-                                            if (sCell.getCellStyle().getDataFormat().toLowerCase().contains("m") && cellForDisplay.getStringValue().length() == 0) {
-                                                if (sCell.getNumberValue() > 0) {
-                                                    cellForDisplay.setNewStringValue(df.format(DateUtils.getLocalDateTimeFromDate(sCell.getDateValue())));//set a string value as our date for saving purposes
-                                                }
-                                            }
-                                        } else if (sCell.getFormulaResultType() == SCell.CellType.STRING) {
-                                            if (!sCell.getStringValue().equals(cellForDisplay.getStringValue())) {
-                                                if (useSavedValuesOnFormulae && !cellForDisplay.getIgnored()) { // override formula from DB
-                                                    BookUtils.setValue(sCell, cellForDisplay.getStringValue());
-                                                } else { // the formula overrode the DB, get the value ready of saving if the user wants that
-                                                    cellForDisplay.setNewStringValue(sCell.getStringValue());
-                                                    showSave = true;
-                                                }
-                                            }
+                                        } catch (Exception e){
+                                            System.out.println("Error on cell " + sCell.getReferenceString());
+                                            e.printStackTrace();
                                         }
                                     } else {
                                         // we now want to compare in the case of non formulae changes - a value from one data region importing into another,

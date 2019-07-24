@@ -309,7 +309,7 @@ public class AzquoMemoryDBIndex {
         // upper and lower seems a bit arbitrary, I need a way of making it case insensitive.
         // these interns have been tested as helping memory usage.
           String ucAttributeName = attributeName.toUpperCase().trim().intern();
-          // todo - an if on the split to save garbage?
+          // todo - an if on the split to save garbage? also should this be allowed at all! Hadn't really considered it
         String[] attValues = attributeValue.split(StringLiterals.NEXTATTRIBUTE);
         for (String attValue:attValues) {
             String lcAttributeValue = attValue.toLowerCase().trim().intern();

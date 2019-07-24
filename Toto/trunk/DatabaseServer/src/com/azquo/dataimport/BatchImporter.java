@@ -98,8 +98,8 @@ public class BatchImporter implements Callable<Void> {
                     }
                     if (rejectionReason == null) {
                         try {
-                            // dictionary stuff, need to remove when it's confirmed working in reports - todo
-                            resolveCategories(azquoMemoryDBConnection, namesFoundCache, lineToLoad);
+                            // dictionary stuff, need to remove when it's confirmed working in reports, parkd currently 24/07/2019
+                            resolveIntoCategories(azquoMemoryDBConnection, namesFoundCache, lineToLoad);
                             interpretLine(azquoMemoryDBConnection, lineToLoad, namesFoundCache, attributeNames, lineNumber, linesRejected, clearData);
                         } catch (Exception e) {
                             azquoMemoryDBConnection.addToUserLogNoException(e.getMessage(), true);
@@ -136,7 +136,7 @@ public class BatchImporter implements Callable<Void> {
     /*
     interpret the date and change to standard form
     todo consider other date formats on import - these may  be covered in setting up dates, but I'm not sure - WFC
-    HeaadingReader defines DATELANG and USDATELANG
+    HeadingReader defines DATELANG and USDATELANG
     */
     private static void checkDate(ImportCellWithHeading importCellWithHeading) {
         if (importCellWithHeading.getImmutableImportHeading().attribute != null && importCellWithHeading.getImmutableImportHeading().dateForm > 0) {
@@ -331,9 +331,9 @@ public class BatchImporter implements Callable<Void> {
     private static boolean resolveComposition(AzquoMemoryDBConnection azquoMemoryDBConnection, ImportCellWithHeading cell, String compositionPattern, List<ImportCellWithHeading> cells, CompositeIndexResolver compositeIndexResolver, Map<String, Name> namesFoundCache, List<String> attributeNames) throws Exception {
         int headingMarker = compositionPattern.indexOf("`");
         while (headingMarker >= 0) {
-            boolean doublequotes = false;
+            boolean doubleQuotes = false;
             if (headingMarker < compositionPattern.length() && compositionPattern.charAt(headingMarker + 1) == '`') {
-                doublequotes = true;
+                doubleQuotes = true;
                 headingMarker++;
             }
             int headingEnd = compositionPattern.indexOf("`", headingMarker + 1);
@@ -354,9 +354,9 @@ public class BatchImporter implements Callable<Void> {
                     // fairly standard replace name of column with column value but with string manipulation left right mid
                     // checking for things like right(A Column Name, 5). Mid has two numbers.
                     if (expression.contains("(")) {
-                        int bracketpos = expression.indexOf("(");
-                        function = expression.substring(0, bracketpos);
-                        int commaPos = expression.indexOf(",", bracketpos + 1);
+                        int bracketPos = expression.indexOf("(");
+                        function = expression.substring(0, bracketPos);
+                        int commaPos = expression.indexOf(",", bracketPos + 1);
                         int secondComma;
                         if (commaPos > 0) {
                             secondComma = expression.indexOf(",", commaPos + 1);
@@ -373,7 +373,7 @@ public class BatchImporter implements Callable<Void> {
                                 }
                             } catch (Exception ignore) {
                             }
-                            expression = expression.substring(bracketpos + 1, commaPos);
+                            expression = expression.substring(bracketPos + 1, commaPos);
                             //only testing for default display name at present - need to work out what might happen if name contained '.'
                             int dotPos = expression.toUpperCase().indexOf("." + StringLiterals.DEFAULT_DISPLAY_NAME);
                             if (dotPos > 0) {
@@ -422,7 +422,7 @@ public class BatchImporter implements Callable<Void> {
                             }
                             if (function.equalsIgnoreCase("mid")) {
                                 //the second parameter of mid is the number of characters, not the end character
-                                // if the lenght goes off the end ignore it
+                                // if the length goes off the end ignore it
                                 if (((funcInt - 1) + funcInt2) >= sourceVal.length()) {
                                     sourceVal = sourceVal.substring(funcInt - 1);
                                 } else {
@@ -432,8 +432,8 @@ public class BatchImporter implements Callable<Void> {
                         }
                         // now replace and move the marker to the next possible place
                         compositionPattern = compositionPattern.replace(compositionPattern.substring(headingMarker, headingEnd + 1), sourceVal);
-                        headingMarker = headingMarker + sourceVal.length() - 1;//is increaed before two lines below
-                        if (doublequotes) headingMarker++;
+                        headingMarker = headingMarker + sourceVal.length() - 1;//is increased before two lines below
+                        if (doubleQuotes) headingMarker++;
                     } else {
                         // can't get the value . . .
                         return false;
@@ -445,7 +445,7 @@ public class BatchImporter implements Callable<Void> {
             // try to find the start of the next column referenced
             headingMarker = compositionPattern.indexOf("`", ++headingMarker);
         }
-        // todo - investigate third party libraries to exvaluate expressions
+        // todo - investigate third party libraries to evaluate expressions
         // after all the column/string function/attribute still is done there may yet be some basic numeric stuff to do
         // single operator calculation after resolving the column names. 1*4.5, 76+345 etc. trim?
         if (compositionPattern.toLowerCase().startsWith("calc")) {
@@ -506,10 +506,11 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
     Also see note on MutableImportHeading dictionaryMap
 
     *** Following discussion 20/12/2018 this will be moved to reporting
-    * 22/02/19 - added to the report side, will be deleted from here when the reports use the new code
+    22/02/19 - added to the report side, will be deleted from here when the reports use the new code
+    24/07/19 - still not ready to be removed
      */
 
-    private static void resolveCategories(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFoundCache, List<ImportCellWithHeading> cells) throws Exception {
+    private static void resolveIntoCategories(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFoundCache, List<ImportCellWithHeading> cells) throws Exception {
         for (ImportCellWithHeading cell : cells) {
             if (cell.getImmutableImportHeading().dictionaryMap != null) {
                 String value = cell.getLineValue();
@@ -553,15 +554,33 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
         }
     }
 
-    // categorise numeric values, see HeadingReader.java
-    // lookup assumes that the value in the cell is two values comma separated. The name of a set and the value to look for in its children.
-    // Typically this value is made by a composition though it doesn't have to be
-    // from/to are different attributes to check against in the set
-    // lookup used for finding a contract year off a date . . .
-    // todo - remove after WFC has converted to an execute
-    // aparently can't remove. I was up to here in checking - July 2019
+     /*categorise numeric values, see HeadingReader.java
+     lookup assumes that the value in the cell is two values comma separated. The name of a set and the value to look for in its children.
+     Typically this value is made by a composition though it doesn't have to be
+     from/to are different attributes to check against in the set
+     lookup used for finding a contract year off a date . . .
+     apparently can't remove. I was up to here in checking - July 2019*/
 
     private static void checkLookup(AzquoMemoryDBConnection azquoMemoryDBConnection, ImportCellWithHeading cell) throws Exception {
+        /* example to illustrate
+        lookup from `binder contract inception` to `binder contract expiry`
+        so
+
+        lookupFrom `binder contract inception`
+        lookupTo `binder contract expiry`
+
+        notably these two are attribute names - it seems a little odd that the attribute names are fixed but the set can change, we're finding these for each of the children of setName
+
+        The line value in this case is composition `left(Bordereau Contract Year,9)`,`inception`
+
+        the setName there will be a BB123456 or something similar, inception is a date
+
+    `   so we get the children of the contract year and run through them checking the from and to attributes and the first
+        time we find the value sitting between them we have our match and set the line name to be that name and the value to default display name
+        there is a backup of best guess when it's above lookupFrom but not below lookupTo, applicable when provisional, note below
+
+        Also note lookupTo can be null in which case it just needs greater then lookupFrom to match
+         */
         if (cell.getLineValue() != null && cell.getLineValue().length() > 0 && cell.getImmutableImportHeading().lookupFrom != null && cell.getLineNames() == null) {
             int commaPos = cell.getLineValue().indexOf(",");
             if (commaPos < 0) {
@@ -582,7 +601,6 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
                 String lowLimit = toTest.getAttribute(cell.getImmutableImportHeading().lookupFrom);
                 if (lowLimit != null) {
                     try {
-
                         Double d = Double.parseDouble(lowLimit);
                         Double d2 = Double.parseDouble(valueToTest);
                         if (d2 >= d) {
@@ -604,7 +622,6 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
                                 found = true;
                             }
                         }
-
                     } catch (Exception e) {
                         //compare strings
                         if (lowLimit.compareTo(valueToTest) <= 0) {
@@ -622,7 +639,6 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
                             } else {
                                 found = true;
                             }
-
                         }
                     }
                 }
@@ -630,9 +646,9 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
             if (found) {
                 newCellNameValue(cell, bestGuess);
             } else {
+                // provisional means we only store if something does not exist already. Under these circumstances loosen the matching criteria and allow best guess
                 if (cell.getImmutableImportHeading().provisional && bestGuess != null) {
                     newCellNameValue(cell, bestGuess);
-
                 } else {
                     throw new Exception("lookup for " + cell.getImmutableImportHeading().heading + " on " + setName + " and " + valueToTest + " not found");
                 }
@@ -698,7 +714,7 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
                 }
             }
             if (!peersOk) {
-                // wsa CopyOnWriteArrayList but that made no sense - a single line won't be hit by multiple threads, just this one
+                // was CopyOnWriteArrayList but that made no sense - a single line won't be hit by multiple threads, just this one
                 linesRejected.computeIfAbsent(importLine, t -> new ArrayList<>()).add(":Missing peers for" + cell.getImmutableImportHeading().heading);
             } else if (!namesForValue.isEmpty()) { // no point storing if peers not ok or no names for value (the latter shouldn't happen, braces and a belt I suppose)
                 // now we have the set of names for that name with peers get the value from that headingNo it's a heading for
@@ -730,6 +746,9 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
                     linesRejected.computeIfAbsent(importLine, t -> new ArrayList<>()).add("No name for attribute " + cell.getImmutableImportHeading().attribute + " of " + cell.getImmutableImportHeading().heading);
                     break;
                 } else {
+                    // EFC 24/07/19 before the worst that could happen is an attribute overwrote itself but a hack has been put in AzquoMemoryDBIndex.setAttributeForNameInAttributeNameMap
+                    // where the index adapts based on a separated list e.g. for an attribute it has a||b||c which then means that when searching for a name with that attribute either a or b or c will find it
+                    // that results in a situation where a seemingly harmless find a name by attribute a with the value b and set a as b can in fact cause a problem
                     if (!cell.equals(identityCell)) {//IF THIS IS THE IDENTITY CELL THE SYSTEM MIGHT OVERRIDE ALTERNATIVE ATTRIBUTES (a||b||c)
                         for (Name name : identityCell.getLineNames()) {
                             // provisional means if there's a value there already don't change it
@@ -773,6 +792,8 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
              both pedestrianized (ok) and street (NOT ok!) will have their line names resolved
              whereas resolving "Town parent of street local" first means that the street should be correct by the time we resolve "Pedestrianized parent of street".
              essentially sort local names need to be sorted first.
+
+             The point is that the name is attached to a call, it is only resolved once, local gets priority, resolve it first
 
              EFC note August 2018 after modifying WFC code : the old method was just to run through cells that have isLocal first but that could be tripped up
              by a local in a local which, while not recommended, is supported. The key here is that locals should be resolved in order starting at the top.
