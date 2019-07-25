@@ -40,10 +40,19 @@ class NameEditFunctions {
             Collection<Value> toZap = null;
             String[] foundList = nameList.split("\\*");
             for (String partList : foundList) {
+                boolean exact = false;
+                if (partList.toLowerCase().startsWith("exact(")){
+                    partList = partList.substring(6,partList.length() - 1);
+                    exact = true;
+                }
                 Collection<Name> found = NameQueryParser.parseQuery(azquoMemoryDBConnection, partList.trim());
                 Collection<Value> values = new HashSet<>();
                 for (Name name : found) {
-                    values.addAll(name.findValuesIncludingChildren());
+                    if (!exact) {
+                        values.addAll(name.findValuesIncludingChildren());
+                    }else{
+                        values.addAll(name.getValues());
+                    }
                 }
                 if (toZap == null) {
                     toZap = values;

@@ -32,7 +32,6 @@ public class ImmutableImportHeading {
     final String override;
     final List<String> ignoreList;
     final boolean blankZeroes;
-    final boolean isNumber;
     final boolean removeSpaces;
     final boolean lineNameRequired;
     final String exclusive;
@@ -63,7 +62,6 @@ public class ImmutableImportHeading {
         this.override = mutableImportHeading.override;
         this.ignoreList = mutableImportHeading.ignoreList;
         this.blankZeroes = mutableImportHeading.blankZeroes;
-        this.isNumber = mutableImportHeading.isNumber;
         this.removeSpaces = mutableImportHeading.removeSpaces;
         this.lineNameRequired = mutableImportHeading.lineNameRequired;
         this.exclusive = mutableImportHeading.exclusive;

@@ -75,7 +75,6 @@ class ValuesImportConfigProcessor {
                 || heading.startsWith(HeadingReader.NONZERO)
                 || heading.startsWith(HeadingReader.REMOVESPACES)
                 || heading.startsWith(HeadingReader.DATELANG)
-                || heading.startsWith(HeadingReader.NUMBER)
                 || heading.startsWith(HeadingReader.ONLY)
                 || heading.startsWith(HeadingReader.EXCLUSIVE)
                 || heading.startsWith(HeadingReader.CLEAR)
