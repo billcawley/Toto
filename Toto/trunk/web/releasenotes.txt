@@ -1,3 +1,9 @@
+25-07-19
+
+Include 'Dictionary' in list of heading clause words
+
+Various bug fixes
+
 16-07-19
 
 Minor plugin update. Deployment in preparation for UAT move.

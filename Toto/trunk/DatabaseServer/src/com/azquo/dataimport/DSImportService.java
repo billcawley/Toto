@@ -55,10 +55,10 @@ public class DSImportService {
         toReturn.setNoValuesAdjusted(azquoMemoryDBConnection.getAzquoMemoryDB().countValuesForProvenance(azquoMemoryDBConnection.getProvenance()));
         return toReturn;
     }
-    // Called by above but also directly from SSpreadsheet service when it has prepared a CSV from data entered ad-hoc into a sheet
+    // Called by above but also directly from DSSpreadsheet service when it has prepared a CSV from data entered ad-hoc into a sheet
     public static UploadedFile readPreparedFile(AzquoMemoryDBConnection azquoMemoryDBConnection, UploadedFile uploadedFile) throws Exception {
         // ok the thing he is to check if the memory db object lock is free, more specifically don't start an import if persisting is going on, since persisting never calls import there should be no chance of a deadlock from this
-        // of course this doesn't currently stop the opposite, a persist being started while an import is going on.
+        // of course this doesn't currently stop the opposite, a persist being started while an import is going on, that should be robust, new lists of modified objects will be made to be persisted after the current persist
         azquoMemoryDBConnection.addToUserLog("Reading " + uploadedFile.getFullFileName());
         azquoMemoryDBConnection.lockTest();
         azquoMemoryDBConnection.getAzquoMemoryDB().clearCaches();
@@ -167,7 +167,7 @@ public class DSImportService {
                 String[] row = lineIterator.next();
                 if (uploadedFile.getTopHeadings() != null) {
                     for (int colIndex = 0; colIndex < row.length; colIndex++) {
-                        // as mentioned above, run through a bunch of offests here in case the topheadings have been shifted to the right - note they still have to have the same configuration
+                        // as mentioned above, run through a bunch of offsets here in case the top headings have been shifted to the right - note they still have to have the same configuration
                         for (int offset = 0; offset < offsetLimit; offset++){
                             String topHeading = uploadedFile.getTopHeadings().get(new RowColumn(rowIndex, colIndex - offset)); // yes can be a negative col at least at first - no harm it just won't find anything
                             if (topHeading != null && row[colIndex].length() > 0) { // we found the cell
@@ -187,7 +187,7 @@ public class DSImportService {
             for (int offset = 0; offset < offsetLimit; offset++){
                 if (topHeadingsValuesByOffset.get(offset).size() > topHeadingsValues.size()){
                     if (offset > 0){
-                        System.out.println("Using offset on topheadings : " + offset);
+                        System.out.println("Using offset on top headings : " + offset);
                     }
                     topHeadingsValues = topHeadingsValuesByOffset.get(offset);
                 }
@@ -420,23 +420,23 @@ public class DSImportService {
                 */
                     if (heading.contains(HeadingReader.LINEHEADING) && heading.indexOf(";") > 0) {
                         pivot = true;
-                        String headname = heading.substring(0, heading.indexOf(";"));
+                        String headName = heading.substring(0, heading.indexOf(";"));
                         Name headset = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All headings", null, false);
                         // create the set the line heading name will go in
                         // note - headings in different import files will be considered the same if they have the same name
-                        NameService.findOrCreateNameInParent(azquoMemoryDBConnection, headname.replace("_", " "), headset, true);
-                        heading = heading.replace(HeadingReader.LINEHEADING, "parent of LINENO;child of " + headname.replace("_", " ") + ";language " + headname);
+                        NameService.findOrCreateNameInParent(azquoMemoryDBConnection, headName.replace("_", " "), headset, true);
+                        heading = heading.replace(HeadingReader.LINEHEADING, "parent of LINENO;child of " + headName.replace("_", " ") + ";language " + headName);
                     }
 
                     // using file name instead of import interpreter name, not sure of the best plan there
 
                     if (heading.contains(HeadingReader.LINEDATA) && heading.indexOf(";") > 0) {
                         pivot = true;
-                        String headname = heading.substring(0, heading.indexOf(";"));
-                        Name alldataset = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All data", null, false);
-                        Name thisDataSet = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, uploadedFile.getFileName() + " data", alldataset, false);
+                        String headName = heading.substring(0, heading.indexOf(";"));
+                        Name allDataSet = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All data", null, false);
+                        Name thisDataSet = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, uploadedFile.getFileName() + " data", allDataSet, false);
                         // create the set the line data name will go in
-                        NameService.findOrCreateNameInParent(azquoMemoryDBConnection, headname.replace("_", " "), thisDataSet, false);
+                        NameService.findOrCreateNameInParent(azquoMemoryDBConnection, headName.replace("_", " "), thisDataSet, false);
                         heading = heading.replace(HeadingReader.LINEDATA, "peers {LINENO}").replace("_", " ");
                     }
                 }
@@ -499,7 +499,7 @@ public class DSImportService {
         // ok, run the check
         while (lineIterator.hasNext()){
             String[] row = lineIterator.next();
-            // will make it case insensetive
+            // will make it case insensitive
             if (columnIndex < row.length && valuesToCheck.contains(row[columnIndex].toLowerCase())){
                 StringBuilder sb = new StringBuilder();
                 // rebuild the line, seems a little stupid :P

@@ -1,6 +1,5 @@
 package com.azquo.memorydb.service;
 
-import com.azquo.MultidimensionalListUtils;
 import com.azquo.StringLiterals;
 import com.azquo.StringUtils;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
@@ -69,12 +68,10 @@ public final class ValueService {
     public static void storeValueWithProvenanceAndNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, String valueString, final Set<Name> names, boolean override, boolean provisional) throws Exception {
         storeValueWithProvenanceAndNamesCount.incrementAndGet();
         // ok there's an issue of numbers with "," in them, in that case I should remove on the way in
-        if (valueString.contains(",")) {
-            String replaced = valueString.replace(",", "").replace("$","").replace("£","");
-            if (NumberUtils.isNumber(replaced)) { // think that's fine
-                // so without "," it IS a valid number, take commas out of valueString
-                valueString = replaced;
-            }
+        String replaced = valueString.replace(",", "").replace("$", "").replace("£", "");
+        if (NumberUtils.isNumber(replaced)) { // think that's fine
+            // so without "," it IS a valid number, take commas out of valueString
+            valueString = replaced;
         }
         //long marker = System.currentTimeMillis();
         final List<Value> existingValues = findForNames(names);
@@ -366,13 +363,13 @@ public final class ValueService {
                             debugInfo.append("\tApplies to ").append(name.getAttribute(APPLIESTO)).append("\n");
                         }
                         Name appliesTo = NameService.findByName(azquoMemoryDBConnection, name.getAttribute(APPLIESTO));
-                        if (appliesTo!=null){
+                        if (appliesTo != null) {
                             lowest = true;
                             appliesToNames = appliesTo.findAllChildren();
-                        }else{
+                        } else {
                             appliesToNames = NameQueryParser.parseQuery(azquoMemoryDBConnection, name.getAttribute(APPLIESTO), attributeNames, false);
                         }
-                      }
+                    }
                     // then get the result of it, this used to be stored in RPCALC
                     // it does extra things we won't use but the simple parser before SYA should be fine here
                     calc = StringUtils.prepareStatement(calc, nameStrings, formulaStrings, attributeStrings);
@@ -396,20 +393,19 @@ public final class ValueService {
             List<Name> loopNames = null;
             boolean hasList = false;
 
-            for (Name calcName:calcnames){
+            for (Name calcName : calcnames) {
 
                 if (appliesToNames.contains(calcName) && !calcName.hasChildren()) {
-                    if (loopNames ==null || loopNames.contains(calcName)){
+                    if (loopNames == null || loopNames.contains(calcName)) {
                         loopNames = new ArrayList<>();
                         loopNames.add(calcName);
                         hasList = true;
-                    }
-                    else{
+                    } else {
                         return 0;
                     }
-                }else{
-                    if(!Collections.disjoint(appliesToNames, calcName.findAllChildren())) { // nagative on disjoint, there were elements in common
-                        if (loopNames == null){
+                } else {
+                    if (!Collections.disjoint(appliesToNames, calcName.findAllChildren())) { // nagative on disjoint, there were elements in common
+                        if (loopNames == null) {
                             loopNames = new ArrayList<>(appliesToNames);
                         }
                         loopNames.retainAll(calcName.findAllChildren());
@@ -442,11 +438,11 @@ public final class ValueService {
                 //System.out.println("Outer loop size : " + appliesToNames.size());
                 for (Name calcName : calcnames) {
                     // an optimiseation - forget any looping or calcs if one of the calc names has no values, just return
-                    if (calcName.findValuesIncludingChildren().isEmpty()){
+                    if (calcName.findValuesIncludingChildren().isEmpty()) {
                         valuesHook.values = new ArrayList<>();
                         return 0;
                     }
-                    if (outerLoopNames.contains(calcName)){
+                    if (outerLoopNames.contains(calcName)) {
                         outerLoopNames = new HashSet<>();
                         outerLoopNames.add(calcName);
                     }
