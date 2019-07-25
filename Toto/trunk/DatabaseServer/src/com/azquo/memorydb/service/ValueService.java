@@ -62,15 +62,15 @@ public final class ValueService {
     private static AtomicInteger storeValueWithProvenanceAndNamesCount = new AtomicInteger(0);
 
     public static void storeValueWithProvenanceAndNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, String valueString, final Set<Name> names) throws Exception {
-        storeValueWithProvenanceAndNames(azquoMemoryDBConnection, valueString, names, false);
+        storeValueWithProvenanceAndNames(azquoMemoryDBConnection, valueString, names, false, false);
     }
 
 
-    public static void storeValueWithProvenanceAndNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, String valueString, final Set<Name> names, boolean override) throws Exception {
+    public static void storeValueWithProvenanceAndNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, String valueString, final Set<Name> names, boolean override, boolean provisional) throws Exception {
         storeValueWithProvenanceAndNamesCount.incrementAndGet();
         // ok there's an issue of numbers with "," in them, in that case I should remove on the way in
         if (valueString.contains(",")) {
-            String replaced = valueString.replace(",", "");
+            String replaced = valueString.replace(",", "").replace("$","").replace("£","");
             if (NumberUtils.isNumber(replaced)) { // think that's fine
                 // so without "," it IS a valid number, take commas out of valueString
                 valueString = replaced;
