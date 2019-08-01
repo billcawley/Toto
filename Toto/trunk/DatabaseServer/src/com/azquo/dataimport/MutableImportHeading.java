@@ -71,6 +71,7 @@ class MutableImportHeading {
     boolean blankZeroes = false;
     // remove spaces from the cell value
     boolean removeSpaces = false;
+    // is the heading required - must it be found in the file that's being loaded? Very relevant since we're now using import templates
     boolean required = false;
     // is this a column representing names (as opposed to values or attributes). Derived from parent of child of and being referenced by other headings, it's saying : does name, the field above, need to be populated?
     boolean lineNameRequired = false;
@@ -78,22 +79,25 @@ class MutableImportHeading {
     , if it has a value it references a set higher up e.g. if a product is being moved in a structure (this heading is parent of the product) with many levels then the
     set referenced in the exclusive clause might be "Categories", the top set, so that the product would be removed from any names in Categories before being added to this heading*/
     String exclusive = null;
-    // in context of childof - only load the line if this name is in the set already
+    // in context of child of - only load the line if this name is in the set already
     boolean existing = false;
     // if line values had a comma separated list for example , would be the split char. Only used for PwC russia so far
     String splitChar = null;
-    // local names are a p[otential problem if not resolved in the right order. Previously this was solved by resolving local first
+    // local names are a potential problem if not resolved in the right order. Previously this was solved by resolving local first
     // but this didn't deal with local in local. Not recommended but using this the system can support it. Code which resolves this along with comments in BatchImporter.
     List<Integer> localParentIndexes = new ArrayList<>();
     /*dictionaryTerms used to try to bring order to unrestricted string input.   A table can be uploaded (dictionaryTerms) against items in a list.  Each term element contains a comma-separated list of strings
     the terms are connected by + or - signs to indicate that elements from both sets must be present, or to exclude any item that contains elements from the list respectively.
     */
     Map<Name,List<ImmutableImportHeading.DictionaryTerm>> dictionaryMap = null;
-    // todo comments on this lot
+    // synonyms are used with dictionary if you want to add equivalent words, e.g. if when categorising and asking if a string has "car" in it we might say that "auto" + "vehicle" could also count as "car"
     Map<String, List<String>> synonyms = null;
+    // lookup from and to are document ed in batch importer - run through a set of names using these attributed to try and find a name to use for this cell
     String lookupFrom = null;
     String lookupTo = null;
+    // unfinished - may zap after talking to WFC. Todo
     String checkList = null; //list of terms 'number' or 'letters <=> n' separated by ';'
     boolean replace = false; //usually numbers will add if on the same file.  'replace' will accept the last one.
+    // only put an attribute in if it's not there already. Supposedly applies to values too though the code isn't there yet.
     boolean provisional = false;
 }

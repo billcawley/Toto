@@ -14,7 +14,7 @@ import java.util.stream.Collectors;
  * Created by edward on 10/09/16.
  * <p>
  * This class resolves the headings on a data import file. These headings along with lines of data are passed to the BatchImporter.
- *
+ * <p>
  * Some bits are still a little hard to understand, as of 04/01/19 I think it could be improved a bit
  * <p>
  */
@@ -48,6 +48,7 @@ class HeadingReader {
     */
 
     static final String COMPOSITION = "composition";
+    // shorthand for parent of/child of/exclusive, see comments below where it's used
     static final String CLASSIFICATION = "classification";
     static final String DEFAULT = "default";
     private static final String OVERRIDE = "override";
@@ -69,17 +70,17 @@ class HeadingReader {
     static final String SPLIT = "split";
     private static final String CHECK = "check";
     private static final String REPLACE = "replace";
-    private static final String PROVISIONAL = "provisional";//used with 'parent of' to indicate that the parent child relationship should only be created if none esists already (originally for Ed Broking Premium imports)
+    private static final String PROVISIONAL = "provisional";//used with 'parent of' to indicate that the parent child relationship should only be created if none exists already (originally for Ed Broking Premium imports)
 
     /*DICTIONARY finds a name based on the string value of the cell.  The system will search all names for the attribute given by the 'dictionary' term.  For instance if the phrase is 'dictionary complaint terms'
     the system will look through all the attributes 'complaint terms' to see if any match the value of this cell.
     the 'terms' consist of words or phrases separated by '+','-' or ','.   ',' means  'or'  '+' means 'and' and '-' means 'and not'
-    e.g      'car, bus, van + accident - sunday,saturday' would find any phrase containg 'car' or 'bus' or 'van' AND 'accident' but NOT containing 'saturday' or 'sunday'
-    DICTIONARY can be used in conjunction with the set 'SYNONYMS`.  The elements of 'Synonyms` are names witth an attriubte 'sysnonyms'.  The attribute gives a comma-separated list of synonyms.
+    e.g      'car, bus, van + accident - sunday,saturday' would find any phrase containing 'car' or 'bus' or 'van' AND 'accident' but NOT containing 'saturday' or 'sunday'
+    DICTIONARY can be used in conjunction with the set 'SYNONYMS`.  The elements of 'Synonyms` are names with an attribute 'synonyms'.  The attribute gives a comma-separated list of synonyms.
     e.g  if an element of 'Synonyms' is 'car'    then 'car' may have an attribute 'synonyms' consisting of 'motor, auto, vehicle'  which DICTIONARY  would consider to mean the same as 'car'
-    todo : change to be report functionality
+    Note 26-07-2019, I wanted to move this all into reports but
      */
-    public static final String DICTIONARY = "dictionary";
+    static final String DICTIONARY = "dictionary";
     /*
     LOOKUP FROM  `<start attribute>` {TO `<end attribute>`}
     used in conjunction with 'child of' or 'classification'
@@ -93,16 +94,11 @@ class HeadingReader {
 
     any name in the set wih attributes in the range
 
+    See BatchImporter also . . .
      */
     private static final String LOOKUP = "lookup";
 
     private static final int FINDATTRIBUTECOLUMN = -2;
-
-    /*
-    <heading> classification <other heading>
-        =  parent of <other heading>;child of <heading>
-todo - add classification here
-     */
 
     // Manages the context being assigned automatically to subsequent headings. Aside from that calls other functions to
     // produce a finished set of ImmutableImportHeadings to be used by the BatchImporter.
@@ -115,31 +111,37 @@ todo - add classification here
             // on some spreadsheets, pseudo headings are created because there is text in more than one line.  The divider must also be accompanied by a 'peers' clause
             int dividerPos = headingString.lastIndexOf(headingDivider); // is there context defined here?
             if (headingString.trim().length() > 0) { // miss out blanks also.
-                // works backwards simply for convenience to chop off the context headings until only the heading is left, there is nothing significant about the ordering in contextHeadings
-                if (dividerPos > 0 || headingString.indexOf(";") > 0) {//any further clauses void context headings
+                if (dividerPos > 0 || headingString.indexOf(";") > 0) {//any further clauses or new contexts  void existing context headings
+                    contextHeadings = new ArrayList<>(); // reset/build the context headings
+                    // ok this is a slightly odd bit of logic, if there are context headings but NO clauses then grab clauses from the last column which had clauses
+                    // EFC note - I need to confirm with WFC where this is actually used
                     int clausePos = headingString.indexOf(";");
-                    if (clausePos > 0){
+                    if (clausePos > 0) {
                         lastClauses = headingString.substring(clausePos);
-                    }else{
+                    } else {
                         headingString += lastClauses;
                     }
-                    contextHeadings = new ArrayList<>(); // reset/build the context headings
                 }
+                /* context headings are mainly about peers and there are two aspects to it
+                 The first is that when context headings are set they persist across subsequent headings as long as these headings don't have context headings themselves or clauses.
+                 The seconds aspect is that in defining a context heading the name of that heading is added to the peers. Normally peers is the name of the column heading
+                 and names looked up from the cells in other columns. You cannot add another name in the peers {} it's only other columns and the cells will be the peers BUT if you say
+                 name 1|name 2 peers {col1, col 2 etc} then you've got as your peers name1, name 2 and the contents of cells in col 1 & 2 & 3 so under those circumstances it's
+                 not about context persisting past the current column but rather adding in name 2 which isn't possible under the standard peers clause.
+                 */
+
+
+                // works backwards simply for convenience to chop off the context headings until only the heading is left, there is nothing significant about the ordering in contextHeadings
                 while (dividerPos >= 0) {
                     //if there are no clauses, inherit from last
-                      final String contextHeadingString = headingString.substring(dividerPos + 1);
+                    final String contextHeadingString = headingString.substring(dividerPos + 1);
                     // if the heading ends with | the context heading will be blank, ignore it. A way to clear context if you just put a single | at the end of a heading
                     if (contextHeadingString.length() > 0) {
                         // context headings may not use many features but using the standard heading objects and interpreter is fine
-                        MutableImportHeading contextHeading = interpretHeading(azquoMemoryDBConnection, contextHeadingString, attributeNames, uploadedFile.getFileName());
-                        if (contextHeading.attribute != null) {
-                            attributeNames.add(contextHeading.attribute);//not sure when this should be removed.  It must apply until the context is changed THIS IS AN ADDITIONAL LANGUAGE USED TO UNDERSTAND THE HEADINGS - NOT THE DATA!
-                        }
-                        contextHeadings.add(contextHeading);
+                        contextHeadings.add(interpretHeading(azquoMemoryDBConnection, contextHeadingString, attributeNames, uploadedFile.getFileName()));
                     }
                     headingString = headingString.substring(0, dividerPos);
                     dividerPos = headingString.lastIndexOf(headingDivider);
-
                 }
 
                 final MutableImportHeading heading = interpretHeading(azquoMemoryDBConnection, headingString, attributeNames, uploadedFile.getFileName());
@@ -150,24 +152,28 @@ todo - add classification here
                 headings.add(newHeading);
             }
         }
-        // further processing of the Mutable headings - the bits where headings interact with each other
-        for (MutableImportHeading heading:headings){
-            if (heading.attribute!=null && (heading.attribute.equalsIgnoreCase(USDATELANG) || heading.attribute.equalsIgnoreCase(DATELANG))){
-                boolean hasAttributeSubject=false;
-                for (MutableImportHeading heading2:headings){
-                    if (heading2.heading!=null && heading2.heading.equalsIgnoreCase(heading.heading) && (heading2.isAttributeSubject || heading2.attribute==null)){
+        /* further processing of the Mutable headings - the bits where headings interact with each other
+         more specifically we're trying to work out attribute subjects - a language clause will set isAttributeSubject to true, aside from that
+         there's this criteria - it's a date and there's no obvious other candidate
+         */
+
+        for (MutableImportHeading heading : headings) {
+            if (heading.attribute != null && (heading.attribute.equalsIgnoreCase(USDATELANG) || heading.attribute.equalsIgnoreCase(DATELANG))) {
+                boolean hasAttributeSubject = false;
+                for (MutableImportHeading heading2 : headings) {
+                    if (heading2.heading != null && heading2.heading.equalsIgnoreCase(heading.heading) && (heading2.isAttributeSubject || heading2.attribute == null)) {
                         hasAttributeSubject = true;
                         break;
                     }
                 }
-                if (!hasAttributeSubject){
+                if (!hasAttributeSubject) {
                     heading.isAttributeSubject = true;
                 }
             }
         }
         resolvePeersAttributesAndParentOf(azquoMemoryDBConnection, headings);
         //set 'isAttributeSubject for date headings if there is not already an attribute subject or a heading with no attribute
-           // convert to immutable. Not strictly necessary, as much for my sanity as anything (EFC) - we do NOT want this info changed by actual data loading
+        // convert to immutable. Not strictly necessary, as much for my sanity as anything (EFC) - we do NOT want this info changed by actual data loading
 
         return headings.stream().map(ImmutableImportHeading::new).collect(Collectors.toList());
     }
@@ -190,13 +196,13 @@ todo - add classification here
         while (clauseIt.hasNext()) {
             String clause = ((String) clauseIt.next()).trim();
             // classification just being shorthand. According to this code it needs to be the first of the clauses
-            // should classificaltion go inside interpretClause?
+            // should classification go inside interpretClause?
             if (clause.toLowerCase().startsWith(CLASSIFICATION)) {
                 interpretClause(azquoMemoryDBConnection, heading, "parent of " + clause.substring(CLASSIFICATION.length()), fileName);
                 interpretClause(azquoMemoryDBConnection, heading, "child of " + heading.heading, fileName);
                 interpretClause(azquoMemoryDBConnection, heading, "exclusive", fileName);
             } else {
-                if (clause.length() > 0){
+                if (clause.length() > 0) {
                     interpretClause(azquoMemoryDBConnection, heading, clause, fileName);
                 }
             }
@@ -287,12 +293,12 @@ todo - add classification here
             case DEFAULT: // default = composition in now but we'll leave the syntax support in
             case COMPOSITION:// combine more than one column
                 // as with override this seems a little hacky . . .
-                if (result.endsWith("%")){
-                    try{
-                        double d = Double.parseDouble(result.substring(0,result.length()-1)) /100;
+                if (result.endsWith("%")) {
+                    try {
+                        double d = Double.parseDouble(result.substring(0, result.length() - 1)) / 100;
                         result = d + "";
-                     }catch(Exception ignored){
-                     }
+                    } catch (Exception ignored) {
+                    }
                 }
 
                 heading.compositionPattern = result.replace("FILENAME", fileName);
@@ -351,7 +357,7 @@ todo - add classification here
             case CLEAR:
                 if (heading.parentNames != null) {
                     for (Name name : heading.parentNames) {
-                        name.setChildrenWillBePersisted(Collections.emptyList(),azquoMemoryDBConnection);
+                        name.setChildrenWillBePersisted(Collections.emptyList(), azquoMemoryDBConnection);
                     }
                 }
                 break;
@@ -492,14 +498,17 @@ todo - add classification here
                         mutableImportHeading.blankZeroes = true;
                     }
                     if (!contextHeading.peers.isEmpty()) { // then try to resolve the peers! Generally context headings will feature one with peers but it's not 100%
-                        // Context only really works with name in the heading otherwise how would the context differ over different headings, hence make the main heading name if it's not there
+                        // Context only really works with name in the heading otherwise how would the context differ over different headings, hence resolve the main heading name if it's not there
                         if (mutableImportHeading.name == null) {
                             mutableImportHeading.name = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, mutableImportHeading.heading, null, false);
                         }
                         if (!mutableImportHeading.peerNames.isEmpty() || !mutableImportHeading.peerIndexes.isEmpty()) {
                             throw new Exception("context peers trying to overwrite normal heading peers " + mutableImportHeading.name.getDefaultDisplayName() + ", heading " + contextHeading.heading);
                         }
-                        if (contextHeading.compositionPattern!=null){
+                        // as with non zero the context composition overrides the heading one though I don't think
+                        // there would be both on one heading, I guess about flexibility in allowing composition to be
+                        // put on the end as usual. If composition was put on a subsequent heading it would reset the context as any clause does
+                        if (contextHeading.compositionPattern != null) {
                             mutableImportHeading.compositionPattern = contextHeading.compositionPattern;
                         }
                         resolvePeers(mutableImportHeading, contextHeading, headings);
@@ -507,6 +516,7 @@ todo - add classification here
                 }
                 // Resolve Attributes. Having an attribute means the content of this column relates to a name in another column,
                 // need to find that column's index. Fairly simple stuff, it's using findMutableHeadingIndex to find the subject of attributes and parents
+                // as in other places dates are treated as a special case
                 if (mutableImportHeading.attribute != null && !mutableImportHeading.attribute.equalsIgnoreCase(DATELANG) && !mutableImportHeading.attribute.equalsIgnoreCase(USDATELANG)) {
                     // so if it's Customer,Address1 we need to find customer.
                     mutableImportHeading.indexForAttribute = findMutableHeadingIndex(mutableImportHeading.heading, headings);
@@ -552,7 +562,7 @@ todo - add classification here
         }
     }
 
-    /* Updated 31 Aug 2017. Now doens't look up heading names by name, just columns. Gather the heading name and all context names as peers
+    /* Updated 31 Aug 2017. Now doesn't look up heading names by name, just columns. Gather the heading name and all context names as peers
      * Only difference if optional context is sent is that the context is the source of the peers string list */
     private static void resolvePeers(MutableImportHeading heading, MutableImportHeading contextHeading, List<MutableImportHeading> headings) throws Exception {
         MutableImportHeading peersSource = contextHeading != null ? contextHeading : heading;

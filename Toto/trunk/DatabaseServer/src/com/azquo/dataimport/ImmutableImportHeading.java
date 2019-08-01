@@ -42,7 +42,8 @@ public class ImmutableImportHeading {
     Map<String, List<String>> synonyms;
     String lookupFrom;
     String lookupTo;
-    String checkList;
+    // not being used, perhaps zap
+    private String checkList;
     boolean replace;
     boolean provisional;
 

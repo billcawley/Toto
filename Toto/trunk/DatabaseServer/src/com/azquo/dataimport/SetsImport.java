@@ -58,8 +58,8 @@ class SetsImport {
                         }
                     }
                 }
+                lines++;
             }
-            lines++;
         }
         uploadedFile.setNoLinesImported(lines);
     }

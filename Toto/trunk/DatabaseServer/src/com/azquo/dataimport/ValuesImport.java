@@ -41,15 +41,15 @@ public class ValuesImport {
             final Map<Integer, List<String>> linesRejected = new ConcurrentHashMap<>(); // track line numbers rejected
             final AtomicInteger noLinesRejected = new AtomicInteger(); // track line numbers rejected
             int linesImported = 0; // just for some feedback at the end
-            int lineNo = 0;
+            int lineNo = 0; // out here now as we're trying to continue if lineIterator.next() throws an exception
             while (lineIterator.hasNext()) { // the main line reading loop
-                lineNo++;
+                lineNo++; // we are now on line number 1, line 0 wouldn't mean anything for user feedback
                 boolean corrupt = false;
                 String[] lineValues;
                 try {
                     lineValues = lineIterator.next();
                     // I'm currently working on the principle that the line no is the current location -1
-                    // while as rejected lines could well be sequential!
+                    // while rather than if as rejected lines could well be sequential!
                     while (uploadedFile.getIgnoreLines() != null && uploadedFile.getIgnoreLines().keySet().contains(lineIterator.getCurrentLocation().getLineNr() - 1) && lineIterator.hasNext()) {
                         StringBuilder sb = new StringBuilder();
                         sb.append("Deliberately skipping line ").append(lineIterator.getCurrentLocation().getLineNr() - 1).append(", ");
@@ -64,7 +64,7 @@ public class ValuesImport {
                     linesImported++;
                     List<ImportCellWithHeading> importCellsWithHeading = new ArrayList<>();
                     int columnIndex = 0;
-                      boolean blankLine = true;
+                    boolean blankLine = true;
                 /* essentially run some basic checks on the data as it comes in and batch it up into headings with line values.
                 that pairing is very helpful in the BatchImporter
                 */
@@ -109,7 +109,7 @@ public class ValuesImport {
                     } else {
                         linesImported--; // drop it down as we're not even going to try that line
                     }
-                }catch (Exception e){
+                } catch (Exception e) {
                     rejectedLinesForUserFeedback.add(new UploadedFile.RejectedLine(lineNo, "", e.getMessage()));
                 }
             }
@@ -120,15 +120,6 @@ public class ValuesImport {
                 futureBatch.get(1, TimeUnit.HOURS);
             }
             lineIterator.close();
-            // Delete check for tomcat temp files, if read from the other temp directly then leave it alone
-            if (uploadedFile.getPath().contains("/usr/")) {
-                File test = new File(uploadedFile.getPath());
-                if (test.exists()) {
-                    if (!test.delete()) {
-                        System.out.println("unable to delete " + uploadedFile.getPath());
-                    }
-                }
-            }
             uploadedFile.setNoData(linesImported == 0);
             uploadedFile.setProcessingDuration((System.currentTimeMillis() - track) / 1000);
             uploadedFile.setNoLinesImported(linesImported - noLinesRejected.get());
@@ -136,25 +127,25 @@ public class ValuesImport {
             if (!linesRejected.isEmpty()) {
                 // I'm going to have to go through the file and fine the rejected lines if they're there, can't really use the iterator before I don't think.
                 // I guess watch for possible performance issues . . .
-                 // this try should gracefully release the resources
+                // this try should gracefully release the resources
                 long time = System.currentTimeMillis();
                 try (BufferedReader br = Files.newBufferedReader(Paths.get(uploadedFile.getPath()), Charset.forName("UTF-8"))) {
                     lineNo = 0;
                     String line;
                     // I assume the line no as given by the json iterator starts at line 1, might have to check this . . .
-                    while ((line = br.readLine()) != null){
+                    while ((line = br.readLine()) != null) {
                         lineNo++;
-                        if (linesRejected.containsKey(lineNo)){
+                        if (linesRejected.containsKey(lineNo)) {
                             List<String> errors = linesRejected.remove(lineNo);
                             StringBuilder sb = new StringBuilder();
-                            for (String error : errors){
-                                if (sb.length() > 0){
+                            for (String error : errors) {
+                                if (sb.length() > 0) {
                                     sb.append(", ");
                                 }
                                 sb.append(error);
                             }
                             rejectedLinesForUserFeedback.add(new UploadedFile.RejectedLine(lineNo, line, sb.toString()));
-                            if (linesRejected.isEmpty()){ // we've grabbed all the rejected lines (removed above  . . .)
+                            if (linesRejected.isEmpty()) { // we've grabbed all the rejected lines (removed above  . . .)
                                 break;
                             }
                         }
@@ -163,6 +154,15 @@ public class ValuesImport {
                 System.out.println("millis to scan for error lines : " + (System.currentTimeMillis() - time));
                 uploadedFile.setNoLinesRejected(noLinesRejected.get());
                 uploadedFile.addToLinesRejected(rejectedLinesForUserFeedback);
+            }
+            // Delete check for tomcat temp files, if read from the other temp directly then leave it alone
+            if (uploadedFile.getPath().contains("/usr/")) {
+                File test = new File(uploadedFile.getPath());
+                if (test.exists()) {
+                    if (!test.delete()) {
+                        System.out.println("unable to delete " + uploadedFile.getPath());
+                    }
+                }
             }
             System.out.println("---------- names found cache size " + namesFoundCache.size());
         } catch (Exception e) {
@@ -196,7 +196,7 @@ public class ValuesImport {
             if (lineValue.toLowerCase().endsWith("f")) return lineValue;
             try {
                 double d = Double.parseDouble(lineValue.replace(",", ""));
-                if (!(d + "").contains("E")){ // this is hacky but big decimal to plain string got junk on fractions
+                if (!(d + "").contains("E")) { // this is hacky but big decimal to plain string got junk on fractions
                     lineValue = d + "";
                     if (lineValue.endsWith(".0")) {
                         lineValue = lineValue.substring(0, lineValue.length() - 2);

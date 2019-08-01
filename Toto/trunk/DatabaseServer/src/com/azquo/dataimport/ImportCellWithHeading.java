@@ -16,7 +16,7 @@ class ImportCellWithHeading {
     private final ImmutableImportHeading immutableImportHeading;
     private String lineValue;// prefix  line to try to avoid confusion
     private Set<Name> lineNames; // it could be a comma separated list. Added for PwC, I'm not entirely happy about this but if it's necessary it's necessary - EFC
-    public boolean needsResolving;
+    boolean needsResolving;
 
     ImportCellWithHeading(ImmutableImportHeading immutableImportHeading, String value) {
         this.immutableImportHeading = immutableImportHeading;
