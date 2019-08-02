@@ -429,6 +429,9 @@ public class BatchImporter implements Callable<Void> {
                                     sourceVal = sourceVal.substring(funcInt - 1, (funcInt - 1) + funcInt2);
                                 }
                             }
+                            if (function.equalsIgnoreCase("standardise")){
+                                sourceVal = sourceVal.replaceAll("[^0-9a-zA-Z]", "").toLowerCase().substring(0,funcInt);
+                            }
                         }
                         // now replace and move the marker to the next possible place
                         compositionPattern = compositionPattern.replace(compositionPattern.substring(headingMarker, headingEnd + 1), sourceVal);
