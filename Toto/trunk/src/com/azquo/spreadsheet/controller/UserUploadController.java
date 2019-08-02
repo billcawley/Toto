@@ -186,7 +186,7 @@ public class UserUploadController {
                                 }
                             }
                             //detect from workbook name
-                            if (uploadedFile.getFileName().toLowerCase().endsWith("import templates.xlsx")) {
+                            if (uploadedFile.getFileName().toLowerCase().contains("import templates")) {
                                 isImportTemplate = true;
                             }
                             // detect Ben Jones contract style template
