@@ -40,6 +40,7 @@ class NameEditFunctions {
             Collection<Value> toZap = null;
             String[] foundList = nameList.split("\\*");
             for (String partList : foundList) {
+                partList = partList.trim();
                 boolean exact = false;
                 if (partList.toLowerCase().startsWith("exact(")){
                     partList = partList.substring(6,partList.length() - 1);
