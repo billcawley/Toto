@@ -104,13 +104,52 @@ public class CommonReportUtils {
             while (pos >= 0) {
                 int endPos = query.indexOf("]", pos);
                 if (endPos < 0) break;
+
                 String userChoice = query.substring(pos + 1, endPos);
+                String function = "";
+                if (userChoice.toLowerCase().startsWith("left{")){
+                    function="left";
+
+                }
+                if (userChoice.startsWith("right(")){
+                    function = "right";
+                }
+                if (userChoice.startsWith("mid(")){
+                    function = "mid";
+                }
+                int para2 = 0;
+                int para3 = 0;
+                if (function.length() > 0){
+                    userChoice = userChoice.substring(function.length() + 1, userChoice.length() - 1);
+                    String[] paras = userChoice.split(",");
+                    if (paras.length==3){
+                        para3 = Integer.parseInt(paras[2]);
+
+                    }
+                    if (paras.length>=2){
+                        para2 = Integer.parseInt(paras[1]);
+                    }
+                    userChoice = paras[0];
+                }
                 String userChoiceBasic = userChoice;
                 if (userChoice.toLowerCase().startsWith("az_")) {
                     userChoiceBasic = userChoice.substring(3);
                 }
                 String replacement = userChoices.get(userChoiceBasic.toLowerCase().replace(" ",""));//remove any blanks.
                 if (replacement != null) {
+                    if (function.length() > 0){
+                        if (function.equals("left")&& replacement.length()> para2){
+                            replacement = replacement.substring(0,para2 - 1);
+                        }
+                        if (function.equals("right") && replacement.length() > para2){
+                            replacement = replacement.substring(replacement.length() - para2);
+                        }
+                        if (function.equals("mid") && replacement.length() > para2){
+                            replacement = replacement.substring(para2-1, para2 + para3-1);
+                        }
+
+
+                    }
                     query = query.substring(0, pos) + replacement + query.substring(endPos + 1);
                     pos = pos + replacement.length();
 
