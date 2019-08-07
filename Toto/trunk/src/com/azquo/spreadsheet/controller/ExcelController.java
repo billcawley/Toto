@@ -744,6 +744,7 @@ public class ExcelController {
                         loggedInUser.setSentCells(loggedInUser.getUser().getReportId(), excelJsonRequest.sheetName, excelJsonRequest.region, cellsAndHeadingsForDisplay);
                         return "Empty space set to ad hoc data : " + excelJsonRequest.region;
                     } else {
+                        // todo : find out how, in particular after a list of states, the arrays can not be square, that is to say that the bottom one has an extra blank
                         CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = SpreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser,
                                 excelJsonRequest.region, 0,
                                 replaceUserChoicesInHeadings(loggedInUser,excelJsonRequest.rowHeadings),

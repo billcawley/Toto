@@ -2,10 +2,7 @@ package com.azquo.memorydb.core;
 
 import com.azquo.StringLiterals;
 import com.azquo.memorydb.service.DSAdminService;
-import com.azquo.memorydb.service.NameService;
-import com.azquo.memorydb.service.ValueService;
 import net.openhft.koloboke.collect.map.hash.HashObjObjMaps;
-import org.apache.log4j.Logger;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -40,7 +37,7 @@ public final class AzquoMemoryDB {
 
     // todo - move these somewhere else
     private static Properties azquoProperties = new Properties();
-    public static final String host;
+    private static final String host;
     private static final String GROOVYDIR = "groovydir";
 
     // no point doing this on every constructor!
@@ -73,7 +70,7 @@ public final class AzquoMemoryDB {
         return groovyDir;
     }
 
-    private static final Logger logger = Logger.getLogger(AzquoMemoryDB.class);
+//    private static final Logger logger = Logger.getLogger(AzquoMemoryDB.class);
 
     // The old memory db manager logic is going in here, want to make the constructor private
     private static final ConcurrentHashMap<String, AzquoMemoryDB> memoryDatabaseMap = new ConcurrentHashMap<>(); // by data store name. Will be unique
@@ -151,9 +148,9 @@ public final class AzquoMemoryDB {
 
     private static AtomicInteger newDatabaseCount = new AtomicInteger(0);
 
+    // as in does the transport need to accommodate longer values - see ValueDAO.convertForLongTextValues
     private volatile boolean checkValueLengths;
 
-    private final boolean isATemporaryCopy;
     /*
 
     I need to consider this https://www.securecoding.cert.org/confluence/display/java/TSM03-J.+Do+not+publish+partially+initialized+objects
@@ -185,11 +182,9 @@ public final class AzquoMemoryDB {
         if (sourceDB != null) {
             azquoMemoryDBTransport = new TemporaryAzquoMemoryDBTransport(this, sourceDB);
             backupTransport = null;
-            isATemporaryCopy = true;
         } else {
             azquoMemoryDBTransport = new AzquoMemoryDBTransport(this, persistenceName, sessionLog);
             backupTransport = new BackupTransport(this);
-            isATemporaryCopy = false;
         }
         nameByIdMap = new ConcurrentHashMap<>();
         valueByIdMap = new ConcurrentHashMap<>();
@@ -212,11 +207,11 @@ public final class AzquoMemoryDB {
     }
 
 
-    public void checkValueLengths() {
+    void checkValueLengths() {
         checkValueLengths = true;
     }
 
-    public boolean needToCheckValueLengths() {
+    boolean needToCheckValueLengths() {
         return checkValueLengths;
     }
 
@@ -347,9 +342,11 @@ public final class AzquoMemoryDB {
 
     // trying for a basic count and set cache
 
-    public Provenance getProvenanceById(final int id) {
+    Provenance getProvenanceById(final int id) {
         return provenanceByIdMap.get(id);
     }
+
+    /* Json then custom ones, maybe refactor later*/
 
     // would need to be synchronized if not on a concurrent map
 
@@ -365,12 +362,38 @@ public final class AzquoMemoryDB {
         nameByIdMap.remove(toRemove.getId());
     }
 
+    void addValueToDb(final Value newValue) throws Exception {
+        newValue.checkDatabaseMatches(this);
+        // add it to the memory database, this means it's in line for proper persistence (the ID map is considered reference)
+        if (valueByIdMap.putIfAbsent(newValue.getId(), newValue) != null) { // != null means there was something in there, this really should not happen hence the exception
+            throw new Exception("tried to add a value to the database with an existing id!");
+        }
+    }
+
     void removeValueFromDb(final Value toRemove) throws Exception {
         toRemove.checkDatabaseMatches(this);
         valueByIdMap.remove(toRemove.getId());
     }
 
-    /* Json then custom ones, maybe refactor later*/
+    private volatile AtomicReference<Provenance> mostRecentProvenance = new AtomicReference<>();
+
+    void addProvenanceToDb(final Provenance newProvenance) throws Exception {
+        newProvenance.checkDatabaseMatches(this);
+        // add it to the memory database, this means it's in line for proper persistence (the ID map is considered reference)
+        if (provenanceByIdMap.putIfAbsent(newProvenance.getId(), newProvenance) != null) {
+            throw new Exception("tried to add a provenance to the database with an existing id!");
+        }
+        mostRecentProvenance.getAndUpdate(provenance -> provenance != null && provenance.getTimeStamp().isAfter(newProvenance.getTimeStamp()) ? provenance : newProvenance);
+    }
+
+    // practically speaking could the last provenance ever be null when this is called? I guess be safe.
+    public long getLastModifiedTimeStamp() {
+        return mostRecentProvenance.get() != null ? mostRecentProvenance.get().getTimeStamp().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli() : 0;
+    }
+
+    public Provenance getMostRecentProvenance() {
+        return mostRecentProvenance.get();
+    }
 
     private static AtomicInteger setJsonEntityNeedsPersistingCount = new AtomicInteger(0);
 
@@ -416,34 +439,6 @@ public final class AzquoMemoryDB {
         return backupTransport;
     }
 
-    void addValueToDb(final Value newValue) throws Exception {
-        newValue.checkDatabaseMatches(this);
-        // add it to the memory database, this means it's in line for proper persistence (the ID map is considered reference)
-        if (valueByIdMap.putIfAbsent(newValue.getId(), newValue) != null) { // != null means there was something in there, this really should not happen hence the exception
-            throw new Exception("tried to add a value to the database with an existing id!");
-        }
-    }
-
-    private volatile AtomicReference<Provenance> mostRecentProvenance = new AtomicReference<>();
-
-    void addProvenanceToDb(final Provenance newProvenance) throws Exception {
-        newProvenance.checkDatabaseMatches(this);
-        // add it to the memory database, this means it's in line for proper persistence (the ID map is considered reference)
-        if (provenanceByIdMap.putIfAbsent(newProvenance.getId(), newProvenance) != null) {
-            throw new Exception("tried to add a provenance to the database with an existing id!");
-        }
-        mostRecentProvenance.getAndUpdate(provenance -> provenance != null && provenance.getTimeStamp().isAfter(newProvenance.getTimeStamp()) ? provenance : newProvenance);
-    }
-
-    // practically speaking could the last provenance ever be null when this is called? I guess be safe.
-    public long getLastModifiedTimeStamp() {
-        return mostRecentProvenance.get() != null ? mostRecentProvenance.get().getTimeStamp().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli() : 0;
-    }
-
-    public Provenance getMostRecentProvenance() {
-        return mostRecentProvenance.get();
-    }
-
     // should lock stuff be in a different class?
     // note - this function will NOT check for existing locks for these values, it just sets time for this user then sets new locks
     public void setValuesLockForUser(Collection<Value> values, String userId) {
@@ -458,10 +453,7 @@ public final class AzquoMemoryDB {
             valueLocks.values().removeAll(Collections.singleton(userId)); // need to force a collection rather than an instance to remove all values in the map that match. Hence do NOT remove .singleton here!
         }
         // and remove all old locks for all users
-        removeOldLocks(60); // arbitrary time, this seems as good a palce as any to check
-    }
-
-    private void removeOldLocks(int minutesAllowed) {
+        int minutesAllowed = 60; // arbitrary but seems fine
         for (Map.Entry<String, LocalDateTime> userLock : valueLockTimes.entrySet()) {
             final LocalDateTime lockTime = userLock.getValue();
             if (ChronoUnit.MINUTES.between(lockTime, LocalDateTime.now()) > minutesAllowed) {
@@ -474,6 +466,7 @@ public final class AzquoMemoryDB {
         return !valueLockTimes.isEmpty() && !(valueLockTimes.size() == 1 && valueLockTimes.keySet().iterator().next().equals(userId));
     }
 
+    // as in it's locked by another user, get the details of why
     public String checkLocksForValueAndUser(String userId, Collection<Value> valuesToCheck) {
         if (valueLockTimes.isEmpty() || (valueLockTimes.size() == 1 && valueLockTimes.get(userId) != null)) {
             return null; // what I'll call "ok" for the mo
@@ -488,10 +481,6 @@ public final class AzquoMemoryDB {
         return null;
     }
 
-    public boolean isATemporaryCopy() {
-        return isATemporaryCopy;
-    }
-
     // I may change these later, for the mo I just want to stop drops and clears at the same time as persistToDataStore
     public synchronized void synchronizedClear() throws Exception {
         DSAdminService.emptyDatabaseInPersistence(azquoMemoryDBTransport.getPersistenceName());
@@ -500,7 +489,7 @@ public final class AzquoMemoryDB {
     public synchronized void synchronizedDrop() throws Exception {
         DSAdminService.dropDatabaseInPersistence(azquoMemoryDBTransport.getPersistenceName());
     }
-
+/*
     private static void printFunctionCountStats() {
         System.out.println("######### AZQUO MEMORY DB FUNCTION COUNTS");
         System.out.println("newDatabaseCount\t\t\t\t" + newDatabaseCount.get());
@@ -521,7 +510,6 @@ public final class AzquoMemoryDB {
                 forceNameNeedsPersistingCount,
                 setValueNeedsPersistingCount);
     }
-
     // debug stuff, I'll allow the warnings for the moment. Really need calls to be based off a flag, not commented/uncommented
     public static void printAllCountStats() {
         printFunctionCountStats();
@@ -537,5 +525,5 @@ public final class AzquoMemoryDB {
         Value.clearFunctionCountStats();
         NameService.clearFunctionCountStats();
         ValueService.clearFunctionCountStats();
-    }
+    }*/
 }

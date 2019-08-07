@@ -1,3 +1,11 @@
+02-08-19
+
+Removes $ and £ signs from values which can be stored as numbers. Preparatory work to handle 'provisionsl'
+
+Host prefix on power BI export
+
+includes function 'standardise' which removes all characters except numbers and letters from string as in 'standardise("17 Broad Street",7) ->17Broad
+
 25-07-19
 
 Include 'Dictionary' in list of heading clause words

@@ -79,6 +79,7 @@ public class DBCron {
     // need to think of how to define this
     @Scheduled(cron = "0 * * * * *")
     public void directoryScan() throws Exception {
+        final long millisOldThreshold = 30_000;
         synchronized (this) { // one at a time
             if (SpreadsheetService.getScanBusiness() != null && SpreadsheetService.getScanBusiness().length() > 0) {
                 Business b = BusinessDAO.findByName(SpreadsheetService.getScanBusiness());
@@ -126,7 +127,6 @@ public class DBCron {
                             });
                         }
                     }
-                    long millisOldThreshold = 300_000;
 
                     if (SpreadsheetService.getXMLScanDir() != null && SpreadsheetService.getXMLScanDir().length() > 0) {
                         // make tagged as before but this time the plan is to parse all found XML files into a single CSV and upload it
@@ -139,9 +139,9 @@ public class DBCron {
                         // fragment off t'internet to get the most recent file
                         Path p = Paths.get(SpreadsheetService.getXMLScanDir());
                         // need to do try with resources or it leaks file handlers
-                        try (Stream<Path> list1 = Files.list(p)){
+                        try (Stream<Path> list1 = Files.list(p)) {
                             Optional<Path> lastFilePath = list1    // here we get the stream with full directory listing
-                                .filter(f -> (!Files.isDirectory(f) && f.getFileName().endsWith("xml")))  // exclude subdirectories and non xml files from listing
+                                    .filter(f -> (!Files.isDirectory(f) && f.getFileName().endsWith("xml")))  // exclude subdirectories and non xml files from listing
                                     .max(Comparator.comparingLong(f -> f.toFile().lastModified()));  // finally get the last file using simple comparator by lastModified field
                             // 300 seconds, 5 minutes, I want the most recent file to be at least that old before I start doing things to them
                             if (lastFilePath.isPresent() && !Files.isDirectory(lastFilePath.get()) && (System.currentTimeMillis() - Files.getLastModifiedTime(lastFilePath.get()).toMillis()) > millisOldThreshold) {
@@ -177,33 +177,33 @@ public class DBCron {
                                                     if (lastModifiedTime.toMillis() < (timestamp - millisOldThreshold)) {
                                                         System.out.println("file : " + origName);
                                                         // newer logic, start with the original sent data then add anything from brokasure on. Will help Bill/Nic to parse
-                                                        if (Files.exists(Paths.get(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".xml"))){
-                                                            readXML(fileKey,filesValues,null,builder,Paths.get(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".xml"),headings,lastModifiedTime);
+                                                        if (Files.exists(Paths.get(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".xml"))) {
+                                                            readXML(fileKey, filesValues, null, builder, Paths.get(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".xml"), headings, lastModifiedTime);
                                                         }
                                                         // todo what if root tags don't match between the existing file and the one from BS??
                                                         // add in extra info, initial reason it was required was for section info not suitable for Brokasure but required to load the data back in
-                                                        if (Files.exists(Paths.get(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".properties"))){
-                                                            try(InputStream is = new FileInputStream(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".properties")){
+                                                        if (Files.exists(Paths.get(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".properties"))) {
+                                                            try (InputStream is = new FileInputStream(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".properties")) {
                                                                 Properties properties = new Properties();
                                                                 properties.load(is);
                                                                 Map<String, String> thisFileValues = filesValues.computeIfAbsent(fileKey, t -> new HashMap<>());
-                                                                for (String propertyName : properties.stringPropertyNames()){
+                                                                for (String propertyName : properties.stringPropertyNames()) {
                                                                     headings.add(propertyName);
                                                                     thisFileValues.put(propertyName, properties.getProperty(propertyName));
                                                                 }
                                                             }
                                                         }
                                                         // ok I need to stop fields of a different type mixing, read xml will return false if the root document name doesn't match. Under those circumstances leave the file there
-                                                        if (readXML(fileKey,filesValues,rootDocumentName,builder,path,headings,lastModifiedTime)){
+                                                        if (readXML(fileKey, filesValues, rootDocumentName, builder, path, headings, lastModifiedTime)) {
                                                             Files.move(path, tagged.resolve(timestamp + origName));
                                                         }
                                                         // check the xlsx isn't still in the inbox - zap it if it is
                                                         Path leftoverXLSX = Paths.get(SpreadsheetService.getXMLDestinationDir()).resolve(fileKey + ".xlsx");
-                                                        if (Files.exists(leftoverXLSX)){
+                                                        if (Files.exists(leftoverXLSX)) {
                                                             Files.delete(leftoverXLSX);
-                                                        } else if (fileKey.toLowerCase().startsWith("cs")){ // it was zapped (as in ok!) - in the case of CS claim settlements the original file which will be in temp now needs to go in the outbox
+                                                        } else if (fileKey.toLowerCase().startsWith("cs")) { // it was zapped (as in ok!) - in the case of CS claim settlements the original file which will be in temp now needs to go in the outbox
                                                             Path xlsxFileToMove = Paths.get(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".xlsx");
-                                                            if (Files.exists(xlsxFileToMove)){
+                                                            if (Files.exists(xlsxFileToMove)) {
                                                                 System.out.println("moving file back to the out box " + fileKey + ".xlsx");
                                                                 Files.move(xlsxFileToMove, Paths.get(SpreadsheetService.getXMLScanDir()).resolve(fileKey + ".xlsx"));
                                                             }
@@ -218,7 +218,7 @@ public class DBCron {
                                             } catch (Exception e) {
                                                 e.printStackTrace();
                                                 // try to move the file if it failed - unclog the outbox
-                                                try{
+                                                try {
                                                     Files.move(path, Paths.get(SpreadsheetService.getHomeDir() + "/temp/" + path.getFileName()));
                                                 } catch (IOException ex) {
                                                     ex.printStackTrace();
@@ -254,18 +254,64 @@ public class DBCron {
                                         }
                                     });
                                 }
-                                if (Files.exists(newScannedDir.resolve(csvFileName)) && SpreadsheetService.getXMLScanDB() != null && !SpreadsheetService.getXMLScanDB().isEmpty()){ // it should exist and a database should be set also
+                                if (Files.exists(newScannedDir.resolve(csvFileName)) && SpreadsheetService.getXMLScanDB() != null && !SpreadsheetService.getXMLScanDB().isEmpty()) { // it should exist and a database should be set also
                                     // hacky, need to sort, todo
                                     Database db = DatabaseDAO.findForNameAndBusinessId(SpreadsheetService.getXMLScanDB(), b.getId());
                                     LoggedInUser loggedInUser = new LoggedInUser(""
-                                            , new User(0,LocalDateTime.now(),b.getId(),"brokasure","","","","","",0,0,"","")
+                                            , new User(0, LocalDateTime.now(), b.getId(), "brokasure", "", "", "", "", "", 0, 0, "", "")
                                             , DatabaseServerDAO.findById(db.getDatabaseServerId()), db, null, b.getBusinessDirectory());
                                     final Map<String, String> fileNameParams = new HashMap<>();
                                     String fileName = newScannedDir.resolve(csvFileName).getFileName().toString();
                                     ImportService.addFileNameParametersToMap(fileName, fileNameParams);
 
-                                ImportService.importTheFile(loggedInUser, new UploadedFile( newScannedDir.resolve(csvFileName).toString()
-                                        , new ArrayList<>(Collections.singletonList(fileName)), fileNameParams, false,false), null, null);
+                                    ImportService.importTheFile(loggedInUser, new UploadedFile(newScannedDir.resolve(csvFileName).toString()
+                                            , new ArrayList<>(Collections.singletonList(fileName)), fileNameParams, false, false), null, null);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // scan for direct uploads - added for Joe Brown's
+
+            if (SpreadsheetService.getDirectUploadDir() != null && !SpreadsheetService.getDirectUploadDir().isEmpty()) {
+                Path directUploadDir = Paths.get(SpreadsheetService.getDirectUploadDir());
+                if (directUploadDir.toFile().exists() && directUploadDir.toFile().isDirectory()) {
+                    try (Stream<Path> directUploadDirList = Files.list(directUploadDir)) {
+                        Iterator<Path> directUploadDirListIterator = directUploadDirList.iterator();
+                        // go through the main directory looking for directories that match a DB name
+                        while (directUploadDirListIterator.hasNext()) {
+                            Path dbDir = directUploadDirListIterator.next();
+                            File dbDirFile = dbDir.toFile();
+                            if (dbDirFile.isDirectory()) {
+                                Database matchingDBdir = DatabaseDAO.findForPersistenceName(dbDirFile.getName());
+                                if (matchingDBdir != null) {
+                                    // ok we have a database directory
+                                    final Business b = BusinessDAO.findById(matchingDBdir.getBusinessId());
+                                    try (Stream<Path> filesToUpload = Files.list(dbDir)) {
+                                        Iterator<Path> filesToUploadIterator = filesToUpload.iterator();
+                                        while (filesToUploadIterator.hasNext()) {
+                                            Path fileToUpload = filesToUploadIterator.next();
+                                            if (fileToUpload.toFile().isFile()) {
+                                                FileTime lastModifiedTime = Files.getLastModifiedTime(fileToUpload);
+                                                // only interested in files in the db directory and ones that have not very recently been modified - don't want to interfere with a file while it's being copied or generated
+                                                if (lastModifiedTime.toMillis() < (System.currentTimeMillis() - millisOldThreshold)) {
+                                                    Path moved = Paths.get(SpreadsheetService.getHomeDir() + "/temp/" + System.currentTimeMillis() + fileToUpload.getFileName());
+                                                    String fileName = fileToUpload.toFile().getName();
+                                                    Files.move(fileToUpload, moved);
+                                                    // now . . .we need a user to upload it. Initially copying broaksure code above, this may need to be changed in time
+                                                    LoggedInUser loggedInUser = new LoggedInUser(""
+                                                            , new User(0, LocalDateTime.now(), b.getId(), "brokasure", "", "", "", "", "", 0, 0, "", "")
+                                                            , DatabaseServerDAO.findById(matchingDBdir.getDatabaseServerId()), matchingDBdir, null, b.getBusinessDirectory());
+                                                    final Map<String, String> fileNameParams = new HashMap<>();
+                                                    ImportService.addFileNameParametersToMap(fileName, fileNameParams);
+                                                    ImportService.importTheFile(loggedInUser, new UploadedFile(moved.toString()
+                                                            , new ArrayList<>(Collections.singletonList(fileName)), fileNameParams, false, false), null, null);
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -283,10 +329,10 @@ public class DBCron {
         Document workbookXML = builder.parse(path.toFile());
         //workbookXML.getDocumentElement().normalize(); // probably fine on smaller XML, don't want to do on the big stuff
         Element documentElement = workbookXML.getDocumentElement();
-        if (rootDocumentName != null){ // when loading non brokasure files i.e. the originals generated then don't pay attention to the root name - it might be wrong
-            if (rootDocumentName.get() == null){
+        if (rootDocumentName != null) { // when loading non brokasure files i.e. the originals generated then don't pay attention to the root name - it might be wrong
+            if (rootDocumentName.get() == null) {
                 rootDocumentName.set(documentElement.getTagName());
-            } else if (!rootDocumentName.get().equals(documentElement.getTagName())){ // this file doens't match the others in this set, don't scan it into the file
+            } else if (!rootDocumentName.get().equals(documentElement.getTagName())) { // this file doens't match the others in this set, don't scan it into the file
                 filesValues.remove(fileKey); // get rid of that key
                 return false; // tells the code outside to leave the file there, we'lll process later
             }

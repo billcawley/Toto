@@ -45,7 +45,7 @@ public class SpreadsheetService {
 
     private static final Properties azquoProperties = new Properties();
 
-    private static final String host;
+    public static final String host;
 
     static {
         System.out.println("attempting properties load from classpath");
@@ -82,6 +82,7 @@ public class SpreadsheetService {
     private static final String DEVMACHINE = "dev.machine";
     private static final String ALIAS = "alias";
     private static final String SCANDIR = "scandir";
+    private static final String DIRECTUPLOADDIR = "directuploaddir";
     private static final String SCANBUSINESS = "scanbusiness";
     // where to scan the XML, initially a path
     private static final String XMLSCANDIR = "xmlscandir";
@@ -141,6 +142,10 @@ public class SpreadsheetService {
 
     public static String getXMLScanDB() {
         return getProperty(XMLSCANDB);
+    }
+
+    public static String getDirectUploadDir() {
+        return getProperty(DIRECTUPLOADDIR);
     }
 
     // where we'll put generated XML for Ed Broking

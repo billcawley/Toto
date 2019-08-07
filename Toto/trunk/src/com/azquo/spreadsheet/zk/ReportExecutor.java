@@ -269,7 +269,6 @@ public class ReportExecutor {
                                 String exportFirstLine = null;
                                 if (existsAlready) {
                                     try (BufferedReader br = Files.newBufferedReader(Paths.get(exportPath), Charset.forName("UTF-8"))) {
-                                        // grab the first line to check on delimiters
                                         exportFirstLine = br.readLine();
                                     }
                                 }
@@ -400,14 +399,23 @@ public class ReportExecutor {
                 } else if (trimmedLine.toLowerCase().startsWith("exportpath")) { // note unlike filtercontext and filteritems this goes down the recursive levels, it's not just at this level
                     // when this is set then zap the file if it exists
                     String checkPath = trimmedLine.substring("exportpath".length()).trim();
+                    int last = checkPath.lastIndexOf("\\");
+                    if (checkPath.lastIndexOf("/") > last){
+                        last = checkPath.lastIndexOf("/");
+                    }
+                    if (last > 0){
+                        checkPath = checkPath.substring(0,last + 1) + SpreadsheetService.host + checkPath.substring(last + 1);
+                    }
                     Path path = Paths.get(checkPath);
+                    // new logic according to Ed Broking requirements - preface the filename with the host
                     if (Files.exists(path)) {
                         Files.delete(path);
                         // if it existed then we know it's a reasonable path
                         exportPath = checkPath;
                     } else if (Files.isDirectory(path.getParent())) { // does the directory exist
-                            exportPath = checkPath;
+                        exportPath = checkPath;
                     }
+
                 } else if (trimmedLine.toLowerCase().startsWith("set ")) {
                     /*
                     there are now two versions:
