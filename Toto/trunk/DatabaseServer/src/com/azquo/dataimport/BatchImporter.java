@@ -430,7 +430,10 @@ public class BatchImporter implements Callable<Void> {
                                 }
                             }
                             if (function.equalsIgnoreCase("standardise")){
-                                sourceVal = sourceVal.replaceAll("[^0-9a-zA-Z]", "").toLowerCase().substring(0,funcInt);
+                                sourceVal = sourceVal.replaceAll("[^0-9a-zA-Z]", "").toLowerCase();
+                                if (funcInt > sourceVal.length()) {
+                                    sourceVal = sourceVal.substring(0, funcInt);
+                                }
                             }
                         }
                         // now replace and move the marker to the next possible place
