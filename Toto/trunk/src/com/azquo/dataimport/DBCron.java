@@ -79,7 +79,7 @@ public class DBCron {
     // need to think of how to define this
     @Scheduled(cron = "0 * * * * *")
     public void directoryScan() throws Exception {
-        final long millisOldThreshold = 30_000;
+        final long millisOldThreshold = 300_000;
         synchronized (this) { // one at a time
             if (SpreadsheetService.getScanBusiness() != null && SpreadsheetService.getScanBusiness().length() > 0) {
                 Business b = BusinessDAO.findByName(SpreadsheetService.getScanBusiness());
