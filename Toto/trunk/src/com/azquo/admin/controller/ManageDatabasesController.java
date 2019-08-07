@@ -301,7 +301,7 @@ public class ManageDatabasesController {
                         File moved = new File(SpreadsheetService.getHomeDir() + "/temp/" + System.currentTimeMillis() + fileName); // timestamp to stop file overwriting
                         uploadFile.transferTo(moved);
                         model.put("error", BackupService.loadBackup(loggedInUser, moved, database));
-                    } else if ("true".equals(template)) {
+                    } else if ("true".equals(template)||  uploadFile.getOriginalFilename().toLowerCase().contains("import templates")) {
                         try {
                             String fileName = uploadFile.getOriginalFilename();
                             File moved = new File(SpreadsheetService.getHomeDir() + "/temp/" + System.currentTimeMillis() + fileName); // timestamp to stop file overwriting
