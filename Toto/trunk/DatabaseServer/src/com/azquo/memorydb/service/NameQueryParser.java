@@ -37,7 +37,7 @@ public class NameQueryParser {
         StringTokenizer st = new StringTokenizer(searchByNames, ",");
         while (st.hasMoreTokens()) {
             String nameName = st.nextToken().trim();
-            NameSetList nameSetList = interpretSetTerm(null, nameName, formulaStrings, referencedNames, attributeStrings, azquoMemoryDBConnection, attributeNames);
+            NameSetList nameSetList = interpretSetTerm(null, nameName, formulaStrings, referencedNames, attributeStrings, azquoMemoryDBConnection, attributeNames,"");
             Set<Name> nameSet = nameSetList.set != null ? nameSetList.set : HashObjSets.newMutableSet(nameSetList.list); // just wrap if it's a list, should be fine. This object return type is for the query parser really
             toReturn.add(nameSet);
         }
@@ -187,7 +187,7 @@ public class NameQueryParser {
             if (op == StringLiterals.NAMEMARKER) { // then a straight name children from to etc. Resolve in interpretSetTerm
                 stackCount++;
                 // now returns a custom little object that hods a list a set and whether it's immutable
-                nameStack.add(interpretSetTerm(null, setFormula.substring(pos, nextTerm - 1), formulaStrings, referencedNames, attributeStrings, azquoMemoryDBConnection, attributeNames));
+                nameStack.add(interpretSetTerm(null, setFormula.substring(pos, nextTerm - 1), formulaStrings, referencedNames, attributeStrings, azquoMemoryDBConnection, attributeNames, setFormula));
             } else if (stackCount-- < 2) {
                 throw new Exception("not understood:  " + formulaCopy);
             } else if (op == '*') { // * meaning intersection here . . .
@@ -225,10 +225,10 @@ public class NameQueryParser {
                 int childrenPos = setFormula.substring(pos).indexOf("children");
                 if (childrenPos > 0) {
 
-                    nameStack.set(0, interpretSetTerm(nameStack.get(0), setFormula.substring(pos + 1, pos + childrenPos), formulaStrings, referencedNames, attributeStrings, azquoMemoryDBConnection, attributeNames));
-                    nameStack.set(0, interpretSetTerm(nameStack.get(0), setFormula.substring(childrenPos + pos), formulaStrings, referencedNames, attributeStrings, azquoMemoryDBConnection, attributeNames));
+                    nameStack.set(0, interpretSetTerm(nameStack.get(0), setFormula.substring(pos + 1, pos + childrenPos), formulaStrings, referencedNames, attributeStrings, azquoMemoryDBConnection, attributeNames, setFormula));
+                    nameStack.set(0, interpretSetTerm(nameStack.get(0), setFormula.substring(childrenPos + pos), formulaStrings, referencedNames, attributeStrings, azquoMemoryDBConnection, attributeNames, setFormula));
                 } else {
-                    nameStack.set(0, interpretSetTerm(nameStack.get(0), setFormula.substring(pos + 1), formulaStrings, referencedNames, attributeStrings, azquoMemoryDBConnection, attributeNames));
+                    nameStack.set(0, interpretSetTerm(nameStack.get(0), setFormula.substring(pos + 1), formulaStrings, referencedNames, attributeStrings, azquoMemoryDBConnection, attributeNames, setFormula));
                 }
             }
             pos = nextTerm;
@@ -306,7 +306,7 @@ public class NameQueryParser {
     // needs azquomemory db conneciton for it's indexes for the attribute set criteria. Boring but can't see a way around that.
     private static AtomicInteger interpretSetTermCount = new AtomicInteger(0);
 
-    private static NameSetList interpretSetTerm(NameSetList namesFound, String setTerm, List<String> strings, List<Name> referencedNames, List<String> attributeStrings, AzquoMemoryDBConnection azquoMemoryDBConnection, List<String> languages) throws Exception {
+    private static NameSetList interpretSetTerm(NameSetList namesFound, String setTerm, List<String> strings, List<Name> referencedNames, List<String> attributeStrings, AzquoMemoryDBConnection azquoMemoryDBConnection, List<String> languages, String setFormula) throws Exception {
         interpretSetTermCount.incrementAndGet();
         //System.out.println("interpret set term . . ." + setTerm);
         final String levelString = StringUtils.getInstruction(setTerm, StringLiterals.LEVEL);
@@ -419,7 +419,7 @@ public class NameQueryParser {
             if (namesFound.list != null) { // yeah I know some say this is not best practice but hey ho
                 namesFound = NameFilterFunctions.constrainNameListFromToCount(namesFound, fromString, toString, countString, offsetString, compareWithString, referencedNames);
             } else {
-                System.out.println("can't from/to/count a non-list, " + setTerm);
+                System.out.println("can't from/to/count a non-list, " + setFormula);
             }
         }
         return namesFound != null ? namesFound : new NameSetList(null, new ArrayList<>(), true); // empty one if it's null

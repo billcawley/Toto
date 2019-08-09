@@ -193,6 +193,7 @@ public class SpreadsheetService {
                     UserChoiceDAO.store(userChoice);
                 }
             }
+
         } else {
             if (userChoice != null) {
                 UserChoiceDAO.removeById(userChoice);
