@@ -653,7 +653,7 @@ public final class ImportService {
         if (blankPos > 0) {
             templateName = templateName.substring(0, blankPos);
         }
-
+        String importVersion = uploadedFile.getParameter(IMPORTVERSION);
         if (!templateName.toLowerCase().startsWith("sets") && !importTemplateUsedAlready) {
             ImportTemplateData importTemplateData = getImportTemplateForUploadedFile(loggedInUser, uploadedFile, templateCache);
             if (importTemplateData != null) { // new logic - we must have an import version
@@ -661,12 +661,31 @@ public final class ImportService {
                 Map<String, String> templateParameters = new HashMap<>(); // things like pre processor, file encoding etc
                 List<List<String>> standardHeadings = new ArrayList<>();
                 // scan first for the main model
+                List<List<String>> template= null;
+                boolean hasImportModel = false;
+                if (importVersion!=null) {
+                    template = importTemplateData.getSheets().get("Import Model");
+                    if (template == null) {
+                         template = importTemplateData.getSheets().get(importVersion);
+                    }else{
+                        hasImportModel = true;
+                    }
+                }else{
+                    template = sheetInfo(importTemplateData, templateName);//case insensitive
+
+                }
+                if (template != null) {
+                    importSheetScan(template, null, standardHeadings, null, templateParameters, null);
+                }
+                /* old version - did not allow IMPORTVERSION to override file name when there was no Import Model.
                 for (String sheetName : importTemplateData.getSheets().keySet()) {
                     if ((sheetName.equalsIgnoreCase("Import Model") && uploadedFile.getParameter(IMPORTVERSION) != null) || (uploadedFile.getParameter(IMPORTVERSION) == null && sheetName.equalsIgnoreCase(templateName))) {
                         importSheetScan(importTemplateData.getSheets().get(sheetName), null, standardHeadings, null, templateParameters, null);
                         break;
                     }
                 }
+                */
+
                 // without standard headings then there's nothing to work with
                 if (!standardHeadings.isEmpty()) {
                     Map<RowColumn, String> topHeadings = new HashMap<>();
@@ -675,16 +694,17 @@ public final class ImportService {
                     // this *should* be single line, used to lookup information from the Import Model
                     List<List<String>> headingReference = new ArrayList<>();
                     // a "version" - similar to the import model parsing but the headings can be multi level (double decker) and not at the top thus allowing for top headings
-                    for (String sheetName : importTemplateData.getSheets().keySet()) {
-                        if (sheetName.equalsIgnoreCase(uploadedFile.getParameter(IMPORTVERSION))) {
+                    if (hasImportModel && importVersion !=null) {
+                        template = sheetInfo(importTemplateData,importVersion);
+                        if (template!=null){
                             // unlike the "default" mode there can be a named range for the headings here so
-                            AreaReference headingsName = importTemplateData.getName(AZHEADINGS + sheetName);
+                            AreaReference headingsName = importTemplateData.getName(AZHEADINGS + importVersion);
                             if (headingsName != null) { // we have to have it or don't bother!
                                 uploadedFile.setSkipLines(headingsName.getFirstCell().getRow());
                                 // parameters and lookups are cumulative, pass through the same maps
-                                importSheetScan(importTemplateData.getSheets().get(sheetName), topHeadings, headingReference, versionHeadings, templateParameters, headingsName);
+                                importSheetScan(template, topHeadings, headingReference, versionHeadings, templateParameters, headingsName);
                             } else {
-                                throw new Exception("Import version sheet " + uploadedFile.getParameter(IMPORTVERSION) + " found but couldn't find az_Headings" + sheetName);
+                                throw new Exception("Import version sheet " + importVersion + " found but couldn't find az_Headings" + importVersion);
                             }
                         }
                     }
@@ -784,7 +804,7 @@ public final class ImportService {
                                 }
 
                                 if (azquoClauses.isEmpty()) {
-                                    throw new Exception("On import version sheet " + uploadedFile.getParameter(ImportService.IMPORTVERSION) + " no headings on Import Model found for " + reference + " - was this referenced twice?");
+                                    throw new Exception("On import version sheet " + importVersion + " no headings on Import Model found for " + reference + " - was this referenced twice?");
                                 } else if (headingReference.get(index).size() > 1) { // add the extra ones
                                     extraVersionClauses.addAll(headingReference.get(index).subList(1, headingReference.get(index).size()));
                                 }
@@ -864,7 +884,6 @@ public final class ImportService {
         if (uploadedFile.getPreProcessor() != null) {
             File file = new File(SpreadsheetService.getGroovyDir() + "/" + uploadedFile.getPreProcessor());
             if (file.exists()) {
-                String oldImportVersion = uploadedFile.getParameter(IMPORTVERSION);
                 System.out.println("Groovy pre processor running  . . . ");
                 Object[] groovyParams = new Object[1];
                 groovyParams[0] = uploadedFile;
@@ -882,7 +901,7 @@ public final class ImportService {
                     return uploadedFile;
                 }
                 // todo - the import version switching will be broken!
-                if (oldImportVersion != null && !oldImportVersion.equalsIgnoreCase(uploadedFile.getParameter(IMPORTVERSION))) { // the template changed! Call this function again to load the new template
+                if (importVersion != null && !importVersion.equalsIgnoreCase(uploadedFile.getParameter(IMPORTVERSION))) { // the template changed! Call this function again to load the new template
                     // there is a danger of a circular reference - protect against that?
                     // must clear template based parameters, new object
                     UploadedFile fileToProcessAgain = new UploadedFile(uploadedFile.getPath(), uploadedFile.getFileNames(), uploadedFile.getParameters(), true, uploadedFile.isValidationTest());
@@ -1017,6 +1036,15 @@ public final class ImportService {
 
     // in this context the custom headings range is for when there are multiple versions of an importer based off a master sheet -
     // e.g. the big Ed Broking import sheet for Risk which will have sub sheets - these sheets will have a named range,
+
+    private static List<List<String>> sheetInfo(ImportTemplateData importTemplateData, String toTest){
+        for (String sheetName: importTemplateData.getSheets().keySet()){
+            if (sheetName.equalsIgnoreCase(toTest)){
+                return importTemplateData.getSheets().get(sheetName);
+            }
+        }
+        return null;
+    }
 
     enum ImportSheetScanMode {OFF, TOPHEADINGS, CUSTOMHEADINGS, STANDARDHEADINGS, PARAMETERS}
 
