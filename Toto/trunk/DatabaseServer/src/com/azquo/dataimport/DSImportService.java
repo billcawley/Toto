@@ -216,22 +216,32 @@ public class DSImportService {
                     }
                     // so try and find the headings
                     List<List<String>> headingsFromTheFile = new ArrayList<>();
-                    for (int i = 0; i < headingDepth; i++) {
-                        if (lineIterator.hasNext()) {
-                            String[] lineCells = lineIterator.next();
-                            for (int j = 0; j < lineCells.length; j++) {
-                                if (i == 0) {
-                                    headingsFromTheFile.add(new ArrayList<>());
+                    if (uploadedFile.getParameter("noheadings")==null){
+                        for (int i = 0; i < headingDepth; i++) {
+                            if (lineIterator.hasNext()) {
+                                String[] lineCells = lineIterator.next();
+                                for (int j = 0; j < lineCells.length; j++) {
+                                    if (i == 0) {
+                                        headingsFromTheFile.add(new ArrayList<>());
+                                    }
+                                    // NOTE, we want case insensitive on heading names in the file look up, hence this which corresponds to to .toLowerCases in ImportService.readPreparedFile
+                                    String lineHeading = lineCells[j].replace("\\\\n", "\n").replace("\\\\t", "\t").trim().toLowerCase();
+                                    if (!lineHeading.isEmpty()) { // not having blanks
+                                        headingsFromTheFile.get(j).add(lineHeading);
+                                    }
                                 }
-                                // NOTE, we want case insensitive on heading names in the file look up, hence this which corresponds to to .toLowerCases in ImportService.readPreparedFile
-                                String lineHeading = lineCells[j].replace("\\\\n", "\n").replace("\\\\t", "\t").trim().toLowerCase();
-                                if (!lineHeading.isEmpty()){ // not having blanks
-                                    headingsFromTheFile.get(j).add(lineHeading);
-                                }
+                            } else {
+                                throw new Exception("Unable to find expected headings on the file");
                             }
-                        } else {
-                            throw new Exception("Unable to find expected headings on the file");
                         }
+                    }else{
+                        //copy the presumed headings
+                        for(List<String> heading:uploadedFile.getHeadingsByFileHeadingsWithInterimLookup().keySet()){
+                            List<String>assumedHeadings = new ArrayList<>();
+                            assumedHeadings.add(heading.get(0));
+                            headingsFromTheFile.add(assumedHeadings);
+                        }
+
                     }
                     // for feedback to the user
                     uploadedFile.setFileHeadings(headingsFromTheFile);
