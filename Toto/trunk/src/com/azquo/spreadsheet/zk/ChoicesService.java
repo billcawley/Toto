@@ -67,7 +67,7 @@ public class ChoicesService {
                     contextChoices = book.getInternalBook().getNameByName(ReportRenderer.AZPIVOTHEADINGS);
                 }
                 if (contextChoices != null) {
-                    showChoices(loggedInUser, book, contextChoices, filters, 3);
+                    showChoices(loggedInUser, book, contextChoices, filters );
                 }
             }
             if (name.getName().toLowerCase().endsWith("choice")) {
@@ -134,7 +134,8 @@ public class ChoicesService {
     }
 
     // shows choices on a pivot but need to be clearer on exactly what this is
-    private static void showChoices(LoggedInUser loggedInUser, Book book, SName contextChoices, String[] filters, int headingWidth) {
+    private static void showChoices(LoggedInUser loggedInUser, Book book, SName contextChoices, String[] filters) {
+        int headingWidth = 3; // it can be made a parameter again later if it will ever be different
         Sheet cSheet = book.getSheet(contextChoices.getRefersToSheetName());
         CellRegion chRange = contextChoices.getRefersToCellRegion();
         int headingRow = chRange.getRow();
@@ -159,9 +160,9 @@ public class ChoicesService {
 
                 }
                 BookUtils.setValue(cSheet.getInternalSheet().getCell(chosenRow, chosenCol), filter);
-                if (headingWidth > 1) {
+//                if (headingWidth > 1) {
                     BookUtils.setValue(cSheet.getInternalSheet().getCell(chosenRow, chosenCol + 1), selected);
-                }
+//                }
                 filterCount++;
             }
         }
@@ -174,9 +175,9 @@ public class ChoicesService {
         boolean resolveChoices = true;
         Map<String, List<String>> choiceOptionsMap = resolveChoiceOptions(namesForSheet, loggedInUser);
         Map<String, String> userChoices = CommonReportUtils.getUserChoicesMap(loggedInUser);
-        String context = "";
+        StringBuilder context = new StringBuilder();
         while (resolveChoices) {
-            context = "";
+            context = new StringBuilder();
             // Now I need to run through all choices setting from the user options IF it is valid and the first on the menu if it is not
             for (SName sName : namesForSheet) {
                 if (sName.getName().endsWith("Chosen")) {
@@ -190,14 +191,14 @@ public class ChoicesService {
                             String userChoice = userChoices.get(choiceName.startsWith("az_") ? choiceName.substring(3) : choiceName);
                             LocalDate date = ReportUtils.isADate(userChoice);
                             // todo - tidy after the valid motpions ower case thing
-                            if (validOptions != null && validOptions.size() > 0 && validOptions.get(0)!=null) {//a single null element returned when list consists of an attribute that does not exis
+                            if (validOptions != null && validOptions.size() > 0 && validOptions.get(0) != null) {//a single null element returned when list consists of an attribute that does not exis
                                 if (SpreadsheetService.FIRST_PLACEHOLDER.equals(userChoice)) {
                                     userChoice = validOptions.get(0);
                                 }
                                 if (SpreadsheetService.LAST_PLACEHOLDER.equals(userChoice)) {
                                     userChoice = validOptions.get(validOptions.size() - 1);
                                 }
-                                String first = !validOptions.isEmpty() ? validOptions.get(0) : null; // before lower case
+                                String first = validOptions.get(0); // before lower case
                                 // hack - valid options needs to be case insensitive. Allow dec-18 for Dec-18
                                 for (int i = 0; i < validOptions.size(); i++){
                                     validOptions.set(i, validOptions.get(i).toLowerCase().trim());
@@ -217,7 +218,7 @@ public class ChoicesService {
                                 SCell sCell = sheet.getInternalSheet().getCell(chosen.getRow(), chosen.getColumn());
                                 BookUtils.setValue(sCell, userChoice);
                                 Ranges.range(sheet, sCell.getRowIndex(), sCell.getColumnIndex()).notifyChange(); // might well be formulae related to the choice setting
-                                context += choiceName + " = " + userChoice + ";";
+                                context.append(choiceName).append(" = ").append(userChoice).append(";");
                                 if (choiceName.startsWith("az_")) {
                                     choiceName = choiceName.substring(3);
                                 }
@@ -257,7 +258,7 @@ public class ChoicesService {
                 System.out.println("10 attempts at resolving choices, odds on there's some kind of circular reference, stopping");
             }
         }
-        loggedInUser.setContext(context);
+        loggedInUser.setContext(context.toString());
         return choiceOptionsMap;
     }
 
@@ -341,9 +342,6 @@ public class ChoicesService {
                 if (chosen != null && choiceSource != null && choiceList != null && listName != null && listName.length() > 0 && validationSourceColumn < 1000) {
                     int targetCol = validationSourceColumn;
                     while (vSheet.getCell(0, targetCol).getStringValue().length() > 0 && targetCol < 1000) targetCol++;
-                    if (targetCol == 1000) {
-                        //throw exception "too many set lists"
-                    }
                     int maxSize = 0;
                     int optionNo = 0;
                     //create an array of the options....
@@ -428,7 +426,7 @@ public class ChoicesService {
             if (allOptions.size() - chosenOptions.size() > 5) return "[various]";
             StringBuilder toReturn = new StringBuilder();
             toReturn.append("[all] but ");
-            List<String> remaining = new ArrayList<String>(allOptions);
+            List<String> remaining = new ArrayList<>(allOptions);
             boolean firstElement = true;
             remaining.removeAll(chosenOptions);
             for (String choice : remaining) {

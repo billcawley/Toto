@@ -18,8 +18,8 @@ import groovy.lang.GroovyShell;
 import groovy.lang.Script;
 
 import java.io.*;
-import java.nio.charset.Charset;
 import java.nio.charset.MalformedInputException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
@@ -91,7 +91,7 @@ public class DSImportService {
             char delimiter = ',';
             final File sizeTest = new File(uploadedFile.getPath());
             final long fileLength = sizeTest.length();
-            try (BufferedReader br = Files.newBufferedReader(Paths.get(uploadedFile.getPath()), Charset.forName("UTF-8"))) {
+            try (BufferedReader br = Files.newBufferedReader(Paths.get(uploadedFile.getPath()), StandardCharsets.UTF_8)) {
                 // grab the first line to check on delimiters
                 try {
                     String firstLine = br.readLine();
@@ -470,7 +470,7 @@ public class DSImportService {
         char delimiter = ',';
 //        System.out.println("get lines with values and column, col index : " + columnIndex);
 //        System.out.println("get lines with values and column, values to check : " + valuesToCheck);
-        try (BufferedReader br = Files.newBufferedReader(Paths.get(uploadedFile.getPath()), Charset.forName("UTF-8"))) {
+        try (BufferedReader br = Files.newBufferedReader(Paths.get(uploadedFile.getPath()), StandardCharsets.UTF_8)) {
             // grab the first line to check on delimiters
                 String firstLine = br.readLine();
                 if (firstLine.contains("|")) {

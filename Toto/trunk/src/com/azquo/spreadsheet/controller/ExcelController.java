@@ -17,6 +17,7 @@ import com.azquo.spreadsheet.*;
 import com.azquo.spreadsheet.transport.*;
 import com.azquo.spreadsheet.transport.json.CellsAndHeadingsForExcel;
 import com.azquo.spreadsheet.transport.json.ExcelJsonRequest;
+import com.azquo.spreadsheet.transport.json.ExcelRegionModification;
 import com.azquo.spreadsheet.zk.ChoicesService;
 import com.azquo.spreadsheet.zk.ReportExecutor;
 import com.azquo.spreadsheet.zk.ReportRenderer;
@@ -35,7 +36,6 @@ import org.zkoss.poi.ss.usermodel.Workbook;
 import org.zkoss.poi.xssf.usermodel.XSSFWorkbook;
 import org.zkoss.zss.api.Importers;
 import org.zkoss.zss.api.model.Book;
-import sun.rmi.runtime.Log;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -168,6 +168,7 @@ public class ExcelController {
             , @RequestParam(value = "regioncol", required = false) String regioncol
             , @RequestParam(value = "choice", required = false) String choice
             , @RequestParam(value = "chosen", required = false) String chosen
+            , @RequestParam(value = "context", required = false) String context
             , @RequestParam(value = "json", required = false) String json
             , @RequestParam(value = "template", required = false) String template
     ) {
@@ -791,31 +792,58 @@ public class ExcelController {
                     )));
                 }
             }
-            if (op.equals("saveregion")) {
-                ExcelJsonRequest excelJsonRequest = jacksonMapper.readValue(json, ExcelJsonRequest.class);
-                loggedInUser.setContext(excelJsonRequest.userContext);
-                //excelJsonRequest.query =
-                CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(loggedInUser.getUser().getReportId(), excelJsonRequest.sheetName, excelJsonRequest.region);
-                List<List<String>> data = excelJsonRequest.data;
-                List<List<CellForDisplay>> oldData = cellsAndHeadingsForDisplay.getData();
+            /* the COM plugin worked by sending back all the regions - I'm going to try a lighter approach where just the modified cells are sent - this will be a JSON list of
 
-                if ((data != null && oldData != null) && (data.size() < oldData.size() || (data.size() > 0 && oldData.size() > 0 && data.get(0).size() != oldData.get(0).size())))
-                    return "error: data region " + excelJsonRequest.region + " on " + excelJsonRequest.sheetName + " has changed size.";
-                Iterator<List<String>> rowIt = data.iterator();
-                for (List<CellForDisplay> oldRow : oldData) {//for the moment, ignore any lines below old data - assume to be blank.....
-                    List<String> row = rowIt.next();
-                    Iterator cellIt = oldRow.iterator();
-                    for (String cell : row) {
-                        CellForDisplay oldCell = (CellForDisplay) cellIt.next();
-                        if (!isEqual(oldCell.getStringValue(), cell)) {
-                            oldCell.setNewStringValue(cell);
-                            oldCell.setChanged();
-                        }
-                    }//no persisting
+                interface RegionModification {
+                    sheet: string;
+                    region: string;
+                    cellModifications : CellModification[];
                 }
-                int reportId = loggedInUser.getUser().getReportId();
-                reportName = OnlineReportDAO.findById(reportId).getReportName();
-                result = SpreadsheetService.saveData(loggedInUser, reportId, reportName, excelJsonRequest.sheetName, excelJsonRequest.region, false);
+
+                interface CellModification {
+                    Row: number;
+                    col: number;
+                    newValue: string;
+                }
+
+
+             */
+
+            if (op.equals("savemodifications")) {
+                //System.out.println("json " + json);
+                List<ExcelRegionModification> excelRegionModifications = jacksonMapper.readValue(json, jacksonMapper.getTypeFactory().constructCollectionType(List.class, ExcelRegionModification.class));
+                // todo - set the context which is a choice list really, see ChoicesService.resolveAndSetChoiceOptions
+                //loggedInUser.setContext(context);
+                for (ExcelRegionModification excelRegionModification : excelRegionModifications){
+                    CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(loggedInUser.getUser().getReportId(), excelRegionModification.sheet, excelRegionModification.region);
+                    List<List<CellForDisplay>> data = cellsAndHeadingsForDisplay.getData();
+                    for (ExcelRegionModification.CellModification cellModification : excelRegionModification.cellModifications){
+                        if (cellModification.row < data.size()){
+                            List<CellForDisplay> row = data.get(cellModification.row);
+                            if (cellModification.col < row.size()){
+                                CellForDisplay cell = row.get(cellModification.col);
+                                if (!isEqual(cell.getStringValue(), cellModification.newValue)) {
+                                    cell.setNewStringValue(cellModification.newValue);
+                                }
+                            }
+                        } // exception on an else? I think the server side stuff will give give some helpful feedback in the result
+                    }
+                    int reportId = loggedInUser.getUser().getReportId();
+                    reportName = OnlineReportDAO.findById(reportId).getReportName();
+                    loggedInUser.setContext(context);
+                    result = SpreadsheetService.saveData(loggedInUser, reportId, reportName, excelRegionModification.sheet, excelRegionModification.region, false);
+                    // so here's the followon execute which
+                    OnlineReport or = OnlineReportDAO.findById(loggedInUser.getUser().getReportId());
+                    String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath +
+                            loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + or.getFilenameForDisk();
+                    Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
+                    // I think I need those two
+                    book.getInternalBook().setAttribute(LOGGED_IN_USER, loggedInUser);
+                    book.getInternalBook().setAttribute(REPORT_ID, or.getId());
+                    ReportRenderer.populateBook(book, 0);
+                    ReportExecutor.runExecuteCommandForBook(book, ReportRenderer.FOLLOWON); // that SHOULD do it. It will fail gracefully in the vast majority of times there is no followon
+                    return result;
+                }
             }
         } catch (NullPointerException npe) {
             npe.printStackTrace();
@@ -875,9 +903,10 @@ public class ExcelController {
             , @RequestParam(value = "regioncol", required = false) String regioncol
             , @RequestParam(value = "choice", required = false) String choice
             , @RequestParam(value = "chosen", required = false) String chosen
+            , @RequestParam(value = "context", required = false) String context
             , @RequestParam(value = "json", required = false) String json
 
     ) {
-        return handleRequest(request, response, sessionId, op, database, form, formsubmit, reportName, sheetName, logon, password, region, options, regionrow, regioncol, choice, chosen, json, "true");
+        return handleRequest(request, response, sessionId, op, database, form, formsubmit, reportName, sheetName, logon, password, region, options, regionrow, regioncol, choice, chosen, context, json, "true");
     }
 }

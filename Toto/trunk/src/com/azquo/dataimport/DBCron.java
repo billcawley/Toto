@@ -308,6 +308,8 @@ public class DBCron {
                                                     ImportService.addFileNameParametersToMap(fileName, fileNameParams);
                                                     ImportService.importTheFile(loggedInUser, new UploadedFile(moved.toString()
                                                             , new ArrayList<>(Collections.singletonList(fileName)), fileNameParams, false, false), null, null);
+                                                    // ok I know this seems illogical after moving it, this rule was added after
+                                                    Files.deleteIfExists(moved);
                                                 }
                                             }
                                         }
