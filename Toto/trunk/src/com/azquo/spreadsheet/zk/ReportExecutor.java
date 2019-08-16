@@ -35,7 +35,7 @@ import javax.xml.transform.*;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import java.io.*;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -268,7 +268,7 @@ public class ReportExecutor {
                                 boolean existsAlready = Files.exists(Paths.get(exportPath));
                                 String exportFirstLine = null;
                                 if (existsAlready) {
-                                    try (BufferedReader br = Files.newBufferedReader(Paths.get(exportPath), Charset.forName("UTF-8"))) {
+                                    try (BufferedReader br = Files.newBufferedReader(Paths.get(exportPath), StandardCharsets.UTF_8)) {
                                         exportFirstLine = br.readLine();
                                     }
                                 }

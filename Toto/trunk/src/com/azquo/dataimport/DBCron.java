@@ -177,36 +177,39 @@ public class DBCron {
                                                     if (lastModifiedTime.toMillis() < (timestamp - millisOldThreshold)) {
                                                         System.out.println("file : " + origName);
                                                         // newer logic, start with the original sent data then add anything from brokasure on. Will help Bill/Nic to parse
+                                                        // further to this we'll only process files that have a corresponding temp file as Dev and UAT share directories so if there's no matching file in temp don't do anything
                                                         if (Files.exists(Paths.get(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".xml"))) {
                                                             readXML(fileKey, filesValues, null, builder, Paths.get(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".xml"), headings, lastModifiedTime);
-                                                        }
-                                                        // todo what if root tags don't match between the existing file and the one from BS??
-                                                        // add in extra info, initial reason it was required was for section info not suitable for Brokasure but required to load the data back in
-                                                        if (Files.exists(Paths.get(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".properties"))) {
-                                                            try (InputStream is = new FileInputStream(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".properties")) {
-                                                                Properties properties = new Properties();
-                                                                properties.load(is);
-                                                                Map<String, String> thisFileValues = filesValues.computeIfAbsent(fileKey, t -> new HashMap<>());
-                                                                for (String propertyName : properties.stringPropertyNames()) {
-                                                                    headings.add(propertyName);
-                                                                    thisFileValues.put(propertyName, properties.getProperty(propertyName));
+                                                            // todo what if root tags don't match between the existing file and the one from BS??
+                                                            // add in extra info, initial reason it was required was for section info not suitable for Brokasure but required to load the data back in
+                                                            if (Files.exists(Paths.get(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".properties"))) {
+                                                                try (InputStream is = new FileInputStream(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".properties")) {
+                                                                    Properties properties = new Properties();
+                                                                    properties.load(is);
+                                                                    Map<String, String> thisFileValues = filesValues.computeIfAbsent(fileKey, t -> new HashMap<>());
+                                                                    for (String propertyName : properties.stringPropertyNames()) {
+                                                                        headings.add(propertyName);
+                                                                        thisFileValues.put(propertyName, properties.getProperty(propertyName));
+                                                                    }
                                                                 }
                                                             }
-                                                        }
-                                                        // ok I need to stop fields of a different type mixing, read xml will return false if the root document name doesn't match. Under those circumstances leave the file there
-                                                        if (readXML(fileKey, filesValues, rootDocumentName, builder, path, headings, lastModifiedTime)) {
-                                                            Files.move(path, tagged.resolve(timestamp + origName));
-                                                        }
-                                                        // check the xlsx isn't still in the inbox - zap it if it is
-                                                        Path leftoverXLSX = Paths.get(SpreadsheetService.getXMLDestinationDir()).resolve(fileKey + ".xlsx");
-                                                        if (Files.exists(leftoverXLSX)) {
-                                                            Files.delete(leftoverXLSX);
-                                                        } else if (fileKey.toLowerCase().startsWith("cs")) { // it was zapped (as in ok!) - in the case of CS claim settlements the original file which will be in temp now needs to go in the outbox
-                                                            Path xlsxFileToMove = Paths.get(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".xlsx");
-                                                            if (Files.exists(xlsxFileToMove)) {
-                                                                System.out.println("moving file back to the out box " + fileKey + ".xlsx");
-                                                                Files.move(xlsxFileToMove, Paths.get(SpreadsheetService.getXMLScanDir()).resolve(fileKey + ".xlsx"));
+                                                            // ok I need to stop fields of a different type mixing, read xml will return false if the root document name doesn't match. Under those circumstances leave the file there
+                                                            if (readXML(fileKey, filesValues, rootDocumentName, builder, path, headings, lastModifiedTime)) {
+                                                                Files.move(path, tagged.resolve(timestamp + origName));
                                                             }
+                                                            // check the xlsx isn't still in the inbox - zap it if it is
+                                                            Path leftoverXLSX = Paths.get(SpreadsheetService.getXMLDestinationDir()).resolve(fileKey + ".xlsx");
+                                                            if (Files.exists(leftoverXLSX)) {
+                                                                Files.delete(leftoverXLSX);
+                                                            } else if (fileKey.toLowerCase().startsWith("cs")) { // it was zapped (as in ok!) - in the case of CS claim settlements the original file which will be in temp now needs to go in the outbox
+                                                                Path xlsxFileToMove = Paths.get(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".xlsx");
+                                                                if (Files.exists(xlsxFileToMove)) {
+                                                                    System.out.println("moving file back to the out box " + fileKey + ".xlsx");
+                                                                    Files.move(xlsxFileToMove, Paths.get(SpreadsheetService.getXMLScanDir()).resolve(fileKey + ".xlsx"));
+                                                                }
+                                                            }
+                                                        } else {
+                                                            System.out.println("Can't find corresponding temp xml file " + fileKey + ".xml, perhaps it was generated by another server");
                                                         }
                                                     } else {
                                                         System.out.println("file found for XML but it's only " + ((timestamp - lastModifiedTime.toMillis()) / 1_000) + " seconds old, needs to be " + (millisOldThreshold / 1_000) + " seconds old");
