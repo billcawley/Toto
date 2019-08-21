@@ -41,7 +41,12 @@ def fileProcess(Object[] args) {
                     if (col.equals("agmt_num")){
                        topLine = lineNo;
                        agreementCol = colNum
-
+                    }
+                    if (col.equals("Tran_Date")){
+                        Map<String, String> newparams = new HashMap<>(uploadedFile.getParameters());
+                        // this is a template switch, todo . . . .
+                        newparams.put("importversion", "AllRisksPremium2");
+                        uploadedFile.setParameters(newparams);
                     }
                     if (col.equals("contract_num")){
                         contractNumCol = colNum
@@ -63,7 +68,7 @@ def fileProcess(Object[] args) {
                 }
             } else if (agreementCol >= 0) { // ok we're into data
                 if (lineNo == topLine + 1) {
-                    if (agreementCol >= 0 && line.size() > agreementCol && line[agreementCol] != 'B') {
+                    if (!uploadedFile.getParameter("importversion").equals("AllRisksPremium2") &&  agreementCol >= 0 && line.size() > agreementCol && line[agreementCol] != 'B') {
                         Map<String, String> newparams = new HashMap<>(uploadedFile.getParameters());
                         // this is a template switch, todo . . . .
                         newparams.put("importversion", "AllRisksPremium1");
