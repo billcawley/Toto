@@ -108,7 +108,7 @@ public class ZKComposer extends SelectorComposer<Component> {
             for (SName name : names) {
                 if (name.getName().toLowerCase().endsWith(MULTI.toLowerCase())) { // a new style
                     selectionName = name.getName();
-                    final SName filterQueryCell = event.getSheet().getBook().getInternalBook().getNameByName(name.getName().substring(0, name.getName().length() - MULTI.length()) + CHOICE, name.getRefersToSheetName());
+                    final SName filterQueryCell = event.getSheet().getBook().getInternalBook().getNameByName(name.getName().substring(0, name.getName().length() - MULTI.length()) + CHOICE, name.getApplyToSheetName());
                     if (filterQueryCell != null) {
                         selectionList = BookUtils.getSnameCell(filterQueryCell).getStringValue();
                     }
