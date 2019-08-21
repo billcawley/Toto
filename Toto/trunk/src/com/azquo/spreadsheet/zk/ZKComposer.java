@@ -108,7 +108,7 @@ public class ZKComposer extends SelectorComposer<Component> {
             for (SName name : names) {
                 if (name.getName().toLowerCase().endsWith(MULTI.toLowerCase())) { // a new style
                     selectionName = name.getName();
-                    final SName filterQueryCell = event.getSheet().getBook().getInternalBook().getNameByName(name.getName().substring(0, name.getName().length() - MULTI.length()) + CHOICE);
+                    final SName filterQueryCell = event.getSheet().getBook().getInternalBook().getNameByName(name.getName().substring(0, name.getName().length() - MULTI.length()) + CHOICE, name.getRefersToSheetName());
                     if (filterQueryCell != null) {
                         selectionList = BookUtils.getSnameCell(filterQueryCell).getStringValue();
                     }
@@ -437,7 +437,6 @@ public class ZKComposer extends SelectorComposer<Component> {
                         cellsAndHeadingsForDisplay.setRowHeadings(revisedHeadings);
                     }
                 }
-
             }
         }
     }
@@ -605,8 +604,6 @@ public class ZKComposer extends SelectorComposer<Component> {
         // "after_start" is the position we'd want
         filterPopup.open(pageX, pageY);
     }
-
-
 /* not used might as well comment for the mo
     @Listen("onCellSelection = #myzss")
     public void onCellSelection(CellSelectionEvent event){
@@ -617,6 +614,4 @@ public class ZKComposer extends SelectorComposer<Component> {
         //show info...
     }
 */
-
-
 }
