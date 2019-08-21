@@ -218,10 +218,10 @@ public class ChoicesService {
                                 SCell sCell = sheet.getInternalSheet().getCell(chosen.getRow(), chosen.getColumn());
                                 BookUtils.setValue(sCell, userChoice);
                                 Ranges.range(sheet, sCell.getRowIndex(), sCell.getColumnIndex()).notifyChange(); // might well be formulae related to the choice setting
-                                context.append(choiceName).append(" = ").append(userChoice).append(";");
                                 if (choiceName.startsWith("az_")) {
                                     choiceName = choiceName.substring(3);
                                 }
+                                context.append(choiceName).append(" = ").append(userChoice).append(";");
                                 choiceName = choiceName.toLowerCase();
                                 if (!userChoice.equals(userChoices.get(choiceName))){
                                     SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(),choiceName,userChoice);

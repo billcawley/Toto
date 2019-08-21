@@ -217,6 +217,10 @@ public class ManageDatabasesController {
                 if (databaseList != null) {
                     for (Database database : databaseList) {
                         boolean isLoaded = AdminService.isDatabaseLoaded(loggedInUser, database);
+                        // it seems sometimes databases get stuck on 0 when they are clearly not 0, this is a quick hack to try to catch this when it happens
+                        if (isLoaded && database.getNameCount() == 0){
+                            AdminService.updateNameAndValueCounts(loggedInUser,database);
+                        }
                         displayDataBases.add(new DisplayDataBase(isLoaded, database));
                     }
                 }

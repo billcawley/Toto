@@ -5,7 +5,6 @@ import com.azquo.spreadsheet.transport.HeadingWithInterimLookup;
 import com.azquo.util.CommandLineCalls;
 import org.apache.commons.lang.SystemUtils;
 import org.apache.log4j.Logger;
-import org.apache.log4j.Priority;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
@@ -55,7 +54,7 @@ import org.zkoss.zss.api.model.CellData;
 import javax.servlet.http.HttpSession;
 import javax.xml.parsers.*;
 import java.io.*;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
@@ -83,7 +82,7 @@ public final class ImportService {
     public static final String onlineReportsDir = "/onlinereports/";
     public static final String importTemplatesDir = "/importtemplates/";
     public static String LOCALIP = "127.0.0.1";
-    public static final String IMPORTTEMPLATE = "importtemplate";
+    private static final String IMPORTTEMPLATE = "importtemplate";
     public static final String IMPORTVERSION = "importversion";
 
 
@@ -521,7 +520,7 @@ public final class ImportService {
                                         File newTempFile = File.createTempFile("from" + uploadedFile.getPath() + sheetName, ".csv");
                                         newTempFile.deleteOnExit();
                                         // Think it's ok with a blank file created
-                                        CsvWriter csvW = new CsvWriter(newTempFile.toString(), '\t', Charset.forName("UTF-8"));
+                                        CsvWriter csvW = new CsvWriter(newTempFile.toString(), '\t', StandardCharsets.UTF_8);
                                         csvW.setUseTextQualifier(false);
                                         // this is called twice, for the column headers and then the data itself
                                         rangeToCSV(importTemplateData.getSheets().get(sheetName), entry.getValue(), knownValues, csvW);
@@ -552,7 +551,7 @@ public final class ImportService {
             String tempPath = temp.getPath();
             temp.deleteOnExit();
             FileOutputStream fos = new FileOutputStream(tempPath);
-            CsvWriter csvW = new CsvWriter(fos, '\t', Charset.forName("UTF-8"));
+            CsvWriter csvW = new CsvWriter(fos, '\t', StandardCharsets.UTF_8);
             csvW.setUseTextQualifier(false);
             // poi convert - notably the iterators skip blank rows and cells hence the checking that indexes match
             int rowIndex = -1;
@@ -625,7 +624,7 @@ public final class ImportService {
     private static final String NOFILEHEADINGS = "nofileheadings";
     private static final String LANGUAGE = "language";
     private static final String SKIPLINES = "skiplines";
-    public static final String AZHEADINGS = "az_Headings";
+    private static final String AZHEADINGS = "az_Headings";
 
 
     // copy the file to the database server if it's on a different physical machine then tell the database server to process it
@@ -661,7 +660,7 @@ public final class ImportService {
                 Map<String, String> templateParameters = new HashMap<>(); // things like pre processor, file encoding etc
                 List<List<String>> standardHeadings = new ArrayList<>();
                 // scan first for the main model
-                List<List<String>> template= null;
+                List<List<String>> template;
                 boolean hasImportModel = false;
                 if (importVersion!=null) {
                     template = importTemplateData.getSheets().get("Import Model");
@@ -672,7 +671,6 @@ public final class ImportService {
                     }
                 }else{
                     template = sheetInfo(importTemplateData, templateName);//case insensitive
-
                 }
                 if (template != null) {
                     importSheetScan(template, null, standardHeadings, null, templateParameters, null);
@@ -694,7 +692,7 @@ public final class ImportService {
                     // this *should* be single line, used to lookup information from the Import Model
                     List<List<String>> headingReference = new ArrayList<>();
                     // a "version" - similar to the import model parsing but the headings can be multi level (double decker) and not at the top thus allowing for top headings
-                    if (hasImportModel && importVersion !=null) {
+                    if (hasImportModel) {
                         template = sheetInfo(importTemplateData,importVersion);
                         if (template!=null){
                             // unlike the "default" mode there can be a named range for the headings here so
@@ -855,7 +853,7 @@ public final class ImportService {
                                 }
                             }
                             // ok criteria added after (may need refactoring), if a top heading with a value (surrounded by ``) matches a heading on the import model use that also
-                            if (required || (!standardHeadingsColumn.isEmpty() && topHeadings.values().contains("`" + standardHeadingsColumn.get(0) + "`"))) {
+                            if (required || (!standardHeadingsColumn.isEmpty() && topHeadings.containsValue("`" + standardHeadingsColumn.get(0) + "`"))) {
                                 StringBuilder azquoHeadingsAsString = new StringBuilder();
                                 // clauses after the first cell
                                 for (String clause : standardHeadingsColumn.subList(1, standardHeadingsColumn.size())) {
@@ -1084,7 +1082,7 @@ public final class ImportService {
                     blankLine = false;
                     if (mode == ImportSheetScanMode.TOPHEADINGS) {
                         // pretty simple really - jam any values found in the map!
-                        if (!topHeadings.values().contains(cellValue)) { // not allowing multiple identical top headings. Typically can happen from a merge spreading across cells
+                        if (!topHeadings.containsValue(cellValue)) { // not allowing multiple identical top headings. Typically can happen from a merge spreading across cells
                             topHeadings.put(new RowColumn(rowIndex, cellIndex), cellValue);
                         }
                     } else if (mode == ImportSheetScanMode.CUSTOMHEADINGS) { // custom headings to be used for lookup on files - I'll watch for limiting by column though it hasn't been used yet
@@ -1403,7 +1401,7 @@ public final class ImportService {
         }
         return null;
     }
-
+/*
     // is returning a string the best idea?
     public static String testImportTemplateForTemplateAndVersion(LoggedInUser loggedInUser, String template, String version) throws Exception {
         // similar logic to above/below but we're looking for a very quick read of the file's contents
@@ -1432,7 +1430,7 @@ public final class ImportService {
             return "Import Template not found";
         }
         return "ok";
-    }
+    }*/
 
 
     public static ImportTemplateData getImportTemplateData(ImportTemplate importTemplate, LoggedInUser loggedInUser) throws Exception {
@@ -1526,7 +1524,7 @@ fr.close();
         }
         return null;
     }
-
+/*
     // note - am making these all lower case as we want case insensitive checks
     private static void getSheetAndNamedRangesNamesQuicklyFromXLSX(String xlsxPath, Set<String> sheetNames, Set<String> namedRangesNames) throws Exception {
         OPCPackage opcPackage = OPCPackage.open(new File(xlsxPath));
@@ -1567,7 +1565,7 @@ fr.close();
         opcPackage.close();
 
     }
-
+*/
     private static void processSheet(
             StylesTable styles,
             ReadOnlySharedStringsTable strings,
@@ -1610,7 +1608,7 @@ fr.close();
             this.merges = merges;
         }
 
-        public void startElement(String uri, String localName, String name, Attributes attributes) throws SAXException {
+        public void startElement(String uri, String localName, String name, Attributes attributes) {
             if ("mergeCell".equals(name)) {
                 merges.add(attributes.getValue("ref"));
             }

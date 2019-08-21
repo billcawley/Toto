@@ -47,6 +47,7 @@ public class ReportRenderer {
     static final String AZXML = "az_xml";
     static final String AZXMLEXTRAINFO = "az_xmlextrainfo";
     static final String AZXMLFILENAME = "az_xmlfilename";
+    static final String AZXMLFLAG = "az_xmlflag";
     static final String AZSUPPORTREPORTNAME = "az_supportreportname";
     static final String AZSUPPORTREPORTFILEXMLTAG = "az_supportreportfilexmltag";
     static final String AZSUPPORTREPORTSELECTIONS = "az_supportreportselections";

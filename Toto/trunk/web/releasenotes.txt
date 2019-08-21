@@ -1,3 +1,15 @@
+16-08-19
+
+Make DBCron only grab XML files it has generated - UAT and Dev share folders, need to stop them reading each other's files
+
+Excel plug in save functionality
+
+making the export from execute append the host name to the beginning of the file. For power BI export
+
+has basic string functions (left, right, mid) for user choices (in [])
+
+'standardise' (removes all but numbers and characters from strings (e.g. addresses)
+
 02-08-19
 
 Removes $ and £ signs from values which can be stored as numbers. Preparatory work to handle 'provisionsl'

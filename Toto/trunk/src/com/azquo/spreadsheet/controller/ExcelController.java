@@ -841,6 +841,7 @@ public class ExcelController {
                     book.getInternalBook().setAttribute(LOGGED_IN_USER, loggedInUser);
                     book.getInternalBook().setAttribute(REPORT_ID, or.getId());
                     ReportRenderer.populateBook(book, 0);
+                    // ok this crashes due to no book path but I think I'll allow no book path itnernally as
                     ReportExecutor.runExecuteCommandForBook(book, ReportRenderer.FOLLOWON); // that SHOULD do it. It will fail gracefully in the vast majority of times there is no followon
                     return result;
                 }
