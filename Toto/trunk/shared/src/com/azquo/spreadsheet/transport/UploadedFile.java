@@ -37,6 +37,9 @@ public class UploadedFile implements Serializable {
 
     private Map<String, String> parameters;
 
+    private Map<String, String> templateParameters;//e.g. preprocessor, validation etc, which clear out on each template load
+
+    private String postProcessingResult;
     // as it says - server side this can change how headings are looked up. Legacy logic that could be clarified.
     private final boolean convertedFromWorksheet;
 
@@ -63,14 +66,7 @@ public class UploadedFile implements Serializable {
 
     private int skipLines;
 
-    private String preProcessor;
-    private String additionalDataProcessor;
-    private String postProcessor;
-    // result of the execute from postProcessor
-    private String postProcessingResult;
-    // like post processor but only called when validating and no post processing result - results of validation are in system data
-    private String validation;
-    // heading definitions. At its most simple it would be a list of strings but it can be a lookup based on file headings and there could be multiple headingss so
+     // heading definitions. At its most simple it would be a list of strings but it can be a lookup based on file headings and there could be multiple headingss so
     private List<String> simpleHeadings;
 
     // not required for importing to work but a copy of the headings we found on the file can dramatically improve feedback to the user
@@ -180,6 +176,8 @@ public class UploadedFile implements Serializable {
         // keeping immutable should avoid some nasty bugs
         this.fileNames = Collections.unmodifiableList(names);
         this.parameters = parameters != null ? Collections.unmodifiableMap(parameters) : Collections.emptyMap();
+        this.templateParameters = null;
+        this.postProcessingResult = null;
         this.convertedFromWorksheet = convertedFromWorksheet;
         this.isValidationTest = isValidationTest;
         processingDuration = 0;
@@ -198,11 +196,6 @@ public class UploadedFile implements Serializable {
 
         skipLines = 0;
 
-        preProcessor = null;
-        additionalDataProcessor = null;
-        postProcessor = null;
-        validation = null;
-        postProcessingResult = null;
         simpleHeadings = null;
         fileHeadings = null;
         headingsByFileHeadingsWithInterimLookup = null;
@@ -251,6 +244,20 @@ public class UploadedFile implements Serializable {
     public void setParameters(Map<String, String> parameters) {
         this.parameters = parameters;
     }
+
+    public void setTemplateParameters(Map<String,String> templateParameters){this.templateParameters = templateParameters; }
+
+
+    public String getTemplateParameter(String templateParameter){
+        if (this.templateParameters == null) {
+            return null;
+        }
+        return this.templateParameters.get(templateParameter);
+    }
+
+    public String getPostProcessingResult() { return this.postProcessingResult; }
+
+    public void setPostProcessingResult(String postProcessorResult) {this.postProcessingResult = postProcessingResult; }
 
     public boolean isConvertedFromWorksheet() {
         return convertedFromWorksheet;
@@ -377,46 +384,6 @@ public class UploadedFile implements Serializable {
             return parameters.get(key.toLowerCase());
         }
         return null;
-    }
-
-    public String getPreProcessor() {
-        return preProcessor;
-    }
-
-    public void setPreProcessor(String preProcessor) {
-        this.preProcessor = preProcessor;
-    }
-
-    public String getAdditionalDataProcessor() {
-        return additionalDataProcessor;
-    }
-
-    public void setAdditionalDataProcessor(String additionalDataProcessor) {
-        this.additionalDataProcessor = additionalDataProcessor;
-    }
-
-    public String getPostProcessor() {
-        return postProcessor;
-    }
-
-    public void setPostProcessor(String postProcessor) {
-        this.postProcessor = postProcessor;
-    }
-
-    public String getValidation() {
-        return validation;
-    }
-
-    public void setValidation(String validation) {
-        this.validation = validation;
-    }
-
-    public String getPostProcessingResult() {
-        return postProcessingResult;
-    }
-
-    public void setPostProcessingResult(String postProcessingResult) {
-        this.postProcessingResult = postProcessingResult;
     }
 
     public List<String> getSimpleHeadings() {
