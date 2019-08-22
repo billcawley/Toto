@@ -8,6 +8,8 @@ import com.azquo.spreadsheet.transport.UploadedFile;
 import org.apache.commons.lang.math.NumberUtils;
 
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -62,7 +64,8 @@ class HeadingReader {
     static final String EXCLUSIVE = "exclusive";
     static final String CLEAR = "clear";
     static final String COMMENT = "comment";
-    static final String EXISTING = "existing"; // only works in in context of child of
+    static final String EXISTING = "existing"; // only works in in context of child of - reject the line if not existing
+    static final String OPTIONAL = "optional"; // only works in in context of child of - carry on with blank if not existing
     // essentially using either of these keywords switches to pivot mode (like an Excel pivot) where a name is created
     // from the line number and in a set called the name of the file, uploading successive files with the same name would of course cause problems for this system, data should be cleared before re uploading
     static final String LINEHEADING = "lineheading";//lineheading and linedata are shortcuts for data destined for a pivot table, they are replaced before parsing starts properly
@@ -71,6 +74,8 @@ class HeadingReader {
     private static final String CHECK = "check";
     private static final String REPLACE = "replace";
     private static final String PROVISIONAL = "provisional";//used with 'parent of' to indicate that the parent child relationship should only be created if none exists already (originally for Ed Broking Premium imports)
+    public static final int EXCLUSIVETOCHILDOF = -1;
+    public static final int NOTEXCLUSIVE = -2;
 
     /*DICTIONARY finds a name based on the string value of the cell.  The system will search all names for the attribute given by the 'dictionary' term.  For instance if the phrase is 'dictionary complaint terms'
     the system will look through all the attributes 'complaint terms' to see if any match the value of this cell.
@@ -96,7 +101,7 @@ class HeadingReader {
 
     See BatchImporter also . . .
      */
-    private static final String LOOKUP = "lookup";
+    public static final String LOOKUP = "lookup";
 
     private static final int FINDATTRIBUTECOLUMN = -2;
 
@@ -170,6 +175,12 @@ class HeadingReader {
                     heading.isAttributeSubject = true;
                 }
             }
+            if (heading.lookupString!=null){
+                String error = handleLookup(heading, headings);
+                if (error!=null){
+                    throw new Exception(error);
+                }
+            }
         }
         resolvePeersAttributesAndParentOf(azquoMemoryDBConnection, headings);
         //set 'isAttributeSubject for date headings if there is not already an attribute subject or a heading with no attribute
@@ -178,6 +189,28 @@ class HeadingReader {
         return headings.stream().map(ImmutableImportHeading::new).collect(Collectors.toList());
     }
 
+
+    private static String handleLookup(MutableImportHeading heading, List<MutableImportHeading>headings) throws Exception{
+        //the syntax is:  in '<parentheadingname>' using <condition/attribute>.
+        // (note - using (') for heading names as  because we are mizing azquo names with field names here)
+        String lookupString = heading.lookupString;
+        String error = "could not understand lookup: " + lookupString;
+        Pattern p = Pattern.compile("'[^']*'");
+        Matcher m = p.matcher(lookupString);
+        if(!m.find()){
+            return error;
+        }
+        if (lookupString.length() < 10 || !lookupString.toLowerCase().startsWith("in ")) return error;
+        heading.lookupParentIndex = findMutableHeadingIndex(lookupString.substring(m.start() + 1, m.end()-1), headings);
+        if (heading.lookupParentIndex < 0) return error;
+        lookupString = lookupString.substring(m.end()).trim();
+        if (lookupString.length() < 6 || !lookupString.toLowerCase().startsWith("using ")) return error;
+        lookupString = lookupString.substring(6).trim();
+        heading. lookupString = lookupString;
+        return null;
+
+
+    }
     //headings are clauses separated by semicolons, first is the heading name then onto the extra stuff
     //essentially parsing through all the relevant things in a heading to populate a MutableImportHeading
     private static MutableImportHeading interpretHeading(AzquoMemoryDBConnection azquoMemoryDBConnection, String headingString, List<String> attributeNames, String fileName) throws Exception {
@@ -208,9 +241,9 @@ class HeadingReader {
             }
         }
         // exclusive error checks
-        if ("".equals(heading.exclusive) && heading.parentNames.isEmpty()) { // then exclusive what is the name exclusive of?
+        if (heading.exclusiveIndex==EXCLUSIVETOCHILDOF && heading.parentNames.isEmpty()) { // then exclusive what is the name exclusive of?
             throw new Exception("blank exclusive and no \"child of\" clause in " + heading.heading + " in headings"); // other clauses cannot be blank!
-        } else if (heading.exclusive != null && heading.parentOfClause == null) { // exclusive means nothing without parent of
+        } else if (heading.exclusiveIndex > NOTEXCLUSIVE && heading.parentOfClause == null) { // exclusive means nothing without parent of
             throw new Exception("exclusive and no \"parent of\" clause in " + heading.heading + " in headings");
         }
         return heading;
@@ -241,6 +274,7 @@ class HeadingReader {
                 && !firstWord.equals(CLEAR)
                 && !firstWord.equals(REPLACE)
                 && !firstWord.equals(EXISTING)
+                && !firstWord.equals(OPTIONAL)
                 && !firstWord.equals(PROVISIONAL)) { // empty clause, exception unless one which allows blank
             throw new Exception(clause + " empty in " + heading.heading + " in headings"); // other clauses cannot be blank!
         }
@@ -349,10 +383,13 @@ class HeadingReader {
                 heading.required = true;
                 break;
             case EXCLUSIVE:
-                heading.exclusive = result;
+                heading.exclusiveClause = result.trim();
                 break;
             case EXISTING: // currently simply a boolean that can work with childof
                 heading.existing = true;
+                break;
+            case OPTIONAL: // currently simply a boolean that can work with childof
+                heading.optional = true;
                 break;
             case CLEAR:
                 if (heading.parentNames != null) {
@@ -417,50 +454,12 @@ class HeadingReader {
                     }
                 }
 
-                heading.exclusive = "";
+                heading.exclusiveIndex = NOTEXCLUSIVE;
                 break;
             case LOOKUP:
-                if (!result.toLowerCase().startsWith("from ") || result.indexOf("`", 6) < 0) {
-                    throw new Exception("lookup FROM `<attribute`");
-                }
-                result = result.substring(6);
-                int endFrom = result.indexOf("`");
-                heading.lookupFrom = result.substring(0, endFrom);
-                result = result.substring(endFrom + 1);
-                if (result.toLowerCase().contains("to")) {
-                    int startTo = result.indexOf("to") + 2;
-                    startTo = result.indexOf("`", startTo);
-                    if (startTo < 0 || result.indexOf("`", startTo + 1) < 0) {
-                        throw new Exception("lookup FROM `attribute` TO `attribute`");
-                    }
-                    heading.lookupTo = result.substring(startTo + 1, result.indexOf("`", startTo + 1)).trim();
-                }
-                break;
-            case CHECK:
-                String[] checks = result.split(";");
-                for (String check : checks) {
-                    boolean ok = false;
-                    check = check.toLowerCase().trim();
-                    if (check.startsWith("letters ")) {
-                        String letterCheck = check.substring(7).trim();
-
-                        while (letterCheck.length() > 0 && (letterCheck.startsWith(">") || letterCheck.startsWith("=") || letterCheck.startsWith("<"))) {
-                            ok = true;
-                            letterCheck = letterCheck.substring(1);
-                        }
-                        if (ok) {
-                            ok = NumberUtils.isDigits(letterCheck.trim());
-                        }
-                    } else {
-                        if (check.equals("number")) {
-                            ok = true;
-                        }
-                    }
-                    if (!ok) {
-                        throw new Exception("heading " + heading.heading + " has unknown check " + check);
-                    }
-                }
-                heading.checkList = result;
+                heading.lookupString = result;
+                //leave analysis until all headings have been read.
+                 break;
             case REPLACE:
                 heading.replace = true;
                 break;
@@ -544,6 +543,17 @@ class HeadingReader {
                     if (mutableImportHeading.isLocal) {
                         headings.get(mutableImportHeading.indexForChild).localParentIndexes.add(headingNo);
                     }
+                }
+                if (mutableImportHeading.exclusiveClause !=null){
+                    if (mutableImportHeading.exclusiveClause.length()==0){
+                        mutableImportHeading.exclusiveIndex = EXCLUSIVETOCHILDOF;
+                    }else{
+                        mutableImportHeading.exclusiveIndex = findMutableHeadingIndex(mutableImportHeading.exclusiveClause, headings);
+                        if (mutableImportHeading.exclusiveIndex < 0) {
+                            throw new Exception("cannot find column " + mutableImportHeading.exclusiveClause + " for exclusive column of " + mutableImportHeading.heading + "." + mutableImportHeading.attribute);
+                        }
+                    }
+
                 }
                 // Mark column indexes where the line cells will be resolved to names
                 indexesNeedingNames.addAll(mutableImportHeading.peerIndexes);
