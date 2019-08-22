@@ -57,11 +57,14 @@ public class BatchImporter implements Callable<Void> {
         this.compositeIndexResolver = compositeIndexResolver;
     }
 
+    private static final char CONSTANTMARKER = '!';
+
+
     @Override
     public Void call() {
         Long time = System.currentTimeMillis();
-        for (LineDataWithLineNumber lineDataWithLineNumber : dataToLoad) {
-            List<ImportCellWithHeading> lineToLoad = lineDataWithLineNumber.getLineData();
+         for (LineDataWithLineNumber lineDataWithLineNumber : dataToLoad) {
+             List<ImportCellWithHeading> lineToLoad = lineDataWithLineNumber.getLineData();
             int lineNumber = lineDataWithLineNumber.getLineNumber();
             try {
                 ImportCellWithHeading first = lineToLoad.get(0);
@@ -75,7 +78,8 @@ public class BatchImporter implements Callable<Void> {
                 if (first.getLineValue().length() > 0 || first.getImmutableImportHeading().heading == null
                         || first.getImmutableImportHeading().compositionPattern != null || first.getImmutableImportHeading().attribute != null) {
                     //check dates before resolving composite values
-                    for (ImportCellWithHeading importCellWithHeading : lineToLoad) {
+                    for (int i=0;i< lineToLoad.size();i++){
+                        ImportCellWithHeading importCellWithHeading = lineToLoad.get(i);
                         // this basic value checking was outside, I see no reason it shouldn't be in here
                         // attempt to standardise date formats
                         checkDate(importCellWithHeading);
@@ -133,6 +137,140 @@ public class BatchImporter implements Callable<Void> {
         return null;
     }
 
+
+    private static boolean checkCondition(List<ImportCellWithHeading>lineToLoad, String condition, CompositeIndexResolver compositeIndexResolver, Name nameToTest, final Map<Name, String> nearestList) {
+        char SETMARKER = '|';
+        boolean found = false;
+        if (condition.equals("all")) return true;
+        List<String> constants = new ArrayList<>();
+        List<List<String>> sets = new ArrayList<>();
+        Pattern p = Pattern.compile("\"[^\"]*\"");
+        Matcher m = p.matcher(condition);
+        StringBuffer newCondition = new StringBuffer();
+        int lastPos = 0;
+        int count = 0;
+        while (m.find()) {
+            constants.add(condition.substring(m.start() + 1, m.end() - 1));
+            newCondition.append(condition.substring(lastPos, m.start()) + CONSTANTMARKER + ("" + (count++ + 100)).substring(1));
+            lastPos = m.end();
+        }
+        condition = newCondition.toString() + condition.substring(lastPos);
+        newCondition = new StringBuffer();
+        lastPos = 0;
+        p = Pattern.compile("'[^']*'");
+        m = p.matcher(condition);
+        while (m.find()) {
+            int fieldNo = compositeIndexResolver.getColumnIndexForHeading(condition.substring(m.start() + 1, m.end() - 1));
+            if (fieldNo < 0) {
+                return false;
+            }
+            constants.add(lineToLoad.get(fieldNo).getLineValue());
+            newCondition.append(condition.substring(lastPos, m.start()) + CONSTANTMARKER + ("" + (count++ + 100)).substring(1));
+            lastPos = m.end();
+        }
+        condition = newCondition.toString() + condition.substring(lastPos);
+        newCondition = new StringBuffer();
+        lastPos = 0;
+        p = Pattern.compile("`[^`]*`");
+        m = p.matcher(condition);
+        while (m.find()) {
+            String attribute = nameToTest.getAttribute(condition.substring(m.start() + 1, m.end() - 1));
+            if (attribute == null) {
+                return false;
+            }
+            constants.add(attribute);
+            newCondition.append(condition.substring(lastPos, m.start()) + CONSTANTMARKER + ("" + (count++ + 100)).substring(1));
+            lastPos = m.end();
+        }
+        condition = newCondition.toString() + condition.substring(lastPos);
+        newCondition = new StringBuffer();
+        lastPos = 0;
+        p = Pattern.compile("\\{[^\\}]*\\}");
+        m = p.matcher(condition);
+        count = 0;
+        while (m.find()) {
+            sets.add(Arrays.asList(condition.substring(m.start() + 1, m.end() - 1).split(",")));
+            newCondition.append(condition.substring(lastPos, m.start()) + CONSTANTMARKER + ("" + (count++ + 100)).substring(1));
+            lastPos = m.end();
+
+        }
+        condition = newCondition.toString() + condition.substring(lastPos);
+
+        List<String> conditions = null;
+        if (condition.startsWith("and(") && condition.endsWith(")")) {
+            conditions = Arrays.asList(condition.substring(4, condition.length() - 1).split(","));
+
+        } else {
+            conditions = new ArrayList<>();
+            conditions.add(condition);
+        }
+        for (String element : conditions) {
+            found = false;
+            int inPos = element.indexOf(" in ");
+            if (inPos > 0) {
+                String fieldSt = element.substring(0, inPos).trim();
+                if (fieldSt.charAt(0) != CONSTANTMARKER) {
+                    return false;
+                }
+                String fieldFound = constants.get(Integer.parseInt(fieldSt.substring(1)));
+                List<String> setFound = sets.get(Integer.parseInt(element.substring(inPos + 5)));
+                for (String testField : setFound) {
+                    if (testField.trim().startsWith(CONSTANTMARKER + "")) {
+                        testField = constants.get(Integer.parseInt(testField.trim().substring(1)));
+                    }
+                    if (testField.equalsIgnoreCase(fieldFound)) {
+                        found = true;
+                        break;
+                    }
+                }
+            } else {
+                p = Pattern.compile("[<=~>]+");
+                m = p.matcher(element);
+                if (!m.find()) return false;
+                String LHS = interpretTerm(constants, element.substring(0, m.start()).trim());
+                String RHS = interpretTerm(constants, element.substring(m.end()).trim());
+                String op = m.group();
+                for (int i = 0; i < op.length(); i++) {
+                    switch (op.charAt(i)) {
+                        case '<':
+                            if (LHS.toLowerCase().compareTo(RHS.toLowerCase()) < 0) {
+                                found = true;
+                            }
+                            break;
+                        case '=':
+                            if (LHS.equalsIgnoreCase(RHS)) {
+                                found = true;
+                             }
+                            break;
+                        case '>':
+                            if (LHS.toLowerCase().compareTo(RHS.toLowerCase()) > 0) {
+                                found = true;
+                            }
+                        case '~':
+                            if (LHS.toLowerCase().compareTo(RHS.toLowerCase()) >= 0) {
+                                nearestList.put(nameToTest, RHS.toLowerCase());
+                            }
+
+
+                    }
+                }
+
+            }
+            if (!found) return false;
+        }
+
+        return found;
+    }
+
+    private static String interpretTerm(List<String> constants, String term){
+        term = term.trim();
+        if (term.charAt(0) == CONSTANTMARKER){
+            return constants.get(Integer.parseInt(term.substring(1)));
+        }
+        return term;
+    }
+
+
     /*
     interpret the date and change to standard form
     todo consider other date formats on import - these may  be covered in setting up dates, but I'm not sure - WFC
@@ -181,7 +319,7 @@ public class BatchImporter implements Callable<Void> {
             }
             // this assumes composite has been run if required
             // note that the code assumes there can only be one "existing" per line, it will exit this function on the first one.
-            if (cell.getImmutableImportHeading().existing) {
+            if (!cell.needsResolving && cell.getImmutableImportHeading().existing) {
                 boolean cellOk = false;
                 if (cell.getImmutableImportHeading().attribute != null && cell.getImmutableImportHeading().attribute.length() > 0) {
                     languages = new ArrayList<>();
@@ -199,7 +337,7 @@ public class BatchImporter implements Callable<Void> {
                     }
                 }
                 if (!cellOk) {
-                    return cell.getLineValue() + " not existing"; // none found break the line
+                    return cell.getImmutableImportHeading().heading + ":" + cell.getLineValue() + " not existing"; // none found break the line
                 }
             }
         }
@@ -216,18 +354,18 @@ public class BatchImporter implements Callable<Void> {
         // first pass, sort overrides and flag what might need resolving
         for (ImportCellWithHeading cell : cells) {
             // we try to resolve if there's a composition pattern *and* no value in the cell. If there's a value in the cell we don't override it with a composite value
-            if (cell.getImmutableImportHeading().compositionPattern == null || (cell.getLineValue() != null && !cell.getLineValue().isEmpty())) {
+            if (cell.getImmutableImportHeading().lookupParentIndex<0 && (cell.getImmutableImportHeading().compositionPattern == null || (cell.getLineValue() != null && !cell.getLineValue().isEmpty()))) {
                 cell.needsResolving = false;
             }
             if (cell.getImmutableImportHeading().override != null) {
                 cell.setLineValue(cell.getImmutableImportHeading().override);
                 cell.needsResolving = false;
-                if (cell.getImmutableImportHeading().lineNameRequired) {
-                    Name compName = includeInParents(azquoMemoryDBConnection, namesFoundCache, cell.getLineValue().trim()
-                            , cell.getImmutableImportHeading().parentNames, cell.getImmutableImportHeading().isLocal, StringLiterals.DEFAULT_DISPLAY_NAME_AS_LIST);
-                    cell.addToLineNames(compName);
-                }
             }
+            //resolve some line names ASAP particularly to handle lookups (parent and element are separate cells)
+            if (cell.getImmutableImportHeading().lineNameRequired && cell.getLineNames() == null && cell.getLineValue()!=null && cell.getLineValue().length() > 0) {
+                optionalIncludeInParents(azquoMemoryDBConnection, cell,namesFoundCache);
+            }
+
         }
         int loopLimit = 10;
         // loops in case there are multiple levels of dependencies. The compositionPattern stays the same but on each pass the result may be different.
@@ -236,18 +374,32 @@ public class BatchImporter implements Callable<Void> {
             adjusted = false;
             for (ImportCellWithHeading cell : cells) {
                 if (cell.needsResolving) {
-                    String compositionPattern = cell.getImmutableImportHeading().compositionPattern;
-                    compositionPattern = compositionPattern.replace("LINENO", importLine + "");
-                    if (compositionPattern.toLowerCase().startsWith("if(")) {
-                        if (resolveIf(azquoMemoryDBConnection, cell, compositionPattern, cells, compositeIndexResolver, namesFoundCache, attributeNames)) {
-                            adjusted = true;
+                    if (cell.getImmutableImportHeading().lookupParentIndex<0) {
+                        String compositionPattern = cell.getImmutableImportHeading().compositionPattern;
+                        if (compositionPattern == null) {
+                            //parent of lookups now needs resolving
+                            compositionPattern = cell.getLineValue();
                         }
-                    } else {
-                        if (resolveComposition(azquoMemoryDBConnection, cell, compositionPattern, cells, compositeIndexResolver, namesFoundCache, attributeNames)) {
-                            adjusted = true;
+                        compositionPattern = compositionPattern.replace("LINENO", importLine + "");
+                        if (compositionPattern.toLowerCase().startsWith("if(")) {
+                            if (resolveIf(azquoMemoryDBConnection, cell, compositionPattern, cells, compositeIndexResolver, namesFoundCache, attributeNames)) {
+                                adjusted = true;
+                            }
+                        } else {
+                            if (resolveComposition(azquoMemoryDBConnection, cell, compositionPattern, cells, compositeIndexResolver, namesFoundCache, attributeNames)) {
+                                adjusted = true;
+
+                            }
+                        }
+                    }else{
+                        ImportCellWithHeading parentCell = cells.get(cell.getImmutableImportHeading().lookupParentIndex);
+                        if (!parentCell.needsResolving && parentCell.getLineNames()!=null){
+                             adjusted = checkLookup(azquoMemoryDBConnection, cell, parentCell.getLineNames().iterator().next(), cells,compositeIndexResolver);
                         }
                     }
+
                 }
+
             }
             timesLineIsModified++;
             if (timesLineIsModified == loopLimit) {
@@ -398,10 +550,8 @@ public class BatchImporter implements Callable<Void> {
                     // we have a name attribute and it is a column with a name, we resolve the name if necessary and get the attribute
                     if (nameAttribute != null && compCell.getImmutableImportHeading().lineNameRequired) {
                         if (compCell.getLineNames() == null && compCell.getLineValue().length() > 0) {
-                            Name compName = includeInParents(azquoMemoryDBConnection, namesFoundCache, compCell.getLineValue().trim()
-                                    , compCell.getImmutableImportHeading().parentNames, compCell.getImmutableImportHeading().isLocal, setLocalLanguage(compCell.getImmutableImportHeading().attribute, attributeNames));
-                            compCell.addToLineNames(compName);
-                        }
+                            optionalIncludeInParents(azquoMemoryDBConnection,compCell,namesFoundCache);
+                          }
                         if (compCell.getLineNames() == null) {
                             return false;
                         }
@@ -493,12 +643,30 @@ public class BatchImporter implements Callable<Void> {
             compositionPattern = compositionPattern.substring(1, compositionPattern.length() - 1);
         }
         cell.setLineValue(compositionPattern);
+        if (cell.getImmutableImportHeading().lineNameRequired){
+            optionalIncludeInParents(azquoMemoryDBConnection,cell,namesFoundCache);
+        }
         cell.needsResolving = false;
-        checkLookup(azquoMemoryDBConnection, cell);
         checkDate(cell);
         return true; // if composition did result in the line value being changed we should run the loop again in case dependencies mean the results will change again
     }
 
+    private static void optionalIncludeInParents(AzquoMemoryDBConnection azquoMemoryDBConnection, ImportCellWithHeading cell, Map<String, Name>namesFoundCache)throws Exception{
+        if (cell.getImmutableImportHeading().optional){
+            //don't create a new name
+            try {
+                Name compName = NameService.findByName(azquoMemoryDBConnection, cell.getImmutableImportHeading().parentNames.iterator().next().getDefaultDisplayName() + "->" + cell.getLineValue());
+                cell.addToLineNames(compName);
+            }catch (Exception e){
+            }
+            cell.needsResolving = false;
+        }else {
+            Name compName = includeInParents(azquoMemoryDBConnection, namesFoundCache, cell.getLineValue().trim()
+                    , cell.getImmutableImportHeading().parentNames, cell.getImmutableImportHeading().isLocal, StringLiterals.DEFAULT_DISPLAY_NAME_AS_LIST);
+            cell.addToLineNames(compName);
+        }
+
+    }
 
     /*
 
@@ -567,99 +735,69 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
      lookup used for finding a contract year off a date . . .
      apparently can't remove. I was up to here in checking - July 2019*/
 
-    private static void checkLookup(AzquoMemoryDBConnection azquoMemoryDBConnection, ImportCellWithHeading cell) throws Exception {
+    private static boolean checkLookup(AzquoMemoryDBConnection azquoMemoryDBConnection, ImportCellWithHeading cell, Name parentSet, List<ImportCellWithHeading>lineToLoad, CompositeIndexResolver compositeIndexResolver) throws Exception {
         /* example to illustrate
-        lookup from `binder contract inception` to `binder contract expiry`
-        so
 
-        lookupFrom `binder contract inception`
-        lookupTo `binder contract expiry`
 
-        notably these two are attribute names - it seems a little odd that the attribute names are fixed but the set can change, we're finding these for each of the children of setName
+        lookup 'Policy Reference' in 'Contract Reference' using and('inception' >= `binder contract inception`, 'inception' <= `binder contract expiry`)
 
-        The line value in this case is composition `left(Bordereau Contract Year,9)`,`inception`
+        lookupParentIndex = pointer to the heading 'Contract Reference'
+        lookupString = and('inception' >= `binder contract inception`, 'inception' <= `binder contract expiry`)
 
-        the setName there will be a BB123456 or something similar, inception is a date
+        this will search the children of the set for elements which satisfy the condition.
+        in the condition, '' means headings in the file `` means attributes of the child name
 
-    `   so we get the children of the contract year and run through them checking the from and to attributes and the first
-        time we find the value sitting between them we have our match and set the line name to be that name and the value to default display name
-        there is a backup of best guess when it's above lookupFrom but not below lookupTo, applicable when provisional, note below
+        OR  lookupString can be an attribute on the child name
+        e.g  lookupString = `specification`
 
-        Also note lookupTo can be null in which case it just needs greater then lookupFrom to match
+        in this case the condition will be taken from the attribute, so will differ for each element tested.  This condition is recognised by the absence of relation operators <=>{}
+
+
+
+        ??there is a backup of best guess when it's above lookupFrom but not below lookupTo, applicable when provisional, note below
+
          */
-        if (cell.getLineValue() != null && cell.getLineValue().length() > 0 && cell.getImmutableImportHeading().lookupFrom != null && cell.getLineNames() == null) {
-            int commaPos = cell.getLineValue().indexOf(",");
-            if (commaPos < 0) {
-                throw new Exception(cell.getImmutableImportHeading().heading + " has no comma in the lookup value");
-            }
-            String setName = cell.getLineValue().substring(0, commaPos).trim();
-            String valueToTest = cell.getLineValue().substring(commaPos + 1).trim();
-            Name toTestParent = NameService.findByName(azquoMemoryDBConnection, setName);
 
-            if (toTestParent == null) {
-                throw new Exception((cell.getImmutableImportHeading().heading + " no such name: " + setName));
+
+        Pattern p = Pattern.compile("[<=~>{]");
+        String condition = cell.getImmutableImportHeading().lookupString;
+        Matcher m = p.matcher(condition);
+        String conditionAttribute = null;
+        if (!m.find()){
+            conditionAttribute = condition;
+        }
+        boolean found = false;
+        Map<Name,String>nearestList = new HashMap<>();
+        for (Name toTest : parentSet.getChildren()) {
+            if (conditionAttribute!=null){
+                condition = toTest.getAttribute(conditionAttribute);
             }
-            boolean found = false;
-            String bestFrom = "";
-            double bestFromNo = 0;
-            Name bestGuess = null;
-            for (Name toTest : toTestParent.getChildren()) {
-                String lowLimit = toTest.getAttribute(cell.getImmutableImportHeading().lookupFrom);
-                if (lowLimit != null) {
-                    try {
-                        Double d = Double.parseDouble(lowLimit);
-                        Double d2 = Double.parseDouble(valueToTest);
-                        if (d2 >= d) {
-                            if (d > bestFromNo) {
-                                bestFromNo = d;
-                                bestGuess = toTest;
-                            }
-                            if (cell.getImmutableImportHeading().lookupTo != null) {
-                                String highlimit = toTest.getAttribute(cell.getImmutableImportHeading().lookupTo);
-                                if (highlimit != null) {
-                                    d = Double.parseDouble(highlimit);
-                                    if (d2 <= d) {
-                                        found = true;
-                                        newCellNameValue(cell, toTest);
-                                        break;
-                                    }
-                                }
-                            } else {
-                                found = true;
-                            }
-                        }
-                    } catch (Exception e) {
-                        //compare strings
-                        if (lowLimit.compareTo(valueToTest) <= 0) {
-                            if (lowLimit.compareTo(bestFrom) > 0) {
-                                bestFrom = lowLimit;
-                                bestGuess = toTest;
-                            }
-                            if (cell.getImmutableImportHeading().lookupTo != null) {
-                                String highLimit = toTest.getAttribute(cell.getImmutableImportHeading().lookupTo);
-                                if (highLimit != null && highLimit.compareTo(valueToTest) >= 0) {
-                                    newCellNameValue(cell, toTest);
-                                    found = true;
-                                    break;
-                                }
-                            } else {
-                                found = true;
-                            }
-                        }
-                    }
-                }
-            }
-            if (found) {
-                newCellNameValue(cell, bestGuess);
-            } else {
-                // provisional means we only store if something does not exist already. Under these circumstances loosen the matching criteria and allow best guess
-                if (cell.getImmutableImportHeading().provisional && bestGuess != null) {
-                    newCellNameValue(cell, bestGuess);
-                } else {
-                    throw new Exception("lookup for " + cell.getImmutableImportHeading().heading + " on " + setName + " and " + valueToTest + " not found");
-                }
+            if (checkCondition(lineToLoad,condition,compositeIndexResolver, toTest, nearestList)){
+                found = true;
+                newCellNameValue(cell,toTest);
+                return true;
             }
         }
+
+        if (!found && nearestList.size() > 0) {
+            Name nameFound = null;
+            String highestFound = "";
+            for (Name toTest : nearestList.keySet()) {
+                if (highestFound.compareTo(nearestList.get(toTest)) < 0) {
+                    highestFound = nearestList.get(toTest);
+                    nameFound = toTest;
+                }
+            }
+            if (nameFound != null) {
+                newCellNameValue(cell, nameFound);
+                found = true;
+            }
+        }
+        if (!found){
+            throw new Exception("lookup for " + cell.getImmutableImportHeading().heading + " not found");
+        }
+
+        return false;
     }
 
     public static boolean containsSynonym(Map<String, List<String>> synonymList, String term, String value) {
@@ -878,7 +1016,7 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
             }
             // note! Exclusive can't work if THIS column is multiple names
             if (cellWithHeading.getLineNames() != null) {
-                if (cellWithHeading.getLineNames().size() == 1 && cellWithHeading.getImmutableImportHeading().exclusive != null) {
+                if (cellWithHeading.getLineNames().size() == 1 && cellWithHeading.getImmutableImportHeading().exclusiveIndex != HeadingReader.NOTEXCLUSIVE) {
                     Name parent = cellWithHeading.getLineNames().iterator().next();
                     //the 'parent' above is the current cell name, not its parent
                     // check exclusive to remove the child from some other parents if necessary - this replaces the old "remove from" functionality
@@ -891,13 +1029,16 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
                 get rid of any parents "White Poplin Shirt" has that are in (or are!) "Name Specified By Exclusive" that are NOT "Shirts"
                  */
                     // Exclusive is being dealt with as a single name, when defined explicitly it is and if we're deriving it from "child of" we just grab the first.
-                    Name exclusiveName;
-                    if ("".equals(cellWithHeading.getImmutableImportHeading().exclusive)) {
+                    Name exclusiveName=null;
+                    if (cellWithHeading.getImmutableImportHeading().exclusiveIndex==HeadingReader.EXCLUSIVETOCHILDOF) {
                         // blank exclusive clause, use "child of" clause - currently this only looks at the first name to be exclusive of, more than one makes little sense
                         // (check all the way down. all children, necessary due due to composite option name1->name2->name3->etc
                         exclusiveName = cellWithHeading.getImmutableImportHeading().parentNames.iterator().next();
                     } else { // exclusive has a value, not null or blank, is referring to a higher name
-                        exclusiveName = NameService.findByName(azquoMemoryDBConnection, cellWithHeading.getImmutableImportHeading().exclusive);
+                        Set<Name>exclusiveNameSet = cells.get(cellWithHeading.getImmutableImportHeading().exclusiveIndex).getLineNames();
+                        if (exclusiveNameSet!=null){
+                            exclusiveName = exclusiveNameSet.iterator().next();
+                        }
                     }
                     if (exclusiveName != null) {
                     /* To follow the example above run through the parents of "White Poplin Shirt".
@@ -909,30 +1050,35 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
                       might well have been built using the composite functionality above so it's possible another azquo upload could have jammed "White Poplin Shirt"
                       somewhere under "All Categories" many levels below. */
                         // given that we now have multiple names on a line we run through the child ones checking as necessary
-                        for (Name childCellName : childCell.getLineNames()) {
-                            boolean needsAdding = true; // defaults to true
-                            for (Name childCellParent : childCellName.getParents()) {
-                                if (childCellParent == parent) {
-                                    needsAdding = false;
-                                } else if (childCellParent == exclusiveName || exclusiveName.getChildren().contains(childCellParent)) {
-                                    if (cellWithHeading.getImmutableImportHeading().provisional) {
-                                        needsAdding = false;
-                                        break;
-                                    }
-                                    childCellParent.removeFromChildrenWillBePersisted(childCellName, azquoMemoryDBConnection);
-                                }
-                            }
-                            // having hopefully sorted a new name or exclusive add the child
-                            if (needsAdding) {
-                                parent.addChildWillBePersisted(childCellName, azquoMemoryDBConnection);
-                            }
+                        addChildExclusive(azquoMemoryDBConnection, childCell, parent, exclusiveName, cellWithHeading.getImmutableImportHeading().provisional);
                         }
-                    }
                 }
             }
         }
     }
 
+    private static void addChildExclusive(AzquoMemoryDBConnection azquoMemoryDBConnection, ImportCellWithHeading childCell, Name parent, Name  exclusiveName, boolean provisional)throws Exception{
+        //we are checking whether we can put the child name into the parent within the exclusiveName set
+        for (Name childCellName : childCell.getLineNames()) {
+            boolean needsAdding = true; // defaults to true
+            for (Name childCellParent : childCellName.getParents()) {
+                if (childCellParent == parent) {
+                    needsAdding = false;
+                } else if (childCellParent == exclusiveName || exclusiveName.getChildren().contains(childCellParent)) {
+                    if (provisional) {
+                        needsAdding = false;
+                        break;
+                    }
+                    childCellParent.removeFromChildrenWillBePersisted(childCellName, azquoMemoryDBConnection);
+                }
+            }
+            // having hopefully sorted a new name or exclusive add the child
+            if (needsAdding) {
+                parent.addChildWillBePersisted(childCellName, azquoMemoryDBConnection);
+            }
+        }
+
+    }
     private static boolean alreadyCategorised(Name parent, Name child) {
         //this routine is for the specific case where a categorisation is only to be done if the child is not already categorised
         //when importing Ed Broking premium data the premiums need to be categorised, but the information available is such that the categorisation is sometimes false
