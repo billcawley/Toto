@@ -68,7 +68,7 @@ public class DSImportService {
         } else {
             // needs the groovy file specified correctly
             try {
-                File file = new File(AzquoMemoryDB.getGroovyDir() + "/" + uploadedFile.getAdditionalDataProcessor());
+                File file = new File(AzquoMemoryDB.getGroovyDir() + "/" + uploadedFile.getTemplateParameter("additionaldataprocessor"));
                 if (file.exists()) {
                     System.out.println("Groovy found! Running  . . . ");
                     Object[] groovyParams = new Object[2];
@@ -291,6 +291,7 @@ public class DSImportService {
                             so a problem in here is a heading config problem I think rather than a data problem */
                                 if (!headingToAdd.toLowerCase().contains(HeadingReader.DEFAULT)
                                         && !leftOver.getHeading().toLowerCase().contains(HeadingReader.COMPOSITION)
+                                        && !leftOver.getHeading().toLowerCase().contains(HeadingReader.LOOKUP)
                                         && uploadedFile.getParameter(clauses[0].trim().toLowerCase()) == null
                                 ) {
                                     throw new Exception("headings missing required heading: " + leftOver.getHeading());
@@ -580,6 +581,7 @@ public class DSImportService {
                 || heading.startsWith(HeadingReader.CLEAR)
                 || heading.startsWith(HeadingReader.COMMENT)
                 || heading.startsWith(HeadingReader.EXISTING)
+                || heading.startsWith(HeadingReader.OPTIONAL)
                 || heading.startsWith(HeadingReader.LINEHEADING)
                 || heading.startsWith(HeadingReader.LINEDATA)
                 || heading.startsWith(HeadingReader.DICTIONARY)

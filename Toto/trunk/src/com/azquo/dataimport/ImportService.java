@@ -706,22 +706,8 @@ public final class ImportService {
                             }
                         }
                     }
+                    uploadedFile.setTemplateParameters(templateParameters);
 
-                    if (templateParameters.get(PRE_PROCESSOR) != null) {
-                        uploadedFile.setPreProcessor(templateParameters.get(PRE_PROCESSOR));
-                    }
-                    if (templateParameters.get(PREPROCESSOR) != null) {
-                        uploadedFile.setPreProcessor(templateParameters.get(PREPROCESSOR));
-                    }
-                    if (templateParameters.get(ADDITIONALDATAPROCESSOR) != null) {
-                        uploadedFile.setAdditionalDataProcessor(templateParameters.get(ADDITIONALDATAPROCESSOR));
-                    }
-                    if (templateParameters.get(POSTPROCESSOR) != null) {
-                        uploadedFile.setPostProcessor(templateParameters.get(POSTPROCESSOR));
-                    }
-                    if (templateParameters.get(VALIDATION) != null) {
-                        uploadedFile.setValidation(templateParameters.get(VALIDATION));
-                    }
                     if (templateParameters.get(LANGUAGE) != null) {
                         String languages = templateParameters.get(LANGUAGE);
                         String[] splitLanguages = languages.split(",");
@@ -879,8 +865,8 @@ public final class ImportService {
         }
 
         // new thing - pre processor on the report server
-        if (uploadedFile.getPreProcessor() != null) {
-            File file = new File(SpreadsheetService.getGroovyDir() + "/" + uploadedFile.getPreProcessor());
+        if (uploadedFile.getTemplateParameter(PREPROCESSOR) != null) {
+            File file = new File(SpreadsheetService.getGroovyDir() + "/" + uploadedFile.getTemplateParameter(PREPROCESSOR));
             if (file.exists()) {
                 System.out.println("Groovy pre processor running  . . . ");
                 Object[] groovyParams = new Object[1];
@@ -892,7 +878,7 @@ public final class ImportService {
                 try {
                     uploadedFile.setPath((String) script.invokeMethod("fileProcess", groovyParams));
                 } catch (Exception e) {
-                    uploadedFile.setError("Preprocessor error in " + uploadedFile.getPreProcessor() + " : " + e.getMessage());
+                    uploadedFile.setError("Preprocessor error in " + uploadedFile.getTemplateParameter(PREPROCESSOR) + " : " + e.getMessage());
                     if (pendingUploadConfig != null) {
                         pendingUploadConfig.incrementFileCounter();
                     }
@@ -906,7 +892,7 @@ public final class ImportService {
                     return readPreparedFile(loggedInUser, fileToProcessAgain, false, pendingUploadConfig, templateCache);
                 }
             } else {
-                uploadedFile.setError("unable to find preprocessor : " + uploadedFile.getPreProcessor());
+                uploadedFile.setError("unable to find preprocessor : " + uploadedFile.getTemplateParameter(PREPROCESSOR));
                 if (pendingUploadConfig != null) {
                     pendingUploadConfig.incrementFileCounter();
                 }
@@ -927,7 +913,7 @@ public final class ImportService {
         // run any executes defined in the file
         // the 2d arrays should probably be removed from post processor but not just yet
         List<List<List<String>>> systemData2DArrays = new ArrayList<>();
-        if (uploadedFile.getPostProcessor() != null) {
+        if (uploadedFile.getTemplateParameter(POSTPROCESSOR) != null) {
             // set user choices to file params, could be useful to the execute
             for (String choice : uploadedFile.getParameters().keySet()) {
                 System.out.println(choice + " : " + uploadedFile.getParameter(choice));
@@ -935,14 +921,14 @@ public final class ImportService {
             }
             loggedInUser.copyMode = uploadedFile.isValidationTest();
             try {
-                uploadedFile.setPostProcessingResult(ReportExecutor.runExecute(loggedInUser, uploadedFile.getPostProcessor(), systemData2DArrays, uploadedFile.getProvenanceId(), false).toString());
+                uploadedFile.setPostProcessingResult(ReportExecutor.runExecute(loggedInUser, uploadedFile.getTemplateParameter(POSTPROCESSOR), systemData2DArrays, uploadedFile.getProvenanceId(), false).toString());
             } catch (Exception e) {
                 loggedInUser.copyMode = false;
                 throw e;
             }
         }
 
-        if (uploadedFile.getValidation() != null && uploadedFile.isValidationTest()) {
+        if (uploadedFile.getTemplateParameter(VALIDATION) != null && uploadedFile.isValidationTest()) {
             // set user choices to file params, could be useful to the execute
             for (String choice : uploadedFile.getParameters().keySet()) {
                 System.out.println(choice + " : " + uploadedFile.getParameter(choice));
@@ -950,7 +936,7 @@ public final class ImportService {
             }
             loggedInUser.copyMode = true;
             try {
-                ReportExecutor.runExecute(loggedInUser, uploadedFile.getValidation(), systemData2DArrays, uploadedFile.getProvenanceId(), false);
+                ReportExecutor.runExecute(loggedInUser, uploadedFile.getTemplateParameter(VALIDATION), systemData2DArrays, uploadedFile.getProvenanceId(), false);
             } catch (Exception e) {
                 loggedInUser.copyMode = false;
                 throw e;
@@ -1128,6 +1114,7 @@ public final class ImportService {
                     }
                 }
             }
+
             if (blankLine && mode != ImportSheetScanMode.TOPHEADINGS) { // top headings will tolerate blank lines, other modes won't so switch off
                 mode = ImportSheetScanMode.OFF;
             }
