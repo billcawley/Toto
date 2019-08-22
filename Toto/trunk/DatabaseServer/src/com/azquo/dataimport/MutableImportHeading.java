@@ -77,10 +77,14 @@ class MutableImportHeading {
     boolean lineNameRequired = false;
     /* used in context of "parent of". Can be blank in which case it means that the child can't have two siblings as parents, this heading will override existing parents
     , if it has a value it references a set higher up e.g. if a product is being moved in a structure (this heading is parent of the product) with many levels then the
-    set referenced in the exclusive clause might be "Categories", the top set, so that the product would be removed from any names in Categories before being added to this heading*/
-    String exclusive = null;
+    set referenced in the exclusive clause might be "Categories", the top set, so that the product would be removed from any names in Categories before being added to this heading
+    Where there is a term following 'exclusive' that term is a column heading - hence storing the index for that term*/
+    String exclusiveClause = null;
+    int exclusiveIndex = HeadingReader.NOTEXCLUSIVE;
     // in context of child of - only load the line if this name is in the set already
     boolean existing = false;
+    // in context of child of - only set the value if the element and set exists
+    boolean optional = false;
     // if line values had a comma separated list for example , would be the split char. Only used for PwC russia so far
     String splitChar = null;
     // local names are a potential problem if not resolved in the right order. Previously this was solved by resolving local first
@@ -92,12 +96,18 @@ class MutableImportHeading {
     Map<Name,List<ImmutableImportHeading.DictionaryTerm>> dictionaryMap = null;
     // synonyms are used with dictionary if you want to add equivalent words, e.g. if when categorising and asking if a string has "car" in it we might say that "auto" + "vehicle" could also count as "car"
     Map<String, List<String>> synonyms = null;
-    // lookup from and to are document ed in batch importer - run through a set of names using these attributed to try and find a name to use for this cell
-    String lookupFrom = null;
-    String lookupTo = null;
-    // unfinished - may zap after talking to WFC. Todo
-    String checkList = null; //list of terms 'number' or 'letters <=> n' separated by ';'
     boolean replace = false; //usually numbers will add if on the same file.  'replace' will accept the last one.
     // only put an attribute in if it's not there already. Supposedly applies to values too though the code isn't there yet.
     boolean provisional = false;
+    //lookup syntax is now:
+    // lookup <Element> using <expression>
+    //<Element> is a heading from the import file
+    //the expression can EITHER be a formula such as
+    // and('date' >= `period start date`, 'date' <= `period end date`)
+    // where 'date' is a file heading, `period start date` and `period end date` are attributes of the set mentioned in 'child of'
+    //OR the expression does not contain any of <=>{ in which case the expression is the name of an attribute in the target set
+    // which will contain the expression that defines whether that element is OK
+    //lookup finds the parent through lookupParentIndex
+    int lookupParentIndex = -1;
+    String lookupString = null;
 }

@@ -34,18 +34,19 @@ public class ImmutableImportHeading {
     final boolean blankZeroes;
     final boolean removeSpaces;
     final boolean lineNameRequired;
-    final String exclusive;
+    final int exclusiveIndex;
     final boolean existing;
+    final boolean optional;
     final String splitChar;
     final List<Integer> localParentIndexes;
     Map<Name, List<DictionaryTerm>> dictionaryMap;
     Map<String, List<String>> synonyms;
-    String lookupFrom;
-    String lookupTo;
-    // not being used, perhaps zap
-    private String checkList;
+     // not being used, perhaps zap
     boolean replace;
     boolean provisional;
+    int lookupParentIndex;
+    String lookupString;
+
 
     ImmutableImportHeading(MutableImportHeading mutableImportHeading) {
         this.heading = mutableImportHeading.heading;
@@ -65,18 +66,17 @@ public class ImmutableImportHeading {
         this.blankZeroes = mutableImportHeading.blankZeroes;
         this.removeSpaces = mutableImportHeading.removeSpaces;
         this.lineNameRequired = mutableImportHeading.lineNameRequired;
-        this.exclusive = mutableImportHeading.exclusive;
+        this.exclusiveIndex = mutableImportHeading.exclusiveIndex;
         this.existing = mutableImportHeading.existing;
+        this.optional = mutableImportHeading.optional;
         this.splitChar = mutableImportHeading.splitChar;
         this.localParentIndexes = mutableImportHeading.localParentIndexes;
         this.dictionaryMap = mutableImportHeading.dictionaryMap;
         this.synonyms = mutableImportHeading.synonyms;
-        this.lookupFrom = mutableImportHeading.lookupFrom;
-        this.lookupTo = mutableImportHeading.lookupTo;
-        // not being used - todo zap?
-        this.checkList = mutableImportHeading.checkList;
         this.replace = mutableImportHeading.replace;
         this.provisional = mutableImportHeading.provisional;
+        this.lookupParentIndex = mutableImportHeading.lookupParentIndex;
+        this.lookupString = mutableImportHeading.lookupString;
     }
 
     public static class DictionaryTerm {
