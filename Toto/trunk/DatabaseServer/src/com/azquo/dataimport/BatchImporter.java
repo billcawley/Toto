@@ -364,7 +364,7 @@ public class BatchImporter implements Callable<Void> {
             }
             //resolve some line names ASAP particularly to handle lookups (parent and element are separate cells)
             if (cell.getImmutableImportHeading().lineNameRequired && cell.getLineNames() == null && cell.getLineValue()!=null && cell.getLineValue().length() > 0) {
-                optionalIncludeInParents(azquoMemoryDBConnection, cell,namesFoundCache);
+                optionalIncludeInParents(azquoMemoryDBConnection, cell,namesFoundCache, attributeNames);
             }
 
         }
@@ -551,7 +551,7 @@ public class BatchImporter implements Callable<Void> {
                     // we have a name attribute and it is a column with a name, we resolve the name if necessary and get the attribute
                     if (nameAttribute != null && compCell.getImmutableImportHeading().lineNameRequired) {
                         if (compCell.getLineNames() == null && compCell.getLineValue().length() > 0) {
-                            optionalIncludeInParents(azquoMemoryDBConnection,compCell,namesFoundCache);
+                            optionalIncludeInParents(azquoMemoryDBConnection,compCell,namesFoundCache, attributeNames);
                           }
                         if (compCell.getLineNames() == null) {
                             return false;
@@ -645,35 +645,13 @@ public class BatchImporter implements Callable<Void> {
         }
         cell.setLineValue(compositionPattern);
         if (cell.getImmutableImportHeading().lineNameRequired){
-            optionalIncludeInParents(azquoMemoryDBConnection,cell,namesFoundCache);
+            optionalIncludeInParents(azquoMemoryDBConnection,cell,namesFoundCache, attributeNames);
         }
         cell.needsResolving = false;
         checkDate(cell);
         return true; // if composition did result in the line value being changed we should run the loop again in case dependencies mean the results will change again
     }
 
-    private static void optionalIncludeInParents(AzquoMemoryDBConnection azquoMemoryDBConnection, ImportCellWithHeading cell, Map<String, Name>namesFoundCache)throws Exception{
-        List<String> languages = new ArrayList<>();
-         if (cell.getImmutableImportHeading().attribute != null && cell.getImmutableImportHeading().attribute.length() > 0) {
-            String newLanguages = cell.getImmutableImportHeading().attribute;
-            languages.addAll(Arrays.asList(newLanguages.split(",")));
-        }
-        languages.add(StringLiterals.DEFAULT_DISPLAY_NAME);
-        if (cell.getImmutableImportHeading().optional){
-            //don't create a new name
-            try {
-                Name compName = NameService.findByName(azquoMemoryDBConnection, cell.getImmutableImportHeading().parentNames.iterator().next().getDefaultDisplayName() + "->" + cell.getLineValue(), languages);
-                cell.addToLineNames(compName);
-            }catch (Exception e){
-            }
-            cell.needsResolving = false;
-        }else {
-            Name compName = includeInParents(azquoMemoryDBConnection, namesFoundCache, cell.getLineValue().trim()
-                    , cell.getImmutableImportHeading().parentNames, cell.getImmutableImportHeading().isLocal, languages);
-            cell.addToLineNames(compName);
-        }
-
-    }
 
     /*
 
@@ -973,8 +951,7 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
             //sometimes there is a list of parents here (e.g. company industry segments   Retail Grocery/Wholesale Grocery/Newsagent) where we want to insert the child into all sets
             for (String nameName : nameNames) {
                 if (nameName.trim().length() > 0) {
-                    cellWithHeading.addToLineNames(includeInParents(azquoMemoryDBConnection, namesFoundCache, nameName.trim()
-                            , cellWithHeading.getImmutableImportHeading().parentNames, cellWithHeading.getImmutableImportHeading().isLocal, setLocalLanguage(cellWithHeading.getImmutableImportHeading().attribute, attributeNames)));
+                    cellWithHeading.addToLineNames(optionalIncludeInParents(azquoMemoryDBConnection,cellWithHeading,namesFoundCache, attributeNames));
                 }
             }
         } else { // it existed (created below as child name(s))
@@ -1126,18 +1103,33 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
     }
 
     // to make a batch call to the above if there are a list of parents a name should have
-
-    private static Name includeInParents(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFoundCache, String name, Set<Name> parents, boolean local, List<String> attributeNames) throws Exception {
+    private static Name optionalIncludeInParents(AzquoMemoryDBConnection azquoMemoryDBConnection, ImportCellWithHeading cell, Map<String, Name>namesFoundCache, List<String>attributeNames)throws Exception{
+        List<String> languages = setLocalLanguage(cell.getImmutableImportHeading().attribute, attributeNames);
         Name child = null;
-        if (parents == null || parents.size() == 0) {
-            child = findOrCreateNameStructureWithCache(azquoMemoryDBConnection, namesFoundCache, name, null, local, attributeNames);
-        } else {
-            for (Name parent : parents) {
-                child = findOrCreateNameStructureWithCache(azquoMemoryDBConnection, namesFoundCache, name, parent, local, attributeNames);
+        if (cell.getImmutableImportHeading().optional){
+            //don't create a new name
+            try {
+                child = NameService.findByName(azquoMemoryDBConnection, cell.getImmutableImportHeading().parentNames.iterator().next().getDefaultDisplayName() + "->" + cell.getLineValue(),languages);
+                cell.addToLineNames(child);
+            }catch (Exception e){
             }
+            cell.needsResolving = false;
+        }else {
+            Set<Name> parents = cell.getImmutableImportHeading().parentNames;
+            boolean local = cell.getImmutableImportHeading().isLocal;
+            if (parents == null || parents.size() == 0) {
+                child = findOrCreateNameStructureWithCache(azquoMemoryDBConnection, namesFoundCache, cell.getLineValue().trim(), null, local, languages);
+            } else {
+                for (Name parent : parents) {
+                    child = findOrCreateNameStructureWithCache(azquoMemoryDBConnection, namesFoundCache, cell.getLineValue().trim(), parent, local, languages);
+                }
+            }
+            cell.addToLineNames(child);
         }
         return child;
+
     }
+
 
     private static List<String> setLocalLanguage(String localLanguage, List<String> defaultLanguages) {
         List<String> languages = new ArrayList<>();
