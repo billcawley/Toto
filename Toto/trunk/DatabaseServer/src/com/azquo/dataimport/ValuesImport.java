@@ -8,7 +8,7 @@ import com.fasterxml.jackson.databind.MappingIterator;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
@@ -50,7 +50,7 @@ public class ValuesImport {
                     lineValues = lineIterator.next();
                     // I'm currently working on the principle that the line no is the current location -1
                     // while rather than if as rejected lines could well be sequential!
-                    while (uploadedFile.getIgnoreLines() != null && uploadedFile.getIgnoreLines().keySet().contains(lineIterator.getCurrentLocation().getLineNr() - 1) && lineIterator.hasNext()) {
+                    while (uploadedFile.getIgnoreLines() != null && uploadedFile.getIgnoreLines().containsKey(lineIterator.getCurrentLocation().getLineNr() - 1) && lineIterator.hasNext()) {
                         StringBuilder sb = new StringBuilder();
                         sb.append("Deliberately skipping line ").append(lineIterator.getCurrentLocation().getLineNr() - 1).append(", ");
                         for (String cell : lineValues) {
@@ -129,7 +129,7 @@ public class ValuesImport {
                 // I guess watch for possible performance issues . . .
                 // this try should gracefully release the resources
                 long time = System.currentTimeMillis();
-                try (BufferedReader br = Files.newBufferedReader(Paths.get(uploadedFile.getPath()), Charset.forName("UTF-8"))) {
+                try (BufferedReader br = Files.newBufferedReader(Paths.get(uploadedFile.getPath()), StandardCharsets.UTF_8)) {
                     lineNo = 0;
                     String line;
                     // I assume the line no as given by the json iterator starts at line 1, might have to check this . . .

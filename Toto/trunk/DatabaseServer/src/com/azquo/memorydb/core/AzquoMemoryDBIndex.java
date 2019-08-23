@@ -34,7 +34,7 @@ public class AzquoMemoryDBIndex {
 
     private static AtomicInteger getAttributesCount = new AtomicInteger(0);
 
-    // was unmodifable, since it's a copy I see no reason. Also its only use is serialised.
+    // was unmodifiable, since it's a copy I see no reason. Also its only use is serialised.
     public List<String> getAttributes() {
         getAttributesCount.incrementAndGet();
         return new ArrayList<>(nameByAttributeMap.keySet());
@@ -58,6 +58,7 @@ public class AzquoMemoryDBIndex {
         return Collections.emptySet(); // moving away from nulls - this will complain outside if it is modified though!
     }
 
+    // only used by the namesFromAttributeFunction. Todo - confirm the usage of this. I'd like to zap it, WFC says it's not currently being used but wants to keep it
     private static AtomicInteger getValuesForAttributeCount = new AtomicInteger(0);
 
     public Set<String> getValuesForAttribute(final String attributeName) {
@@ -69,7 +70,7 @@ public class AzquoMemoryDBIndex {
         return Collections.emptySet(); // moving away from nulls - this will complain outside if it is modified though!
     }
 
-    // same as above but then zap any not in the parent - if one cant find a direct parent then allow indiret parents which might mean multiple names
+    // same as above but then zap any not in the parent - if one cant find a direct parent then allow indirect parents which might mean multiple names
 
     private static AtomicInteger getNamesForAttributeAndParentCount = new AtomicInteger(0);
 
@@ -134,7 +135,7 @@ public class AzquoMemoryDBIndex {
         int testCount = 0;
         for (Collection<Name> names : map.values()) {
             if (testCount++ % 50000 == 0) {
-                System.out.println("testing for duplicates - count " + testCount + " dups found " + dupCount);
+                System.out.println("testing for duplicates - count " + testCount + " dupes found " + dupCount);
             }
             if (names.size() > 1) {
                 boolean nameadded = false;
@@ -302,14 +303,14 @@ public class AzquoMemoryDBIndex {
     private static AtomicInteger setAttributeForNameInAttributeNameMapCount = new AtomicInteger(0);
 
     void setAttributeForNameInAttributeNameMap(String attributeName, String attributeValue, Name name) {
-        if (attributeName.length()==0){
+        if (attributeName.length() == 0){
             return;//there should never be a zero length attribute name
         }
         setAttributeForNameInAttributeNameMapCount.incrementAndGet();
         // upper and lower seems a bit arbitrary, I need a way of making it case insensitive.
         // these interns have been tested as helping memory usage.
           String ucAttributeName = attributeName.toUpperCase().trim().intern();
-          // todo - an if on the split to save garbage? also should this be allowed at all! Hadn't really considered it
+          // todo - an if on the split to save garbage? also should this be allowed at all! Hadn't really considered it. Used on importing so really the code should be there not in there
         String[] attValues = attributeValue.split(StringLiterals.NEXTATTRIBUTE);
         for (String attValue:attValues) {
             String lcAttributeValue = attValue.toLowerCase().trim().intern();
@@ -319,7 +320,7 @@ public class AzquoMemoryDBIndex {
             // moved to computeIfAbsent, saved a fair few lines of code
             Map<String, Collection<Name>> namesForThisAttribute = nameByAttributeMap.computeIfAbsent(ucAttributeName, s -> new ConcurrentHashMap<>());
             // Generally these lists will be single and not modified often so I think copy on write array should do the high read speed thread safe trick!
-            // cost on writes but thread safe reads, might take a little more memory than the ol arraylist, hopefully not a big prob
+            // cost on writes but thread safe reads, might take a little more memory than the ol ArrayList, hopefully not a big prob
             // ok, these got bigger than expected, big bottleneck. Using compute should be able to safely switch over at 512 entries
             //Collection<Name> names = namesForThisAttribute.computeIfAbsent(lcAttributeValue, s -> new CopyOnWriteArrayList<>());
             // modification of the sets or list is in compute but I still need the collections themselves to be thread safe as I need to safely call an iterator on them
@@ -343,7 +344,7 @@ public class AzquoMemoryDBIndex {
 
     private static AtomicInteger removeAttributeFromNameInAttributeNameMapCount = new AtomicInteger(0);
 
-    void removeAttributeFromNameInAttributeNameMap(final String attributeName, final String attributeValue, final Name name) throws Exception {
+    void removeAttributeFromNameInAttributeNameMap(final String attributeName, final String attributeValue, final Name name) {
         removeAttributeFromNameInAttributeNameMapCount.incrementAndGet();
         String ucAttributeName = attributeName.toUpperCase().trim();
         String[] attValues = attributeValue.split(StringLiterals.NEXTATTRIBUTE);

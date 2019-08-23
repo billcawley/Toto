@@ -15,7 +15,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ * Copyright (C) 2019 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
  * <p>
  * Created with IntelliJ IDEA.
  * User: cawley
@@ -81,7 +81,7 @@ public final class AzquoMemoryDB {
         // open database logging could maybe be added back in client side
     }
 
-    public static boolean copyExists(String persistenceName){
+    public static boolean copyExists(String persistenceName) {
         return memoryDatabaseMap.containsKey(StringLiterals.copyPrefix + persistenceName);
     }
 
@@ -242,14 +242,14 @@ public final class AzquoMemoryDB {
 
     // while loading check that the id of the entity just loaded isn't above the current "next" id
     void setNextId(int newNext) {
-        nextId.getAndUpdate(current -> current < newNext ? newNext : current);
+        nextId.getAndUpdate(current -> Math.max(current, newNext));
     }
 
     public AzquoMemoryDBIndex getIndex() {
         return index;
     }
 
-    // for debug purposes, is there a harm in being public??
+    // for debug purposes
 /*(
     public int getCurrentMaximumId() {
         return nextId.get();
@@ -311,17 +311,16 @@ public final class AzquoMemoryDB {
     public void clearCaches() {
         clearCachesCount.incrementAndGet();
         nameByIdMap.values().forEach(com.azquo.memorydb.core.Name::clearChildrenCaches);
-        //countCache.clear();
-        //setCache.clear();
     }
 
     // maybe these two should be moved, need to think about it. Used to count the number of names modified by an upload
     private static AtomicInteger countNamesForProvenance = new AtomicInteger(0);
+
     public int countNamesForProvenance(Provenance p) {
         countNamesForProvenance.incrementAndGet();
         int toReturn = 0;
-        for (Name name : nameByIdMap.values()){
-            if (name.getProvenance() == p){
+        for (Name name : nameByIdMap.values()) {
+            if (name.getProvenance() == p) {
                 toReturn++;
             }
         }
@@ -329,18 +328,17 @@ public final class AzquoMemoryDB {
     }
 
     private static AtomicInteger countValuesForProvenance = new AtomicInteger(0);
+
     public int countValuesForProvenance(Provenance p) {
         countValuesForProvenance.incrementAndGet();
         int toReturn = 0;
-        for (Value Value : valueByIdMap.values()){
-            if (Value.getProvenance() == p){
+        for (Value Value : valueByIdMap.values()) {
+            if (Value.getProvenance() == p) {
                 toReturn++;
             }
         }
         return toReturn;
     }
-
-    // trying for a basic count and set cache
 
     Provenance getProvenanceById(final int id) {
         return provenanceByIdMap.get(id);

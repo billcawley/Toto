@@ -32,17 +32,17 @@ public abstract class AzquoMemoryDBEntity {
     // I am going to hold a reference here, then we simply compare objects by == to check that objects are in their created databases
 
     private final AzquoMemoryDB azquoMemoryDB;
-    // final id, can only be set in the constructor, we like that! Note I'm limiting to 2 billion entities total per database. Not a problem right now.
+    // final id, can only be set in the constructor, we like that! Note I'm limiting to 2 billion entities total per database. Not a problem right now, fairly easy to change
     private final int id;
-    // it's a new object, this is private as all dealt with here. Needsinserting can go from true to false but not the other way around
+    // it's a new object, this is private as all dealt with here. Needs inserting can go from true to false but not the other way around
     private boolean needsInserting;
     // flag for deletion, to be picked up by the persistence, can go from false to true but not the other way around
     private boolean needsDeleting;
 
-    // had to look up that syntax :)
     AzquoMemoryDBEntity(final AzquoMemoryDB azquoMemoryDB, final int id) throws Exception {
         this(azquoMemoryDB, id, false);
     }
+
     //key with this is it makes the setting of an Id only in context of a memory db and hence one can only make one of these in this package (I think!)
     // 12/09/2018 - I've added the option to force the ID for backup restore. Since constructors which use this will be package private I *think* that's ok
     AzquoMemoryDBEntity(final AzquoMemoryDB azquoMemoryDB, final int id, boolean forceIdForBackupRestore) throws Exception {
