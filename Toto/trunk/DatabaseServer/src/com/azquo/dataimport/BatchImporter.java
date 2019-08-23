@@ -246,6 +246,7 @@ public class BatchImporter implements Callable<Void> {
                             if (LHS.toLowerCase().compareTo(RHS.toLowerCase()) > 0) {
                                 found = true;
                             }
+                            break;
                         case '~':
                             if (LHS.toLowerCase().compareTo(RHS.toLowerCase()) >= 0) {
                                 nearestList.put(nameToTest, RHS.toLowerCase());
@@ -652,17 +653,23 @@ public class BatchImporter implements Callable<Void> {
     }
 
     private static void optionalIncludeInParents(AzquoMemoryDBConnection azquoMemoryDBConnection, ImportCellWithHeading cell, Map<String, Name>namesFoundCache)throws Exception{
+        List<String> languages = new ArrayList<>();
+         if (cell.getImmutableImportHeading().attribute != null && cell.getImmutableImportHeading().attribute.length() > 0) {
+            String newLanguages = cell.getImmutableImportHeading().attribute;
+            languages.addAll(Arrays.asList(newLanguages.split(",")));
+        }
+        languages.add(StringLiterals.DEFAULT_DISPLAY_NAME);
         if (cell.getImmutableImportHeading().optional){
             //don't create a new name
             try {
-                Name compName = NameService.findByName(azquoMemoryDBConnection, cell.getImmutableImportHeading().parentNames.iterator().next().getDefaultDisplayName() + "->" + cell.getLineValue());
+                Name compName = NameService.findByName(azquoMemoryDBConnection, cell.getImmutableImportHeading().parentNames.iterator().next().getDefaultDisplayName() + "->" + cell.getLineValue(), languages);
                 cell.addToLineNames(compName);
             }catch (Exception e){
             }
             cell.needsResolving = false;
         }else {
             Name compName = includeInParents(azquoMemoryDBConnection, namesFoundCache, cell.getLineValue().trim()
-                    , cell.getImmutableImportHeading().parentNames, cell.getImmutableImportHeading().isLocal, StringLiterals.DEFAULT_DISPLAY_NAME_AS_LIST);
+                    , cell.getImmutableImportHeading().parentNames, cell.getImmutableImportHeading().isLocal, languages);
             cell.addToLineNames(compName);
         }
 
