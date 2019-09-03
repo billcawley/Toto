@@ -178,6 +178,11 @@ public class ReportExecutor {
                     }
                     // if not a for each I guess we just execute? Will check for "do"
                 } else if (trimmedLine.toLowerCase().startsWith("do")) {
+                    boolean debug = false;
+                    if (trimmedLine.toLowerCase().endsWith("debug")){
+                        debug = true;
+                        trimmedLine = trimmedLine.substring(0, trimmedLine.length() - "debug".length()).trim();
+                    }
                     String reportToRun = trimmedLine.substring(2).trim();
                     Database oldDatabase = null;
                     OnlineReport onlineReport;
@@ -258,6 +263,16 @@ public class ReportExecutor {
                             // gather debug info
                             systemData2DArrays.add(BookUtils.nameToStringLists(systemDataName));
                         }
+
+                        //stuff added by edd, need an option for the user to see these files for debug purposes
+                        if (debug){
+                            Exporter exporter = Exporters.getExporter();
+                            File file = File.createTempFile(Long.toString(System.currentTimeMillis()), "temp.xlsx");
+                            try (FileOutputStream fos = new FileOutputStream(file)) {
+                                exporter.export(book, fos);
+                            }
+                        }
+
                         // check for XML, in the context of execute we run it automatically
                         if (book.getInternalBook().getAttribute(OnlineController.XML) != null) {
                             Path destdir = Paths.get(SpreadsheetService.getXMLDestinationDir());
@@ -534,12 +549,14 @@ public class ReportExecutor {
                     int left = name.getRefersToCellRegion().getColumn();
 
                     CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(reportId, sheetName, region);
-                    List<List<CellForDisplay>> data = cellsAndHeadingsForDisplay.getData();
-                    for (int rowNo = 0; rowNo < data.size(); rowNo++) {
-                        for (int colNo = 0; colNo < data.get(0).size(); colNo++) {
-                            String cellVal = ImportService.getCellValue(sheet, top + rowNo, left + colNo).getSecond();
-                            if (cellVal.length() > 0) {
-                                data.get(rowNo).get(colNo).setNewStringValue(cellVal);
+                    if (cellsAndHeadingsForDisplay != null){ // apparently it can be . . .
+                        List<List<CellForDisplay>> data = cellsAndHeadingsForDisplay.getData();
+                        for (int rowNo = 0; rowNo < data.size(); rowNo++) {
+                            for (int colNo = 0; colNo < data.get(0).size(); colNo++) {
+                                String cellVal = ImportService.getCellValue(sheet, top + rowNo, left + colNo).getSecond();
+                                if (cellVal.length() > 0) {
+                                    data.get(rowNo).get(colNo).setNewStringValue(cellVal);
+                                }
                             }
                         }
                     }

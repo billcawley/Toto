@@ -103,7 +103,6 @@ public class DBCron {
                                         lastModifiedTime = Files.getLastModifiedTime(path);
                                         long timestamp = System.currentTimeMillis();
                                         if (lastModifiedTime.toMillis() < (timestamp - 120_000)) {
-                                            System.out.println("file : " + origName);
                                             Files.move(path, tagged.resolve(timestamp + origName));
                                             // ok it's moved now make the pending upload record
                                             // todo - assign the database and team automatically!
@@ -141,10 +140,10 @@ public class DBCron {
                         // need to do try with resources or it leaks file handlers
                         try (Stream<Path> list1 = Files.list(p)) {
                             Optional<Path> lastFilePath = list1    // here we get the stream with full directory listing
-                                    .filter(f -> (!Files.isDirectory(f) && f.getFileName().endsWith("xml")))  // exclude subdirectories and non xml files from listing
+                                    .filter(f -> (!Files.isDirectory(f) && f.getFileName().toString().endsWith("xml")))  // exclude subdirectories and non xml files from listing
                                     .max(Comparator.comparingLong(f -> f.toFile().lastModified()));  // finally get the last file using simple comparator by lastModified field
                             // 300 seconds, 5 minutes, I want the most recent file to be at least that old before I start doing things to them
-                            if (lastFilePath.isPresent() && !Files.isDirectory(lastFilePath.get()) && (System.currentTimeMillis() - Files.getLastModifiedTime(lastFilePath.get()).toMillis()) > millisOldThreshold) {
+                            if (lastFilePath.isPresent() && (System.currentTimeMillis() - Files.getLastModifiedTime(lastFilePath.get()).toMillis()) > millisOldThreshold) {
                                 DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
                                 final DocumentBuilder builder = factory.newDocumentBuilder();
                                 long fileMillis = System.currentTimeMillis();
@@ -170,49 +169,46 @@ public class DBCron {
                                                 String origName = path.getFileName().toString();
                                                 if (origName.toLowerCase().contains(".xml")) {
                                                     String fileKey = origName.substring(0, origName.indexOf("-"));
+                                                    boolean error = origName.toLowerCase().contains("error");
                                                     FileTime lastModifiedTime = Files.getLastModifiedTime(path);
                                                     // todo - match to the source file when it hits an error response
 
                                                     long timestamp = System.currentTimeMillis();
-                                                    if (lastModifiedTime.toMillis() < (timestamp - millisOldThreshold)) {
-                                                        System.out.println("file : " + origName);
-                                                        // newer logic, start with the original sent data then add anything from brokasure on. Will help Bill/Nic to parse
-                                                        // further to this we'll only process files that have a corresponding temp file as Dev and UAT share directories so if there's no matching file in temp don't do anything
-                                                        if (Files.exists(Paths.get(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".xml"))) {
-                                                            readXML(fileKey, filesValues, null, builder, Paths.get(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".xml"), headings, lastModifiedTime);
-                                                            // todo what if root tags don't match between the existing file and the one from BS??
-                                                            // add in extra info, initial reason it was required was for section info not suitable for Brokasure but required to load the data back in
-                                                            if (Files.exists(Paths.get(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".properties"))) {
-                                                                try (InputStream is = new FileInputStream(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".properties")) {
-                                                                    Properties properties = new Properties();
-                                                                    properties.load(is);
-                                                                    Map<String, String> thisFileValues = filesValues.computeIfAbsent(fileKey, t -> new HashMap<>());
-                                                                    for (String propertyName : properties.stringPropertyNames()) {
-                                                                        headings.add(propertyName);
-                                                                        thisFileValues.put(propertyName, properties.getProperty(propertyName));
-                                                                    }
+                                                    System.out.println("file : " + origName);
+                                                    // newer logic, start with the original sent data then add anything from brokasure on. Will help Bill/Nic to parse
+                                                    // further to this we'll only process files that have a corresponding temp file as Dev and UAT share directories so if there's no matching file in temp don't do anything
+                                                    if (Files.exists(Paths.get(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".xml"))) {
+                                                        readXML(fileKey, filesValues, null, builder, Paths.get(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".xml"), headings, lastModifiedTime);
+                                                        // todo what if root tags don't match between the existing file and the one from BS??
+                                                        // add in extra info, initial reason it was required was for section info not suitable for Brokasure but required to load the data back in
+                                                        if (Files.exists(Paths.get(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".properties"))) {
+                                                            try (InputStream is = new FileInputStream(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".properties")) {
+                                                                Properties properties = new Properties();
+                                                                properties.load(is);
+                                                                Map<String, String> thisFileValues = filesValues.computeIfAbsent(fileKey, t -> new HashMap<>());
+                                                                for (String propertyName : properties.stringPropertyNames()) {
+                                                                    headings.add(propertyName);
+                                                                    thisFileValues.put(propertyName, properties.getProperty(propertyName));
                                                                 }
                                                             }
-                                                            // ok I need to stop fields of a different type mixing, read xml will return false if the root document name doesn't match. Under those circumstances leave the file there
-                                                            if (readXML(fileKey, filesValues, rootDocumentName, builder, path, headings, lastModifiedTime)) {
-                                                                Files.move(path, tagged.resolve(timestamp + origName));
+                                                        }
+                                                        // ok I need to stop fields of a different type mixing, read xml will return false if the root document name doesn't match. Under those circumstances leave the file there
+                                                        if (readXML(fileKey, filesValues, rootDocumentName, builder, path, headings, lastModifiedTime)) {
+                                                            Files.move(path, tagged.resolve(timestamp + origName));
+                                                        }
+                                                        // check the xlsx isn't still in the inbox - zap it if it is
+                                                        Path leftoverXLSX = Paths.get(SpreadsheetService.getXMLDestinationDir()).resolve(fileKey + ".xlsx");
+                                                        if (Files.exists(leftoverXLSX)) {
+                                                            Files.delete(leftoverXLSX);
+                                                        } else if (fileKey.toLowerCase().startsWith("cs") && !error) { // it was zapped (as in ok!) - in the case of CS claim settlements the original file which will be in temp now needs to go in the outbox - if there was no error of course!
+                                                            Path xlsxFileToMove = Paths.get(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".xlsx");
+                                                            if (Files.exists(xlsxFileToMove)) {
+                                                                System.out.println("moving file back to the out box " + fileKey + ".xlsx");
+                                                                Files.move(xlsxFileToMove, Paths.get(SpreadsheetService.getXMLScanDir()).resolve(fileKey + ".xlsx"));
                                                             }
-                                                            // check the xlsx isn't still in the inbox - zap it if it is
-                                                            Path leftoverXLSX = Paths.get(SpreadsheetService.getXMLDestinationDir()).resolve(fileKey + ".xlsx");
-                                                            if (Files.exists(leftoverXLSX)) {
-                                                                Files.delete(leftoverXLSX);
-                                                            } else if (fileKey.toLowerCase().startsWith("cs")) { // it was zapped (as in ok!) - in the case of CS claim settlements the original file which will be in temp now needs to go in the outbox
-                                                                Path xlsxFileToMove = Paths.get(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".xlsx");
-                                                                if (Files.exists(xlsxFileToMove)) {
-                                                                    System.out.println("moving file back to the out box " + fileKey + ".xlsx");
-                                                                    Files.move(xlsxFileToMove, Paths.get(SpreadsheetService.getXMLScanDir()).resolve(fileKey + ".xlsx"));
-                                                                }
-                                                            }
-                                                        } else {
-                                                            System.out.println("Can't find corresponding temp xml file " + fileKey + ".xml, perhaps it was generated by another server");
                                                         }
                                                     } else {
-                                                        System.out.println("file found for XML but it's only " + ((timestamp - lastModifiedTime.toMillis()) / 1_000) + " seconds old, needs to be " + (millisOldThreshold / 1_000) + " seconds old");
+                                                        System.out.println("Can't find corresponding temp xml file " + fileKey + ".xml, perhaps it was generated by another server");
                                                     }
                                                 } else {
                                                     // supress this for the mo as we're putting xlsx files back in here. Todo - clarify what's going on there!
@@ -352,5 +348,12 @@ public class DBCron {
         }
         thisFileValues.put("Date", lastModifiedTime.toString());
         return true;
+    }
+
+    @Scheduled(cron = "0 * * * * *")
+    public void runScheduledReports() throws Exception {
+        synchronized (this) { // one at a time
+            SpreadsheetService.runScheduledReports();
+        }
     }
 }

@@ -1,3 +1,19 @@
+28-08-19
+
+Brokasure xml scan bug fix
+
+28-08-19
+
+Switch on report scheduler
+
+fixed bugs relating to languages in 'includeInParents' - now amended to 'optionalIncludeInParents' to accommodate the parameter 'optional', which will only fill the cell if the name already exists.
+
+23-08-19
+
+Tidying and work on the excel save to execute correctly after
+
+Code for revised 'lookup' and 'optional'
+
 16-08-19
 
 Make DBCron only grab XML files it has generated - UAT and Dev share folders, need to stop them reading each other's files

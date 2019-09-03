@@ -30,6 +30,7 @@ public class ValuesImport {
             , UploadedFile uploadedFile, List<ImmutableImportHeading> importHeadings
             , int batchSize, int lastColumnToActuallyRead, CompositeIndexResolver compositeIndexResolver) {
         ArrayList<UploadedFile.RejectedLine> rejectedLinesForUserFeedback = new ArrayList<>();
+        int lineNo = 0; // out here now as we're trying to continue if lineIterator.next() throws an exception
         try {
             long track = System.currentTimeMillis();
             // now, since this will be multi threaded need to make line objects to batch up. Cannot be completely immutable due to the current logic e.g. composite values
@@ -41,8 +42,7 @@ public class ValuesImport {
             final Map<Integer, List<String>> linesRejected = new ConcurrentHashMap<>(); // track line numbers rejected
             final AtomicInteger noLinesRejected = new AtomicInteger(); // track line numbers rejected
             int linesImported = 0; // just for some feedback at the end
-            int lineNo = 0; // out here now as we're trying to continue if lineIterator.next() throws an exception
-            while (lineIterator.hasNext()) { // the main line reading loop
+            while (lineIterator.hasNext()) { // the main line reading loop. Unfortunately it can error here
                 lineNo++; // we are now on line number 1, line 0 wouldn't mean anything for user feedback
                 boolean corrupt = false;
                 String[] lineValues;
@@ -166,6 +166,7 @@ public class ValuesImport {
             }
             System.out.println("---------- names found cache size " + namesFoundCache.size());
         } catch (Exception e) {
+            System.out.println("Error on line " + lineNo);
             // the point of this is to add the file name to the exception message - I wonder if I should just leave a vanilla exception here and deal with this client side?
             e.printStackTrace();
             Throwable t = e;
