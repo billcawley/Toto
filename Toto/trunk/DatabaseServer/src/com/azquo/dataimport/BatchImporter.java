@@ -78,8 +78,7 @@ public class BatchImporter implements Callable<Void> {
                 if (first.getLineValue().length() > 0 || first.getImmutableImportHeading().heading == null
                         || first.getImmutableImportHeading().compositionPattern != null || first.getImmutableImportHeading().attribute != null) {
                     //check dates before resolving composite values
-                    for (int i=0;i< lineToLoad.size();i++){
-                        ImportCellWithHeading importCellWithHeading = lineToLoad.get(i);
+                    for (ImportCellWithHeading importCellWithHeading : lineToLoad) {
                         // this basic value checking was outside, I see no reason it shouldn't be in here
                         // attempt to standardise date formats
                         checkDate(importCellWithHeading);
@@ -91,6 +90,7 @@ public class BatchImporter implements Callable<Void> {
                             for (String ignoreItem : cell.getImmutableImportHeading().ignoreList) {
                                 if (cell.getLineValue().toLowerCase().contains(ignoreItem)) {
                                     rejectionReason = "ignored";
+                                    break;
                                 }
                             }
                         }
@@ -139,7 +139,6 @@ public class BatchImporter implements Callable<Void> {
 
 
     private static boolean checkCondition(List<ImportCellWithHeading>lineToLoad, String condition, CompositeIndexResolver compositeIndexResolver, Name nameToTest, final Map<Name, String> nearestList) {
-        char SETMARKER = '|';
         boolean found = false;
         if (condition.equals("all")) return true;
         List<String> constants = new ArrayList<>();
@@ -395,7 +394,7 @@ public class BatchImporter implements Callable<Void> {
                     }else{
                         ImportCellWithHeading parentCell = cells.get(cell.getImmutableImportHeading().lookupParentIndex);
                         if (!parentCell.needsResolving && parentCell.getLineNames()!=null){
-                             adjusted = checkLookup(azquoMemoryDBConnection, cell, parentCell.getLineNames().iterator().next(), cells,compositeIndexResolver);
+                             adjusted = checkLookup(cell, parentCell.getLineNames().iterator().next(), cells,compositeIndexResolver);
                         }
                     }
 
@@ -720,7 +719,7 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
      lookup used for finding a contract year off a date . . .
      apparently can't remove. I was up to here in checking - July 2019*/
 
-    private static boolean checkLookup(AzquoMemoryDBConnection azquoMemoryDBConnection, ImportCellWithHeading cell, Name parentSet, List<ImportCellWithHeading>lineToLoad, CompositeIndexResolver compositeIndexResolver) throws Exception {
+    private static boolean checkLookup(ImportCellWithHeading cell, Name parentSet, List<ImportCellWithHeading>lineToLoad, CompositeIndexResolver compositeIndexResolver) throws Exception {
         /* example to illustrate
 
 
@@ -1111,7 +1110,7 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
             try {
                 child = NameService.findByName(azquoMemoryDBConnection, cell.getImmutableImportHeading().parentNames.iterator().next().getDefaultDisplayName() + "->" + cell.getLineValue(),languages);
                 cell.addToLineNames(child);
-            }catch (Exception e){
+            }catch (Exception ignored){
             }
             cell.needsResolving = false;
         }else {

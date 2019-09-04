@@ -981,15 +981,19 @@ public final class ImportService {
                         // going to try based on feedback in the processed file
                         if (uploadedFile.getFileHeadings() != null) { // if we don't have the original set of headings we won't be able to check the file
                             int index = 0;
-                            for (List<String> fileHeading : uploadedFile.getFileHeadings()) {
+                            if ("lineno".equalsIgnoreCase(keyColumn)){
+                                index = -1; // special case - the value IS the line number
+                            } else {
+                                for (List<String> fileHeading : uploadedFile.getFileHeadings()) {
 //                            for (String subHeading : fileHeading) { // currently looking up against the model reference not the file reference
-                                HeadingWithInterimLookup headingWithInterimLookup = uploadedFile.getHeadingsByFileHeadingsWithInterimLookup().get(fileHeading);
-                                // so the current criteria - it's a heading which looked up something on the model and it's the lookup which is the name we're interested in. Import Model having the canonical name for their purposes
-                                if (headingWithInterimLookup != null && headingWithInterimLookup.getInterimLookup() != null && headingWithInterimLookup.getInterimLookup().equalsIgnoreCase(keyColumn.trim())) {
-                                    // we have a winner
-                                    break;
+                                    HeadingWithInterimLookup headingWithInterimLookup = uploadedFile.getHeadingsByFileHeadingsWithInterimLookup().get(fileHeading);
+                                    // so the current criteria - it's a heading which looked up something on the model and it's the lookup which is the name we're interested in. Import Model having the canonical name for their purposes
+                                    if (headingWithInterimLookup != null && headingWithInterimLookup.getInterimLookup() != null && headingWithInterimLookup.getInterimLookup().equalsIgnoreCase(keyColumn.trim())) {
+                                        // we have a winner
+                                        break;
+                                    }
+                                    index++;
                                 }
-                                index++;
                             }
                             if (index < uploadedFile.getFileHeadings().size()) { // then we found the relevant column
                                 // I'm going to go to the server code to look this up

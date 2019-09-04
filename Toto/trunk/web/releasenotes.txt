@@ -1,3 +1,7 @@
+03-08-19
+
+Executes can dump debugging info if required
+
 28-08-19
 
 Brokasure xml scan bug fix

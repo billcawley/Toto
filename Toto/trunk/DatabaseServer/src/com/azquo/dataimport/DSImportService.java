@@ -501,7 +501,8 @@ public class DSImportService {
         while (lineIterator.hasNext()){
             String[] row = lineIterator.next();
             // will make it case insensitive
-            if (columnIndex < row.length && valuesToCheck.contains(row[columnIndex].toLowerCase())){
+            if ((columnIndex == -1 && valuesToCheck.contains((lineIterator.getCurrentLocation().getLineNr() - 1) + "")) // bit of a hack - -1 col index assumes the value is the line no we're after
+                    || (columnIndex > -1 && columnIndex < row.length && valuesToCheck.contains(row[columnIndex].toLowerCase()))){
                 StringBuilder sb = new StringBuilder();
                 // rebuild the line, seems a little stupid :P
                 for (String s : row) {
@@ -510,7 +511,7 @@ public class DSImportService {
                     }
                     sb.append(s);
                 }
-                toReturn.put(lineIterator.getCurrentLocation().getLineNr() - 1, new TypedPair<>(row[columnIndex], sb.toString()));
+                toReturn.put(lineIterator.getCurrentLocation().getLineNr() - 1, new TypedPair<>(columnIndex == -1 ? (lineIterator.getCurrentLocation().getLineNr() - 1) + "" : row[columnIndex], sb.toString()));
             }
         }
         return toReturn;
