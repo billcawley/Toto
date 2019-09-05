@@ -53,6 +53,8 @@ class HeadingReader {
     // shorthand for parent of/child of/exclusive, see comments below where it's used
     static final String CLASSIFICATION = "classification";
     static final String DEFAULT = "default";
+    // if there's no file heading then make composite and default ignore any data found on that line - we assume it's irrelevant or junk
+    static final String NOFILEHEADING = "nofileheading";
     private static final String OVERRIDE = "override";
     static final String NONZERO = "nonzero";
     static final String REMOVESPACES = "removespaces";
@@ -275,6 +277,7 @@ class HeadingReader {
                 && !firstWord.equals(REPLACE)
                 && !firstWord.equals(EXISTING)
                 && !firstWord.equals(OPTIONAL)
+                && !firstWord.equals(NOFILEHEADING)
                 && !firstWord.equals(PROVISIONAL)) { // empty clause, exception unless one which allows blank
             throw new Exception(clause + " empty in " + heading.heading + " in headings"); // other clauses cannot be blank!
         }
@@ -369,6 +372,9 @@ class HeadingReader {
                         throw new Exception("Unclosed } in headings, heading " + heading.heading);
                     }
                 }
+                break;
+            case NOFILEHEADING:  // if there's no file heading then make composite and default ignore any data found on that line - we assume it's irrelevant or junk
+                heading.noFileHeading = true;
                 break;
             case LOCAL:  // local names in child of, can work with parent of but then it's the subject that it affects
                 heading.isLocal = true;
@@ -468,7 +474,6 @@ class HeadingReader {
                 break;
             default:
                 throw new Exception(firstWord + " not understood in heading '" + heading.heading + "'");
-
         }
     }
 

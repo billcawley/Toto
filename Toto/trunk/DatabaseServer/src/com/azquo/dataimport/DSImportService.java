@@ -267,7 +267,7 @@ public class DSImportService {
                     // ok now we add the headings with no file headings or where the file headings couldn't be found
                     for (HeadingWithInterimLookup leftOver : headingsNoFileHeadingsWithInterimLookup) {
                         // pasted and modified from old code to exception on required as necessary
-                        String headingToAdd = leftOver.getHeading();
+                        String headingToAdd = leftOver.getHeading() + "; nofileheading"; // we need to tell the heading object this to change the rules on composite and default - it should ignore any irrelevant data in the file
 
                         // most of the time top headings will be jammed in below as a simple default but that default might be against an existing heading in which case
                         // add the default here and knock it off the list so it's not added again later

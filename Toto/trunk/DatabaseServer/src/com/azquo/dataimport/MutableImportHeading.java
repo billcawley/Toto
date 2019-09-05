@@ -63,6 +63,8 @@ class MutableImportHeading {
     composite can be called by the syntax default also
     */
     String compositionPattern = null;
+    // if there's no file heading then make composite and default ignore any data found on that line - we assume it's irrelevant or junk
+    boolean noFileHeading = false;
     //override is the same as default, but it ignores any existing value - used for file parameter assumptions
     String override = null;
     //ignore is the opposite of 'only', omit any lines where this field consists of any element of the string list

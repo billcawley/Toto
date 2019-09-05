@@ -29,6 +29,7 @@ public class ImmutableImportHeading {
     final boolean isLocal;
     final String only;
     final String compositionPattern;
+    final boolean noFileHeading;
     final String override;
     final List<String> ignoreList;
     final boolean blankZeroes;
@@ -61,6 +62,7 @@ public class ImmutableImportHeading {
         this.isLocal = mutableImportHeading.isLocal;
         this.only = mutableImportHeading.only;
         this.compositionPattern = mutableImportHeading.compositionPattern;
+        this.noFileHeading = mutableImportHeading.noFileHeading;
         this.override = mutableImportHeading.override;
         this.ignoreList = mutableImportHeading.ignoreList;
         this.blankZeroes = mutableImportHeading.blankZeroes;

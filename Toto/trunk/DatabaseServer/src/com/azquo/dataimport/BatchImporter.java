@@ -353,8 +353,8 @@ public class BatchImporter implements Callable<Void> {
         int timesLineIsModified = 0;
         // first pass, sort overrides and flag what might need resolving
         for (ImportCellWithHeading cell : cells) {
-            // we try to resolve if there's a composition pattern *and* no value in the cell. If there's a value in the cell we don't override it with a composite value
-            if (cell.getImmutableImportHeading().lookupParentIndex<0 && (cell.getImmutableImportHeading().compositionPattern == null || (cell.getLineValue() != null && !cell.getLineValue().isEmpty()))) {
+            // we try to resolve if there's a composition pattern *and* no value in the cell. If there's a value in the cell we don't override it with a composite value *unless* it's flagged as headless according to an import template - see DSImportService line 270
+            if (cell.getImmutableImportHeading().lookupParentIndex<0 && (cell.getImmutableImportHeading().compositionPattern == null || ((cell.getLineValue() != null && !cell.getLineValue().isEmpty()) && !cell.getImmutableImportHeading().noFileHeading))) {
                 cell.needsResolving = false;
             }
             if (cell.getImmutableImportHeading().override != null) {
