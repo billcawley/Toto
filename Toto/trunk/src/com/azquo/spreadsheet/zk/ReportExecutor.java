@@ -734,7 +734,7 @@ public class ReportExecutor {
                             if (row >= refersToCellRegion.row && row <= refersToCellRegion.getLastRow()) {
                                 SCell cell = selectedSheet.getInternalSheet().getCell(row, refersToCellRegion.column);
                                 if (cell != null) { // not sure how it could be null
-                                    if (cell.getType() == SCell.CellType.BLANK) {
+                                    if (cell.getType() != SCell.CellType.STRING || !"Y".equalsIgnoreCase(cell.getStringValue())){
                                         go = false;
                                     }
                                 }

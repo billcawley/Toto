@@ -53,7 +53,7 @@ public class JstreeController {
             , @RequestParam(value = "parents", required = false) String parents
             , @RequestParam(value = "attribute", required = false) String attribute //only for use at root.
             , @RequestParam(value = "itemschosen", required = false) String itemsChosen
-    ) throws Exception {
+    ) {
         if (attribute == null || attribute.length() == 0) {
             attribute = StringLiterals.DEFAULT_DISPLAY_NAME;
         }

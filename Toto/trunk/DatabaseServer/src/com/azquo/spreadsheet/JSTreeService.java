@@ -59,8 +59,7 @@ public class JSTreeService {
     // was about 40 lines before jackson though the class above is of course important. Changing name to details not structure which implies many levels.
     public static JsonChildStructure getNameDetailsJson(DatabaseAccessToken databaseAccessToken, int nameId) {
         Name name = NameService.findById(AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken), nameId);
-        Map<String, Object> attributesForJackson = new HashMap<>();
-        attributesForJackson.putAll(name.getAttributes());
+        Map<String, Object> attributesForJackson = new HashMap<>(name.getAttributes());
         return new JsonChildStructure(name.getDefaultDisplayName()
                 , name.getId(), getTotalValues(name), name.getValues().size(), attributesForJackson, name.getChildren().size(), "User : " + name.getProvenance().getUser() + "<br/>"
                 + "Timestamp : " + name.getProvenance().getTimeStamp() + "<br/>"
@@ -212,7 +211,7 @@ public class JSTreeService {
             }
         }
         List<Value> values = null;
-        String heading = "";
+        StringBuilder heading = new StringBuilder();
         for (Name name : names) {
             if (values == null) {
 //                values = new ArrayList<>(valueService.findValuesForNameIncludeAllChildren(name, true));
@@ -220,11 +219,11 @@ public class JSTreeService {
             } else {
                 values.retainAll(name.findValuesIncludingChildren());
             }
-            if (heading.length() > 0) heading += ", ";
-            heading += name.getDefaultDisplayName();
+            if (heading.length() > 0) heading.append(", ");
+            heading.append(name.getDefaultDisplayName());
         }
         TreeNode toReturn = new TreeNode();
-        toReturn.setHeading(heading);
+        toReturn.setHeading(heading.toString());
         toReturn.setValue("");
         toReturn.setChildren(ProvenanceService.nodify(AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken), values, maxSize));
         ProvenanceService.addNodeValues(toReturn);
