@@ -28,7 +28,7 @@ def fileProcess(Object[] args) {
                 while (st.hasMoreElements()){
                     st.nextToken()
                     state = st.nextToken()
-                    if (!state.equals("Totals For:")){
+                    if (state.length()==2){
                         //println("found a state " + state)
                         states.add(state);
                         break;
