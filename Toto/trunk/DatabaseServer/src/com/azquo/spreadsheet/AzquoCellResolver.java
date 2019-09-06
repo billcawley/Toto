@@ -351,6 +351,7 @@ public class AzquoCellResolver {
             if (!checked) { // no valid row/col combo
                 locked.isTrue = true;
             } else {
+                List<DataRegionHeading> scaleHeadings = new ArrayList<>();
                 // ok new logic here, we need to know if we're going to use attributes or values
                 DataRegionHeading functionHeading = null;
                 DataRegionHeading.FUNCTION function = null;
@@ -365,7 +366,7 @@ public class AzquoCellResolver {
                     if (heading.getFunction() != null) { // should NOT be a name function, that should have been caught before
                         functionHeading = heading;
                         function = heading.getFunction();
-                        if (function == DataRegionHeading.FUNCTION.EXACT) {
+                          if (function == DataRegionHeading.FUNCTION.EXACT) {
                             exactName = heading.getName();
                         }
 
@@ -389,7 +390,7 @@ public class AzquoCellResolver {
                         break; // can't combine functions I don't think
                     }
                 }
-                if (redundantHeading!=null){
+                 if (redundantHeading!=null){
                     headingsForThisCell.remove(redundantHeading);//not needed any more - we know the details (above)
                 }
                 if (!DataRegionHeadingService.headingsHaveAttributes(headingsForThisCell)) { // we go the value route (as it was before allowing attributes), need the headings as names,
@@ -418,8 +419,71 @@ public class AzquoCellResolver {
                                 }
                             }
                         }
+                        List<Value> scaleValues = new ArrayList<>();
+                        ValuesHook scaleValuesHook = new ValuesHook();
+                        for (DataRegionHeading heading : headingsForThisCell) {
+                            if (heading.getFunction() == DataRegionHeading.FUNCTION.SCALE) {
+                                scaleHeadings.add(heading);
+                            }
+                        }
+                        if (scaleHeadings.size() > 0){
+                            headingsForThisCell.removeAll(scaleHeadings);
+
+                            /*
+                            An explanation of 'Scale' function.
+                            'Scale' creates a set of lookup values of which one or more may be applied to every individual value found (e.g. Foreign Exchange values)
+
+                            So when one or more haeadings contains 'scale', the system isolates those headings and creates a set of lookup values from them.
+                            The cell calculation then continues as normal, but after the cell is resolved, the system erases the value found, and goes through the entire list of
+                            values that created the result.  For each value it sees if any of the scale values apply, and, if so, multiplies by that value
+
+                            */
+                            doubleValue = ValueService.findValueForNames(connection, DataRegionHeadingService.namesFromDataRegionHeadings(scaleHeadings),
+                                    DataRegionHeadingService.calcsFromDataRegionHeadings(scaleHeadings),  locked, scaleValuesHook, languages, null, null, null, debugInfo);
+                            //using only the scaleValuesHook
+
+
+                        }
                         doubleValue = ValueService.findValueForNames(connection, DataRegionHeadingService.namesFromDataRegionHeadings(headingsForThisCell),
                                                                                 DataRegionHeadingService.calcsFromDataRegionHeadings(headingsForThisCell),  locked, valuesHook, languages, function, exactName, nameComboValueCache, debugInfo);
+                        if (doubleValue!=0 && scaleHeadings.size() > 0){
+                            double scaleDouble = 0;
+                            List<Value> newValues = new ArrayList<>();
+                            for (Value value:valuesHook.values){
+                                Set<Name> allValueParents = new HashSet<>();
+                                for (Name name:value.getNames()){
+                                    allValueParents.addAll(name.findAllParents());
+                                }
+                                //throw in the headings as well - these should be found regardless
+                                for (DataRegionHeading scaleHeading:scaleHeadings){
+                                    allValueParents.add(scaleHeading.getName());
+                                }
+
+                                double scale = 0;
+                                List<Value> thisScaleValues = new ArrayList<>();
+                                for (Value scaleValue:scaleValuesHook.values){
+                                    boolean scaleFound = true;
+                                    for(Name scaleName:scaleValue.getNames()){
+                                        if (!allValueParents.contains(scaleName)){
+                                            scaleFound = false;
+                                            break;
+                                        }
+                                     }
+                                    if (scaleFound){
+                                        thisScaleValues.add(scaleValue);
+                                        scale += Double.parseDouble(scaleValue.getText());
+                                    }
+                                }
+                                if (scale > 0){
+                                    scaleDouble += Double.parseDouble(value.getText()) * scale;
+                                    newValues.add(value);
+                                    newValues.addAll(thisScaleValues);
+                                }
+                            }
+                            doubleValue = scaleDouble;
+                            valuesHook.values = newValues;
+                         }
+
                         if ((function == DataRegionHeading.FUNCTION.BESTMATCH
                                 || function == DataRegionHeading.FUNCTION.BESTVALUEMATCH
                                 || function == DataRegionHeading.FUNCTION.BESTNAMEVALUEMATCH)&& valueFunctionSet != null && description!=null) { // last lookup: we're going to override the double value just set

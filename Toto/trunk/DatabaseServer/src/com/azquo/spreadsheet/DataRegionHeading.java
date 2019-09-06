@@ -45,6 +45,7 @@ public class DataRegionHeading {
         , BESTNAMEMATCH//                       Value/Name function BESTNAMEMATCH(<set expression>,<value>) is similar to the above, but finds the name in the set which is most close to the value given.  In the above example it would show the last date on which any product changed price.
         , BESTNAMEVALUEMATCH//                  Value/Name function BESTNAMEVALUEMATCH(<set expression>,<value>) is similar to ‘bestvaluematch’ in finding the values for the particular context, but then shows the name attached to the value found.  In the example above it would show the last date on which a particular product changed price.
         , DICTIONARY//                          Name function       Replacing the dictionary on importing. Passed a set of names and an attribute to look for in those names which will be used to define dictionary criteria, see comments in the code itself for syntax
+        , SCALE//                               Value function      uses the 'scale' terms to create a lookup list, which is then applied to the individual values in the rest of the cell names to create a multiplier (e.g. for FX)
     }
 
     enum SUFFIX {UNLOCKED, LOCKED, SPLIT}
