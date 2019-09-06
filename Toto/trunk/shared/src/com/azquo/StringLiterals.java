@@ -35,6 +35,7 @@ public class StringLiterals {
     public static final String SORTED = "sorted";
     public static final String CHILDREN = "children";
     public static final String ATTRIBUTESET = "attributeset";
+    public static final String FILTERBY = "filterby"; // see how this is used in NameQueryParser
     public static final String SELECT = "select";
     public static final String CONTAINS = "contains";
     public static final String TEMPORARYNAMES  = "temporary names";
@@ -50,8 +51,9 @@ public class StringLiterals {
     public static final String AS = "as";
     public static final String ASGLOBAL = "asglobal";
     public static final String ASGLOBAL2 = "->";
-    public static final char ASSYMBOL = '@';
+    public static final char ASSYMBOL = '@';// if a name had an e-mail might this be a problem?
     public static final char CONTAINSSYMBOL = 127;
+    public static final char FILTERBYSYMBOL = 128;// I think this will work, These are a bit hacky overall
     public static final char ASGLOBALSYMBOL = '¬';//searching for symbols!
     public static final String WHERE = "where";
     public static final String languageIndicator = "<-";

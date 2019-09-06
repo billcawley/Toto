@@ -260,9 +260,9 @@ public class UserChoiceService {
     }
 
     // it doesn't return anything, for things like setting up "as" criteria
-    public static String resolveQuery(DatabaseAccessToken databaseAccessToken, String query, String user) throws Exception {
+    public static String resolveQuery(DatabaseAccessToken databaseAccessToken, String query, String user, List<List<String>> contextSource) throws Exception {
         List<String> languages = NameService.getDefaultLanguagesList(user);
-        Collection<Name> names = NameQueryParser.parseQuery(AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken), query, languages, true);
+        Collection<Name> names = NameQueryParser.parseQuery(AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken), query, languages, true, contextSource);
 
         if (names != null && names.size() != 0){
             if (names.size()==1) {

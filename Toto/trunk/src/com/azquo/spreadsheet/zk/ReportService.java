@@ -139,11 +139,7 @@ public class ReportService {
                     if (queryCell.getType() == SCell.CellType.FORMULA) {
                         queryCell.clearFormulaResultCache();
                     }
-                    String queryResult = null;
-                    String query = queryCell.getStringValue();
-                    if (!resolveFilterQuery(loggedInUser, query, contextSource)) {
-                        queryResult = CommonReportUtils.resolveQuery(loggedInUser, queryCell.getStringValue());
-                    }
+                    String queryResult = CommonReportUtils.resolveQuery(loggedInUser, queryCell.getStringValue(), contextSource);
                     if (queryResult != null && queryResult.toLowerCase().startsWith("error")) {
                         BookUtils.setValue(queryCell, queryCell.getStringValue() + " - " + queryResult);
                         Ranges.range(sheet, queryCell.getRowIndex(), queryCell.getColumnIndex()).notifyChange(); //
@@ -152,52 +148,6 @@ public class ReportService {
             }
         }
     }
-
-    public static boolean resolveFilterQuery(LoggedInUser loggedInUser, String query, List<List<String>> contextSource) {
-        int wherePos = query.toLowerCase().indexOf(" where (");
-        if (wherePos < 0) return false;
-        String filterSet = query.substring(0, wherePos).trim();
-        query = query.substring(wherePos + 7).trim();
-        if (query.startsWith(".")) {// attributes query
-            return false;
-        }
-        //System.out.println("Where query:" + query);
-
-        int bracketCount = 1;
-        int pos = 1;
-        while (pos < query.length()) {
-            if (query.charAt(pos) == '(') bracketCount++;
-            if (query.charAt(pos) == ')') bracketCount--;
-            if (bracketCount == 0) {
-                String calc = query.substring(0, pos + 1);
-                String remainder = query.substring(pos + 1).trim();
-                if (remainder.toLowerCase().startsWith("as ") || remainder.toLowerCase().startsWith("asglobal ")) {
-                    String target = remainder.substring(remainder.indexOf(" ") + 1);
-                    List<List<String>> rowHeadingSource = new ArrayList<>();
-                    List<List<String>> colHeadingSource = new ArrayList<>();
-                    List<String> rowHeadingsLine = new ArrayList<>();
-                    rowHeadingsLine.add(filterSet);
-                    rowHeadingSource.add(rowHeadingsLine);
-                    List<String> colHeadingsLine = new ArrayList<>();
-                    colHeadingsLine.add(calc);
-                    colHeadingSource.add(colHeadingsLine);
-
-                    try {
-                        UserRegionOptions userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), loggedInUser.getOnlineReport().getId(), "---", "---");
-                        SpreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser, "---", 0, rowHeadingSource, colHeadingSource, contextSource, userRegionOptions, true, target);
-                    } catch (Exception e) {
-                        return false;
-                    }
-                    break;
-
-                }
-            }
-            pos++;
-        }
-        return true;
-
-    }
-
 
     private static final DateTimeFormatter df = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 

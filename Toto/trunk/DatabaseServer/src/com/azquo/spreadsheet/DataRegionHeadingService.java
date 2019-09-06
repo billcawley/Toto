@@ -19,8 +19,10 @@ import java.util.concurrent.Future;
  * Extracted from DSSpreadsheetService by edward on 28/10/16.
  * <p>
  * Functions to resolve lists of DataRegionHeadings according to instructions in reports. A bit longer than I'd like but an improvement.
+ *
+ * todo - can/should I stop this being public if I change code in NameStackOperators
  */
-class DataRegionHeadingService {
+public class DataRegionHeadingService {
     /* This function now takes a 2d array representing the excel region. It expects blank or null for empty cells (the old text paste didn't support this)
     more specifically : the outermost list is of rows, the second list is each cell in that row and the final list is a list not a heading
     because there could be multiple names/attributes in a cell if the cell has something like container;children. Interpretnames is what does this. Hence
@@ -229,15 +231,13 @@ class DataRegionHeadingService {
                                     // parseQuery needs the 'sorted' instruction for sorting name sets.   Irrelevent if sorting data
                                     //sourceCell = sourceCell.substring(0,sourceCell.length() - 7).trim();
                                 }
+                                // allow a calculation to be jammed in there
                                 if (sourceCell.startsWith("(") && sourceCell.endsWith(")")){
                                     List<DataRegionHeading> single = new ArrayList<>();
                                     sourceCell = sourceCell.substring(1,sourceCell.length()-1);
-
-
                                     single.add(new DataRegionHeading(null, false, null, null, sorted ? "sorted" : null, null, null, 0, sourceCell));
                                     row.add(single);
-                                 }else {
-
+                                 } else {
                                     names = NameQueryParser.parseQuery(azquoMemoryDBConnection, sourceCell, attributeNames, true);
                                     if (namesQueryLimit > 0 && names.size() > namesQueryLimit) {
                                         throw new Exception("While creating headings " + sourceCell + " resulted in " + names.size() + " names, more than the specified limit of " + namesQueryLimit);
@@ -797,7 +797,7 @@ class DataRegionHeadingService {
         return toReturn;
     }
 
-    static List<DataRegionHeading> getContextHeadings(AzquoMemoryDBConnection azquoMemoryDBConnection, List<List<String>> contextSource, List<String> languages) throws Exception {
+    public static List<DataRegionHeading> getContextHeadings(AzquoMemoryDBConnection azquoMemoryDBConnection, List<List<String>> contextSource, List<String> languages) throws Exception {
         final List<List<List<DataRegionHeading>>> contextArraysFromSpreadsheetRegion = DataRegionHeadingService.createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBConnection, contextSource, languages, null, false); // no default suffix, this is where we might find it. DOn't surpress errors onh context!
         final List<DataRegionHeading> contextHeadings = new ArrayList<>();
         for (List<List<DataRegionHeading>> list1 : contextArraysFromSpreadsheetRegion) {

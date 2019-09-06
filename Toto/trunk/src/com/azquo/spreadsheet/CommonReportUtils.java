@@ -4,7 +4,6 @@ import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseServer;
 import com.azquo.admin.user.UserChoice;
 import com.azquo.admin.user.UserChoiceDAO;
-import com.azquo.StringLiterals;
 import com.azquo.rmi.RMIClient;
 
 import java.util.*;
@@ -165,11 +164,11 @@ public class CommonReportUtils {
         return query.trim();
     }
 
-    public static String resolveQuery(LoggedInUser loggedInUser, String query) {
+    public static String resolveQuery(LoggedInUser loggedInUser, String query, List<List<String>> contextSource) {
         query = replaceUserChoicesInQuery(loggedInUser, query);
         try {
             return RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
-                    .resolveQuery(loggedInUser.getDataAccessToken(), query, loggedInUser.getUser().getEmail());// sending the same as choice but the goal here is execute server side. Generally to set an "As"
+                    .resolveQuery(loggedInUser.getDataAccessToken(), query, loggedInUser.getUser().getEmail(), contextSource);// sending the same as choice but the goal here is execute server side. Generally to set an "As"
         } catch (Exception e) {
             e.printStackTrace();
             return "Error executing: " + query + " -  : " + getErrorFromServerSideException(e);

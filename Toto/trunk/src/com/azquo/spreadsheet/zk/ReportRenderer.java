@@ -460,7 +460,6 @@ public class ReportRenderer {
         SName contextDescription = BookUtils.getNameByName(AZCONTEXT + region, sheet);
         if (queryRegion!=null){
             List<List<String>> contextList = replaceUserChoicesInRegionDefinition(loggedInUser,contextDescription);
-
             ReportService.resolveQuery(loggedInUser,sheet,queryRegion, contextList);
         }
 

@@ -56,7 +56,17 @@ public class NameQueryParser {
 
     public static Collection<Name> parseQuery(final AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula, List<String> attributeNames, boolean returnReadOnlyCollection) throws Exception {
         parseQuery2Count.incrementAndGet();
-        return parseQuery(azquoMemoryDBConnection, setFormula, attributeNames, null, returnReadOnlyCollection);
+        return parseQuery(azquoMemoryDBConnection, setFormula, attributeNames, returnReadOnlyCollection, null);
+    }
+
+    private static AtomicInteger parseQuery3Count = new AtomicInteger(0);
+
+    public static Collection<Name> parseQuery(final AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula, List<String> attributeNames, boolean returnReadOnlyCollection, List<List<String>> contextSource) throws Exception {
+        parseQuery3Count.incrementAndGet();
+        return parseQuery(azquoMemoryDBConnection, setFormula, attributeNames, null, returnReadOnlyCollection, contextSource);
+    }
+    public static Collection<Name> parseQuery(final AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula, List<String> attributeNames, Collection<Name> toReturn, boolean returnReadOnlyCollection) throws Exception {
+        return parseQuery(azquoMemoryDBConnection, setFormula, attributeNames,toReturn, returnReadOnlyCollection, null);
     }
 
     /* todo : sort exceptions?
@@ -65,10 +75,10 @@ public class NameQueryParser {
     in places but performance should be better and garbage reduced
     todo - check logic regarding toReturn makes sense.
     */
-    private static AtomicInteger parseQuery3Count = new AtomicInteger(0);
+    private static AtomicInteger parseQuery4Count = new AtomicInteger(0);
 
-    public static Collection<Name> parseQuery(final AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula, List<String> attributeNames, Collection<Name> toReturn, boolean returnReadOnlyCollection) throws Exception {
-        parseQuery3Count.incrementAndGet();
+    public static Collection<Name> parseQuery(final AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula, List<String> attributeNames, Collection<Name> toReturn, boolean returnReadOnlyCollection, List<List<String>> contextSource) throws Exception {
+        parseQuery4Count.incrementAndGet();
         long track = System.currentTimeMillis();
         String formulaCopy = setFormula;
         int mb = 1024 * 1024;
@@ -105,6 +115,25 @@ public class NameQueryParser {
         //todo - find a better way of using 'parseQuery` for other operations
         if (setFormula.toLowerCase().startsWith("edit:")) {
             return NameEditFunctions.handleEdit(azquoMemoryDBConnection, setFormula.substring(5).trim(), languages);
+        }
+        // filterby is a special case, I'm only allowing one of them. e.g. Claim children * `bb12345` filterby "(`line count` > 1)"
+        String filterByCriteria = null;
+        if (setFormula.toLowerCase().contains(StringLiterals.FILTERBY)){
+            int filterByIndex = setFormula.toLowerCase().indexOf(StringLiterals.FILTERBY);
+            int firstQuote = setFormula.indexOf("\"", filterByIndex);
+            int secondQuote = setFormula.indexOf("\"", firstQuote + 1);
+            if (firstQuote < 0 || secondQuote < 0){
+                throw new Exception("filterby must be followed by criteria in quotes" + setFormula);
+            }
+            if (setFormula.toLowerCase().indexOf(StringLiterals.FILTERBY, firstQuote) != -1){
+                throw new Exception("cannot have more than one filterby " + setFormula);
+            }
+            if (contextSource == null){
+                throw new Exception("cannot use filterby without context source - query must be matched to a region " + setFormula);
+            }
+
+            filterByCriteria = setFormula.substring(firstQuote + 1, secondQuote);
+            setFormula = setFormula.substring(0, firstQuote) + setFormula.substring(secondQuote + 1); // zap the criteria - it will mess up the parsing below
         }
 
         List<NameSetList> nameStack = new ArrayList<>(); // now use the container object, means we only create new collections at the last minute as required
@@ -148,11 +177,11 @@ public class NameQueryParser {
             }*/
             throw e;
         }
-        setFormula = setFormula.replace(StringLiterals.ASGLOBAL, StringLiterals.ASGLOBALSYMBOL + "");
+        setFormula = setFormula.replace(StringLiterals.ASGLOBAL, StringLiterals.ASGLOBALSYMBOL + "").replace(StringLiterals.FILTERBY, StringLiterals.FILTERBYSYMBOL + "");
         setFormula = setFormula.replace(StringLiterals.AS, StringLiterals.ASSYMBOL + "").replace(StringLiterals.CONTAINS, StringLiterals.CONTAINSSYMBOL+"");
 
         setFormula = StringUtils.shuntingYardAlgorithm(setFormula);
-        Pattern p = Pattern.compile("[\\+\\-\\*/" + StringLiterals.NAMEMARKER + StringLiterals.ASSYMBOL + StringLiterals.ASGLOBALSYMBOL +StringLiterals.CONTAINSSYMBOL + "]");//recognises + - * / NAMEMARKER  NOTE THAT - NEEDS BACKSLASHES (not mentioned in the regex tutorial on line
+        Pattern p = Pattern.compile("[\\+\\-\\*/" + StringLiterals.NAMEMARKER + StringLiterals.ASSYMBOL + StringLiterals.ASGLOBALSYMBOL + StringLiterals.CONTAINSSYMBOL + StringLiterals.FILTERBYSYMBOL + "]");//recognises + - * / NAMEMARKER  NOTE THAT - NEEDS BACKSLASHES (not mentioned in the regex tutorial on line
         String resetDefs = null;
         boolean global = false;
         logger.debug("Set formula after SYA " + setFormula);
@@ -188,6 +217,8 @@ public class NameQueryParser {
                 stackCount++;
                 // now returns a custom little object that hods a list a set and whether it's immutable
                 nameStack.add(interpretSetTerm(null, setFormula.substring(pos, nextTerm - 1), formulaStrings, referencedNames, attributeStrings, azquoMemoryDBConnection, attributeNames, setFormula));
+            } else if (op == StringLiterals.FILTERBYSYMBOL){ // filter by is unique - it's not an operator which takes two name sets, it simply applies a condition to the set before sp the stack can be one for this operator
+                NameStackOperators.filterBy(nameStack, filterByCriteria, azquoMemoryDBConnection, contextSource, languages);
             } else if (stackCount-- < 2) {
                 throw new Exception("not understood:  " + formulaCopy);
             } else if (op == '*') { // * meaning intersection here . . .
@@ -204,7 +235,6 @@ public class NameQueryParser {
                 nameStack.set(stackCount,nameStack.get(stackCount-1));
                 nameStack.set(stackCount-1, topList);
                 NameStackOperators.removeFromSet(nameStack,stackCount);
-
             } else if (op == StringLiterals.ASSYMBOL) {
                 Name totalName = nameStack.get(stackCount).getAsCollection().iterator().next();// get(0) relies on list, this works on a collection
                 if (totalName.getAttribute(StringLiterals.DEFAULT_DISPLAY_NAME) != null){
@@ -218,7 +248,6 @@ public class NameQueryParser {
                 }
                 NameStackOperators.assignSetAsName(azquoMemoryDBConnection, attributeNames, nameStack, stackCount, true);
                 global = true;
-
             }
             if (op != StringLiterals.NAMEMARKER && nextTerm > setFormula.length() && pos < nextTerm - 3) {
                 //there's still more stuff to understand!  Having created a set, we may now wish to operate on that set
@@ -422,7 +451,7 @@ public class NameQueryParser {
                 System.out.println("can't from/to/count a non-list, " + setFormula);
             }
         }
-        return namesFound != null ? namesFound : new NameSetList(null, new ArrayList<>(), true); // empty one if it's null
+        return namesFound;
     }
 
     // we replace the names with markers for parsing. Then we need to resolve them later, here is where the exception will be thrown. Should be NameNotFoundException?
@@ -499,7 +528,7 @@ public class NameQueryParser {
             }
             modifiedStatement.append(attribute);
         }
-        modifiedStatement.append(statement.substring(lastEnd, statement.length()));
+        modifiedStatement.append(statement.substring(lastEnd));
 
         return modifiedStatement.toString();
     }
@@ -556,19 +585,5 @@ public class NameQueryParser {
         parseQuery3Count.set(0);
         getNameListFromStringListCount.set(0);
         getNameFromListAndMarkerCount.set(0);
-    }
-
-    public static boolean isAllowed(Name name, List<Set<Name>> names) {
-        if (name == null || names == null || names.isEmpty()) { // empty the same as null
-            return true;
-        }
-        for (Set<Name> listNames : names) {
-            if (!listNames.isEmpty()) {
-                if (NameService.inParentSet(name, listNames) != null) {
-                    return true;
-                }
-            }
-        }
-        return false;
     }
 }

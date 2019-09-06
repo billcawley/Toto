@@ -20,7 +20,6 @@ class NameFilterFunctions {
     static NameSetList filter(NameSetList nameSetList, String condition, List<String> strings, List<String> attributeNames) {
         NameSetList toReturn = nameSetList.mutable ? nameSetList : new NameSetList(nameSetList); // make a new mutable NameSetList if the one passed wasn't mutable
          Collection<Name> namesToFilter = toReturn.getAsCollection();
-        int lastPos = 0;
         StringTokenizer st = new StringTokenizer(condition, " ");
         List<Set<Name>> nameStack = new ArrayList<>();
         int stackPos = 0;

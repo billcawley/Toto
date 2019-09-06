@@ -267,7 +267,7 @@ public class ReportExecutor {
                         //stuff added by edd, need an option for the user to see these files for debug purposes
                         if (debug){
                             Exporter exporter = Exporters.getExporter();
-                            File file = File.createTempFile(Long.toString(System.currentTimeMillis()), "temp.xlsx");
+                            File file = File.createTempFile("debug" + System.currentTimeMillis(), "temp.xlsx");
                             try (FileOutputStream fos = new FileOutputStream(file)) {
                                 exporter.export(book, fos);
                             }
@@ -473,16 +473,14 @@ public class ReportExecutor {
 
 
                     } else {
-                        if (!ReportService.resolveFilterQuery(loggedInUser, trimmedLine.substring(4), makeNewListList(filterContext))) {
-                            String result = CommonReportUtils.resolveQuery(loggedInUser, trimmedLine.substring(4));
+                            String result = CommonReportUtils.resolveQuery(loggedInUser, trimmedLine.substring(4), null);
                             RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).addToLog(loggedInUser.getDataAccessToken(), result);
                             if (result.toLowerCase().startsWith("error")) {
                                 throw (new Exception(result));
                             }
-                        }
                     }
                 } else if (trimmedLine.toLowerCase().startsWith("if ")) {
-                    String result = CommonReportUtils.resolveQuery(loggedInUser, trimmedLine.substring(4));
+                    String result = CommonReportUtils.resolveQuery(loggedInUser, trimmedLine.substring(4), null);
                     if (result.toLowerCase().startsWith("error")) {
                         throw (new Exception(result));
                     }

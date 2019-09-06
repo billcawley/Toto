@@ -146,7 +146,7 @@ class RMIImplementation implements RMIInterface {
     public CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(DatabaseAccessToken databaseAccessToken, String user, String regionName, int valueId, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource, RegionOptions regionOptions, boolean quiet, String filterTargetName) throws RemoteException {
         try {
-            return DSSpreadsheetService.getCellsAndHeadingsForDisplay(databaseAccessToken, user, regionName, valueId, rowHeadingsSource, colHeadingsSource, contextSource, regionOptions, quiet, filterTargetName);
+            return DSSpreadsheetService.getCellsAndHeadingsForDisplay(databaseAccessToken, user, regionName, valueId, rowHeadingsSource, colHeadingsSource, contextSource, regionOptions, quiet);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
@@ -262,9 +262,9 @@ class RMIImplementation implements RMIInterface {
     }
 
     @Override
-    public String resolveQuery(DatabaseAccessToken databaseAccessToken, String query, String user) throws RemoteException {
+    public String resolveQuery(DatabaseAccessToken databaseAccessToken, String query, String user, List<List<String>> contextSource) throws RemoteException {
         try {
-            return UserChoiceService.resolveQuery(databaseAccessToken, query, user);
+            return UserChoiceService.resolveQuery(databaseAccessToken, query, user, contextSource);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }

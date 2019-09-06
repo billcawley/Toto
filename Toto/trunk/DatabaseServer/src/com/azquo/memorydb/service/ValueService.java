@@ -347,7 +347,6 @@ public final class ValueService {
                     }
                 } else
                     remainingCalcs.add(calc);
-
             }
         }
         for (Name name : names) {

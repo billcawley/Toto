@@ -380,7 +380,7 @@ public class AzquoCellResolver {
                         if (function == DataRegionHeading.FUNCTION.BESTMATCH
                                 || function == DataRegionHeading.FUNCTION.BESTNAMEVALUEMATCH
                                 || function == DataRegionHeading.FUNCTION.BESTVALUEMATCH
-                                || function == DataRegionHeading.FUNCTION.BESTNAMEVALUEMATCH){
+                                ){
                             redundantHeading = heading;
                         }
                         if (debugInfo != null) {

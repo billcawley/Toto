@@ -2,6 +2,10 @@ package com.azquo.memorydb.service;
 
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.core.Name;
+import com.azquo.spreadsheet.AzquoCell;
+import com.azquo.spreadsheet.AzquoCellService;
+import com.azquo.spreadsheet.DataRegionHeading;
+import com.azquo.spreadsheet.DataRegionHeadingService;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 
 import java.util.*;
@@ -177,6 +181,44 @@ class NameStackOperators {
         nameStack.remove(stackCount);
     }
 
+    // filterby, a bit hairy
+    static void filterBy(final List<NameSetList> nameStack, String filterByCriteria, AzquoMemoryDBConnection azquoMemoryDBConnection, List<List<String>> contextSource, List<String> languages) throws Exception{
+        // this was on the report server - it's going to render a data region with the name set using the context and applying the condition then return only the names where the value was > 0 as in true
+        // this might need development over time to make it clearer and more robust but previously it wasn't even part of the NameQueryParser so this is an improvement
+        // as above it will need to have been in quotes - a condition that the SYA shouldn't touch
+            /* was Claim children * `bb12345` where (`line count` > 1) as `Temporary Set 1`
+             now will be Claim children * `bb12345` filterby "(`line count` > 1)" quotes tell it to deal with it as a string
+             passed to this function is nameStack where the last on the stack is the left hand set of names and filterByCriteria is condition
+
+             ok what we really want to do here is call getDataRegion BUT we don't have the source of the row headings. Going to try to fudge
+             stripped down internals of getDataRegion so we can jump right to AzquoCellService.getAzquoCellsForRowsColumnsAndContext.
+             Since this is always one dimensional row headings with a single col heading it's minimal duplication, about seven lines
+           */
+        NameSetList nameSetList = nameStack.get(nameStack.size() - 1);
+        List<List<DataRegionHeading>> rowHeadings = new ArrayList<>(nameSetList.getAsCollection().size());
+        for (Name n : nameSetList.getAsCollection()) {
+            rowHeadings.add(Collections.singletonList(new DataRegionHeading(n, true, null, null, null, null, null, 0)));
+        }
+        List<List<DataRegionHeading>> colHeadings = new ArrayList<>(1);
+        filterByCriteria = filterByCriteria.substring(1, filterByCriteria.length() - 1);
+        colHeadings.add(Collections.singletonList(new DataRegionHeading(null, false, null, null, null, null, null, 0, filterByCriteria)));
+        final List<DataRegionHeading> contextHeadings = DataRegionHeadingService.getContextHeadings(azquoMemoryDBConnection, contextSource, languages);
+        List<List<AzquoCell>> dataToShow = AzquoCellService.getAzquoCellsForRowsColumnsAndContext(azquoMemoryDBConnection, rowHeadings, colHeadings, contextHeadings, languages, 0, true);
+        //a set being built as a result of a value being non zero, a set being true
+        Iterator<List<AzquoCell>> rowIt = dataToShow.iterator();
+        List<Name> result = new ArrayList<>();
+        for (List<DataRegionHeading> row : rowHeadings) {
+            List<AzquoCell> dataRow = rowIt.next();
+            DataRegionHeading dataRegionHeading = row.iterator().next();
+            AzquoCell cell = dataRow.iterator().next();
+            if (cell.getDoubleValue() > 0) {
+                result.add(dataRegionHeading.getName());
+            }
+        }
+        // simply replace
+        nameStack.set(nameStack.size() - 1, new NameSetList(null, result, true));
+    }
+
     // todo - if not global then don't use the most recent provenance
     // "As" assign the results of a query as a certain name
     static void assignSetAsName(AzquoMemoryDBConnection azquoMemoryDBConnection, List<String> attributeNames, final List<NameSetList> nameStack, int stackCount, boolean global) throws Exception {
@@ -193,15 +235,15 @@ class NameStackOperators {
             if (totalName.getAttribute(userEmail) == null) { // there is no specific set for this user yet, need to do something
                 Name userSpecificSet = new Name(azquoMemoryDBConnection.getAzquoMemoryDB(), azquoMemoryDBConnection.getProvenance()); // a basic copy of the set
                 //userSpecificSet.setAttributeWillBePersisted(Constants.DEFAULT_DISPLAY_NAME, userEmail + totalName.getDefaultDisplayName()); // GOing to set the default display name as bits of the suystem really don't like it not being there
-                userSpecificSet.setAttributeWillBePersisted(userEmail, totalName.getDefaultDisplayName(),azquoMemoryDBConnection); // set the name (usually default_display_name) but for the "user email" attribute
+                userSpecificSet.setAttributeWillBePersisted(userEmail, totalName.getDefaultDisplayName(), azquoMemoryDBConnection); // set the name (usually default_display_name) but for the "user email" attribute
                 totalName.addChildWillBePersisted(userSpecificSet, azquoMemoryDBConnection);
                 totalName = userSpecificSet; // switch the new one in, it will be used as normal
             }
         }
         if (nameStack.get(stackCount - 1).list != null) {
-            totalName.setChildrenWillBePersisted(nameStack.get(stackCount - 1).list,azquoMemoryDBConnection);
+            totalName.setChildrenWillBePersisted(nameStack.get(stackCount - 1).list, azquoMemoryDBConnection);
         } else {
-            totalName.setChildrenWillBePersisted(nameStack.get(stackCount - 1).getAsCollection(),azquoMemoryDBConnection);
+            totalName.setChildrenWillBePersisted(nameStack.get(stackCount - 1).getAsCollection(), azquoMemoryDBConnection);
         }
         nameStack.remove(stackCount);
         Set<Name> totalNameSet = HashObjSets.newMutableSet();

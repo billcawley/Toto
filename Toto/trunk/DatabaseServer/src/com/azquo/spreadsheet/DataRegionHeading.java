@@ -63,18 +63,18 @@ public class DataRegionHeading {
     private Collection<Name> valueFunctionSet; // just used for valueparentcount and valueset
     private final double doubleParameter; // initially used for percentile, could be others. I think this needs to be rearranged at some point but for the moment make percentile work.
     private final Collection<Name> attributeSet;
-    private String calculation; //the description having passed through the preparation routines
+    private final String calculation; //will later be used as a calculation - coming in from the heading rather than the name, see value service 334
 
     DataRegionHeading(Name name, boolean writeAllowed, FUNCTION function, SUFFIX suffix, String description, Set<Name> valueFunctionSet) {
         this(name, writeAllowed,function,suffix, description, null, valueFunctionSet, 0, null);
     }
 
-    DataRegionHeading(Name name, boolean writeAllowed, FUNCTION function, SUFFIX suffix, String description, List<DataRegionHeading> offsetHeadings, Collection<Name> valueFunctionSet, double doubleParameter) {
+    public DataRegionHeading(Name name, boolean writeAllowed, FUNCTION function, SUFFIX suffix, String description, List<DataRegionHeading> offsetHeadings, Collection<Name> valueFunctionSet, double doubleParameter) {
         this(name, writeAllowed,function,suffix, description, offsetHeadings, valueFunctionSet, doubleParameter, null);
     }
 
     // todo - maybe factor the constructors a little :)
-    DataRegionHeading(Name name, boolean writeAllowed, FUNCTION function, SUFFIX suffix, String description, List<DataRegionHeading> offsetHeadings, Collection<Name> valueFunctionSet, double doubleParameter, String calculation) {
+    public DataRegionHeading(Name name, boolean writeAllowed, FUNCTION function, SUFFIX suffix, String description, List<DataRegionHeading> offsetHeadings, Collection<Name> valueFunctionSet, double doubleParameter, String calculation) {
         this.name = name;
         this.attribute = null;
         this.writeAllowed = writeAllowed;
@@ -211,9 +211,6 @@ public class DataRegionHeading {
         return doubleParameter;
     }
 
-    public String getCalculation() { return calculation; }
-
-    public void setCalculation(String calculation){ this.calculation = calculation; }
-
+    String getCalculation() { return calculation; }
 
 }

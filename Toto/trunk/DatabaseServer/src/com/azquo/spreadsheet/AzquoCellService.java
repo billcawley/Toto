@@ -31,7 +31,7 @@ import java.util.regex.Pattern;
  * <p>
  * A little over my 500 line limit but I'll leave it for the moment.
  */
-class AzquoCellService {
+public class AzquoCellService {
 
     private static final Runtime runtime = Runtime.getRuntime();
 
@@ -110,9 +110,9 @@ class AzquoCellService {
     }
 
     // filterTargetName use a where statement on the data based on values e.g. where linecount > 1, need to clarify the actya
-
-    static List<List<AzquoCell>> getDataRegion(AzquoMemoryDBConnection azquoMemoryDBConnection, String regionName, List<List<String>> rowHeadingsSource
-            , List<List<String>> colHeadingsSource, List<List<String>> contextSource, RegionOptions regionOptions, String user, int valueId, boolean quiet, String filterTargetName) throws Exception {
+    // now public as the NameQueryParser might want it
+    public static List<List<AzquoCell>> getDataRegion(AzquoMemoryDBConnection azquoMemoryDBConnection, String regionName, List<List<String>> rowHeadingsSource
+            , List<List<String>> colHeadingsSource, List<List<String>> contextSource, RegionOptions regionOptions, String user, int valueId, boolean quiet) throws Exception {
         if (!quiet) {
             azquoMemoryDBConnection.addToUserLog("Getting data for region : " + regionName);
         }
@@ -154,7 +154,6 @@ class AzquoCellService {
             languages = new ArrayList<>();
             languages.add(regionOptions.columnLanguage);
         }
-          if (filterTargetName==null) {
              String firstColumnHeading = colHeadingsSource.get(0).get(0);
              Pattern p = Pattern.compile("" + StringLiterals.QUOTE + "[^" + StringLiterals.QUOTE + "]*" + StringLiterals.QUOTE + " ="); //`name`=
             Matcher matcher = p.matcher(firstColumnHeading);
@@ -164,9 +163,7 @@ class AzquoCellService {
                 String target = matcher.group();
                 target = target.substring(0, target.length() - 2);//remove ' ='
                 colHeadingsSource.get(0).set(0, target);
-
             }
-        }
         final List<List<List<DataRegionHeading>>> columnHeadingLists = DataRegionHeadingService.createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBConnection, colHeadingsSource, languages, AzquoCellService.COL_HEADINGS_NAME_QUERY_LIMIT, contextSuffix, regionOptions.ignoreHeadingErrors);
         languages = defaultLanguages;
         time = (System.currentTimeMillis() - track);
@@ -203,22 +200,6 @@ class AzquoCellService {
             permute = true;
         dataToShow = sortAndFilterCells(dataToShow, rowHeadings
                 , regionOptions, permute);
-        // todo EFC understand properly
-        //a set being built as a result of an expression being true.
-        if (filterTargetName!=null){
-            Name target = NameService.findByName(azquoMemoryDBConnection, filterTargetName);
-            target.setChildrenWillBePersisted(new ArrayList<>(), azquoMemoryDBConnection);
-            Iterator<List<AzquoCell>> rowIt = dataToShow.iterator();
-            for (List<DataRegionHeading>row:rowHeadings){
-                List<AzquoCell> dataRow = rowIt.next();
-                DataRegionHeading dataRegionHeading = row.iterator().next();
-                AzquoCell cell = dataRow.iterator().next();
-                if (cell.getDoubleValue()>0){
-                    target.addChildWillBePersisted(dataRegionHeading.getName(), azquoMemoryDBConnection);
-                }
-            }
-
-        }
         time = (System.currentTimeMillis() - track);
         if (time > threshold) System.out.println("data sort/filter in " + time + "ms");
         System.out.println("region delivered in " + (System.currentTimeMillis() - start) + "ms");
@@ -704,7 +685,7 @@ class AzquoCellService {
     }
 
 
-    private static List<List<AzquoCell>> getAzquoCellsForRowsColumnsAndContext(AzquoMemoryDBConnection connection, List<List<DataRegionHeading>> headingsForEachRow
+    public static List<List<AzquoCell>> getAzquoCellsForRowsColumnsAndContext(AzquoMemoryDBConnection connection, List<List<DataRegionHeading>> headingsForEachRow
             , final List<List<DataRegionHeading>> headingsForEachColumn
             , final List<DataRegionHeading> contextHeadings, List<String> languages, int valueId, boolean quiet) throws Exception {
         long oldHeapMarker = (runtime.totalMemory() - runtime.freeMemory());

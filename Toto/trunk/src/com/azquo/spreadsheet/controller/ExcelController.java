@@ -347,7 +347,7 @@ public class ExcelController {
                 return jsonError("done");
             }
             if (op.equals("resolvequery")) {
-                return CommonReportUtils.resolveQuery(loggedInUser, chosen);
+                return CommonReportUtils.resolveQuery(loggedInUser, chosen, null);
             }
             if (op.equals("getdropdownlistforquery")) {
                 return jacksonMapper.writeValueAsString(CommonReportUtils.getDropdownListForQuery(loggedInUser, choice));
