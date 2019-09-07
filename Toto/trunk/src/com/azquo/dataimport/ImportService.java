@@ -983,6 +983,16 @@ public final class ImportService {
                             int index = 0;
                             if ("lineno".equalsIgnoreCase(keyColumn)){
                                 index = -1; // special case - the value IS the line number
+                                for (String errorKey : new HashSet<>(errorLines.keySet())){
+                                    // worth an explanation, line no can hit other files so if it has a - in it then take the file name from before the -
+                                    // and then check the uploadedFile file name contains it otherwise ditch the error line
+                                    if (errorKey.contains("-")){
+                                        Map<String, String> errorLine = errorLines.remove(errorKey);
+                                        if (uploadedFile.getFileName().toLowerCase().contains(errorKey.toLowerCase().substring(0, errorKey.indexOf("-")))){
+                                            errorLines.put(errorKey.substring(errorKey.indexOf("-") + 1), errorLine);
+                                        }
+                                    }
+                                }
                             } else {
                                 for (List<String> fileHeading : uploadedFile.getFileHeadings()) {
 //                            for (String subHeading : fileHeading) { // currently looking up against the model reference not the file reference

@@ -91,6 +91,8 @@ public class SpreadsheetService {
     // if XML is scanned which db to put it into
     private static final String XMLSCANDB = "xmlscandb";
 
+    private static final String TRACKINGDB = "traackingdb";
+
     private static String getProperty(String key) {
         if (properties.get(key) == null) {
             if (azquoProperties.getProperty(host + "." + key) != null) {
@@ -155,6 +157,10 @@ public class SpreadsheetService {
 
     public static String getScanBusiness() {
         return getProperty(SCANBUSINESS);
+    }
+
+    public static String getTrackingDb() {
+        return getProperty(TRACKINGDB);
     }
 
     private static final String LOGONPAGEOVERRIDE = "logonpageoverride";

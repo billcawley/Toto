@@ -356,4 +356,15 @@ public class DBCron {
             SpreadsheetService.runScheduledReports();
         }
     }
+
+    @Scheduled(cron = "0 * * * * *")
+    public void extractEdBrokingTrackingData() throws Exception {
+        synchronized (this) { // one at a time
+            String trackingdb = SpreadsheetService.getTrackingDb();
+            if (trackingdb != null){
+
+            }
+        }
+    }
+
 }
