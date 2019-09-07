@@ -665,7 +665,7 @@ public final class ImportService {
                 if (importVersion!=null) {
                     template = importTemplateData.getSheets().get("Import Model");
                     if (template == null) {
-                         template = importTemplateData.getSheets().get(importVersion);
+                        template = sheetInfo(importTemplateData, templateName);//case insensitive
                     }else{
                         hasImportModel = true;
                     }
