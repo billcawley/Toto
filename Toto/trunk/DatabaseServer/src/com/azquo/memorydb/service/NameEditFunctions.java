@@ -27,12 +27,18 @@ class NameEditFunctions {
             return findDuplicateNames(azquoMemoryDBConnection, setFormula);
         }
         if (setFormula.startsWith("zap ")) {
-            Collection<Name> names = NameQueryParser.parseQuery(azquoMemoryDBConnection, setFormula.substring(4), languages, true); // defaulting to list here
+            Collection<Name> names = null;
+            try {
+               names = NameQueryParser.parseQuery(azquoMemoryDBConnection, setFormula.substring(4), languages, true);
+            }catch(Exception e){
+                names =  new ArrayList<>(azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNamesWithAttributeContaining(languages.iterator().next(), setFormula.substring(4)));
+            }
             if (names != null) {
                 for (Name name : names) name.delete(azquoMemoryDBConnection);
                 azquoMemoryDBConnection.persist();
                 return toReturn;
             }
+
         }
         if (setFormula.startsWith("zapdata ")) {
             //expecting a list of queries separated by |  e.g.   `Mens products`|2018
@@ -141,6 +147,25 @@ class NameEditFunctions {
         if (setFormula.startsWith("check")) {
             // check db if required . . .
             return new ArrayList<>();
+        }
+        if (setFormula.startsWith("zapaudit")){
+            String provenenceToZap = setFormula.substring(9).toLowerCase().trim();
+            if (provenenceToZap.length() < 10) return new ArrayList<>();
+            List<Name> toZap = new ArrayList<>();
+            for (Name topName: NameService.findTopNames(azquoMemoryDBConnection,StringLiterals.DEFAULT_DISPLAY_NAME)){
+                Collection<Name> children = topName.findAllChildren();
+                 for (Name child:children){
+                    if (child.getProvenance().getName().toLowerCase().contains(provenenceToZap)){
+                        toZap.add(child);
+
+                    }
+                }
+
+            }
+            for (Name name:toZap){
+                name.delete(azquoMemoryDBConnection);
+            }
+            //TO DO - ZAP THE OTHER VALUES TOO
         }
 
         throw new Exception(setFormula + " not understood");
