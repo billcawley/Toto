@@ -1,8 +1,10 @@
 package com.azquo.dataimport;
 
 import com.azquo.DateUtils;
+import com.azquo.TypedPair;
 import com.azquo.admin.StandardDAO;
 import com.azquo.admin.user.User;
+import com.azquo.spreadsheet.SpreadsheetService;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 
@@ -21,49 +23,20 @@ import java.util.Map;
 public class TrackingParser {
 
     // the default table name for this data.
-    private static final String TABLENAME = "trackingdb";
+    private static final String TABLENAME = "tracking";
 
     // column names except ID which is in the superclass
 
     private static final String TRACKMESSKEY = "TrackMessKey";
     private static final String TMXMLDATA = "TMXMLData";
 
-/*
-    public static Map<String, Object> getColumnNameValueMap(final User user) {
-        final Map<String, Object> toReturn = new HashMap<>();
-        toReturn.put(StandardDAO.ID, user.getId());
-        toReturn.put(ENDDATE, DateUtils.getDateFromLocalDateTime(user.getEndDate()));
-        toReturn.put(BUSINESSID, user.getBusinessId());
-        toReturn.put(EMAIL, user.getEmail());
-        toReturn.put(NAME, user.getName());
-        toReturn.put(STATUS, user.getStatus());
-        toReturn.put(PASSWORD, user.getPassword());
-        toReturn.put(SALT, user.getSalt());
-        toReturn.put(CREATEDBY, user.getCreatedBy());
-        toReturn.put(DATABASEID, user.getDatabaseId());
-        toReturn.put(REPORTID, user.getReportId());
-        toReturn.put(SELECTIONS, user.getSelections());
-        toReturn.put(TEAM, user.getTeam());
-        return toReturn;
-    }
-
-    private static final class UserRowMapper implements RowMapper<User> {
+    // maybe move from TypedPair but this is a bit of a hack so maybe neither here nor there . . .
+    private static final class PairRowMapper implements RowMapper<TypedPair<String, String>> {
         @Override
-        public User mapRow(final ResultSet rs, final int row) throws SQLException {
+        public TypedPair<String, String> mapRow(final ResultSet rs, final int row) throws SQLException {
             try {
-                return new User(rs.getInt(StandardDAO.ID)
-                        , DateUtils.getLocalDateTimeFromDate(rs.getTimestamp(ENDDATE))
-                        , rs.getInt(BUSINESSID)
-                        , rs.getString(EMAIL)
-                        , rs.getString(NAME)
-                        , rs.getString(STATUS)
-                        , rs.getString(PASSWORD)
-                        , rs.getString(SALT)
-                        , rs.getString(CREATEDBY)
-                        , rs.getInt(DATABASEID)
-                        , rs.getInt(REPORTID)
-                        , rs.getString(SELECTIONS)
-                        , rs.getString(TEAM)
+                return new TypedPair<>(rs.getString(TRACKMESSKEY)
+                        , rs.getString(TMXMLDATA)
                 );
             } catch (Exception e) {
                 e.printStackTrace();
@@ -72,51 +45,20 @@ public class TrackingParser {
         }
     }
 
-    private static final UserRowMapper userRowMapper = new UserRowMapper();
-
-    public static User findByEmail(final String email) {
-        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        namedParams.addValue(EMAIL, email);
-        return StandardDAO.findOneWithWhereSQLAndParameters(" WHERE `" + EMAIL + "` = :" + EMAIL, TABLENAME, userRowMapper, namedParams);
-    }
-
-    public static List<User> findForBusinessId(final int businessId) {
-        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        namedParams.addValue(BUSINESSID, businessId);
-        return StandardDAO.findListWithWhereSQLAndParameters("WHERE " + BUSINESSID + " = :" + BUSINESSID, TABLENAME, userRowMapper, namedParams);
-    }
+    private static final PairRowMapper userRowMapper = new PairRowMapper();
 
     // really to check if a report should be zapped
-    public static List<User> findForReportId(final int reportId) {
+    public static List<TypedPair<String, String>> findAll() {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        namedParams.addValue(REPORTID, reportId);
-        return StandardDAO.findListWithWhereSQLAndParameters("WHERE " + REPORTID + " = :" + REPORTID, TABLENAME, userRowMapper, namedParams);
+//        namedParams.addValue(REPORTID, reportId);
+        final String SQL_SELECT = "Select `" + SpreadsheetService.getTrackingDb() + "`.`" + TABLENAME + "`.* from `" + SpreadsheetService.getTrackingDb() + "`.`" + TABLENAME + "`";
+        return StandardDAO.getJdbcTemplate().query(SQL_SELECT, namedParams, userRowMapper);
     }
 
-    // required when restoring a backup
+    /*
     public static List<User> findForDatabaseId(int databaseId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(DATABASEID, databaseId);
         return StandardDAO.findListWithWhereSQLAndParameters("WHERE " + DATABASEID + " = :" + DATABASEID, TABLENAME, userRowMapper, namedParams);
-    }
-
-
-    public static List<User> findForBusinessIdAndCreatedBy(final int businessId, String createdBy) {
-        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        namedParams.addValue(BUSINESSID, businessId);
-        namedParams.addValue(CREATEDBY, createdBy);
-        return StandardDAO.findListWithWhereSQLAndParameters("WHERE " + BUSINESSID + " = :" + BUSINESSID + " and " + CREATEDBY + " = :" + CREATEDBY, TABLENAME, userRowMapper, namedParams);
-    }
-
-    public static User findById(int id) {
-        return StandardDAO.findById(id, TABLENAME, userRowMapper);
-    }
-
-    public static void removeById(User user) {
-        StandardDAO.removeById(user, TABLENAME);
-    }
-
-    public static void store(User user) {
-        StandardDAO.store(user, TABLENAME, getColumnNameValueMap(user));
     }*/
 }

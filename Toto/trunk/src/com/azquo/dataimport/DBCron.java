@@ -1,5 +1,6 @@
 package com.azquo.dataimport;
 
+import com.azquo.TypedPair;
 import com.azquo.admin.BackupService;
 import com.azquo.admin.business.Business;
 import com.azquo.admin.business.BusinessDAO;
@@ -13,6 +14,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
+import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
 import javax.xml.parsers.DocumentBuilder;
@@ -328,7 +330,7 @@ public class DBCron {
         // unlike the above, before moving it I need to read it
         Map<String, String> thisFileValues = filesValues.computeIfAbsent(fileKey, t -> new HashMap<>());
         Document workbookXML = builder.parse(path.toFile());
-        //workbookXML.getDocumentElement().normalize(); // probably fine on smaller XML, don't want to do on the big stuff
+        //workbookXML.getDocumentElement().normalize(); // probably fine on smaller XML, don't want to do on the big stuff - note I'd commented this but not sure why on this small XML. Leave for the mo as it's working but the tracking stuff needs it
         Element documentElement = workbookXML.getDocumentElement();
         if (rootDocumentName != null) { // when loading non brokasure files i.e. the originals generated then don't pay attention to the root name - it might be wrong
             if (rootDocumentName.get() == null) {
@@ -357,12 +359,89 @@ public class DBCron {
         }
     }
 
-    @Scheduled(cron = "0 * * * * *")
+    @Scheduled(cron = "0 0 * * * *")
     public void extractEdBrokingTrackingData() throws Exception {
         synchronized (this) { // one at a time
             String trackingdb = SpreadsheetService.getTrackingDb();
             if (trackingdb != null){
+                List<TypedPair<String, String>> all = TrackingParser.findAll();
+                // I don't think I can use the other XMl code, too different
+                DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+                final DocumentBuilder builder = factory.newDocumentBuilder();
+                Map<String, Map<String, String>> premiumsFilesValues = new HashMap<>();
+                Map<String, Map<String, String>> claimsFilesValues = new HashMap<>();
+                Set<String> cheadings = new HashSet<>();
+                Set<String> pheadings = new HashSet<>();
+                for (TypedPair<String, String> tp : all){
+                    Document xml = builder.parse(new InputSource(new StringReader(tp.getSecond())));
+                    xml.normalizeDocument();
+                    Map<String, String> thisFileValues = new HashMap<>();
+                    Element documentElement = xml.getDocumentElement();
+                    boolean claims = true;
+                    for (int index = 0; index < documentElement.getChildNodes().getLength(); index++) {
+                        Node node = documentElement.getChildNodes().item(index);
+                        if (node.hasChildNodes()) {
+                            if (node.getChildNodes().getLength() > 1){
+                                if (claims && node.getNodeName().startsWith("P1_")){
+                                    claims = false;
+                                }
+                                for (int index1 = 0; index1 < node.getChildNodes().getLength(); index1++) {
+                                    Node node1 = node.getChildNodes().item(index1);
+                                    if (!node1.getNodeName().equalsIgnoreCase("#text") && node1.getFirstChild() != null){
+                                        thisFileValues.put(node.getNodeName() + "-" + node1.getNodeName(), node1.getFirstChild().getNodeValue().replace("\n", ""));
+                                    }
+                                }
+                            } else {
+                                thisFileValues.put(node.getNodeName(), node.getFirstChild().getNodeValue().replace("\n", ""));
+                            }
+                        }
+                        if (claims){
+                            claimsFilesValues.put(tp.getFirst(), thisFileValues);
+                            cheadings.addAll(thisFileValues.keySet());
+                        } else {
+                            premiumsFilesValues.put(tp.getFirst(), thisFileValues);
+                            pheadings.addAll(thisFileValues.keySet());
+                        }
+                    }
+//                    System.out.println("key " + tp.getFirst());
+//                    System.out.println("xml " + tp.getSecond());
 
+                }
+                Path tagged = Paths.get(SpreadsheetService.getHomeDir() + "/temp/tagged");
+                String csvFileName = System.currentTimeMillis() + "tracking (importtemplate=Tracking;importversion=Claims).tsv";
+                BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(tagged.resolve(csvFileName).toFile()));
+                bufferedWriter.write("TrackMessKey\t");
+                for (String heading : cheadings) {
+                    bufferedWriter.write(heading + "\t");
+                }
+                bufferedWriter.newLine();
+                for (String key  : claimsFilesValues.keySet()) {
+                    Map<String, String> lineValues = claimsFilesValues.get(key);
+                    bufferedWriter.write(key + "\t");
+                    for (String heading : cheadings) {
+                        String value = lineValues.get(heading);
+                        bufferedWriter.write((value != null ? value : "") + "\t");
+                    }
+                    bufferedWriter.newLine();
+                }
+                bufferedWriter.close();
+                csvFileName = System.currentTimeMillis() + "tracking (importtemplate=Tracking;importversion=Premium).tsv";
+                bufferedWriter = new BufferedWriter(new FileWriter(tagged.resolve(csvFileName).toFile()));
+                bufferedWriter.write("TrackMessKey\t");
+                for (String heading : pheadings) {
+                    bufferedWriter.write(heading + "\t");
+                }
+                bufferedWriter.newLine();
+                for (String key  : premiumsFilesValues.keySet()) {
+                    Map<String, String> lineValues = premiumsFilesValues.get(key);
+                    bufferedWriter.write(key + "\t");
+                    for (String heading : pheadings) {
+                        String value = lineValues.get(heading);
+                        bufferedWriter.write((value != null ? value : "") + "\t");
+                    }
+                    bufferedWriter.newLine();
+                }
+                bufferedWriter.close();
             }
         }
     }

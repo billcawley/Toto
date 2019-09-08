@@ -91,7 +91,7 @@ public class SpreadsheetService {
     // if XML is scanned which db to put it into
     private static final String XMLSCANDB = "xmlscandb";
 
-    private static final String TRACKINGDB = "traackingdb";
+    private static final String TRACKINGDB = "trackingdb";
 
     private static String getProperty(String key) {
         if (properties.get(key) == null) {

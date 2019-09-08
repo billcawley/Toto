@@ -1,3 +1,17 @@
+08-08-19
+
+07-08-19
+
+Import validation feedback can now look up by a line number rather than value
+
+Tidying, sending xml requires "Y" not just something in the cell
+
+Only list states with a length of 2 characters. (found states called '1' and '.99999999')
+
+With the new 'scale' function (to handle lookups such as FX or underwriter percentage involvement)
+
+Reimplemented filterby, "as" now works properly
+
 03-08-19
 
 Executes can dump debugging info if required
