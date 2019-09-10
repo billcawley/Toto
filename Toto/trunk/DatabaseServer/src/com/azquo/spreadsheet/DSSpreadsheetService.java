@@ -13,9 +13,9 @@ import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
 import com.azquo.spreadsheet.transport.RegionOptions;
 import com.azquo.spreadsheet.transport.UploadedFile;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
-import org.apache.log4j.Logger;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 /*
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
@@ -27,11 +27,11 @@ import java.util.*;
 
 public class DSSpreadsheetService {
 
-    private static final Logger logger = Logger.getLogger(DSSpreadsheetService.class);
+//    private static final Logger logger = Logger.getLogger(DSSpreadsheetService.class);
 
     // should be called before each report request
 
-    public static void clearLog(DatabaseAccessToken databaseAccessToken) throws Exception {
+    public static void clearLog(DatabaseAccessToken databaseAccessToken) {
         AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken).clearUserLog();
     }
 
@@ -78,11 +78,13 @@ public class DSSpreadsheetService {
                 for (DataRegionHeading dataRegionHeading : sourceCell.getColumnHeadings()) {
                     if (dataRegionHeading == null || ".".equals(dataRegionHeading.getAttribute())) {
                         ignored = true;
+                        break;
                     }
                 }
                 for (DataRegionHeading dataRegionHeading : sourceCell.getRowHeadings()) {
                     if (dataRegionHeading == null || ".".equals(dataRegionHeading.getAttribute())) {
                         ignored = true;
+                        break;
                     }
                 }
                 if (sourceCell.isSelected()) {
@@ -190,9 +192,9 @@ public class DSSpreadsheetService {
         String fileName = "temp_" + user;
         File temp = File.createTempFile(fileName + ".csv", "csv");
         String tempPath = temp.getPath();
-        BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(temp), "UTF-8"));
+        BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(temp), StandardCharsets.UTF_8));
         StringBuffer sb = new StringBuffer();
-        List<String> colHeadings = null;
+        List<String> colHeadings;
         boolean transpose = false;
         //new behaviour.  If the saved region has row headings but no column headings, then transpose
         if (cellsAndHeadingsForDisplay.getColumnHeadings().size()==0){
@@ -229,7 +231,7 @@ public class DSSpreadsheetService {
                 // use string if we have it,otherwise double if it's not 0 or explicitly changed (0 allowed if manually entered). Otherwise blank.
                 // this WAS only checking when there was a new string value being added - tripped up by formual calculations having new doubles but not new strings
                 String val = (cellForDisplay.getNewStringValue() != null && cellForDisplay.getNewStringValue().length() > 0) ? cellForDisplay.getNewStringValue() : cellForDisplay.getNewDoubleValue() != 0 ? cellForDisplay.getNewDoubleValue() + "" : "";
-                //for the moment we're passsing on cells that have not been entered as blanks which are ignored in the importer - this does not leave space for deleting values or attributes
+                //for the moment we're passing on cells that have not been entered as blanks which are ignored in the importer - this does not leave space for deleting values or attributes
                 if (val.length() > 0) {
                     blankLine = false;
                     sb.append(val); // no point appending it if it's not there!
@@ -262,7 +264,7 @@ public class DSSpreadsheetService {
         azquoMemoryDBConnection.persist();
     }
 
-    public static void unlockData(DatabaseAccessToken databaseAccessToken) throws Exception {
+    public static void unlockData(DatabaseAccessToken databaseAccessToken) {
         AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
         azquoMemoryDBConnection.getAzquoMemoryDB().removeValuesLockForUser(databaseAccessToken.getUserId());
     }
@@ -289,7 +291,8 @@ public class DSSpreadsheetService {
             }
         }
         int numberOfValuesModified = 0;
-        String redundantNames = "";
+        // EFC commented on WFC advice - before uncommenting need to understand how it is used - it might break the error checking on line 320
+        //        String redundantNames = null;
         //check for any set to be cleared - WFC logic - EFC doesn't own possible problems from this at the moment
         checkClear(azquoMemoryDBConnection, cellsAndHeadingsForDisplay.getColumnHeadings());
         checkClear(azquoMemoryDBConnection, cellsAndHeadingsForDisplay.getRowHeadings());
@@ -307,7 +310,7 @@ public class DSSpreadsheetService {
                 return "true " + numberOfValuesModified;
             }
             // check we're not getting cellsAndHeadingsForDisplay.getTimeStamp() = 0 here, it should only happen due tio ad hoc which should have returned by now . . .
-            redundantNames = checkEditable(azquoMemoryDBConnection, cellsAndHeadingsForDisplay);
+            //redundantNames = checkEditable(azquoMemoryDBConnection, cellsAndHeadingsForDisplay);
             boolean changed = false;
             String toReturn = "";
             // new logic - get this out here and use it for the cells. Means the region is re resolved regardless but we're getting bottlenecks resolving every cell in this
@@ -316,7 +319,7 @@ public class DSSpreadsheetService {
                     , cellsAndHeadingsForDisplay.getOptions(), user, 0, true);
             if (modifiedInTheMeanTime) { // then we need to compare data as sent to what it is now before trying to save - assuming this is not relevant to the import style above
                 List<List<CellForDisplay>> sentData = cellsAndHeadingsForDisplay.getData();
-                if (currentData.size() != sentData.size()&& redundantNames==null) {// overlapping editable ranges change size if there are redundant names
+                if (currentData.size() != sentData.size()/*&& redundantNames==null*/) {// overlapping editable ranges change size if there are redundant names
                     toReturn = "Data region " + cellsAndHeadingsForDisplay.getRegion() + " has changed size!";
                     changed = true;
                 } else {
@@ -553,24 +556,23 @@ public class DSSpreadsheetService {
         // clear the caches after, if we do before then some will be recreated as part of saving.
         // Is this a bit overkill given that it should clear as it goes? I suppose there's the query and count caches, plus parents of the changed names
         azquoMemoryDBConnection.getAzquoMemoryDB().clearCaches();
-        if (redundantNames == null) return "true " + numberOfValuesModified;
-        return "true " + numberOfValuesModified + " " + redundantNames;
+        /*if (redundantNames == null) */return "true " + numberOfValuesModified;
+        //return "true " + numberOfValuesModified + " " + redundantNames;
     }
 
-    static boolean isEqual(String string1, String string2){
+    private static boolean isEqual(String string1, String string2){
         if (string1.equals(string2)) return true;
         //deal with minor calculation differences
         try {
             double diff = Double.parseDouble(string1) - Double.parseDouble(string2);
             if ( diff < .000000001 && diff > -.000000001) return true;
-        }catch(Exception e){
-
+        }catch(Exception ignored){
         }
         return false;
     }
 
 
-    private static String checkEditable(AzquoMemoryDBConnection azquoMemoryDBConnection, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay) throws Exception {
+    /*private static String checkEditable(AzquoMemoryDBConnection azquoMemoryDBConnection, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay) throws Exception {
         //EDITABLE currently only checking top left cell of row headings
         String topLeftRowHeading = cellsAndHeadingsForDisplay.getRowHeadingsSource().get(0).get(0);
         if (!topLeftRowHeading.toLowerCase().endsWith(StringLiterals.EDITABLE)) {
@@ -657,16 +659,13 @@ public class DSSpreadsheetService {
         }
 
         return "";
-    }
+    }*/
 
     private static boolean compareCells(String a1, String a2) {
         if (a1.equals(a2)) {
             return true;
         }
-        if (DateUtils.isADate(a1) != null && DateUtils.isADate(a1) == DateUtils.isADate(a2)) {
-            return true;
-        }
-        return false;
+        return DateUtils.isADate(a1) != null && DateUtils.isADate(a1) == DateUtils.isADate(a2);
     }
 
     public static List<String> nameAutoComplete(DatabaseAccessToken databaseAccessToken, String s, int limit) throws Exception {
