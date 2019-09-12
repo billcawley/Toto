@@ -10,6 +10,7 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,16 +29,29 @@ public class TrackingParser {
     // column names except ID which is in the superclass
 
     private static final String TRACKMESSKEY = "TrackMessKey";
-    private static final String TMXMLDATA = "TMXMLData";
+    public static final String TMXMLDATA = "TMXMLData";
+    // extra fields Tony added in
+    private static final String TMTRACKACT = "TMTrackAct";
+    private static final String TMVARCAT3 = "TMVarCat3";
+    private static final String TMVARCAT4 = "TMVarCat4";
+    private static final String TMAPPKEY = "TMAppKey";
 
-    // maybe move from TypedPair but this is a bit of a hack so maybe neither here nor there . . .
-    private static final class PairRowMapper implements RowMapper<TypedPair<String, String>> {
+
+    private static final PairRowMapper userRowMapper = new PairRowMapper();
+
+    // I know the Map is a bit hacky but it fine for this more simple use. See little help in rolling another object
+    private static final class PairRowMapper implements RowMapper<Map<String, String>> {
         @Override
-        public TypedPair<String, String> mapRow(final ResultSet rs, final int row) throws SQLException {
+        public Map<String, String> mapRow(final ResultSet rs, final int row) throws SQLException {
             try {
-                return new TypedPair<>(rs.getString(TRACKMESSKEY)
-                        , rs.getString(TMXMLDATA)
-                );
+                Map<String, String> toReturn = new HashMap<>();
+                toReturn.put(TRACKMESSKEY, rs.getString(TRACKMESSKEY));
+                toReturn.put(TMXMLDATA, rs.getString(TMXMLDATA));
+                toReturn.put(TMTRACKACT, rs.getString(TMTRACKACT));
+                toReturn.put(TMVARCAT3, rs.getString(TMVARCAT3));
+                toReturn.put(TMVARCAT4, rs.getString(TMVARCAT4));
+                toReturn.put(TMAPPKEY, rs.getString(TMAPPKEY));
+                return toReturn;
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;
@@ -45,10 +59,8 @@ public class TrackingParser {
         }
     }
 
-    private static final PairRowMapper userRowMapper = new PairRowMapper();
-
     // really to check if a report should be zapped
-    public static List<TypedPair<String, String>> findAll() {
+    public static List<Map<String, String>> findAll() {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
 //        namedParams.addValue(REPORTID, reportId);
         final String SQL_SELECT = "Select `" + SpreadsheetService.getTrackingDb() + "`.`" + TABLENAME + "`.* from `" + SpreadsheetService.getTrackingDb() + "`.`" + TABLENAME + "`";

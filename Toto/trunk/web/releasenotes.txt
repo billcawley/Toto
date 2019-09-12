@@ -1,5 +1,9 @@
 08-08-19
 
+Initial version of tracking database code for Ed Broking
+
+Allow zapping of names starting with a string - also allow deletion of all data from a specific upload.
+
 07-08-19
 
 Import validation feedback can now look up by a line number rather than value

@@ -563,6 +563,11 @@ public class ZKComposer extends SelectorComposer<Component> {
                         selectedForLog.append(listItem.getLabel() + " ");
                     }
                     loggedInUser.userLog("Multi select : " + selectionName + "," + selectedForLog.toString());
+                    // new logic - set the first as the vanilla choice
+                    if (!selectedItems.isEmpty()){
+                        Listitem first = selectedItems.iterator().next();
+                        SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), selectionName, first.getLabel());
+                    }
                     RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).createFilterSet(loggedInUser.getDataAccessToken(), selectionName, loggedInUser.getUser().getEmail(), childIds);
                     filterPopup.close();
                 });
@@ -580,6 +585,11 @@ public class ZKComposer extends SelectorComposer<Component> {
                         selectedForLog.append(listItem.getLabel() + " ");
                     }
                     loggedInUser.userLog("Multi select : " + selectionName + "," + selectedForLog.toString());
+                    // new logic - set the first as the vanilla choice
+                    if (!selectedItems.isEmpty()){
+                        Listitem first = selectedItems.iterator().next();
+                        SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), selectionName, first.getLabel());
+                    }
                     RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).createFilterSet(loggedInUser.getDataAccessToken(), selectionName, loggedInUser.getUser().getEmail(), childIds);
                     filterPopup.close();
                     try {
