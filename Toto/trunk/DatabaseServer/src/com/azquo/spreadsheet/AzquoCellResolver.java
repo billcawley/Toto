@@ -444,8 +444,10 @@ public class AzquoCellResolver {
 
 
                         }
-                        doubleValue = ValueService.findValueForNames(connection, DataRegionHeadingService.namesFromDataRegionHeadings(headingsForThisCell),
-                                                                                DataRegionHeadingService.calcsFromDataRegionHeadings(headingsForThisCell),  locked, valuesHook, languages, function, exactName, nameComboValueCache, debugInfo);
+                        if (headingsForThisCell.size()>1){
+                            doubleValue = ValueService.findValueForNames(connection, DataRegionHeadingService.namesFromDataRegionHeadings(headingsForThisCell),
+                                    DataRegionHeadingService.calcsFromDataRegionHeadings(headingsForThisCell),  locked, valuesHook, languages, function, exactName, nameComboValueCache, debugInfo);
+                        }
                         if (doubleValue!=0 && scaleHeadings.size() > 0){
                             double scaleDouble = 0;
                             List<Value> newValues = new ArrayList<>();
