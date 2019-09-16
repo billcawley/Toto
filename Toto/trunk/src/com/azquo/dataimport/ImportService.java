@@ -856,6 +856,17 @@ public final class ImportService {
                                 headingsNoFileHeadingsWithInterimLookup.add(new HeadingWithInterimLookup(azquoHeadingsAsString.toString(), standardHeadingsColumn.get(0)));
                             }
                         }
+                        if (uploadedFile.getTemplateParameter("category lookups")!=null){
+                            //add lookups for the categorisation statements
+                            String[] catLookups = uploadedFile.getTemplateParameter("category lookups").split(";");
+                            for (String catLookup:catLookups){
+                                String[] vals = catLookup.split("=");
+                                String newHeading = vals[0].trim();
+                                HeadingWithInterimLookup headingWithInterimLookup = new HeadingWithInterimLookup(newHeading + ";composition " + vals[1], newHeading);
+                                 headingsNoFileHeadingsWithInterimLookup.add(headingWithInterimLookup);
+
+                            }
+                        }
                         uploadedFile.setHeadingsByFileHeadingsWithInterimLookup(headingsByFileHeadingsWithInterimLookup);
                         uploadedFile.setHeadingsNoFileHeadingsWithInterimLookup(headingsNoFileHeadingsWithInterimLookup);
                         uploadedFile.setTopHeadings(topHeadings);
@@ -1031,8 +1042,16 @@ public final class ImportService {
         }
         return uploadedFile;
     }
+    private static HeadingWithInterimLookup findTheHeading(String headingToFind, Map<List<String>,HeadingWithInterimLookup> mapping){
+         for (List<String> headings:mapping.keySet()){
+            if (headings.size()==1 && headings.get(0).equalsIgnoreCase(headingToFind)){
+                return mapping.get(headings);
+            }
+        }
 
-    // in this context the custom headings range is for when there are multiple versions of an importer based off a master sheet -
+        return null;
+    }
+   // in this context the custom headings range is for when there are multiple versions of an importer based off a master sheet -
     // e.g. the big Ed Broking import sheet for Risk which will have sub sheets - these sheets will have a named range,
 
     private static List<List<String>> sheetInfo(ImportTemplateData importTemplateData, String toTest){
