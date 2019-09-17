@@ -237,7 +237,8 @@ public class AzquoCellResolver {
                  }
 
             } else if (expressionFunctionHeadings.get(0).getFunction() == DataRegionHeading.FUNCTION.NAMECOUNT) { // a straight set but with [ROWHEADING] as part of the criteria
-                Set<Name> namesToCount = HashObjSets.newMutableSet(); // I think this will be faster for purpose
+                Set<Name
+                        > namesToCount = HashObjSets.newMutableSet(); // I think this will be faster for purpose
                 NameQueryParser.parseQuery(connection, expressions.get(0), languages, namesToCount, false);
                 doubleValue = namesToCount.size();
                 stringValue = doubleValue + "";
@@ -246,22 +247,36 @@ public class AzquoCellResolver {
                 String[] twoSets = expressionFunctionHeadings.get(0).getDescription().split(","); // we assume this will give an array of two, I guess see if this is a problem
                 Set<Name> leftSet = HashObjSets.newMutableSet();
                 Set<Name> rightSet = HashObjSets.newMutableSet();
+                Name rowHeading = null;
                 NameQueryParser.parseQuery(connection, twoSets[0], languages, leftSet, false);
-                NameQueryParser.parseQuery(connection, twoSets[1], languages, rightSet, false);
+                if (twoSets[1].equalsIgnoreCase("[ROWHEADING]")){
+                    rowHeading =rowHeadings.get(0).getName();
+                }else{
+                    NameQueryParser.parseQuery(connection, twoSets[1], languages, rightSet, false);
+                }
                 // ok I have the two sets, I got rid of total name count (which featured caching), I'm going to do the nuts and bolts here, need to think a little
                 Set<Name> alreadyTested = HashObjSets.newMutableSet();
                 // ok this should be like the inside of totalSetIntersectionCount but dealing with left set as the first parameter not a name.
                 // Notable that the left set is expanded out to try intersecting with the right set which is "as is", this needs testing
                 int count = 0;
-                for (Name child : leftSet) {
-                    if (rightSet.contains(child)) {
-                        count++;
+                if (rowHeading!=null){
+                       for (Name child:leftSet){
+                        if (child.getChildren().contains(rowHeading)){
+                            count++;
+                        }
                     }
-                }
-                if (count == 0) { // I think we only go ahead if there was no intersection at the top level - need to discuss with WFC
+
+                }else {
                     for (Name child : leftSet) {
-                        if (child.hasChildren()) {
-                            count += totalSetIntersectionCount(child, rightSet, alreadyTested, 0);
+                        if (rightSet.contains(child)) {
+                            count++;
+                        }
+                    }
+                    if (count == 0) { // I think we only go ahead if there was no intersection at the top level - need to discuss with WFC
+                        for (Name child : leftSet) {
+                            if (child.hasChildren()) {
+                                count += totalSetIntersectionCount(child, rightSet, alreadyTested, 0);
+                            }
                         }
                     }
                 }
