@@ -228,13 +228,15 @@ public class ZKSpreadsheetCommandController {
                         }
                         int fileCount = ReportExecutor.generateXMLFilesAndSupportingReports(loggedInUser,ss.getSelectedSheet(), destdir);
                         // it was building a zip, compress and set for download
-                        if (zipMode){
-                            ZipUtil.unexplode(destdir.toFile());
-                            Filedownload.save(new AMedia(ss.getSelectedSheetName() + "xml.zip", "zip", "application/zip", destdir.toFile(), true));
-                            Clients.clearBusy();
-                        } else {
-                            Clients.clearBusy();
-                            Clients.alert(fileCount + " files created in " + SpreadsheetService.getXMLDestinationDir());
+                        if (fileCount> 0) {
+                            if (zipMode) {
+                                ZipUtil.unexplode(destdir.toFile());
+                                Filedownload.save(new AMedia(ss.getSelectedSheetName() + "xml.zip", "zip", "application/zip", destdir.toFile(), true));
+                                Clients.clearBusy();
+                            } else {
+                                Clients.clearBusy();
+                                Clients.alert(fileCount + " files created in " + SpreadsheetService.getXMLDestinationDir());
+                            }
                         }
                     }
 
