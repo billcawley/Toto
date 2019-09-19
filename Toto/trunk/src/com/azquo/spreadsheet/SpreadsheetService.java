@@ -187,6 +187,7 @@ public class SpreadsheetService {
         if (choiceName.startsWith("az_")){
             choiceName = choiceName.substring(3);
         }
+        choiceName = choiceName.replace(" ","");
         UserChoice userChoice = UserChoiceDAO.findForUserIdAndChoice(userId, choiceName);
         if (choiceValue != null && choiceValue.length() > 0) {
             if (userChoice == null) {
