@@ -164,10 +164,16 @@ public class BatchImporter implements Callable<Void> {
                 return false;
             }
             ImportCellWithHeading cell = lineToLoad.get(fieldNo);
+            String conditionValue = null;
             if (cell.needsResolving){
-                resolveComposition(azquoMemoryDBConnection, cell, cell.getImmutableImportHeading().compositionPattern, lineToLoad, compositeIndexResolver, namesFoundCache, attributeNames);
+                conditionValue = getCompositeValue(azquoMemoryDBConnection, cell, cell.getImmutableImportHeading().compositionPattern, lineToLoad, compositeIndexResolver, namesFoundCache, attributeNames);
+            }else{
+                conditionValue = cell.getLineValue();
             }
-            constants.add(lineToLoad.get(fieldNo).getLineValue());
+            if (conditionValue==null){
+                return false;
+            }
+            constants.add(conditionValue);
             newCondition.append(condition.substring(lastPos, m.start()) + CONSTANTMARKER + ("" + (count++ + 100)).substring(1));
             lastPos = m.end();
         }
@@ -452,13 +458,11 @@ public class BatchImporter implements Callable<Void> {
         if (conditionTerm == null)
             return false;
         int conditionPos = condition.indexOf(conditionTerm);
-        if (!resolveComposition(azquoMemoryDBConnection, cell, condition.substring(0, conditionPos).trim(), cells, compositeIndexResolver, namesFoundCache, attributeNames))
-            return false;
+        String leftTerm = getCompositeValue(azquoMemoryDBConnection, cell, condition.substring(0, conditionPos).trim(), cells, compositeIndexResolver, namesFoundCache, attributeNames);
+        if (leftTerm==null)    return false;
         // as mentioned above - composition jams the result into line value so need to get it out of there
-        String leftTerm = cell.getLineValue();
-        if (!resolveComposition(azquoMemoryDBConnection, cell, condition.substring(conditionPos + conditionTerm.length()).trim(), cells, compositeIndexResolver, namesFoundCache, attributeNames))
-            return false;
-        String rightTerm = cell.getLineValue();
+        String rightTerm = getCompositeValue(azquoMemoryDBConnection, cell, condition.substring(conditionPos + conditionTerm.length()).trim(), cells, compositeIndexResolver, namesFoundCache, attributeNames);
+        if (rightTerm==null)    return false;
         // string compare only currently, could probably detect numbers and adjust accordingly
         if ((conditionTerm.contains("=") && leftTerm.equals(rightTerm)) || (conditionTerm.contains("<") && leftTerm.compareTo(rightTerm) < 0) || (conditionTerm.contains(">") && leftTerm.compareTo(rightTerm) > 0)) {
             return resolveComposition(azquoMemoryDBConnection, cell, trueTerm, cells, compositeIndexResolver, namesFoundCache, attributeNames);
@@ -476,6 +480,21 @@ public class BatchImporter implements Callable<Void> {
     }
 
     private static boolean resolveComposition(AzquoMemoryDBConnection azquoMemoryDBConnection, ImportCellWithHeading cell, String compositionPattern, List<ImportCellWithHeading> cells, CompositeIndexResolver compositeIndexResolver, Map<String, Name> namesFoundCache, List<String> attributeNames) throws Exception {
+        String value = getCompositeValue(azquoMemoryDBConnection, cell, compositionPattern,cells, compositeIndexResolver,  namesFoundCache, attributeNames);
+        if (value==null){
+            return false;
+        }
+        cell.setLineValue(value);
+        if (cell.getImmutableImportHeading().lineNameRequired) {
+            optionalIncludeInParents(azquoMemoryDBConnection, cell, namesFoundCache, attributeNames);
+        }
+        cell.needsResolving = false;
+        checkDate(cell);
+        return true;
+    }
+
+
+    private static String getCompositeValue(AzquoMemoryDBConnection azquoMemoryDBConnection, ImportCellWithHeading cell, String compositionPattern, List<ImportCellWithHeading> cells, CompositeIndexResolver compositeIndexResolver, Map<String, Name> namesFoundCache, List<String> attributeNames) throws Exception {
         int headingMarker = compositionPattern.indexOf("`");
         while (headingMarker >= 0) {
             boolean doubleQuotes = false;
@@ -548,7 +567,7 @@ public class BatchImporter implements Callable<Void> {
                             optionalIncludeInParents(azquoMemoryDBConnection, compCell, namesFoundCache, attributeNames);
                         }
                         if (compCell.getLineNames() == null) {
-                            return false;
+                            return null;
                         }
                         sourceVal = compCell.getLineNames().iterator().next().getAttribute(nameAttribute);
                     } else { // normal
@@ -587,10 +606,10 @@ public class BatchImporter implements Callable<Void> {
                         if (doubleQuotes) headingMarker++;
                     } else {
                         // can't get the value . . .
-                        return false;
+                        return null;
                     }
                 } else { // couldn't find the cell or the required cell is already resolved, the latter resulting in false is the "no more work to do" signal
-                    return false;
+                    return null;
                 }
             }
             // try to find the start of the next column referenced
@@ -636,13 +655,7 @@ public class BatchImporter implements Callable<Void> {
         if (compositionPattern.startsWith("\"") && compositionPattern.endsWith("\"")) {
             compositionPattern = compositionPattern.substring(1, compositionPattern.length() - 1);
         }
-        cell.setLineValue(compositionPattern);
-        if (cell.getImmutableImportHeading().lineNameRequired) {
-            optionalIncludeInParents(azquoMemoryDBConnection, cell, namesFoundCache, attributeNames);
-        }
-        cell.needsResolving = false;
-        checkDate(cell);
-        return true; // if composition did result in the line value being changed we should run the loop again in case dependencies mean the results will change again
+         return compositionPattern; // if composition did result in the line value being changed we should run the loop again in case dependencies mean the results will change again
     }
 
 
@@ -765,9 +778,10 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
                 found = true;
             }
         }
-        if (!found) {
-            throw new Exception("lookup for " + cell.getImmutableImportHeading().heading + " not found");
-        }
+        //error will be spotted because the cell value will never be set - no need for an exception
+        //if (!found) {
+        //    throw new Exception("lookup for " + cell.getImmutableImportHeading().heading + " not found");
+        //}
         return false;
     }
 
