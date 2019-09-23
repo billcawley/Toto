@@ -169,11 +169,13 @@ public class ReportExecutor {
                         String choiceQuery = trimmedLine.substring(inPos + 4).trim();
                         loopsLog.append(choiceName).append(" : ").append(choiceQuery).append("\r\n");
                         final List<String> dropdownListForQuery = CommonReportUtils.getDropdownListForQuery(loggedInUser, choiceQuery, loggedInUser.getUser().getEmail(), false, provenanceId);
-                        for (String choiceValue : dropdownListForQuery) { // run the "for" :)
-                            RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).addToLog(loggedInUser.getDataAccessToken(), choiceName + " : " + choiceValue);
-                            SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choiceName.replace("`", ""), choiceValue);
-                            loopsLog.append(choiceValue).append("\r\n");
-                            toReturn = executeCommands(loggedInUser, subCommands, exportPath, loopsLog, systemData2DArrays, count, provenanceId);
+                        if (dropdownListForQuery.size() > 0 && !dropdownListForQuery.get(0).startsWith("Error :")) {
+                            for (String choiceValue : dropdownListForQuery) { // run the "for" :)
+                                RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).addToLog(loggedInUser.getDataAccessToken(), choiceName + " : " + choiceValue);
+                                SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choiceName.replace("`", ""), choiceValue);
+                                loopsLog.append(choiceValue).append("\r\n");
+                                toReturn = executeCommands(loggedInUser, subCommands, exportPath, loopsLog, systemData2DArrays, count, provenanceId);
+                            }
                         }
                     }
                     // if not a for each I guess we just execute? Will check for "do"
@@ -473,12 +475,16 @@ public class ReportExecutor {
 
 
                     } else {
-                            String result = CommonReportUtils.resolveQuery(loggedInUser, trimmedLine.substring(4), null);
-                            RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).addToLog(loggedInUser.getDataAccessToken(), result);
-                            if (result.toLowerCase().startsWith("error")) {
-                                throw (new Exception(result));
+
+                            String result = null;
+                            try{
+                                result = CommonReportUtils.resolveQuery(loggedInUser, trimmedLine.substring(4), null);
+                            }catch (Exception e) {
+                                return new TypedPair<String, Double>(result + "Not found:" + trimmedLine.substring(4), 0.0);
                             }
-                    }
+
+                            RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).addToLog(loggedInUser.getDataAccessToken(), result);
+                     }
                 } else if (trimmedLine.toLowerCase().startsWith("if ")) {
                     String result = CommonReportUtils.resolveQuery(loggedInUser, trimmedLine.substring(4), null);
                     if (result.toLowerCase().startsWith("error")) {
