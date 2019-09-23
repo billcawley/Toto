@@ -233,6 +233,7 @@ class NameStackOperators {
         if (!global && attributeNames.size() > 1) { // just checking we have have the user added to the list
             String userEmail = attributeNames.get(0);
             if (totalName.getAttribute(userEmail) == null) { // there is no specific set for this user yet, need to do something
+                azquoMemoryDBConnection.setProvenance(userEmail, "set assigned","", "query");
                 Name userSpecificSet = new Name(azquoMemoryDBConnection.getAzquoMemoryDB(), azquoMemoryDBConnection.getProvenance()); // a basic copy of the set
                 //userSpecificSet.setAttributeWillBePersisted(Constants.DEFAULT_DISPLAY_NAME, userEmail + totalName.getDefaultDisplayName()); // GOing to set the default display name as bits of the suystem really don't like it not being there
                 userSpecificSet.setAttributeWillBePersisted(userEmail, totalName.getDefaultDisplayName(), azquoMemoryDBConnection); // set the name (usually default_display_name) but for the "user email" attribute

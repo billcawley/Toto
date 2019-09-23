@@ -272,7 +272,7 @@ public class ExcelController {
                         region, userRegionOptions, Integer.parseInt(regionrow), Integer.parseInt(regioncol), 1000);
                 if (provenanceDetailsForDisplay.getAuditForDisplayList() != null && !provenanceDetailsForDisplay.getAuditForDisplayList().isEmpty()) {
                     String toReturn = jacksonMapper.writeValueAsString(provenanceDetailsForDisplay);
-                    System.out.println(toReturn);
+                    //System.out.println(toReturn);
                     return toReturn;
                 }
                 return (jsonError("no details"));
@@ -832,7 +832,7 @@ public class ExcelController {
                     reportName = OnlineReportDAO.findById(reportId).getReportName();
                     loggedInUser.setContext(context);
                     result = SpreadsheetService.saveData(loggedInUser, reportId, reportName, excelRegionModification.sheet, excelRegionModification.region, false);
-                    // so here's the followon execute which
+                    // so here's the followon execute
                     OnlineReport or = OnlineReportDAO.findById(loggedInUser.getUser().getReportId());
                     String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath +
                             loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + or.getFilenameForDisk();

@@ -1,7 +1,6 @@
 package com.azquo.memorydb;
 
 import com.azquo.memorydb.core.*;
-import com.azquo.StringUtils;
 //import org.apache.log4j.Logger;
 
 import java.time.LocalDateTime;
@@ -33,7 +32,13 @@ public class AzquoMemoryDBConnection {
 
     private volatile boolean unusedProvenance = false;
 
-
+    // bears an explanation. When dealing with filter (multi select) sets then provenance *might* be required. So allow suggestions here if provenance is null when required
+    // if I just plain set provenance it might make a fair few redundant provenances and trying to check in findOrCreateNameInParent isn't practical either
+    // as it's too low level - that function is used a lot when importing. Hence suggestions if required.
+    private String provenanceUserSuggestion = "unknown";
+    private String provenanceMethodSuggestion = "";
+    private String provenanceNameSuggestion = "";
+    private String provenanceContextSuggestion = "";
     // A bit involved but it makes this object immutable, think that's worth it - note
     // new logic here : we'll say that top test that have no permissions are added as allowed - if someone has added a department for example they should still have access to all dates
 
@@ -108,8 +113,9 @@ public class AzquoMemoryDBConnection {
 
     public Provenance getProvenance() {
         if (provenance == null) {
+            // best put this here to stop NPE but this really shouldn't happen.
             try {
-                provenance = new Provenance(getAzquoMemoryDB(), "unknown provenance", "", "", "-");
+                provenance = new Provenance(getAzquoMemoryDB(), provenanceUserSuggestion, provenanceMethodSuggestion, provenanceNameSuggestion, provenanceContextSuggestion);
             } catch (Exception ignored) {
             }
         }
@@ -119,6 +125,13 @@ public class AzquoMemoryDBConnection {
 
     public boolean isUnusedProvenance() {
         return unusedProvenance;
+    }
+
+    public void suggestProvenance(final String user, final String method, String name, final String context) throws Exception {
+        provenanceUserSuggestion = user;
+        provenanceMethodSuggestion = method;
+        provenanceNameSuggestion = name;
+        provenanceContextSuggestion = context;
     }
 
     public void setProvenance(final String user, final String method, String name, final String context) throws Exception {

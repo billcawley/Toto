@@ -27,6 +27,7 @@ public class UserChoiceService {
         final AzquoMemoryDBConnection connectionFromAccessToken = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
         List<String> justUserNameLanguages = new ArrayList<>();
         justUserNameLanguages.add(userName);
+        connectionFromAccessToken.suggestProvenance(userName, "multi select", "", "");
         Name filterSets = NameService.findOrCreateNameInParent(connectionFromAccessToken, "Filter sets", null, false); // no languages - typically the set will exist
         Name set = NameService.findOrCreateNameInParent(connectionFromAccessToken, setName, filterSets, true, justUserNameLanguages);//must be a local name in 'Filter sets' and be for this user
         set.setAttributeWillBePersisted(StringLiterals.DEFAULT_DISPLAY_NAME, null, connectionFromAccessToken);

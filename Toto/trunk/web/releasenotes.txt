@@ -1,10 +1,26 @@
-08-08-19
+18-09-19
+
+Adjusted the function 'pathcount' to accept [ROWHEADING] as second parameter.
+
+Plugin : passable solution to edit mode problem - users are prompted. Have contacted MS for more details
+
+16-09-19
+
+More tracking columns added
+
+uses 'category lookups' to enable serial classification to work with different import templates
+
+checked that 'headingsForThisCell' has more than one element
+
+will resolve compositions if necessary when evaluating lookups
+
+08-09-19
 
 Initial version of tracking database code for Ed Broking
 
 Allow zapping of names starting with a string - also allow deletion of all data from a specific upload.
 
-07-08-19
+07-09-19
 
 Import validation feedback can now look up by a line number rather than value
 
@@ -16,7 +32,7 @@ With the new 'scale' function (to handle lookups such as FX or underwriter perce
 
 Reimplemented filterby, "as" now works properly
 
-03-08-19
+03-09-19
 
 Executes can dump debugging info if required
 
