@@ -648,6 +648,7 @@ public class PendingUploadController {
                             pu.setImportResultPath(loaded.resolve(timestamp + pu.getFileName() + "results.zip").toString());
                             pu.setProcessedByUserId(loggedInUser.getUser().getId());
                             pu.setProcessedDate(LocalDateTime.now());
+                            pu.setFileName(pu.getFileName() + " - " + "results"); // to make clear to users they'll be downloading results not the source file. See no harm in adjusting this thought perhaps some kind extra field should be used
                             PendingUploadDAO.store(pu);
                             if (loggedInUser.getUser().isAdministrator()){
                                 session.setAttribute(ManageDatabasesController.IMPORTURLSUFFIX, "?uploadreports=true#tab4"); // if actually importing will land back on the pending uploads page

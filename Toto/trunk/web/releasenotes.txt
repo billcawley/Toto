@@ -1,3 +1,15 @@
+23-09-19
+
+Plugin bug fix on Claims V5 Bordereau
+
+fixed bud on 'if' conditionals where interim values were stored in the cell
+
+checks that there are files to download before trying to do so
+
+Reduce the chances of "unknown" Provenance being set
+
+will not show an exception if a 'for each' instruction cannot find the name
+
 18-09-19
 
 Adjusted the function 'pathcount' to accept [ROWHEADING] as second parameter.
