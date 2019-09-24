@@ -45,7 +45,7 @@ public class JSTreeService {
         for (Map.Entry<String, String> attNameValue : attributes.entrySet()) {
             name.setAttributeWillBePersisted(attNameValue.getKey(), attNameValue.getValue(),azquoMemoryDBConnection);
         }
-        azquoMemoryDBConnection.persist();
+        new Thread(azquoMemoryDBConnection::persist).start();
     }
 
     private static int getTotalValues(Name name) {

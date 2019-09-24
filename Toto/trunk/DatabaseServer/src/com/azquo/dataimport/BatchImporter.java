@@ -460,7 +460,6 @@ public class BatchImporter implements Callable<Void> {
         int conditionPos = condition.indexOf(conditionTerm);
         String leftTerm = getCompositeValue(azquoMemoryDBConnection, cell, condition.substring(0, conditionPos).trim(), cells, compositeIndexResolver, namesFoundCache, attributeNames);
         if (leftTerm==null)    return false;
-        // as mentioned above - composition jams the result into line value so need to get it out of there
         String rightTerm = getCompositeValue(azquoMemoryDBConnection, cell, condition.substring(conditionPos + conditionTerm.length()).trim(), cells, compositeIndexResolver, namesFoundCache, attributeNames);
         if (rightTerm==null)    return false;
         // string compare only currently, could probably detect numbers and adjust accordingly
@@ -493,7 +492,7 @@ public class BatchImporter implements Callable<Void> {
         return true;
     }
 
-
+    // ok so resolveIf likes to use some of the composite logic but this automatically assigned the result to line value (see function resolveComposition above), hence the breakup into this function and resolveComposition
     private static String getCompositeValue(AzquoMemoryDBConnection azquoMemoryDBConnection, ImportCellWithHeading cell, String compositionPattern, List<ImportCellWithHeading> cells, CompositeIndexResolver compositeIndexResolver, Map<String, Name> namesFoundCache, List<String> attributeNames) throws Exception {
         int headingMarker = compositionPattern.indexOf("`");
         while (headingMarker >= 0) {
@@ -752,7 +751,6 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
         if (!m.find()) {
             conditionAttribute = condition;
         }
-        boolean found = false;
         Map<Name, String> nearestList = new HashMap<>();
         for (Name toTest : parentSet.getChildren()) {
             if (conditionAttribute != null) {
@@ -764,7 +762,7 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
             }
         }
 
-        if (!found && nearestList.size() > 0) {
+        if (nearestList.size() > 0) {
             Name nameFound = null;
             String highestFound = "";
             for (Name toTest : nearestList.keySet()) {
@@ -775,7 +773,6 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
             }
             if (nameFound != null) {
                 newCellNameValue(cell, nameFound);
-                found = true;
             }
         }
         //error will be spotted because the cell value will never be set - no need for an exception

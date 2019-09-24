@@ -35,7 +35,7 @@ class NameEditFunctions {
             }
             if (names != null) {
                 for (Name name : names) name.delete(azquoMemoryDBConnection);
-                azquoMemoryDBConnection.persist();
+                new Thread(azquoMemoryDBConnection::persist).start();
                 return toReturn;
             }
 
@@ -71,7 +71,7 @@ class NameEditFunctions {
                 for (Value value : toZap) {
                     value.delete();
                 }
-                azquoMemoryDBConnection.persist();
+                new Thread(azquoMemoryDBConnection::persist).start();
                 return toReturn;
             }
         }
@@ -188,7 +188,7 @@ class NameEditFunctions {
             attributeValueName.setChildrenWillBePersisted(azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNamesForAttribute(attribute, attValue),azquoMemoryDBConnection);
             toReturn.add(attributeValueName);
         }
-        azquoMemoryDBConnection.persist();
+        new Thread(azquoMemoryDBConnection::persist).start();
         return toReturn;
     }
 
@@ -291,7 +291,7 @@ class NameEditFunctions {
             }
         }
         toReturn.add(rubbishBin);
-        azquoMemoryDBConnection.persist();
+        new Thread(azquoMemoryDBConnection::persist).start();
         return toReturn;
     }
 }

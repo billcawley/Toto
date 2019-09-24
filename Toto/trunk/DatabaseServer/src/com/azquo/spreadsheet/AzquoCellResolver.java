@@ -72,9 +72,9 @@ public class AzquoCellResolver {
         boolean hasData = false;
         for (DataRegionHeading heading : rowHeadings) {
             if (heading != null && (heading.getName() != null || heading.getAttribute() != null || heading.getFunction() != null)) {
-                 hasData = true;
-           }
-
+                hasData = true;
+                break;
+            }
         }
         DataRegionHeading lastHeading =rowHeadings.get(rowHeadings.size()-1);
         if (lastHeading!=null && lastHeading.getAttribute()!=null && lastHeading.getAttribute().equals(".")){
@@ -134,7 +134,6 @@ public class AzquoCellResolver {
                         for (int colNo1 = 0; colNo1 < rowHeadings.size(); colNo1++) {
                             String fillerAll = ROWHEADING + filler + "]";
                             if (cellQuery.contains(fillerAll)) {
-                                boolean inQuotes = StringUtils.isStringInQuotes(cellQuery, fillerAll, StringLiterals.QUOTE);
                                 String desc = rowHeadings.get(colNo1).getDescription();
                                 if (rowHeadings.get(colNo1).getName() == null) {
                                      if (desc==null){
@@ -456,8 +455,6 @@ public class AzquoCellResolver {
                             doubleValue = ValueService.findValueForNames(connection, DataRegionHeadingService.namesFromDataRegionHeadings(scaleHeadings),
                                     DataRegionHeadingService.calcsFromDataRegionHeadings(scaleHeadings),  locked, scaleValuesHook, languages, null, null, null, debugInfo);
                             //using only the scaleValuesHook
-
-
                         }
                         if (headingsForThisCell.size()>1){
                             doubleValue = ValueService.findValueForNames(connection, DataRegionHeadingService.namesFromDataRegionHeadings(headingsForThisCell),
@@ -810,7 +807,7 @@ But can use a library?
     // Simple attribute summing (assuming attributes are numeric), doesn't use set intersection or name children or anything like that
     // For the moment on the initial version don't use set intersection, just look at the headings as handed to the function - will it ever need to do this?
 
-    private static String findValueForHeadings(final List<DataRegionHeading> headings, final MutableBoolean locked) throws Exception {
+    private static String findValueForHeadings(final List<DataRegionHeading> headings, final MutableBoolean locked) {
         List<Name> names = DataRegionHeadingService.namesFromDataRegionHeadings(headings);
         if (names.size() != 1) {
             locked.isTrue = true;
@@ -922,16 +919,14 @@ But can use a library?
             Collection<Name> onePermute = multiNames.get(0);
             multiNames.remove(0);
             for (Name element:onePermute){
-                List<Name> permuted = new ArrayList<Name>();
-                permuted.addAll(sharedNames);
+                List<Name> permuted = new ArrayList<>(sharedNames);
                 permuted.add(element);
                 permuteNames(result,permuted,multiNames);
             }
         }else{
             Collection<Name> onePermute = multiNames.get(0);
             for (Name element:onePermute){
-                List<Name> permuted = new ArrayList<>();
-                permuted.addAll(sharedNames);
+                List<Name> permuted = new ArrayList<>(sharedNames);
                 permuted.add(element);
                 result.add(permuted);
             }

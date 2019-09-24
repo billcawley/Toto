@@ -305,7 +305,7 @@ public class DSSpreadsheetService {
                 // todo - cen we get the number of values modified???
                 numberOfValuesModified = importDataFromSpreadsheet(azquoMemoryDBConnection, cellsAndHeadingsForDisplay, user);
                 if (persist) {
-                    azquoMemoryDBConnection.persist();
+                    new Thread(azquoMemoryDBConnection::persist).start();
                 }
                 return "true " + numberOfValuesModified;
             }
@@ -550,7 +550,7 @@ public class DSSpreadsheetService {
         } // the close of the block synchronised on the database, close it here before persisting since that is synchronized on the same object - if anything inside the block synchronizes on the database we'll find out pretty quickly!
         if (numberOfValuesModified > 0) {
             if (persist) {
-                azquoMemoryDBConnection.persist();
+                new Thread(azquoMemoryDBConnection::persist).start();
             }
         }
         // clear the caches after, if we do before then some will be recreated as part of saving.
