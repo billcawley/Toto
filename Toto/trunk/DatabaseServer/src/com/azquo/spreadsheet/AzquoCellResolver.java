@@ -140,7 +140,7 @@ public class AzquoCellResolver {
                                         desc = "";
                                      }
                                 }else{
-                                    desc = NameUtils.getFullyQualifiedDefaultDisplayName(rowHeadings.get(colNo1).getName());
+                                    desc = getUniqueName(connection,rowHeadings.get(colNo1).getName());
                                 }
                                 if (desc.length() > 0) {
                                     usedInExpression.add(rowHeadings.get(colNo1).getName());
@@ -161,7 +161,7 @@ public class AzquoCellResolver {
                         if (inQuotes) {
                             cellQuery = cellQuery.replace(COLUMNHEADING, columnHeadings.get(0).getName().getDefaultDisplayName());
                         } else {
-                            cellQuery = cellQuery.replace(COLUMNHEADING, NameUtils.getFullyQualifiedDefaultDisplayName(columnHeadings.get(0).getName()));
+                            cellQuery = cellQuery.replace(COLUMNHEADING, getUniqueName(connection,columnHeadings.get(0).getName()));
                         }
                     }
                     if (cellQuery.contains(COLUMNHEADINGLOWERCASE)) {
@@ -170,7 +170,7 @@ public class AzquoCellResolver {
                         if (inQuotes) {
                             cellQuery = cellQuery.replace(COLUMNHEADINGLOWERCASE, columnHeadings.get(0).getName().getDefaultDisplayName());
                         } else {
-                            cellQuery = cellQuery.replace(COLUMNHEADINGLOWERCASE, NameUtils.getFullyQualifiedDefaultDisplayName(columnHeadings.get(0).getName()));
+                            cellQuery = cellQuery.replace(COLUMNHEADINGLOWERCASE, getUniqueName(connection,columnHeadings.get(0).getName()));
                         }
                     }
                 }
@@ -911,6 +911,18 @@ But can use a library?
             }
         }
         return count;
+    }
+
+    private static String getUniqueName(AzquoMemoryDBConnection azquoMemoryDBConnection, Name name){
+        try{
+            if (NameService.findByName(azquoMemoryDBConnection,name.getDefaultDisplayName())!=null) {
+                return name.getDefaultDisplayName();
+            }else{
+                return NameUtils.getFullyQualifiedDefaultDisplayName(name);
+            }
+        }catch(Exception e){
+            return "";
+        }
     }
 
 
