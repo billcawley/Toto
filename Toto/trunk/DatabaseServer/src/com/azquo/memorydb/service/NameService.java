@@ -4,7 +4,6 @@ import com.azquo.StringLiterals;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.StringUtils;
-import com.azquo.memorydb.core.Provenance;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 import org.apache.log4j.Logger;
 
@@ -49,7 +48,7 @@ public final class NameService {
 
     private static AtomicInteger sortCaseInsensitiveCount = new AtomicInteger(0);
 
-    public static void sortCaseInsensitive(List<Name> namesList) throws Exception {
+    public static void sortCaseInsensitive(List<Name> namesList) {
         namesList.sort(defaultLanguageCaseInsensitiveNameComparator);
     }
 
@@ -303,7 +302,6 @@ public final class NameService {
                     try {
                         existing = azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNameByAttribute(attributeNames, storeName, null);
                     } catch (Exception ignored) { // ignore the Found more than one name exception
-                        existing = null;
                     }
                     if (existing != null && (existing.hasParents() || existing.hasChildren())) {
                         existing = null;
@@ -366,7 +364,7 @@ public final class NameService {
 
     private static AtomicInteger findChildrenAtLevelCount = new AtomicInteger(0);
 
-    static NameSetList findChildrenAtLevel(final Name name, final String levelString) throws Exception {
+    static NameSetList findChildrenAtLevel(final Name name, final String levelString) {
         findChildrenAtLevelCount.incrementAndGet();
         // level 100 means get me the lowest
         // level 101 means 'ALL' (including the top level
@@ -438,7 +436,7 @@ public final class NameService {
         return new NameSetList(ordered ? null : namesFoundSet, ordered ? new ArrayList<>(namesFoundOrderedSet) : null, true); // it will be mutable either way
     }
 
-    private static NameSetList findParentsAtLevel(final Name name, int level) throws Exception {
+    private static NameSetList findParentsAtLevel(final Name name, int level) {
         findChildrenAtLevelCount.incrementAndGet();
         if (level == 1) { // then no need to get clever, just return the parents
             return new NameSetList(null, name.getParents(), false);
@@ -457,22 +455,6 @@ public final class NameService {
         List<String> attributes = azquoMemoryDBConnection.getAzquoMemoryDBIndex().getAttributes();
         Collections.sort(attributes);
         return attributes;
-    }
-
-    private static AtomicInteger inParentSetCount = new AtomicInteger(0);
-
-    static Name inParentSet(Name name, Collection<Name> maybeParents) {
-        inParentSetCount.incrementAndGet();
-        if (maybeParents.contains(name)) {
-            return name;
-        }
-        for (Name parent : name.getParents()) {
-            Name maybeParent = inParentSet(parent, maybeParents);
-            if (maybeParent != null) {
-                return maybeParent;
-            }
-        }
-        return null;
     }
 
     private static AtomicInteger getDefaultLanguagesListCount = new AtomicInteger(0);
@@ -502,7 +484,6 @@ public final class NameService {
         System.out.println("findOrCreateNameInParent2Count\t\t\t\t\t\t\t\t" + findOrCreateNameInParent2Count.get());
         System.out.println("findChildrenAtLevelCount\t\t\t\t\t\t\t\t" + findChildrenAtLevelCount.get());
         System.out.println("attributeListCount\t\t\t\t\t\t\t\t" + attributeListCount.get());
-        System.out.println("inParentSetCount\t\t\t\t\t\t\t\t" + inParentSetCount.get());
     }
 
     public static void clearFunctionCountStats() {
@@ -521,6 +502,5 @@ public final class NameService {
         findOrCreateNameInParent2Count.set(0);
         findChildrenAtLevelCount.set(0);
         attributeListCount.set(0);
-        inParentSetCount.set(0);
     }
 }

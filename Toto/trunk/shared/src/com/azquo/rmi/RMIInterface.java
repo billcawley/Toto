@@ -111,15 +111,11 @@ public interface RMIInterface extends Remote {
 
     void deleteNode(DatabaseAccessToken dataAccessToken, int nameId) throws RemoteException;
 
-    void copyDatabase(DatabaseAccessToken source, DatabaseAccessToken target, String nameList, String user) throws RemoteException;
-
     String getNameAttribute(DatabaseAccessToken dataAccessToken, String nameString, String attribute) throws RemoteException;
 
     void setNameAttribute(DatabaseAccessToken dataAccessToken, String nameString, String attribute, String attVal) throws RemoteException;
 
     List<String> nameAutoComplete(DatabaseAccessToken dataAccessToken, String nameString, int limit) throws RemoteException;
-
-    void copyDatabase(String from, String to) throws RemoteException;
 
     boolean databaseWithNameExists(String nameCheck) throws RemoteException;
 

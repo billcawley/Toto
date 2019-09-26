@@ -23,7 +23,7 @@ public class ValueHistory {
     private final Name[] names;
 
 
-    public ValueHistory(final AzquoMemoryDB azquoMemoryDB, final int id, final int provenanceId, String text, byte[] namesCache) throws Exception {
+    public ValueHistory(final AzquoMemoryDB azquoMemoryDB, final int id, final int provenanceId, String text, byte[] namesCache) {
         this.provenance = azquoMemoryDB.getProvenanceById(provenanceId);
         this.id = id;
         this.text = text.intern();
@@ -63,7 +63,7 @@ public class ValueHistory {
     }
 
     // copied from Value, now required for backing up databases. Factor?
-    public byte[] getNameIdsAsBytes() {
+    byte[] getNameIdsAsBytes() {
         return getNameIdsAsBytes(0);
     }
 

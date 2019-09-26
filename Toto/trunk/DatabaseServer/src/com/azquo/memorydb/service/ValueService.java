@@ -16,7 +16,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ * Copyright (C) 2016 Azquo Ltd.
  * <p>
  * Created with IntelliJ IDEA.
  * User: cawley
@@ -125,7 +125,7 @@ public final class ValueService {
     // should somehow be factored with function above?
     private static AtomicInteger overWriteExistingValueCount = new AtomicInteger(0);
 
-    public static boolean overWriteExistingValue(final AzquoMemoryDBConnection azquoMemoryDBConnection, final Value existingValue, String newValueString) throws Exception {
+    public static void overWriteExistingValue(final AzquoMemoryDBConnection azquoMemoryDBConnection, final Value existingValue, String newValueString) throws Exception {
         overWriteExistingValueCount.incrementAndGet();
         if (newValueString.contains(",")) {
             String replaced = newValueString.replace(",", "");
@@ -135,12 +135,11 @@ public final class ValueService {
             }
         }
         if (StringUtils.compareStringValues(existingValue.getText(), newValueString)) { // converted to use compare string values rather than simple replace
-            return true;
+            return;
         }
         Value newValue = new Value(azquoMemoryDBConnection.getAzquoMemoryDB(), azquoMemoryDBConnection.getProvenance(), newValueString);
         newValue.setNamesWillBePersisted(new HashSet<>(existingValue.getNames())); // a bit crappy but I'm trying to make it a list internally but interfaced by sets
         existingValue.delete();
-        return true;
     }
 
     // doesn't work down the name children - generally this is used when storing
@@ -178,7 +177,7 @@ public final class ValueService {
     }
 
     /* While the above is what would be used to check if data exists for a specific name combination (e.g. when inserting data) this will navigate down through the names
-    this has been a major bottleneck, caching values against names helped a lot, also using similar logic to retainall but creating a new list seemed to double performance and with less garbage I hope!
+    this has been a major bottleneck, caching values against names helped a lot, also using similar logic to retainAll but creating a new list seemed to double performance and with less garbage I hope!
     not to mention a list is better for iterator I think and .contains is NOT used in the one place this is called. Changing the return type to list.
     As mentioned in comments in the function a lot of effort went in to speeding up this function and reducing garbage, be very careful before changing it.
     */
@@ -234,8 +233,7 @@ public final class ValueService {
             int smallestNameSetSize = -1;
             Name smallestName = null;
             for (Name name : names) {
-                int setSizeIncludingChildren = 0;
-
+                int setSizeIncludingChildren;
                 if (name == exactName) {
                     setSizeIncludingChildren = name.getValues().size();
                 } else {
@@ -265,7 +263,7 @@ public final class ValueService {
             setsToCheck = new Set[names.size() - 1]; // I don't want to be creating iterators when checking. Iterator * millions = garbage (in the Java sense!). No problems losing typing, I just need the contains.
             int arrayIndex = 0;
             for (Name name : names) {
-                // note if smallest name is in there twice (duplicate names) then setsToCheck will hav e mull elements at the end, I check for this later in the big loop, should probably zap that. Or get rid of the smallest names before?
+                // note if smallest name is in there twice (duplicate names) then setsToCheck will have null elements at the end, I check for this later in the big loop, should probably zap that. Or get rid of the smallest names before?
                 if (name != smallestName) { // a little cheaper than making a new name set and knocking this one off I think
                     if (name == exactName) {
                         setsToCheck[arrayIndex] = HashObjSets.newImmutableSet(name.getValues());
@@ -276,8 +274,8 @@ public final class ValueService {
                 }
             }
         }
-        // The core things we want to know about values e.g. sum, max, min, could be done in here but currently the values list, via ValuesHook, is still accesed and used.
-        // When we zap it there may be a case for having this funciton return a double according to whether min max sum etc is required. Performance is pretty good at the moment though.
+        // The core things we want to know about values e.g. sum, max, min, could be done in here but currently the values list, via ValuesHook, is still accessed and used.
+        // When we zap it there may be a case for having this function return a double according to whether min max sum etc is required. Performance is pretty good at the moment though.
         boolean add; // declare out here, save reinitialising each time
         int index; // ditto that, should help
         for (Value value : smallestValuesSet) { // because this could be a whacking great loop! I mean many millions.
@@ -393,7 +391,6 @@ public final class ValueService {
             boolean hasList = false;
 
             for (Name calcName : calcnames) {
-
                 if (appliesToNames.contains(calcName) && !calcName.hasChildren()) {
                     if (loopNames == null || loopNames.contains(calcName)) {
                         loopNames = new ArrayList<>();
@@ -484,7 +481,6 @@ public final class ValueService {
             }
         }
     }
-
 
     public static void printFunctionCountStats() {
         System.out.println("######### VALUE SERVICE FUNCTION COUNTS");

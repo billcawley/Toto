@@ -1,9 +1,7 @@
 package com.azquo.memorydb.service;
 
 import com.azquo.TypedPair;
-import com.azquo.dataimport.ValuesImport;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
-import com.azquo.StringLiterals;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.TreeNode;
 import com.azquo.memorydb.core.Name;
@@ -19,7 +17,6 @@ import com.azquo.spreadsheet.transport.ProvenanceDetailsForDisplay;
 import com.azquo.spreadsheet.transport.ProvenanceForDisplay;
 import com.azquo.spreadsheet.transport.RegionOptions;
 import com.azquo.spreadsheet.transport.ValueDetailsForProvenance;
-import net.openhft.koloboke.collect.set.hash.HashObjSets;
 
 import java.text.NumberFormat;
 import java.time.LocalDateTime;
@@ -36,7 +33,6 @@ public class ProvenanceService {
 
     // Some code was creating a temporary value but there's no such thing in Azquo so use this instead.
     private static class DummyValue {
-
         private final int id;
 
         private final String valueText;
@@ -157,36 +153,36 @@ public class ProvenanceService {
     most of the time provenance relates to a cell, this will make a suitable headine for display
      */
 
-    static private String getProvenanceHeadlineForCell(AzquoCell azquoCell){
+    static private String getProvenanceHeadlineForCell(AzquoCell azquoCell) {
         StringBuilder toReturn = new StringBuilder();
         toReturn.append(checkNumberFormat(azquoCell.getStringValue()));
-        for (DataRegionHeading context : azquoCell.getContexts()){
+        for (DataRegionHeading context : azquoCell.getContexts()) {
             toReturn.append(", ").append(context.getName() != null ? context.getName().getDefaultDisplayName() : context.getDescription());
         }
-        for (DataRegionHeading rowHeading : azquoCell.getRowHeadings()){
-            if (rowHeading!=null){
+        for (DataRegionHeading rowHeading : azquoCell.getRowHeadings()) {
+            if (rowHeading != null) {
                 toReturn.append(", ").append(rowHeading.getName() != null ? rowHeading.getName().getDefaultDisplayName() : rowHeading.getDescription());
             }
         }
-        for (DataRegionHeading columnHeading : azquoCell.getColumnHeadings()){
+        for (DataRegionHeading columnHeading : azquoCell.getColumnHeadings()) {
             // could be a blank column heading, a gap on multi line
-            if (columnHeading != null){
+            if (columnHeading != null) {
                 toReturn.append(", ").append(columnHeading.getName() != null ? columnHeading.getName().getDefaultDisplayName() : columnHeading.getDescription());
             }
         }
-        return  toReturn.toString();
+        return toReturn.toString();
     }
 
     /* logic will be changed for new object ProvenanceDetailsForDisplay
      TODO - as mentioned, value history!
      */
 
-    public static ProvenanceDetailsForDisplay getListOfChangedValues(AzquoMemoryDBConnection azquoMemoryDBConnection, int maxSize) throws Exception {
+    public static ProvenanceDetailsForDisplay getListOfChangedValues(AzquoMemoryDBConnection azquoMemoryDBConnection, int maxSize) {
         return valuesProvenance(azquoMemoryDBConnection, azquoMemoryDBConnection.getValuesChanged(), null, maxSize);
     }
 
 
-    private static ProvenanceDetailsForDisplay valuesProvenance(AzquoMemoryDBConnection azquoMemoryDBConnection, List<Value> values, AzquoCell azquoCell, int maxSize) throws Exception {
+    private static ProvenanceDetailsForDisplay valuesProvenance(AzquoMemoryDBConnection azquoMemoryDBConnection, List<Value> values, AzquoCell azquoCell, int maxSize) {
         List<ProvenanceForDisplay> provenanceForDisplays = new ArrayList<>();
         if (values != null && (values.size() > 1 || (values.size() > 0 && values.get(0) != null))) {
             values.sort((o1, o2) -> (o2.getProvenance().getTimeStamp()).compareTo(o1.getProvenance().getTimeStamp()));
@@ -215,7 +211,7 @@ public class ProvenanceService {
             provenanceForDisplay.setValueDetailsForProvenances(getValueDetailsForProvenances(azquoMemoryDBConnection, oneUpdate));
             provenanceForDisplays.add(provenanceForDisplay);
         }
-        return new ProvenanceDetailsForDisplay( azquoCell != null ? getProvenanceHeadlineForCell(azquoCell) : "", null, provenanceForDisplays);
+        return new ProvenanceDetailsForDisplay(azquoCell != null ? getProvenanceHeadlineForCell(azquoCell) : "", null, provenanceForDisplays);
     }
 
     // first string is the value, then the names . . .
@@ -240,15 +236,16 @@ public class ProvenanceService {
         return toReturn;
     }
 
-    private static String checkNumberFormat(String text){
-        try{
+    private static String checkNumberFormat(String text) {
+        try {
             double asNumber = Double.parseDouble(text);
             NumberFormat instance = NumberFormat.getInstance();
             if (text.length() >= 10) {
                 instance.setMaximumFractionDigits(2);
             }
             text = instance.format(asNumber);
-        } catch (Exception ignored){}
+        } catch (Exception ignored) {
+        }
         return text;
     }
 
@@ -443,5 +440,4 @@ public class ProvenanceService {
         }
         return toReturn;
     }
-
 }

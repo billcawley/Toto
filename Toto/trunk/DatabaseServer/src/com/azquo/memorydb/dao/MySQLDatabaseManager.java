@@ -2,18 +2,17 @@ package com.azquo.memorydb.dao;
 
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 
-import java.io.IOException;
 import java.util.HashMap;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
- *
+ * <p>
  * Created by cawley on 08/01/14.
  * for creating and otherwise manipulating the MySLQ databases that are used to persist the memory databases
  */
 public class MySQLDatabaseManager {
 
-    public static void createNewDatabase(String databaseName) throws IOException {
+    public static void createNewDatabase(String databaseName) {
 
         // we assume the database name is safe, should we???
         databaseName = databaseName.replace("`", "oh no you don't");
@@ -31,7 +30,7 @@ public class MySQLDatabaseManager {
         ValueDAO.createValueHistoryTableIfItDoesntExist(databaseName);
     }
 
-    public static void emptyDatabase(String databaseName) throws IOException {
+    public static void emptyDatabase(String databaseName) {
         databaseName = databaseName.replace("`", "oh no you don't");
         JdbcTemplateUtils.update("truncate `" + databaseName + "`.provenance", JsonRecordDAO.EMPTY_PARAMETERS_MAP);
         JdbcTemplateUtils.update("truncate `" + databaseName + "`." + NameDAO.FASTNAME, JsonRecordDAO.EMPTY_PARAMETERS_MAP);
@@ -39,20 +38,20 @@ public class MySQLDatabaseManager {
         JdbcTemplateUtils.update("truncate `" + databaseName + "`." + ValueDAO.VALUEHISTORY, JsonRecordDAO.EMPTY_PARAMETERS_MAP);
     }
 
-    public static void copyDatabase(String from, String to) throws IOException {
+    public static void copyDatabase(String from, String to) {
         JdbcTemplateUtils.update("insert into `" + to + "`.provenance select * from `" + from + "`.provenance", JsonRecordDAO.EMPTY_PARAMETERS_MAP);
         JdbcTemplateUtils.update("insert into `" + to + "`.fast_name select * from `" + from + "`.fast_name", JsonRecordDAO.EMPTY_PARAMETERS_MAP);
         JdbcTemplateUtils.update("insert into `" + to + "`.fast_value select * from `" + from + "`.fast_value", JsonRecordDAO.EMPTY_PARAMETERS_MAP);
         JdbcTemplateUtils.update("insert into `" + to + "`.value_history select * from `" + from + "`.value_history", JsonRecordDAO.EMPTY_PARAMETERS_MAP);
     }
 
-    public static void dropDatabase(String databaseName) throws IOException {
+    public static void dropDatabase(String databaseName) {
         // we assume the database name is safe, should we???
         databaseName = databaseName.replace("`", "oh no you don't");
         JdbcTemplateUtils.update("drop database `" + databaseName + "`", JsonRecordDAO.EMPTY_PARAMETERS_MAP);
     }
 
-    public static boolean databaseWithNameExists(String checkName){
+    public static boolean databaseWithNameExists(String checkName) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue("NAME", checkName);
         return JdbcTemplateUtils.queryCount("SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = :NAME", namedParams) > 0;

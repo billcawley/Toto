@@ -7,7 +7,6 @@ transport class and
 
  */
 
-import com.azquo.StringLiterals;
 import com.azquo.ThreadPools;
 
 import java.text.NumberFormat;
@@ -94,7 +93,6 @@ class TemporaryAzquoMemoryDBTransport extends AzquoMemoryDBTransport {
             AtomicInteger namesLoaded = new AtomicInteger();
             AtomicInteger valuesLoaded = new AtomicInteger();
             final int step = 100_000;
-            marker = System.currentTimeMillis();
             // I'm not going to bother multi threading provenance loading here
             for (Provenance sourceProvenance : source.getAllProvenances()){
                 azquoMemoryDB.setNextId(sourceProvenance.getId());
@@ -103,7 +101,6 @@ class TemporaryAzquoMemoryDBTransport extends AzquoMemoryDBTransport {
             }
             // create thread pool, rack up the loading tasks and wait for it to finish. Repeat for name and values.
             List<Future<?>> futureBatches;
-            marker = System.currentTimeMillis();
             futureBatches = new ArrayList<>();
             ArrayList<Name> nameBatch = new ArrayList<>(step);
             for (Name sourceName : source.getAllNames()){
@@ -117,7 +114,6 @@ class TemporaryAzquoMemoryDBTransport extends AzquoMemoryDBTransport {
             for (Future future : futureBatches) {
                 future.get(1, TimeUnit.HOURS);
             }
-            marker = System.currentTimeMillis();
             futureBatches = new ArrayList<>();
             ArrayList<Value> valueBatch = new ArrayList<>(step);
             for (Value sourceValue : source.getAllValues()){
@@ -131,7 +127,6 @@ class TemporaryAzquoMemoryDBTransport extends AzquoMemoryDBTransport {
             for (Future future : futureBatches) {
                 future.get(1, TimeUnit.HOURS);
             }
-            marker = System.currentTimeMillis();
             // wait until all are loaded before linking
             System.out.println(provenanceLoaded.get() + valuesLoaded.get() + namesLoaded.get() + " unlinked entities loaded in " + (System.currentTimeMillis() - startTime) / 1000 + " second(s)");
             if (memoryTrack) {

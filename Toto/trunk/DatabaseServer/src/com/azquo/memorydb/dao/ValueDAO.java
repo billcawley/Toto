@@ -229,10 +229,6 @@ public class ValueDAO {
         return JdbcTemplateUtils.query(SQL_SELECT_ALL, new ValueHistoryRowMapper(azquoMemoryDB));
     }
 
-    public static int findValueHistoryMaxId(final String persistenceName) throws DataAccessException {
-        return FastDAO.findMaxId(persistenceName, VALUEHISTORY);
-    }
-
     public static List<ValueHistory> getHistoryForValue(final AzquoMemoryDB azquoMemoryDB, Value value) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(NAMES, value.getNameIdsAsBytesSorted());

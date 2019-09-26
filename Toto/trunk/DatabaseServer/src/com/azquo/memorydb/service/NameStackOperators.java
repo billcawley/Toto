@@ -30,7 +30,7 @@ class NameStackOperators {
         if (previousSet.set != null) { // not ordered
             setIntersectionSet = HashObjSets.newMutableSet();
             Set<Name> previousSetSet = previousSet.set;
-            for (Name name : nameStack.get(stackCount).getAsCollection()) { // if the last one on the stack is a list or set it doens't matter I'm not doing a contains on it
+            for (Name name : nameStack.get(stackCount).getAsCollection()) { // if the last one on the stack is a list or set it doesn't matter I'm not doing a contains on it
                 if (previousSetSet.contains(name)) {
                     setIntersectionSet.add(name);
                 }
@@ -182,7 +182,7 @@ class NameStackOperators {
     }
 
     // filterby, a bit hairy
-    static void filterBy(final List<NameSetList> nameStack, String filterByCriteria, AzquoMemoryDBConnection azquoMemoryDBConnection, List<List<String>> contextSource, List<String> languages) throws Exception{
+    static void filterBy(final List<NameSetList> nameStack, String filterByCriteria, AzquoMemoryDBConnection azquoMemoryDBConnection, List<List<String>> contextSource, List<String> languages) throws Exception {
         // this was on the report server - it's going to render a data region with the name set using the context and applying the condition then return only the names where the value was > 0 as in true
         // this might need development over time to make it clearer and more robust but previously it wasn't even part of the NameQueryParser so this is an improvement
         // as above it will need to have been in quotes - a condition that the SYA shouldn't touch
@@ -233,7 +233,7 @@ class NameStackOperators {
         if (!global && attributeNames.size() > 1) { // just checking we have have the user added to the list
             String userEmail = attributeNames.get(0);
             if (totalName.getAttribute(userEmail) == null) { // there is no specific set for this user yet, need to do something
-                azquoMemoryDBConnection.setProvenance(userEmail, "set assigned","", "query");
+                azquoMemoryDBConnection.setProvenance(userEmail, "set assigned", "", "query");
                 Name userSpecificSet = new Name(azquoMemoryDBConnection.getAzquoMemoryDB(), azquoMemoryDBConnection.getProvenance()); // a basic copy of the set
                 //userSpecificSet.setAttributeWillBePersisted(Constants.DEFAULT_DISPLAY_NAME, userEmail + totalName.getDefaultDisplayName()); // GOing to set the default display name as bits of the suystem really don't like it not being there
                 userSpecificSet.setAttributeWillBePersisted(userEmail, totalName.getDefaultDisplayName(), azquoMemoryDBConnection); // set the name (usually default_display_name) but for the "user email" attribute
@@ -250,6 +250,5 @@ class NameStackOperators {
         Set<Name> totalNameSet = HashObjSets.newMutableSet();
         totalNameSet.add(totalName);
         nameStack.set(stackCount - 1, new NameSetList(totalNameSet, null, true));
-
     }
 }

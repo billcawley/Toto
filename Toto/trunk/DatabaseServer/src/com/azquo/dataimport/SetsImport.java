@@ -25,7 +25,7 @@ class SetsImport {
         try (BufferedReader br = Files.newBufferedReader(Paths.get(uploadedFile.getPath()))) {
             // the filename can override the attribute for name creation/search. Seems a bit hacky but can make sense if the set up is a series of workbooks.
             List<String> languages;
-            if (uploadedFile.getParameter(HeadingReader.LANGUAGE) != null){
+            if (uploadedFile.getParameter(HeadingReader.LANGUAGE) != null) {
                 languages = Collections.singletonList(uploadedFile.getParameter(HeadingReader.LANGUAGE));
             } else {
                 // todo - zap this back to normal. When I do then zap the filename parameter and return lines
@@ -52,7 +52,7 @@ class SetsImport {
                         if (set == null) { // assign it - I'm not just grabbing the first cell since there may be cells with spaces or "" at the beginning
                             set = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, cell, null, false, languages);
                             // empty it in case it existed and had children
-                            set.setChildrenWillBePersisted(Collections.emptyList(),azquoMemoryDBConnection);
+                            set.setChildrenWillBePersisted(Collections.emptyList(), azquoMemoryDBConnection);
                         } else { // set is created or found, so start gathering children
                             set.addChildWillBePersisted(NameService.findOrCreateNameInParent(azquoMemoryDBConnection, cell, set, false, languages), azquoMemoryDBConnection);
                         }

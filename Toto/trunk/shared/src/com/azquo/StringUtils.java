@@ -10,7 +10,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ * Copyright (C) 2016 Azquo Ltd.
  * <p>
  * Edd trying to factor off some functions. We want functions that are fairly simple, stateless and do not require database access.
  * <p>
@@ -85,6 +85,7 @@ Essentially prepares a statement for functions like interpretSetTerm and shuntin
         statement = statement.replace(" " + StringLiterals.ASGLOBAL2 + " ", " " + StringLiterals.ASGLOBAL + " ");
 
         StringBuilder modifiedStatement = new StringBuilder();
+        // this works but could the logic be improved? There's a mix of the matcher and indexOf below. What it is doing is simple though - getting the quoted names
         Pattern p = Pattern.compile("" + StringLiterals.QUOTE + ".*?" + StringLiterals.QUOTE + ""); // don't need escaping here I don't think. Possible to add though.
         Matcher matcher = p.matcher(statement);
         int lastEnd = 0;
@@ -120,7 +121,9 @@ Essentially prepares a statement for functions like interpretSetTerm and shuntin
 
         /* now we'll do the string literals - was the other way around but what about quotes in names
          this matcher deals with escaped quotes
-         the goal of this little chunk is pretty simple, replace all the "here is a string literal with all sorts of characters*&)*(&" strings with "01" */
+         the goal of this little chunk is pretty simple, replace all the "here is a string literal with all sorts of characters*&)*(&" strings with "01"
+         Could maybe be more simple with an "inQuotes" boolean
+         */
         modifiedStatement = new StringBuilder();
         p = Pattern.compile("(\"[^\"\\\\]*(?:\\\\.[^\"\\\\]*)*\")");
         matcher = p.matcher(statement);
@@ -145,9 +148,7 @@ Essentially prepares a statement for functions like interpretSetTerm and shuntin
 
 
         // ok we've escaped what we need to (we have quoted names and strings squirrelled away)
-
         statement = statement.replace(";", " "); // legacy from when this was required
-
         // now, we want to run validation on what's left really. One problem is that operators might not have spaces
         // ok this is hacky, I don't really care for the moment
         statement = statement.replace("*", " * ").replace("  ", " ");
@@ -160,11 +161,11 @@ Essentially prepares a statement for functions like interpretSetTerm and shuntin
         statement = statement.replace("=", " = ").replace("  ", " ");
         statement = statement.replace("(", " ( ").replace("  ", " ");
         statement = statement.replace(")", " ) ").replace("  ", " ");
-        statement = statement.replace(" AND ", " & ").replace(" OR "," | ");
-        statement = statement.replace(" and ", " & ").replace(" or "," | ");
+        statement = statement.replace(" AND ", " & ").replace(" OR ", " | ");
+        statement = statement.replace(" and ", " & ").replace(" or ", " | ");
         // this assumes that the , will be taken care of after the parsing
-        statement = statement.replace(",", " , ").replace("  ", " ").replace("  "," ");//remove up to two spaces
-        statement = statement.replace("> =",StringLiterals.GREATEROREQUAL+"").replace("< =",StringLiterals.LESSOREQUAL+"");
+        statement = statement.replace(",", " , ").replace("  ", " ").replace("  ", " ");//remove up to two spaces
+        statement = statement.replace("> =", StringLiterals.GREATEROREQUAL + "").replace("< =", StringLiterals.LESSOREQUAL + "");
         statement = statement.replaceAll("(?i)level lowest", "level 100");
         statement = statement.replaceAll("(?i)level highest", "level -100");
         statement = statement.replaceAll("(?i)level all", "level 101");
@@ -224,7 +225,7 @@ I should be ok for StringTokenizer at this point
                 || term.equals("(") || term.equals(")")
                 || term.equals("[") || term.equals("]")
                 || term.equals("&") || term.equals("|")
-                || term.equals(StringLiterals.GREATEROREQUAL+"") || term.equals(StringLiterals.LESSOREQUAL+"")
+                || term.equals(StringLiterals.GREATEROREQUAL + "") || term.equals(StringLiterals.LESSOREQUAL + "")
                 || term.equalsIgnoreCase(StringLiterals.AND)
                 || term.equalsIgnoreCase(StringLiterals.LEVEL) || term.equalsIgnoreCase(StringLiterals.FROM)
                 || term.equalsIgnoreCase(StringLiterals.TO) || term.equalsIgnoreCase(StringLiterals.COUNT)
@@ -246,7 +247,7 @@ I should be ok for StringTokenizer at this point
     */
 
     public static String shuntingYardAlgorithm(String calc) {
-        Pattern p = Pattern.compile("[" + StringLiterals.ASSYMBOL + StringLiterals.ASGLOBALSYMBOL + "&|<=>"+ StringLiterals.GREATEROREQUAL + StringLiterals.LESSOREQUAL + StringLiterals.MATHFUNCTION + StringLiterals.CONTAINSSYMBOL + "\\-\\+/\\*\\(\\)&]"); // only simple maths allowed at present
+        Pattern p = Pattern.compile("[" + StringLiterals.ASSYMBOL + StringLiterals.ASGLOBALSYMBOL + "&|<=>" + StringLiterals.GREATEROREQUAL + StringLiterals.LESSOREQUAL + StringLiterals.MATHFUNCTION + StringLiterals.CONTAINSSYMBOL + "\\-\\+/\\*\\(\\)&]"); // only simple maths allowed at present
         StringBuilder sb = new StringBuilder();
         String stack = "";
         Matcher m = p.matcher(calc);
@@ -393,29 +394,5 @@ I should be ok for StringTokenizer at this point
             }
         }
         return -1;
-    }
-
-    public static String stripTempSuffix(String name) {
-        int dotPos = name.lastIndexOf(".");
-        boolean istimestamp = true;
-        while (istimestamp && dotPos > 0) {
-            istimestamp = false;
-            int underscorePos = name.substring(0, dotPos).lastIndexOf("_");
-            if (dotPos - underscorePos > 14) {
-                istimestamp = true;
-                for (int i = underscorePos + 1; i < dotPos; i++) {
-                    if (name.charAt(i) < '0' || name.charAt(i) > '9') {
-                        istimestamp = false;
-                        break;
-                    }
-                }
-                if (istimestamp) {
-                    name = name.substring(0, underscorePos) + name.substring(dotPos);
-                    dotPos = name.lastIndexOf(".");
-                }
-            }
-        }
-        return name;
-
     }
 }

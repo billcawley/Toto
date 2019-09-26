@@ -24,26 +24,6 @@ public class NameQueryParser {
 
     private static final Logger logger = Logger.getLogger(NameQueryParser.class);
 
-    // get names from a comma separated list. Well expressions describing names - only used for read and write permissions at the moment.
-    static List<Set<Name>> decodeString(AzquoMemoryDBConnection azquoMemoryDBConnection, String searchByNames, String user) throws Exception {
-        List<String> attributeNames = NameService.getDefaultLanguagesList(user);
-        final List<Set<Name>> toReturn = new ArrayList<>();
-        List<String> formulaStrings = new ArrayList<>();
-        List<String> nameStrings = new ArrayList<>();
-        List<String> attributeStrings = new ArrayList<>(); // attribute names is taken. Perhaps need to think about function parameter names
-        searchByNames = StringUtils.prepareStatement(searchByNames, nameStrings, formulaStrings, attributeStrings);
-        List<Name> referencedNames = getNameListFromStringList(nameStrings, azquoMemoryDBConnection, attributeNames);
-        // given that parse statement treats "," as an operator this should be ok.
-        StringTokenizer st = new StringTokenizer(searchByNames, ",");
-        while (st.hasMoreTokens()) {
-            String nameName = st.nextToken().trim();
-            NameSetList nameSetList = interpretSetTerm(null, nameName, formulaStrings, referencedNames, attributeStrings, azquoMemoryDBConnection, attributeNames,"");
-            Set<Name> nameSet = nameSetList.set != null ? nameSetList.set : HashObjSets.newMutableSet(nameSetList.list); // just wrap if it's a list, should be fine. This object return type is for the query parser really
-            toReturn.add(nameSet);
-        }
-        return toReturn;
-    }
-
     // for deduplicate, inspect search and definition.
     private static AtomicInteger parseQueryCount = new AtomicInteger(0);
 
@@ -65,8 +45,9 @@ public class NameQueryParser {
         parseQuery3Count.incrementAndGet();
         return parseQuery(azquoMemoryDBConnection, setFormula, attributeNames, null, returnReadOnlyCollection, contextSource);
     }
+
     public static Collection<Name> parseQuery(final AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula, List<String> attributeNames, Collection<Name> toReturn, boolean returnReadOnlyCollection) throws Exception {
-        return parseQuery(azquoMemoryDBConnection, setFormula, attributeNames,toReturn, returnReadOnlyCollection, null);
+        return parseQuery(azquoMemoryDBConnection, setFormula, attributeNames, toReturn, returnReadOnlyCollection, null);
     }
 
     /* todo : sort exceptions?
@@ -85,17 +66,17 @@ public class NameQueryParser {
         long startUsed = (runtime.totalMemory() - runtime.freeMemory()) / mb;
 
         /*
-        * This routine now amended to allow for union (+) and intersection (*) of sets.
-        *
-        * This entails first sorting out the names in quotes (which may contain the reserved characters),
-        * starting from the end (there may be "name","parent" in the list)
-        *
-        * These will be replaced by !<id>   e.g. !1234
-        * */
+         * This routine now amended to allow for union (+) and intersection (*) of sets.
+         *
+         * This entails first sorting out the names in quotes (which may contain the reserved characters),
+         * starting from the end (there may be "name","parent" in the list)
+         *
+         * These will be replaced by !<id>   e.g. !1234
+         * */
         if (toReturn == null) {
             toReturn = new ArrayList<>(); // default to this collection type
         } else {
-            // if a colleciton to return was passed we can't return a read only colleciton, we'll be adding to what was passed
+            // if a collection to return was passed we can't return a read only collection, we'll be adding to what was passed
             returnReadOnlyCollection = false;
         }
         if (setFormula.length() == 0) {
@@ -118,17 +99,17 @@ public class NameQueryParser {
         }
         // filterby is a special case, I'm only allowing one of them. e.g. Claim children * `bb12345` filterby "(`line count` > 1)"
         String filterByCriteria = null;
-        if (setFormula.toLowerCase().contains(StringLiterals.FILTERBY)){
+        if (setFormula.toLowerCase().contains(StringLiterals.FILTERBY)) {
             int filterByIndex = setFormula.toLowerCase().indexOf(StringLiterals.FILTERBY);
             int firstQuote = setFormula.indexOf("\"", filterByIndex);
             int secondQuote = setFormula.indexOf("\"", firstQuote + 1);
-            if (firstQuote < 0 || secondQuote < 0){
+            if (firstQuote < 0 || secondQuote < 0) {
                 throw new Exception("filterby must be followed by criteria in quotes" + setFormula);
             }
-            if (setFormula.toLowerCase().indexOf(StringLiterals.FILTERBY, firstQuote) != -1){
+            if (setFormula.toLowerCase().indexOf(StringLiterals.FILTERBY, firstQuote) != -1) {
                 throw new Exception("cannot have more than one filterby " + setFormula);
             }
-            if (contextSource == null){
+            if (contextSource == null) {
                 throw new Exception("cannot use filterby without context source - query must be matched to a region " + setFormula);
             }
 
@@ -164,7 +145,7 @@ public class NameQueryParser {
         try {
             referencedNames = getNameListFromStringList(nameStrings, azquoMemoryDBConnection, languages);
         } catch (Exception e) {
-            if (setFormula.toLowerCase().equals(StringLiterals.NAMEMARKER +"00 children")) return new ArrayList<>();
+            if (setFormula.toLowerCase().equals(StringLiterals.NAMEMARKER + "00 children")) return new ArrayList<>();
                /* sometimes excel formulae generate dependent sets that do not exist (e.g. `2012 Transactions`
             in that case it is better to return a null rather than an exception as temporary names may still be set incorrectly
             if (setFormula.contains(StringLiterals.AS)) {
@@ -178,7 +159,7 @@ public class NameQueryParser {
             throw e;
         }
         setFormula = setFormula.replace(StringLiterals.ASGLOBAL, StringLiterals.ASGLOBALSYMBOL + "").replace(StringLiterals.FILTERBY, StringLiterals.FILTERBYSYMBOL + "");
-        setFormula = setFormula.replace(StringLiterals.AS, StringLiterals.ASSYMBOL + "").replace(StringLiterals.CONTAINS, StringLiterals.CONTAINSSYMBOL+"");
+        setFormula = setFormula.replace(StringLiterals.AS, StringLiterals.ASSYMBOL + "").replace(StringLiterals.CONTAINS, StringLiterals.CONTAINSSYMBOL + "");
 
         setFormula = StringUtils.shuntingYardAlgorithm(setFormula);
         Pattern p = Pattern.compile("[\\+\\-\\*/" + StringLiterals.NAMEMARKER + StringLiterals.ASSYMBOL + StringLiterals.ASGLOBALSYMBOL + StringLiterals.CONTAINSSYMBOL + StringLiterals.FILTERBYSYMBOL + "]");//recognises + - * / NAMEMARKER  NOTE THAT - NEEDS BACKSLASHES (not mentioned in the regex tutorial on line
@@ -217,7 +198,7 @@ public class NameQueryParser {
                 stackCount++;
                 // now returns a custom little object that hods a list a set and whether it's immutable
                 nameStack.add(interpretSetTerm(null, setFormula.substring(pos, nextTerm - 1), formulaStrings, referencedNames, attributeStrings, azquoMemoryDBConnection, attributeNames, setFormula));
-            } else if (op == StringLiterals.FILTERBYSYMBOL){ // filter by is unique - it's not an operator which takes two name sets, it simply applies a condition to the set before sp the stack can be one for this operator
+            } else if (op == StringLiterals.FILTERBYSYMBOL) { // filter by is unique - it's not an operator which takes two name sets, it simply applies a condition to the set before sp the stack can be one for this operator
                 NameStackOperators.filterBy(nameStack, filterByCriteria, azquoMemoryDBConnection, contextSource, languages);
             } else if (stackCount-- < 2) {
                 throw new Exception("not understood:  " + formulaCopy);
@@ -229,21 +210,21 @@ public class NameQueryParser {
                 NameStackOperators.removeFromSet(nameStack, stackCount);
             } else if (op == '+') {
                 NameStackOperators.addSets(nameStack, stackCount);
-            }else if (op==StringLiterals.CONTAINSSYMBOL){
+            } else if (op == StringLiterals.CONTAINSSYMBOL) {
                 //swap the last two elements on the stack, then use op = '-'
                 NameSetList topList = nameStack.get(stackCount);
-                nameStack.set(stackCount,nameStack.get(stackCount-1));
-                nameStack.set(stackCount-1, topList);
-                NameStackOperators.removeFromSet(nameStack,stackCount);
+                nameStack.set(stackCount, nameStack.get(stackCount - 1));
+                nameStack.set(stackCount - 1, topList);
+                NameStackOperators.removeFromSet(nameStack, stackCount);
             } else if (op == StringLiterals.ASSYMBOL) {
                 Name totalName = nameStack.get(stackCount).getAsCollection().iterator().next();// get(0) relies on list, this works on a collection
-                if (totalName.getAttribute(StringLiterals.DEFAULT_DISPLAY_NAME) != null){
+                if (totalName.getAttribute(StringLiterals.DEFAULT_DISPLAY_NAME) != null) {
                     resetDefs = totalName.getAttribute(StringLiterals.DEFAULT_DISPLAY_NAME).toLowerCase();
                 }
                 NameStackOperators.assignSetAsName(azquoMemoryDBConnection, attributeNames, nameStack, stackCount, false);
-            }else if (op == StringLiterals.ASGLOBALSYMBOL){
+            } else if (op == StringLiterals.ASGLOBALSYMBOL) {
                 Name totalName = nameStack.get(stackCount).getAsCollection().iterator().next();// get(0) relies on list, this works on a collection
-                if (totalName.getAttribute(StringLiterals.DEFAULT_DISPLAY_NAME) != null){
+                if (totalName.getAttribute(StringLiterals.DEFAULT_DISPLAY_NAME) != null) {
                     resetDefs = totalName.getAttribute(StringLiterals.DEFAULT_DISPLAY_NAME).toLowerCase();
                 }
                 NameStackOperators.assignSetAsName(azquoMemoryDBConnection, attributeNames, nameStack, stackCount, true);
@@ -282,12 +263,12 @@ public class NameQueryParser {
 
             // note the first entry on the name stack might actually be mutable anyway and hence we could just return it IF a toReturn collection wasn't passed
   */
-            if (returnReadOnlyCollection) {
-                toReturn = nameStack.get(0).getAsCollection();
-            } else {
-                toReturn.addAll(nameStack.get(0).getAsCollection());
-            }
-    //   }
+        if (returnReadOnlyCollection) {
+            toReturn = nameStack.get(0).getAsCollection();
+        } else {
+            toReturn.addAll(nameStack.get(0).getAsCollection());
+        }
+        //   }
         long time = (System.currentTimeMillis() - track);
         long heapIncrease = ((runtime.totalMemory() - runtime.freeMemory()) / mb) - startUsed;
         if (heapIncrease > 50) {
@@ -297,7 +278,7 @@ public class NameQueryParser {
             System.out.println("Parse query : " + formulaCopy + " took : " + time + "ms size : " + toReturn.size());
         }
         // check if this is necessary? Refactor?
-        if (resetDefs !=null) {
+        if (resetDefs != null) {
             //currently recalculates ALL definitions regardless of whether they contain the changed set.  Could speed this by looking for expressions that contain the changed set name
             Collection<Name> defNames = azquoMemoryDBConnection.getAzquoMemoryDBIndex().namesForAttribute(StringLiterals.DEFINITION);
             if (defNames != null) {
@@ -311,10 +292,10 @@ public class NameQueryParser {
                                 localLanguages.add(userEmail);
                                 Name userSpecificSet = NameService.findByName(azquoMemoryDBConnection, defName.getDefaultDisplayName(), localLanguages);
                                 if (userSpecificSet == null) {
-                                    azquoMemoryDBConnection.setProvenance(userEmail, "set assigned","", "query");
+                                    azquoMemoryDBConnection.setProvenance(userEmail, "set assigned", "", "query");
                                     userSpecificSet = new Name(azquoMemoryDBConnection.getAzquoMemoryDB(), azquoMemoryDBConnection.getProvenance()); // a basic copy of the set
                                     //userSpecificSet.setAttributeWillBePersisted(Constants.DEFAULT_DISPLAY_NAME, userEmail + totalName.getDefaultDisplayName()); // GOing to set the default display name as bits of the suystem really don't like it not being there
-                                    userSpecificSet.setAttributeWillBePersisted(userEmail, defName.getDefaultDisplayName(),azquoMemoryDBConnection); // set the name (usually default_display_name) but for the "user email" attribute
+                                    userSpecificSet.setAttributeWillBePersisted(userEmail, defName.getDefaultDisplayName(), azquoMemoryDBConnection); // set the name (usually default_display_name) but for the "user email" attribute
                                     defName.addChildWillBePersisted(userSpecificSet, azquoMemoryDBConnection);
                                 }
                                 defName = userSpecificSet; // switch the new one in, it will be used as normal
@@ -332,8 +313,8 @@ public class NameQueryParser {
     }
 
     // Managed to convert to returning NameSetList, the key being using fast collection operations where possible depending on what has been passed
-    // not entirely happy with this being able to be passed a name set list. It to allow more complex things such as calling children on a previously interpred set term. todo - make mroe elegant?
-    // needs azquomemory db conneciton for it's indexes for the attribute set criteria. Boring but can't see a way around that.
+    // not entirely happy with this being able to be passed a name set list. It to allow more complex things such as calling children on a previously interpreted set term. todo - make more elegant?
+    // needs AzquoMemoryDBConnection for its indexes for the attribute set criteria. Boring but can't see a way around that.
     private static AtomicInteger interpretSetTermCount = new AtomicInteger(0);
 
     private static NameSetList interpretSetTerm(NameSetList namesFound, String setTerm, List<String> strings, List<Name> referencedNames, List<String> attributeStrings, AzquoMemoryDBConnection azquoMemoryDBConnection, List<String> languages, String setFormula) throws Exception {
@@ -356,7 +337,9 @@ public class NameQueryParser {
         int wherePos = setTerm.toLowerCase().indexOf(StringLiterals.WHERE.toLowerCase());
         String whereString = null;
         if (wherePos >= 0) {
-            whereString = setTerm.substring(wherePos + 6);//the rest of the string???   maybe need 'group by' in future
+            if ((wherePos + 6) < setTerm.length()){ // stop possible index out of bounds issue
+                whereString = setTerm.substring(wherePos + 6);//the rest of the string???   maybe need 'group by' in future
+            }
         }
         if (levelString != null) {
             childrenString = "true";
@@ -382,7 +365,7 @@ public class NameQueryParser {
                 namesFound = new NameSetList(null, singleName, true);// mutable single item list
             } else {
                 namesFound = NameService.findChildrenAtLevel(name, levelString); // reassign names from the find children clause
-                if (languages.size() > 1){//need to check for a list of temporary names
+                if (languages.size() > 1) {//need to check for a list of temporary names
                     List<Name> replacementNames = new ArrayList<>();
                     for (Name child : namesFound.getAsCollection()) {
                         if (child != null) {
@@ -396,11 +379,11 @@ public class NameQueryParser {
                             }
                         }
                     }
-                    if (replacementNames.size()>0){//assuming ALL names are temporary currently
+                    if (replacementNames.size() > 0) {//assuming ALL names are temporary currently
                         namesFound = new NameSetList(null, replacementNames, true);
 
                     }
-               }
+                }
             }
         }
         if (whereString != null) {
@@ -504,9 +487,9 @@ public class NameQueryParser {
         }
     }
 
-    public static String replaceAttributes(AzquoMemoryDBConnection azquoMemoryDBConnection,String statement)throws Exception{
+    public static String replaceAttributes(AzquoMemoryDBConnection azquoMemoryDBConnection, String statement) throws Exception {
         StringBuilder modifiedStatement = new StringBuilder();
-        Pattern p = Pattern.compile("" + StringLiterals.QUOTE + "[^" + StringLiterals.QUOTE +"]*" + StringLiterals.QUOTE + "\\."+StringLiterals.QUOTE + "[^" + StringLiterals.QUOTE +"]*"+StringLiterals.QUOTE); //`name`.`attribute`
+        Pattern p = Pattern.compile("" + StringLiterals.QUOTE + "[^" + StringLiterals.QUOTE + "]*" + StringLiterals.QUOTE + "\\." + StringLiterals.QUOTE + "[^" + StringLiterals.QUOTE + "]*" + StringLiterals.QUOTE); //`name`.`attribute`
         Matcher matcher = p.matcher(statement);
         int lastEnd = 0;
         while (matcher.find()) {
@@ -517,13 +500,13 @@ public class NameQueryParser {
             }
             lastEnd = matcher.end();
             String attribute = statement.substring(matcher.start(), matcher.end());
-            int nameEnd = statement.indexOf(StringLiterals.QUOTE,matcher.start()+1);
+            int nameEnd = statement.indexOf(StringLiterals.QUOTE, matcher.start() + 1);
             String nameString = statement.substring(matcher.start() + 1, nameEnd);
-            String attributeString = statement.substring(nameEnd + 3,matcher.end() - 1);
-            Name name = NameService.findByName(azquoMemoryDBConnection,nameString);
-            if (name!=null){
+            String attributeString = statement.substring(nameEnd + 3, matcher.end() - 1);
+            Name name = NameService.findByName(azquoMemoryDBConnection, nameString);
+            if (name != null) {
                 String attVal = name.getAttribute(attributeString);
-                if (attVal!=null) {
+                if (attVal != null) {
                     attribute = attVal;//replaces with a name (an element of a string
                 }
             }
@@ -548,9 +531,9 @@ public class NameQueryParser {
     private static NameSetList attributeSet(AzquoMemoryDBConnection azquoMemoryDBConnection, String attributeName, NameSetList toConvert) {
         String setAttribute = attributeName;
         int dotPos = attributeName.indexOf(".");
-        if (dotPos >0){
+        if (dotPos > 0) {
             setAttribute = attributeName.substring(dotPos + 1);
-            attributeName = attributeName.substring(0,dotPos);
+            attributeName = attributeName.substring(0, dotPos);
         }
         Set<Name> result = HashObjSets.newMutableSet();
         for (Name source : toConvert.getAsCollection()) {
@@ -560,8 +543,8 @@ public class NameQueryParser {
             ...but remember to remove the source set from the result.
 
              */
-            if (source.getAttribute(setAttribute) != null){
-                result.addAll(azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNamesForAttribute(attributeName,source.getAttribute(setAttribute)));
+            if (source.getAttribute(setAttribute) != null) {
+                result.addAll(azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNamesForAttribute(attributeName, source.getAttribute(setAttribute)));
             }
             result.addAll(azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNamesForAttribute(attributeName, source.getDefaultDisplayName()));
         }

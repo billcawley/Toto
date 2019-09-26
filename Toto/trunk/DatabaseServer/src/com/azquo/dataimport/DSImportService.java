@@ -24,7 +24,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
 
-/**top
+/**
  * Copyright (C) 2018 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
  * <p>
  * Created by Edd on 20/05/15.
@@ -55,6 +55,7 @@ public class DSImportService {
         toReturn.setNoValuesAdjusted(azquoMemoryDBConnection.getAzquoMemoryDB().countValuesForProvenance(azquoMemoryDBConnection.getProvenance()));
         return toReturn;
     }
+
     // Called by above but also directly from DSSpreadsheet service when it has prepared a CSV from data entered ad-hoc into a sheet
     public static UploadedFile readPreparedFile(AzquoMemoryDBConnection azquoMemoryDBConnection, UploadedFile uploadedFile) throws Exception {
         // ok the thing he is to check if the memory db object lock is free, more specifically don't start an import if persisting is going on, since persisting never calls import there should be no chance of a deadlock from this
@@ -118,7 +119,7 @@ public class DSImportService {
                     if (firstLine.contains("\t")) {
                         delimiter = '\t';
                     }
-                } catch (MalformedInputException e){
+                } catch (MalformedInputException e) {
                     throw new Exception(uploadedFile.getFileName() + ": Unable to read any data (perhaps due to an empty file in a zip or an empty sheet in a workbook)");
                 }
             }
@@ -151,7 +152,7 @@ public class DSImportService {
             // list of top headings as they appear at offsets up to a limit as well as normal
             int offsetLimit = 20;
             List<Map<String, String>> topHeadingsValuesByOffset = new ArrayList<>();
-            for (int offset = 0; offset < offsetLimit; offset++){
+            for (int offset = 0; offset < offsetLimit; offset++) {
                 topHeadingsValuesByOffset.add(new HashMap<>());
             }
             /*
@@ -168,7 +169,7 @@ public class DSImportService {
                 if (uploadedFile.getTopHeadings() != null) {
                     for (int colIndex = 0; colIndex < row.length; colIndex++) {
                         // as mentioned above, run through a bunch of offsets here in case the top headings have been shifted to the right - note they still have to have the same configuration
-                        for (int offset = 0; offset < offsetLimit; offset++){
+                        for (int offset = 0; offset < offsetLimit; offset++) {
                             String topHeading = uploadedFile.getTopHeadings().get(new RowColumn(rowIndex, colIndex - offset)); // yes can be a negative col at least at first - no harm it just won't find anything
                             if (topHeading != null && row[colIndex].length() > 0) { // we found the cell
                                 if (topHeading.startsWith("`") && topHeading.endsWith("`")) { // we grab the value and store it
@@ -184,9 +185,9 @@ public class DSImportService {
 
             // most of the time the first will have map entries and none of the rest will but it's possible I suppose. Get the most complete set and exception if it's not actually complete
             Map<String, String> topHeadingsValues = new HashMap<>();
-            for (int offset = 0; offset < offsetLimit; offset++){
-                if (topHeadingsValuesByOffset.get(offset).size() > topHeadingsValues.size()){
-                    if (offset > 0){
+            for (int offset = 0; offset < offsetLimit; offset++) {
+                if (topHeadingsValuesByOffset.get(offset).size() > topHeadingsValues.size()) {
+                    if (offset > 0) {
                         System.out.println("Using offset on top headings : " + offset);
                     }
                     topHeadingsValues = topHeadingsValuesByOffset.get(offset);
@@ -225,7 +226,7 @@ public class DSImportService {
                                 }
                                 // NOTE, we want case insensitive on heading names in the file look up, hence this which corresponds to to .toLowerCases in ImportService.readPreparedFile
                                 String lineHeading = lineCells[j].replace("\\\\n", "\n").replace("\\\\t", "\t").trim().toLowerCase();
-                                if (!lineHeading.isEmpty()){ // not having blanks
+                                if (!lineHeading.isEmpty()) { // not having blanks
                                     headingsFromTheFile.get(j).add(lineHeading);
                                 }
                             }
@@ -272,11 +273,11 @@ public class DSImportService {
                         // most of the time top headings will be jammed in below as a simple default but that default might be against an existing heading in which case
                         // add the default here and knock it off the list so it's not added again later
                         // note - if a default top heading matched a heading on file the default won't get set
-                        if (!topHeadingsValues.isEmpty()){
+                        if (!topHeadingsValues.isEmpty()) {
                             String toCheckAgainstTopHeadings = leftOver.getHeading();
-                            if (toCheckAgainstTopHeadings.contains(";")){
+                            if (toCheckAgainstTopHeadings.contains(";")) {
                                 toCheckAgainstTopHeadings = toCheckAgainstTopHeadings.substring(0, toCheckAgainstTopHeadings.indexOf(";"));
-                                if (topHeadingsValues.containsKey(toCheckAgainstTopHeadings) && !"FOUND".equals(topHeadingsValues.get(toCheckAgainstTopHeadings))){
+                                if (topHeadingsValues.containsKey(toCheckAgainstTopHeadings) && !"FOUND".equals(topHeadingsValues.get(toCheckAgainstTopHeadings))) {
                                     headingToAdd = leftOver.getHeading() + ";default " + topHeadingsValues.remove(toCheckAgainstTopHeadings);
                                 }
                             }
@@ -312,14 +313,14 @@ public class DSImportService {
                     boolean hasClauses = false;
                     boolean blank = true;
                     for (String heading : headings) {
-                        if (!heading.isEmpty()){
+                        if (!heading.isEmpty()) {
                             blank = false;
                         }
                         if (heading.contains(".") || heading.contains(";")) {
                             hasClauses = true;
                         }
                     }
-                    if (blank){
+                    if (blank) {
                         uploadedFile.setError("Blank first line and no top headings, not loading.");
                         return uploadedFile;
                     }
@@ -341,10 +342,10 @@ public class DSImportService {
                 headings = uploadedFile.getSimpleHeadings();
             }
             // zap any trailing empty headings, can be an issue with the vertically built headings
-            while (!headings.isEmpty() && headings.get(headings.size() - 1).isEmpty()){
+            while (!headings.isEmpty() && headings.get(headings.size() - 1).isEmpty()) {
                 headings.remove(headings.size() - 1);
             }
-            if (lastColumnToActuallyRead == 0){
+            if (lastColumnToActuallyRead == 0) {
                 lastColumnToActuallyRead = headings.size() - 1; // default to that
             }
             // now add top headings that have a value
@@ -358,7 +359,7 @@ public class DSImportService {
             // these will want the "pre . replaced with ; attribute" reference to a heading also I think, want to be able to say shop.address
             int index = 0;
             for (String heading : headings) {
-                String headingNameForLookUp = heading.contains(";") ? heading.substring(0,heading.indexOf(";")).trim() : heading.trim();
+                String headingNameForLookUp = heading.contains(";") ? heading.substring(0, heading.indexOf(";")).trim() : heading.trim();
                 azquoHeadingCompositeLookup.put(headingNameForLookUp.toUpperCase(), index);
                 String assumption = uploadedFile.getParameter(headingNameForLookUp);
                 if (assumption != null) {
@@ -396,17 +397,17 @@ public class DSImportService {
                     // and now composite can have . between the literals so watch for that too. Writing parsers is a pain,
                     boolean inComposition = false;
                     StringBuilder replacedHeading = new StringBuilder();
-                    for (char c : heading.toCharArray()){
-                        if (replacedHeading.toString().toLowerCase().endsWith("composition")){
+                    for (char c : heading.toCharArray()) {
+                        if (replacedHeading.toString().toLowerCase().endsWith("composition")) {
                             inComposition = true;
                         }
-                        if (inComposition && !inStringLiteral && c == ';'){
+                        if (inComposition && !inStringLiteral && c == ';') {
                             inComposition = false;
                         }
-                        if (c == '`'){
+                        if (c == '`') {
                             inStringLiteral = !inStringLiteral;
                         }
-                        if (c == '.' && !inStringLiteral && !inComposition){
+                        if (c == '.' && !inStringLiteral && !inComposition) {
                             replacedHeading.append(";attribute ");
                         } else {
                             replacedHeading.append(c);
@@ -473,13 +474,13 @@ public class DSImportService {
 //        System.out.println("get lines with values and column, values to check : " + valuesToCheck);
         try (BufferedReader br = Files.newBufferedReader(Paths.get(uploadedFile.getPath()), StandardCharsets.UTF_8)) {
             // grab the first line to check on delimiters
-                String firstLine = br.readLine();
-                if (firstLine.contains("|")) {
-                    delimiter = '|';
-                }
-                if (firstLine.contains("\t")) {
-                    delimiter = '\t';
-                }
+            String firstLine = br.readLine();
+            if (firstLine.contains("|")) {
+                delimiter = '|';
+            }
+            if (firstLine.contains("\t")) {
+                delimiter = '\t';
+            }
         }
         CsvMapper csvMapper = new CsvMapper();
         csvMapper.enable(CsvParser.Feature.WRAP_AS_ARRAY);
@@ -498,11 +499,11 @@ public class DSImportService {
         }
         Map<Integer, TypedPair<String, String>> toReturn = new HashMap<>();
         // ok, run the check
-        while (lineIterator.hasNext()){
+        while (lineIterator.hasNext()) {
             String[] row = lineIterator.next();
             // will make it case insensitive
             if ((columnIndex == -1 && valuesToCheck.contains((lineIterator.getCurrentLocation().getLineNr() - 1) + "")) // bit of a hack - -1 col index assumes the value is the line no we're after
-                    || (columnIndex > -1 && columnIndex < row.length && valuesToCheck.contains(row[columnIndex].toLowerCase()))){
+                    || (columnIndex > -1 && columnIndex < row.length && valuesToCheck.contains(row[columnIndex].toLowerCase()))) {
                 StringBuilder sb = new StringBuilder();
                 // rebuild the line, seems a little stupid :P
                 for (String s : row) {
@@ -532,10 +533,10 @@ public class DSImportService {
                     if (colNo >= headings.size()) {
                         headings.add(heading);
                         // todo - clean up logic
-                        if (heading.length() > 0){
+                        if (heading.length() > 0) {
                             lastfilled = true;
                         }
-                    } else if (heading.length() > 0){
+                    } else if (heading.length() > 0) {
                         if (heading.startsWith(".")) {
                             headings.set(colNo, headings.get(colNo) + heading);
                         } else {

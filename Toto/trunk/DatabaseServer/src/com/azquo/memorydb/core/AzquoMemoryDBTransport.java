@@ -489,6 +489,7 @@ class AzquoMemoryDBTransport {
         for (Set<AzquoMemoryDBEntity> entities : jsonEntitiesToPersist.values()) {
             if (!entities.isEmpty()) {
                 jsonToStore = true;
+                break;
             }
         }
         if (jsonToStore || !namesToPersist.isEmpty() || !valuesToPersist.isEmpty()) {

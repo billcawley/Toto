@@ -10,7 +10,7 @@ import java.util.Set;
 
 /**
  * Extracted from NameService by edward on 18/10/16.
- *
+ * <p>
  * in order to avoid unnecessary collection copying (we could be talking millions of names)
  * I made this little container to move a collection that could be a list or set and possibly mutable
  */
@@ -26,13 +26,13 @@ public class NameSetList {
     }
 
     // make from an existing (probably immutable) one
-    public NameSetList(NameSetList nameSetList) {
+    NameSetList(NameSetList nameSetList) {
         set = nameSetList.set != null ? HashObjSets.newMutableSet(nameSetList.set) : null;
         list = nameSetList.list != null ? new ArrayList<>(nameSetList.list) : null;
         mutable = true;
     }
 
-    public Collection<Name> getAsCollection() {
+    Collection<Name> getAsCollection() {
         return set != null ? set : list;
     }
 }

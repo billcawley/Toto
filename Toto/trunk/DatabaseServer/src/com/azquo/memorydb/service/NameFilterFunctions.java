@@ -7,42 +7,41 @@ import com.azquo.StringUtils;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 
 import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * Extracted from NameQueryParser by edward on 26/10/16.
  * <p>
  * Functions to filter a NameSetList, shouldn't require DB lookups or heavy parsing, parameters should have been gathered.
+ * <p>
+ * Principally constraint by attributes - as in here's a set of names, strip away any where attribute A is not equal to X and attribute B is greater than Y etc.
+ *
+ *
  */
 class NameFilterFunctions {
     // since what it's passed could be immutable need to return
     static NameSetList filter(NameSetList nameSetList, String condition, List<String> strings, List<String> attributeNames) {
         NameSetList toReturn = nameSetList.mutable ? nameSetList : new NameSetList(nameSetList); // make a new mutable NameSetList if the one passed wasn't mutable
-         Collection<Name> namesToFilter = toReturn.getAsCollection();
+        Collection<Name> namesToFilter = toReturn.getAsCollection();
         StringTokenizer st = new StringTokenizer(condition, " ");
         List<Set<Name>> nameStack = new ArrayList<>();
         int stackPos = 0;
-
         while (st.hasMoreTokens()) {
             String opString = st.nextToken();
             char op = opString.charAt(0);
-            if (op == '&' || op == '|'){
+            if (op == '&' || op == '|') {
                 stackPos--;
-                if (op=='&'){
+                // note - this like like it's the wrong way around because at the end the found names are *removed* from the filter set.
+                if (op == '&') {
                     nameStack.get(stackPos - 1).addAll(nameStack.get(stackPos));
-                }else{
+                } else {
                     nameStack.get(stackPos - 1).removeAll(nameStack.get(stackPos));
                 }
                 nameStack.remove(stackPos);
-
-            }else {
-
+            } else {
                 String clauseLhs = opString;
                 String clauseRhs = st.nextToken();
                 opString = st.nextToken();
                 op = opString.charAt(0);
-
                 // note, given the new parser these clauses will either be literals or begin .
                 // there may be code improvements that can be made knowing this
                 if (clauseLhs.charAt(0) == StringLiterals.ATTRIBUTEMARKER) {// we need to replace it
@@ -106,30 +105,22 @@ class NameFilterFunctions {
                 stackPos++;
             }
             // outside the loop, iterator shouldn't get shirty
-         }
+        }
         namesToFilter.removeAll(nameStack.get(0));
         return toReturn; // its appropriate member collection should have been modified via namesToFilter above, return it
     }
 
-
-
-
-
     static NameSetList constrainNameListFromToCount(NameSetList nameSetList, String fromString, String toString, final String countString, final String offsetString, final String compareWithString, List<Name> referencedNames) throws Exception {
-
         if (!nameSetList.mutable) {
             nameSetList = new NameSetList(null, new ArrayList<>(nameSetList.list), true);// then make it mutable
-
         }
         List<Name> sortList = nameSetList.list;
         if (sortList == null) {
             //sort the names.   These are usually dates
-            sortList = new ArrayList<>();
-            sortList.addAll(nameSetList.set);
+            sortList = new ArrayList<>(nameSetList.set);
         }
-        if (sortList.size() >= Name.ARRAYTHRESHOLD){
+        if (sortList.size() >= Name.ARRAYTHRESHOLD) {
             sortList.sort(Comparator.comparing(Name::getDefaultDisplayName));
-
         }
         int count = NameQueryParser.parseInt(countString, -1);
         /*
@@ -151,12 +142,12 @@ class NameFilterFunctions {
         final ArrayList<Name> toReturn = new ArrayList<>();
         int to = -10000;
         int from = 1;
-        int offset =  NameQueryParser.parseInt(offsetString, 0);
+        int offset = NameQueryParser.parseInt(offsetString, 0);
         int compareWith = NameQueryParser.parseInt(compareWithString, 0);
         int space = 1; //spacing between 'compare with' fields
         //first look for integers and encoded names...
 
-        if (toString.length() > 0 && fromString.length()==0) {
+        if (toString.length() > 0 && fromString.length() == 0) {
             //invert the list
             Collections.reverse(sortList);
             fromString = toString;
@@ -196,7 +187,7 @@ class NameFilterFunctions {
             to = sortList.size() + to;
         }
         int added = 0;
-        for (int i =  - offset; i < sortList.size() - offset; i++) {
+        for (int i = -offset; i < sortList.size() - offset; i++) {
             if (position == from || (i >= 0 && i < sortList.size() && fromString.equals(sortList.get(i).getDefaultDisplayName()))) {
                 inSet = true;
             }
@@ -216,7 +207,7 @@ class NameFilterFunctions {
             position++;
         }
         while (added++ < count) {
-            toReturn.add(null);
+            toReturn.add(null); // nulls added to make up the count?? EFC wary of this . . .
         }
         return new NameSetList(null, toReturn, true);
     }

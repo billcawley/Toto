@@ -1,6 +1,5 @@
 package com.azquo.memorydb.core;
 
-import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.NameForBackup;
 import com.azquo.memorydb.ProvenanceForBackup;
 import com.azquo.memorydb.ValueForBackup;
@@ -15,7 +14,7 @@ public class BackupTransport {
 
     private static final int BATCH_SIZE = 100_000;
 
-    public BackupTransport(AzquoMemoryDB azquoMemoryDB) {
+    BackupTransport(AzquoMemoryDB azquoMemoryDB) {
         this.azquoMemoryDB = azquoMemoryDB;
     }
 
@@ -118,7 +117,7 @@ public class BackupTransport {
         }
     }
 
-    public synchronized void setBatchOfValueHistoriesFromBackup(List<ValueForBackup> backupBatch) throws Exception {
+    public synchronized void setBatchOfValueHistoriesFromBackup(List<ValueForBackup> backupBatch) {
         int sqlLimit = 10_000;
         int startPoint = 0;
         while (startPoint < backupBatch.size()){

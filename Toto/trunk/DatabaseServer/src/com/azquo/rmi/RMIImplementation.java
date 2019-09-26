@@ -74,15 +74,6 @@ class RMIImplementation implements RMIInterface {
         }
     }
 
-    @Override
-    public void copyDatabase(String from, String to) throws RemoteException {
-        try {
-            DSAdminService.copyDatabase(from, to);
-        } catch (Exception e) {
-            throw new RemoteException("Database Server Exception", e);
-        }
-    }
-
     //Magento data load stuff (I could break these up but I'm not sure a thte moment it's so important for what's essentially proxy code)
 
     @Override
@@ -464,15 +455,6 @@ class RMIImplementation implements RMIInterface {
     public void addToLog(DatabaseAccessToken databaseAccessToken, String message) throws RemoteException {
         try {
             DSSpreadsheetService.addToLog(databaseAccessToken, message);
-        } catch (Exception e) {
-            throw new RemoteException("Database Server Exception", e);
-        }
-    }
-
-    @Override
-    public void copyDatabase(DatabaseAccessToken source, DatabaseAccessToken target, String nameList, String user) throws RemoteException {
-        try {
-            DSAdminService.copyDatabase(source, target, nameList, user);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }

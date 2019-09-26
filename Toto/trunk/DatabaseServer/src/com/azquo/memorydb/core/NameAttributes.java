@@ -67,15 +67,6 @@ final class NameAttributes {
         return null;
     }
 
-    boolean hasAttribute(String attributeName) {
-        for (int i = 0; i < attributeKeys.length; i++) {
-            if (attributeKeys[i].equals(attributeName)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     Map<String, String> getAsMap() {
         Map<String, String> attributesAsMap = new HashMap<>(attributeKeys.length);
         int count = 0;

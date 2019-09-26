@@ -274,7 +274,7 @@ public class DBCron {
             }
 
             // scan for direct uploads - added for Joe Brown's
-
+            // millis old for JB can be longer? We'll see . . .
             if (SpreadsheetService.getDirectUploadDir() != null && !SpreadsheetService.getDirectUploadDir().isEmpty()) {
                 Path directUploadDir = Paths.get(SpreadsheetService.getDirectUploadDir());
                 if (directUploadDir.toFile().exists() && directUploadDir.toFile().isDirectory()) {

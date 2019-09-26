@@ -11,14 +11,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Extracted from NameService by edward on 14/10/16.
  * <p>
- * Databases can be modified in the queries, this is not used often, I've moved these functions in here.
+ * Databases can be modified in the queries if they start ":edit", this is not used often, I've moved these functions in here.
  */
 class NameEditFunctions {
 
     static List<Name> handleEdit(AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula, List<String> languages) throws Exception {
         List<Name> toReturn = new ArrayList<>();
         if (setFormula.toLowerCase().startsWith("namesfromattribute")) {
-            return namesFromAttribute(azquoMemoryDBConnection, setFormula.substring("namesFromAttribute".length()).replace("`","").trim());
+            return namesFromAttribute(azquoMemoryDBConnection, setFormula.substring("namesFromAttribute".length()).replace("`", "").trim());
         }
         if (setFormula.startsWith("deduplicate")) {
             return deduplicate(azquoMemoryDBConnection, setFormula.substring(12));
@@ -27,18 +27,19 @@ class NameEditFunctions {
             return findDuplicateNames(azquoMemoryDBConnection, setFormula);
         }
         if (setFormula.startsWith("zap ")) {
-            Collection<Name> names = null;
+            Collection<Name> names;
             try {
-               names = NameQueryParser.parseQuery(azquoMemoryDBConnection, setFormula.substring(4), languages, true);
-            }catch(Exception e){
-                names =  new ArrayList<>(azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNamesWithAttributeContaining(languages.iterator().next(), setFormula.substring(4)));
+                names = NameQueryParser.parseQuery(azquoMemoryDBConnection, setFormula.substring(4), languages, true);
+            } catch (Exception e) {
+                names = new ArrayList<>(azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNamesWithAttributeContaining(languages.iterator().next(), setFormula.substring(4)));
             }
             if (names != null) {
-                for (Name name : names) name.delete(azquoMemoryDBConnection);
+                for (Name name : names) {
+                    name.delete(azquoMemoryDBConnection);
+                }
                 new Thread(azquoMemoryDBConnection::persist).start();
                 return toReturn;
             }
-
         }
         if (setFormula.startsWith("zapdata ")) {
             //expecting a list of queries separated by |  e.g.   `Mens products`|2018
@@ -48,8 +49,8 @@ class NameEditFunctions {
             for (String partList : foundList) {
                 partList = partList.trim();
                 boolean exact = false;
-                if (partList.toLowerCase().startsWith("exact(")){
-                    partList = partList.substring(6,partList.length() - 1);
+                if (partList.toLowerCase().startsWith("exact(")) {
+                    partList = partList.substring(6, partList.length() - 1);
                     exact = true;
                 }
                 Collection<Name> found = NameQueryParser.parseQuery(azquoMemoryDBConnection, partList.trim());
@@ -57,7 +58,7 @@ class NameEditFunctions {
                 for (Name name : found) {
                     if (!exact) {
                         values.addAll(name.findValuesIncludingChildren());
-                    }else{
+                    } else {
                         values.addAll(name.getValues());
                     }
                 }
@@ -75,11 +76,11 @@ class NameEditFunctions {
                 return toReturn;
             }
         }
-        if (setFormula.startsWith("saveset")){
+        if (setFormula.startsWith("saveset")) {
             int formulaPos = 8;
             String setName = extractName(setFormula.substring(formulaPos));
-            if (setName==null) return null;
-            Name set = NameService.findByName(azquoMemoryDBConnection,setName);
+            if (setName == null) return null;
+            Name set = NameService.findByName(azquoMemoryDBConnection, setName);
             formulaPos += skipTwoQuotes(setFormula.substring(formulaPos));
             List<String> children = new ArrayList<>();
             int rowNo = 1;
@@ -105,19 +106,19 @@ class NameEditFunctions {
                 }
             }
             String dRows = "";
-            if (needsDisplayRows){
+            if (needsDisplayRows) {
                 dRows = displayRows.toString().substring(1);
             }
             String oldDRows = set.getAttribute("DISPLAYROWS");
             if (oldDRows == null) oldDRows = "";
             boolean changed = false;
-            if (!oldDRows.equals(dRows)){
+            if (!oldDRows.equals(dRows)) {
                 changed = true;
-            }else{
+            } else {
                 Collection<Name> childNames = set.getChildren();
-                if (childNames.size()!= children.size()){
+                if (childNames.size() != children.size()) {
                     changed = true;
-                }else{
+                } else {
                     if (childNames.size() > 0) {
                         List<Name> childList = new ArrayList<>(set.getChildren());
                         for (int childNo = 0; childNo < childNames.size(); childNo++) {
@@ -129,84 +130,78 @@ class NameEditFunctions {
                     }
                 }
             }
-            if (changed){
-                List<Name>newChildren = new ArrayList<>();
-                for (String child:children){
-                    newChildren.add(NameService.findOrCreateNameInParent(azquoMemoryDBConnection,child,set,true));//make local name
+            if (changed) {
+                List<Name> newChildren = new ArrayList<>();
+                for (String child : children) {
+                    newChildren.add(NameService.findOrCreateNameInParent(azquoMemoryDBConnection, child, set, true));//make local name
                 }
                 //Collection<Name> redundantNames = new ArrayList<>(set.getChildren());
                 //redundantNames.removeAll(newChildren);
                 //newChildren.addAll(redundantNames);//must ensure that there are no 'floating names'
-                set.setChildrenWillBePersisted(newChildren,azquoMemoryDBConnection);
-                set.setAttributeWillBePersisted("DISPLAYROWS",dRows,azquoMemoryDBConnection);
+                set.setChildrenWillBePersisted(newChildren, azquoMemoryDBConnection);
+                set.setAttributeWillBePersisted("DISPLAYROWS", dRows, azquoMemoryDBConnection);
                 toReturn.add(set);
             }
             return toReturn;
         }
 
-        if (setFormula.startsWith("check")) {
-            // check db if required . . .
-            return new ArrayList<>();
-        }
-        if (setFormula.startsWith("zapaudit")){
+        if (setFormula.startsWith("zapaudit")) {
             String provenenceToZap = setFormula.substring(9).toLowerCase().trim();
             if (provenenceToZap.length() < 10) return new ArrayList<>();
             List<Name> toZap = new ArrayList<>();
-            for (Name topName: NameService.findTopNames(azquoMemoryDBConnection,StringLiterals.DEFAULT_DISPLAY_NAME)){
+            for (Name topName : NameService.findTopNames(azquoMemoryDBConnection, StringLiterals.DEFAULT_DISPLAY_NAME)) {
                 Collection<Name> children = topName.findAllChildren();
-                 for (Name child:children){
-                    if (child.getProvenance().getName().toLowerCase().contains(provenenceToZap)){
+                for (Name child : children) {
+                    if (child.getProvenance().getName().toLowerCase().contains(provenenceToZap)) {
                         toZap.add(child);
-
                     }
                 }
-
             }
-            for (Name name:toZap){
+            for (Name name : toZap) {
                 name.delete(azquoMemoryDBConnection);
             }
             //TO DO - ZAP THE OTHER VALUES TOO
+            new Thread(azquoMemoryDBConnection::persist).start();
         }
-
         throw new Exception(setFormula + " not understood");
     }
 
     private static List<Name> namesFromAttribute(AzquoMemoryDBConnection azquoMemoryDBConnection, String attribute) throws Exception {
-        if (attribute == null || attribute.isEmpty()){
+        if (attribute == null || attribute.isEmpty()) {
             return Collections.emptyList();
         }
         // first order of business is to create/find the attribute name at the top level and delete all children
         Name attributeName = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, attribute, null, false);
         // clear children
-        for (Name child : attributeName.getChildren()){
+        for (Name child : attributeName.getChildren()) {
             child.delete(azquoMemoryDBConnection);
         }
         Set<String> valuesForAttribute = azquoMemoryDBConnection.getAzquoMemoryDBIndex().getValuesForAttribute(attribute);
         List<Name> toReturn = new ArrayList<>(valuesForAttribute.size());
-        for (String attValue : valuesForAttribute){
+        for (String attValue : valuesForAttribute) {
             Name attributeValueName = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, attValue, attributeName, true); // local child of the name we just cleared/created
-            attributeValueName.setChildrenWillBePersisted(azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNamesForAttribute(attribute, attValue),azquoMemoryDBConnection);
+            attributeValueName.setChildrenWillBePersisted(azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNamesForAttribute(attribute, attValue), azquoMemoryDBConnection);
             toReturn.add(attributeValueName);
         }
         new Thread(azquoMemoryDBConnection::persist).start();
         return toReturn;
     }
 
-    private static int skipTwoQuotes(String source){
+    private static int skipTwoQuotes(String source) {
         int firstQuote = source.indexOf(StringLiterals.QUOTE);
-        return source.indexOf(StringLiterals.QUOTE, firstQuote+1) + 1;
+        return source.indexOf(StringLiterals.QUOTE, firstQuote + 1) + 1;
     }
 
-
-    private static String extractName(String source){
+    private static String extractName(String source) {
         int firstQuote = source.indexOf(StringLiterals.QUOTE);
-        if (firstQuote++ >=0){
+        if (firstQuote++ >= 0) {
             int secondQuote = source.indexOf(StringLiterals.QUOTE, firstQuote);
-            if (secondQuote> 0) return source.substring(firstQuote, secondQuote);
+            if (secondQuote > 0) return source.substring(firstQuote, secondQuote);
         }
         return null;
     }
-    // Edd note - I'm not completely clear on the deduplicate utility functions but they are not core functionality, more to do with importing (should they be in there?)
+
+    // Edd note - I'm not completely clear on the deduplicate utility functions but they are not core functionality, they are no longer used outside of this class
     // so happy to just check for code warnings and not understand 100%
 
     private static AtomicInteger dedupeOneCount = new AtomicInteger(0);
@@ -218,7 +213,7 @@ class NameEditFunctions {
                 Set<Name> existingChildren = new HashSet<>(child2.getChildren());
                 for (Name grandchild : existingChildren) {
                     name.addChildWillBePersisted(grandchild, azquoMemoryDBConnection);
-                    child2.removeFromChildrenWillBePersisted(grandchild,azquoMemoryDBConnection);
+                    child2.removeFromChildrenWillBePersisted(grandchild, azquoMemoryDBConnection);
                 }
                 Set<Name> existingParents = new HashSet<>(child2.getParents());
                 for (Name parentInLaw : existingParents) {
@@ -233,7 +228,7 @@ class NameEditFunctions {
                     v.setNamesWillBePersisted(existingForValue);
                 }
 
-                child2.setAttributeWillBePersisted(StringLiterals.DEFAULT_DISPLAY_NAME, "duplicate-" + child2.getDefaultDisplayName(),azquoMemoryDBConnection);
+                child2.setAttributeWillBePersisted(StringLiterals.DEFAULT_DISPLAY_NAME, "duplicate-" + child2.getDefaultDisplayName(), azquoMemoryDBConnection);
                 rubbishBin.addChildWillBePersisted(child2, azquoMemoryDBConnection);
             }
         }
@@ -250,7 +245,7 @@ class NameEditFunctions {
                 attributeExceptions.add(exception.trim());
             }
         }
-       /*input syntax 'findduplicates`   probably need to add 'exception' list of cases where duplicates are expected (e.g.   Swimshop product categories)*/
+        /*input syntax 'findduplicates`   probably need to add 'exception' list of cases where duplicates are expected (e.g.   Swimshop product categories)*/
         return azquoMemoryDBConnection.getAzquoMemoryDBIndex().findDuplicateNames(StringLiterals.DEFAULT_DISPLAY_NAME, attributeExceptions);
     }
 

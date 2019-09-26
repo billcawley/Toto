@@ -2,7 +2,6 @@ package com.azquo.memorydb.service;
 
 import com.azquo.StringLiterals;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
-import com.azquo.memorydb.core.AzquoMemoryDB;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.Value;
 import com.azquo.spreadsheet.AzquoCellResolver;
@@ -93,9 +92,9 @@ public class ValueCalculationService {
                     *
                     * tl;dr : DELETE THE FOLLOWING SIX LINES OF CODE AT YOUR PERIL
                     */
-                try{
+                try {
                     double value = values[valNo];
-                } catch (Exception e){
+                } catch (Exception e) {
                     System.out.println("correcting nasty concurrency error!");
                     valNo = new Integer(valNo);
                 }
@@ -125,23 +124,23 @@ public class ValueCalculationService {
                         }
                         break;
                     case '>':
-                       values[valNo-1] = values[valNo - 1] > values[valNo] ? 1 : 0;
-                       break;
+                        values[valNo - 1] = values[valNo - 1] > values[valNo] ? 1 : 0;
+                        break;
                     case '<':
-                        values[valNo-1] = values[valNo - 1] < values[valNo] ? 1 : 0;
+                        values[valNo - 1] = values[valNo - 1] < values[valNo] ? 1 : 0;
                         break;
                     case '=':
-                        values[valNo-1] = values[valNo - 1] == values[valNo] ? 1 : 0;
+                        values[valNo - 1] = values[valNo - 1] == values[valNo] ? 1 : 0;
                         break;
                     case StringLiterals.GREATEROREQUAL:
-                        values[valNo-1] = values[valNo - 1] >= values[valNo] ? 1 : 0;
+                        values[valNo - 1] = values[valNo - 1] >= values[valNo] ? 1 : 0;
                         break;
                     case StringLiterals.LESSOREQUAL:
-                        values[valNo-1] = values[valNo - 1] <= values[valNo] ? 1 : 0;
+                        values[valNo - 1] = values[valNo - 1] <= values[valNo] ? 1 : 0;
                         break;
-                 }
+                }
             } else { // a value, not in the Azquo sense, a number or reference to a name
-                if (StringLiterals.EXP.equalsIgnoreCase(term)){ // factor off to something more general later
+                if (StringLiterals.EXP.equalsIgnoreCase(term)) { // factor off to something more general later
                     values[valNo++] = EXPFUNCTION;
                 } else if (NumberUtils.isNumber(term)) {
                     values[valNo++] = Double.parseDouble(term);
@@ -255,14 +254,23 @@ public class ValueCalculationService {
 
         double max = 0;
         double min = 0;
-        Value maxVal = null;;
+        Value maxVal = null;
         Value minVal = null;
         double sumValue = 0;
+        // there might be numbers at the beginning then strings later, hence scan the lot first to decide if we're dealing with strings or numbers
+        boolean stringMode = false;
+        for (Value value : values) {
+            if (value.getText() != null && value.getText().length() > 0) {
+                if (!NumberUtils.isNumber(value.getText())) {
+                    stringMode = true;
+                    break;
+                }
+            }
+        }
         boolean first = true;
         for (Value value : values) {
             if (value.getText() != null && value.getText().length() > 0) {
-                try {
-                    // whole lotta parsing here, could be vaoided if we stored double values. Something to consider.
+                if (!stringMode) {
                     double doubleValue = Double.parseDouble(value.getText());
                     if (first) {
                         max = doubleValue;
@@ -276,7 +284,7 @@ public class ValueCalculationService {
                         }
                     }
                     sumValue += doubleValue;
-                 } catch (Exception e) {
+                } else {
                     if (first) {
                         maxVal = value;
                         minVal = value;
@@ -288,9 +296,8 @@ public class ValueCalculationService {
                             minVal = value;
                         }
                     }
-                    first = false;
-
                 }
+                first = false;
             }
         }
         // ok the hack here is that it was just values. add all but this often involved copying into an empty list which is silly if the list is here and won't be used after,
@@ -306,32 +313,31 @@ public class ValueCalculationService {
         if (values.size() > 1) {
             locked.isTrue = true;
         }
-            if (function == DataRegionHeading.FUNCTION.COUNT) {
-                return values.size();
+        if (function == DataRegionHeading.FUNCTION.COUNT) {
+            return values.size();
+        }
+        if (function == DataRegionHeading.FUNCTION.AVERAGE) {
+            if (values.size() == 0) {
+                return 0; // avoid dividing by zero
             }
-            if (function == DataRegionHeading.FUNCTION.AVERAGE) {
-                if (values.size() == 0) {
-                    return 0; // avoid dividing by zero
-                }
-                return sumValue / values.size();
+            return sumValue / values.size();
+        }
+        if (function == DataRegionHeading.FUNCTION.MAX) {
+            if (maxVal != null) {
+                values.clear();
+                values.add(maxVal);
+                return 0;
             }
-            if (function == DataRegionHeading.FUNCTION.MAX) {
-
-                if (maxVal!=null){
-                    values.clear();
-                    values.add(maxVal);
-                    return 0;
-                }
-                 return max;
+            return max;
+        }
+        if (function == DataRegionHeading.FUNCTION.MIN) {
+            if (minVal != null) {
+                values.clear();
+                values.add(minVal);
+                return 0;
             }
-            if (function == DataRegionHeading.FUNCTION.MIN) {
-                if (minVal!=null) {
-                    values.clear();
-                    values.add(minVal);
-                    return 0;
-                }
-                return min;
-            }
+            return min;
+        }
         return sumValue; // default to sum, no function
     }
 

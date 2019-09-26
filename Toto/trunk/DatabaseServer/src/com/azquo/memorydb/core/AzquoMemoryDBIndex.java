@@ -202,11 +202,11 @@ public class AzquoMemoryDBIndex {
         getNamesWithAttributeContainingCount.incrementAndGet();
         boolean endsWith = true;
         boolean startsWith = true;
-        if (attributeValue.endsWith("*")){
+        if (attributeValue.endsWith("*")) {
             endsWith = false;
             attributeValue = attributeValue.substring(0, attributeValue.length() - 1);
         }
-        if (attributeValue.startsWith("*")){
+        if (attributeValue.startsWith("*")) {
             startsWith = false;
             attributeValue = attributeValue.substring(1);
         }
@@ -232,7 +232,7 @@ public class AzquoMemoryDBIndex {
         final Set<Name> names = HashObjSets.newMutableSet();
         if (attributeName.length() == 0) { // odd that it might be
             for (String attName : nameByAttributeMap.keySet()) {
-                if (attName.length() > 0){//not sure how a blank attribute name was created!
+                if (attName.length() > 0) {//not sure how a blank attribute name was created!
                     names.addAll(getNamesByAttributeValueWildcards(attName, attributeValueSearch, startsWith, endsWith)); // and when attribute name is blank we don't return for all attribute names, just the first that contains this
                 }
                 if (names.size() > 0) {
@@ -313,16 +313,16 @@ public class AzquoMemoryDBIndex {
     private static AtomicInteger setAttributeForNameInAttributeNameMapCount = new AtomicInteger(0);
 
     void setAttributeForNameInAttributeNameMap(String attributeName, String attributeValue, Name name) {
-        if (attributeName.length() == 0){
+        if (attributeName.length() == 0) {
             return;//there should never be a zero length attribute name
         }
         setAttributeForNameInAttributeNameMapCount.incrementAndGet();
         // upper and lower seems a bit arbitrary, I need a way of making it case insensitive.
         // these interns have been tested as helping memory usage.
-          String ucAttributeName = attributeName.toUpperCase().trim().intern();
-          // todo - an if on the split to save garbage? also should this be allowed at all! Hadn't really considered it. Used on importing so really the code should be there not in there
+        String ucAttributeName = attributeName.toUpperCase().trim().intern();
+        // todo - an if on the split to save garbage? also should this be allowed at all! Hadn't really considered it. Used on importing so really the code should be there not in there
         String[] attValues = attributeValue.split(StringLiterals.NEXTATTRIBUTE);
-        for (String attValue:attValues) {
+        for (String attValue : attValues) {
             String lcAttributeValue = attValue.toLowerCase().trim().intern();
             if (lcAttributeValue.indexOf(StringLiterals.QUOTE) >= 0 && !ucAttributeName.equals(StringLiterals.CALCULATION)) {
                 lcAttributeValue = lcAttributeValue.replace(StringLiterals.QUOTE, '\'').intern();
@@ -358,7 +358,7 @@ public class AzquoMemoryDBIndex {
         removeAttributeFromNameInAttributeNameMapCount.incrementAndGet();
         String ucAttributeName = attributeName.toUpperCase().trim();
         String[] attValues = attributeValue.split(StringLiterals.NEXTATTRIBUTE);
-        for (String attValue:attValues) {
+        for (String attValue : attValues) {
             String lcAttributeValue = attValue.toLowerCase().trim();
             final Map<String, Collection<Name>> namesForThisAttribute = nameByAttributeMap.get(ucAttributeName);
             if (namesForThisAttribute != null) {// the map we care about

@@ -127,7 +127,7 @@ public class AzquoMemoryDBConnection {
         return unusedProvenance;
     }
 
-    public void suggestProvenance(final String user, final String method, String name, final String context) throws Exception {
+    public void suggestProvenance(final String user, final String method, String name, final String context) {
         provenanceUserSuggestion = user;
         provenanceMethodSuggestion = method;
         provenanceNameSuggestion = name;

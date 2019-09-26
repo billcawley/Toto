@@ -7,9 +7,7 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 
-import java.sql.Blob;
 import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -37,7 +35,7 @@ public class NameDAO {
         }
 
         @Override
-        public Name mapRow(final ResultSet rs, final int row) throws SQLException {
+        public Name mapRow(final ResultSet rs, final int row) {
             try {
                 azquoMemoryDB.nameChildrenLoadingCache.put(rs.getInt(FastDAO.ID), rs.getBytes(CHILDREN));
                 return new Name(azquoMemoryDB, rs.getInt(FastDAO.ID), rs.getInt(PROVENANCEID), rs.getString(ATTRIBUTES), rs.getInt(NOPARENTS), rs.getInt(NOVALUES));
