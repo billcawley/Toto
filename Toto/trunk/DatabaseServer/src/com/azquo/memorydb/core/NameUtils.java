@@ -51,8 +51,9 @@ public class NameUtils {
 
     public static String getFullyQualifiedDefaultDisplayName(Name name) {
         if (!name.hasParents()) {
-            return StringLiterals.QUOTE + name.getDefaultDisplayName() + StringLiterals.QUOTE;
+            return name.getDefaultDisplayName();
         }
+
         Collection<Name> parents = name.getParents();
         // ignore where there's no default display name
         StringBuilder qualified = new StringBuilder(name.getDefaultDisplayName() != null ? name.getDefaultDisplayName() : "");
@@ -68,7 +69,7 @@ public class NameUtils {
             }
             parents = parent.getParents();
         }
-        return StringLiterals.QUOTE + qualified.toString() + StringLiterals.QUOTE;
+        return qualified.toString();
     }
 
 /*    public static String getFullyQualifiedDefaultDisplayName(Name name) {
