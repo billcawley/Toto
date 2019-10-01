@@ -1,14 +1,13 @@
 package com.azquo.memorydb;
 
 import com.azquo.memorydb.core.*;
-//import org.apache.log4j.Logger;
 
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ * Copyright (C) 2016 Azquo Ltd.
  * <p>
  * Created by cawley on 21/10/14.
  * <p>
@@ -26,7 +25,7 @@ public class AzquoMemoryDBConnection {
 
    // private final List<Set<Name>> writePermissions;
 
-    private final StringBuffer userLog; // threadsafe, it probably needs to be
+    private final StringBuffer userLog; // thread safe, it probably needs to be
 
     protected Provenance provenance = null;
 
@@ -39,26 +38,10 @@ public class AzquoMemoryDBConnection {
     private String provenanceMethodSuggestion = "";
     private String provenanceNameSuggestion = "";
     private String provenanceContextSuggestion = "";
-    // A bit involved but it makes this object immutable, think that's worth it - note
-    // new logic here : we'll say that top test that have no permissions are added as allowed - if someone has added a department for example they should still have access to all dates
 
     private AzquoMemoryDBConnection(AzquoMemoryDB azquoMemoryDB, StringBuffer userLog) {
         this.azquoMemoryDB = azquoMemoryDB;
         this.azquoMemoryDBIndex = azquoMemoryDB.getIndex();
-        /*
-        if (databaseAccessToken.getWritePermissions() != null && !databaseAccessToken.getWritePermissions().isEmpty()) {
-            writePermissions = NameQueryParser.decodeString(this, databaseAccessToken.getWritePermissions(), languages);
-            addExtraPermissionIfRequired(writePermissions);
-        } else {
-            writePermissions = new ArrayList<>();
-        }
-        if (databaseAccessToken.getReadPermissions() != null && !databaseAccessToken.getReadPermissions().isEmpty()) {
-            readPermissions = NameQueryParser.decodeString(this, databaseAccessToken.getReadPermissions(), languages);
-            addExtraPermissionIfRequired(readPermissions);
-        } else {
-            readPermissions = new ArrayList<>();
-        }
-        */
         this.userLog = userLog;
     }
 
@@ -127,6 +110,7 @@ public class AzquoMemoryDBConnection {
         return unusedProvenance;
     }
 
+    // not the comment by the field definitions above
     public void suggestProvenance(final String user, final String method, String name, final String context) {
         provenanceUserSuggestion = user;
         provenanceMethodSuggestion = method;
@@ -157,31 +141,6 @@ public class AzquoMemoryDBConnection {
         return azquoMemoryDB.getLastModifiedTimeStamp();
     }
 
-    // tellingly never used. Might be if the connections were put in a map
-
-    /*    public void setNewProvenance(String provenanceMethod, String provenanceName) {
-            setNewProvenance(provenanceMethod, provenanceName, "","");
-        }
-
-        public void setNewProvenance(String provenanceMethod, String provenanceName, String context, String user) {
-            try {
-                provenance = new Provenance(getAzquoMemoryDB(), user, new Date(), provenanceMethod, provenanceName, context);
-            } catch (Exception e) {
-                logger.error("can't set a new provenance", e);
-            }
-        }
-    */
-    /*
-    // todo : the sets could still be modified
-    public List<Set<Name>> getReadPermissions() {
-        return Collections.unmodifiableList(this.readPermissions);
-    }
-
-    public List<Set<Name>> getWritePermissions() {
-        return Collections.unmodifiableList(this.writePermissions);
-    }
-
-    */
     public void persist() {
         azquoMemoryDB.persistToDataStore();
     }

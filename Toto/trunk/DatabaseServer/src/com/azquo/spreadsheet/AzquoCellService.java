@@ -9,7 +9,6 @@ import com.azquo.spreadsheet.transport.RegionOptions;
 import net.openhft.koloboke.collect.map.hash.HashIntDoubleMaps;
 import net.openhft.koloboke.collect.map.hash.HashIntObjMaps;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
-import org.apache.commons.lang.mutable.Mutable;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -662,7 +661,7 @@ public class AzquoCellService {
                         }
                     }
                     if (highlightHours > age) {
-                        azquoCell.setHighlighted(true);
+                        azquoCell.setAsHighlighted();
                     }
                 }
             }

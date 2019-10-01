@@ -339,6 +339,8 @@ public class NameQueryParser {
         if (wherePos >= 0) {
             if ((wherePos + 6) < setTerm.length()){ // stop possible index out of bounds issue
                 whereString = setTerm.substring(wherePos + 6);//the rest of the string???   maybe need 'group by' in future
+            } else {
+                System.out.println("Dodgy where criteria : " + setTerm);
             }
         }
         if (levelString != null) {

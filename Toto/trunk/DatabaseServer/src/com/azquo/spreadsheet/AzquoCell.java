@@ -1,6 +1,5 @@
 package com.azquo.spreadsheet;
 
-
 import java.util.List;
 
 /**
@@ -50,8 +49,8 @@ public class AzquoCell {
         return locked;
     }
 
-    void setLocked(boolean locked) {
-        this.locked = locked;
+    void setAsLocked() {
+        this.locked = true;
     }
 
     public ListOfValuesOrNamesAndAttributeName getListOfValuesOrNamesAndAttributeName() {
@@ -82,8 +81,8 @@ public class AzquoCell {
         return highlighted;
     }
 
-    void setHighlighted(boolean highlighted) {
-        this.highlighted = highlighted;
+    void setAsHighlighted() {
+        this.highlighted = true;
     }
 
     int getUnsortedRow() {
@@ -97,5 +96,4 @@ public class AzquoCell {
     boolean isSelected() {
         return selected;
     }
-
 }

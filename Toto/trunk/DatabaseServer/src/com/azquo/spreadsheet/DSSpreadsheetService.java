@@ -17,8 +17,9 @@ import net.openhft.koloboke.collect.set.hash.HashObjSets;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+
 /*
- * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ * Copyright (C) 2016 Azquo Ltd.
  *
  * Created as a result of the report server/database server split, was paired roughly with SpreadsheetService on the report side.
  *
@@ -48,8 +49,7 @@ public class DSSpreadsheetService {
 
     /* function that can be called by the front end to deliver the data and headings
     Region name as defined in the Excel. valueId if it's to be the default selected cell. Row and Column headings and context as parsed straight off the sheet (2d array of cells).
-      Filtercount is to remove sets of blank rows, what size chunks we look for. Highlightdays means highlight data where the provenance is less than x days old.
-      todo - factor parameters into a passed object?
+      todo - factor parameters into a passed object? regionOptions helped but still
      */
 
     public static CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(DatabaseAccessToken databaseAccessToken, String user, String regionName, int valueId
@@ -94,7 +94,7 @@ public class DSSpreadsheetService {
                     String result = azquoMemoryDBConnection.getAzquoMemoryDB().checkLocksForValueAndUser(databaseAccessToken.getUserId(), sourceCell.getListOfValuesOrNamesAndAttributeName().getValues());
                     if (result != null) { // it is locked
                         lockCheckResult.add(result); // collate lock message
-                        sourceCell.setLocked(true); // and lock the cell!
+                        sourceCell.setAsLocked(); // and lock the cell!
                     }
                 }
                 // I can only add a comment here if it is a single value or single name#

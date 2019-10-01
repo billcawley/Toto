@@ -810,7 +810,7 @@ public class ExcelController {
              */
 
             if (op.equals("savemodifications")) {
-                //System.out.println("json " + json);
+//                System.out.println("json " + json);
                 List<ExcelRegionModification> excelRegionModifications = jacksonMapper.readValue(json, jacksonMapper.getTypeFactory().constructCollectionType(List.class, ExcelRegionModification.class));
                 // todo - set the context which is a choice list really, see ChoicesService.resolveAndSetChoiceOptions
                 //loggedInUser.setContext(context);

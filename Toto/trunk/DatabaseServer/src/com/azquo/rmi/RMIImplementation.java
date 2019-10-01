@@ -392,7 +392,7 @@ class RMIImplementation implements RMIInterface {
                     try {
                         value = method.invoke(operatingSystemMXBean);
                         percent = (Double) value;
-                    } catch (Exception e) {
+                    } catch (Exception ignored) {
                     } // try
 //                    toReturn.append(method.getName() + " = " + value);
                 } // if
