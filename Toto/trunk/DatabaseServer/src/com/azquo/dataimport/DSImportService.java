@@ -255,8 +255,7 @@ public class DSImportService {
                         // ok the last of the headings that has a value is the one we want for the fileHeadingCompositeLookup
                         // going to allow composite lookup on all headings whether they're used as a proper heading or not
                         Collections.reverse(headingsForAColumn);
-                        for (String heading : headingsForAColumn) {
-                            if (!heading.isEmpty()) {
+                        for (String heading : headingsForAColumn) { if (!heading.isEmpty()) {
                                 fileHeadingCompositeLookup.put(heading.toUpperCase(), headings.size() - 1);
                                 break;
                             }
