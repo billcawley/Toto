@@ -816,6 +816,10 @@ But can use a library?
         for (DataRegionHeading heading : headings) {
             if (heading.getAttributeSet() != null) {
                 attributeSet = heading.getAttributeSet();
+                if (attributeSet.size()==1){
+                    //implicit 'children'
+                    attributeSet = attributeSet.iterator().next().getChildren();
+                }
                 break;
             }
         }
@@ -828,14 +832,14 @@ But can use a library?
         for (Name n : names) { // go through each name
             for (String attribute : attributes) {
                 if (attributeSet != null) {
-                    for (Name possibleParent : attributeSet) {
-                        if (possibleParent.getChildren().contains(n)) {
-                            attValue = possibleParent.getDefaultDisplayName();
-                            if (attValue.equals(attribute)){
+                    Collection<Name> parents = n.findAllParents();
+                    parents.retainAll(attributeSet);
+                    if (parents.size()==1){
+                        Name possibleParent = parents.iterator().next();
+                        attValue = possibleParent.getDefaultDisplayName();
+                        if (attValue.equals(attribute)){
                                 attValue = n.getDefaultDisplayName();
-                            }
-                            break;
-                        }
+                         }
                     }
                 }
                 String strippedAttribute = attribute.replace("`", "").toUpperCase().replace(" EXCLUSIVE","");
