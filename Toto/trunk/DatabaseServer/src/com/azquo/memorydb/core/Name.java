@@ -106,6 +106,10 @@ public final class Name extends AzquoMemoryDBEntity {
         super(azquoMemoryDB, id, forceIdForbackup);
         newName3Count.incrementAndGet();
         this.provenance = getAzquoMemoryDB().getProvenanceById(provenanceId); // see no reason not to do this here now
+        if (this.provenance == null){
+            System.out.println("Provenance null on backup restore!, id is "+ provenanceId + ", making blank provenance");
+            this.provenance = new Provenance(azquoMemoryDB, "-","-","-","-");
+        }
         //this.attributes = transport.attributes;
         // can pass nameAttributes as an optimiseation when making a temporary copy
         if (nameAttributes != null){
