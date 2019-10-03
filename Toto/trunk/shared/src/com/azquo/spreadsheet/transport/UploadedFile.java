@@ -257,6 +257,7 @@ public class UploadedFile implements Serializable {
 
     public String getPostProcessingResult() { return this.postProcessingResult; }
 
+    // why does IntelliJ think this isn't used? Pretty sure it is.
     public void setPostProcessingResult(String postProcessorResult) {this.postProcessingResult = postProcessingResult; }
 
     public boolean isConvertedFromWorksheet() {

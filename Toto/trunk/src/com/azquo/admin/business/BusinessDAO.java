@@ -6,12 +6,11 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 
 import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ * Copyright (C) 2016 Azquo Ltd.
  *
  * Created by cawley on 07/01/14.
  */
@@ -44,7 +43,7 @@ public final class BusinessDAO {
 
     private static class BusinessRowMapper implements RowMapper<Business> {
         @Override
-        public Business mapRow(final ResultSet rs, final int row) throws SQLException {
+        public Business mapRow(final ResultSet rs, final int row) {
             try {
                 return new Business(rs.getInt(StandardDAO.ID)
                         , rs.getString(BUSINESSNAME)

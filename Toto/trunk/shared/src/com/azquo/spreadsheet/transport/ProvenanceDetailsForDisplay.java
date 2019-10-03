@@ -11,11 +11,12 @@ import java.util.List;
 public class ProvenanceDetailsForDisplay implements Serializable {
 
     // show the cell's value and the context and headings
-    final String headline;
+    private final String headline;
     // if the cell is from a function say what it is
-    final String function;
+    private final String function;
 
-    final List<ProvenanceForDisplay> auditForDisplayList;
+    private final List<ProvenanceForDisplay> auditForDisplayList;
+
     public ProvenanceDetailsForDisplay(String headline, String function, List<ProvenanceForDisplay> auditForDisplayList) {
         this.headline = headline;
         this.function = function;
@@ -33,6 +34,4 @@ public class ProvenanceDetailsForDisplay implements Serializable {
     public List<ProvenanceForDisplay> getAuditForDisplayList() {
         return auditForDisplayList;
     }
-
-
 }

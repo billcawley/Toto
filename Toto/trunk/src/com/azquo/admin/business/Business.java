@@ -5,10 +5,10 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
- *
+ * Copyright (C) 2016 Azquo Ltd.
+ * <p>
  * Created by cawley on 07/01/14.
- *
+ * <p>
  * Details of an Azquo customer, mutable as almost certainly will be updated
  */
 public final class Business extends StandardEntity {
@@ -22,14 +22,12 @@ public final class Business extends StandardEntity {
             , String businessName
             , BusinessDetails businessDetails
             , String bannerColor
-            , String logo  ) {
+            , String logo) {
         this.id = id;
         this.businessName = businessName;
         this.businessDetails = businessDetails;
         this.bannerColor = bannerColor;
         this.logo = logo;
-
-
     }
 
     public String getBusinessName() {
@@ -52,13 +50,21 @@ public final class Business extends StandardEntity {
         this.businessDetails = businessDetails;
     }
 
-    public String getBannerColor() {return bannerColor; }
+    public String getBannerColor() {
+        return bannerColor;
+    }
 
-    public void setBannerColor(String bannerColor){ this.bannerColor = bannerColor; }
+    public void setBannerColor(String bannerColor) {
+        this.bannerColor = bannerColor;
+    }
 
-    public String getLogo() {return  logo; }
+    public String getLogo() {
+        return logo;
+    }
 
-    public void setLogo(String logo){ this.logo = logo; }
+    public void setLogo(String logo) {
+        this.logo = logo;
+    }
 
     @Override
     public String toString() {

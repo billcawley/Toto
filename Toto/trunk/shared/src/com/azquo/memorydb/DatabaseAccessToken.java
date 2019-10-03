@@ -1,15 +1,13 @@
 package com.azquo.memorydb;
 
 import java.io.Serializable;
-import java.util.List;
 
 /**
- * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
- *
+ * Copyright (C) 2016 Azquo Ltd.
+ * <p>
  * Created by cawley on 18/05/15.
- *
+ * <p>
  * Passed from client to database server after establishing credentials etc, what the DB server uses to create a connection internally.
- *
  */
 public class DatabaseAccessToken implements Serializable {
 

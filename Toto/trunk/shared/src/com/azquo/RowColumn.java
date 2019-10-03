@@ -5,7 +5,7 @@ import java.io.Serializable;
 /**
  * Created 25th June 2019
  *
- * I want to move away from generic typed pairs
+ * I want to move away from generic typed pairs, this is an example of something that was a TypedPair
  */
 public class RowColumn implements Serializable {
     private final int row;

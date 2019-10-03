@@ -16,7 +16,6 @@ import java.util.Date;
 
 public class DateUtils {
 
-
     public static final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final DateTimeFormatter ukdf2 = DateTimeFormatter.ofPattern("d-M-yy");
     private static final DateTimeFormatter ukdf3 = DateTimeFormatter.ofPattern("d-MMM-yyyy");
@@ -106,5 +105,4 @@ public class DateUtils {
         }
         return null;
     }
-
 }

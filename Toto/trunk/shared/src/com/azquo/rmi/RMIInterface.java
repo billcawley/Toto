@@ -97,8 +97,6 @@ public interface RMIInterface extends Remote {
 
     void clearSessionLog(DatabaseAccessToken databaseAccessToken) throws RemoteException;
 
-    void clearTemporaryNames(DatabaseAccessToken databaseAccessToken) throws RemoteException;
-
     void sendStopMessageToLog(DatabaseAccessToken databaseAccessToken) throws RemoteException;
 
     void addToLog(DatabaseAccessToken databaseAccessToken, String message) throws RemoteException;

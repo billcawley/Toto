@@ -31,7 +31,6 @@ public class CellsAndHeadingsForDisplay implements Serializable {
     private final long timeStamp;
     private RegionOptions options;
     private final String lockResult;
-    private String emailInfo;
 
     public CellsAndHeadingsForDisplay(String region, List<List<String>> columnHeadings, List<List<String>> rowHeadings, Set<Integer> zeroSavedColumnIndexes, Set<Integer> zeroSavedRowIndexes, List<List<CellForDisplay>> data
             , List<List<String>> rowHeadingsSource, List<List<String>> colHeadingsSource, List<List<String>> contextSource, long timeStamp, RegionOptions options, String lockResult) {
@@ -47,7 +46,6 @@ public class CellsAndHeadingsForDisplay implements Serializable {
         this.timeStamp = timeStamp;
         this.options = options;
         this.lockResult = lockResult;
-        this.emailInfo = null;
     }
 
     public String getRegion() {
@@ -102,13 +100,10 @@ public class CellsAndHeadingsForDisplay implements Serializable {
         return options;
     }
 
-    public void setOptions(RegionOptions regionOptions){ this.options = regionOptions; };
+    public void setOptions(RegionOptions regionOptions){ this.options = regionOptions; }
 
     public String getLockResult() {
         return lockResult;
     }
 
-    public void setEmailInfo(String emailInfo){this.emailInfo = emailInfo; }
-
-    public String getEmailInfo() {return emailInfo; }
 }

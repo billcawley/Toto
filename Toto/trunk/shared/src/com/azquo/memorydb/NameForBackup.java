@@ -12,12 +12,12 @@ Similar in structure to the sql transport, I hope to reuse chunks of the code.
 import java.io.Serializable;
 
 public class NameForBackup implements Serializable {
-    final int id;
-    final int provenanceId;
-    final String attributes;
-    final byte[] children;
-    final int noParents;
-    final int noValues;
+    private final int id;
+    private final int provenanceId;
+    private final String attributes;
+    private final byte[] children;
+    private final int noParents;
+    private final int noValues;
 
     public NameForBackup(int id, int provenanceId, String attributes, byte[] children, int noParents, int noValues) {
         this.id = id;

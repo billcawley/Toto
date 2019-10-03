@@ -186,7 +186,7 @@ public class BackupService {
                     Files.copy(Paths.get(f.getPath()), Paths.get(uploadFilePath));// timestamp to stop file overwriting
                     UploadRecord uploadRecord = new UploadRecord(0, LocalDateTime.now(), loggedInUser.getUser().getBusinessId()
                             , loggedInUser.getDatabase().getId(), loggedInUser.getUser().getId()
-                            , fileName, type, "From backup restore", uploadFilePath);
+                            , fileName, type, "From backup restore", uploadFilePath, null);
                     UploadRecordDAO.store(uploadRecord);
 
                 } else { // report or template

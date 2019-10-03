@@ -31,6 +31,7 @@ public final class UploadRecordDAO {
     private static final String FILETYPE = "file_type";
     private static final String COMMENTS = "comments";
     private static final String TEMPPATH = "temp_path";
+    private static final String USERCOMMENT = "user_comment";
 
     public static Map<String, Object> getColumnNameValueMap(final UploadRecord uploadRecord) {
         final Map<String, Object> toReturn = new HashMap<>();
@@ -43,12 +44,13 @@ public final class UploadRecordDAO {
         toReturn.put(FILETYPE, uploadRecord.getFileType());
         toReturn.put(COMMENTS, uploadRecord.getComments());
         toReturn.put(TEMPPATH, uploadRecord.getTempPath());
+        toReturn.put(USERCOMMENT, uploadRecord.getUserComment());
         return toReturn;
     }
 
     private static final class UploadRecordRowMapper implements RowMapper<UploadRecord> {
         @Override
-        public UploadRecord mapRow(final ResultSet rs, final int row) throws SQLException {
+        public UploadRecord mapRow(final ResultSet rs, final int row) {
             // not pretty, just make it work for the moment
             try {
                 return new UploadRecord(rs.getInt(StandardDAO.ID)
@@ -60,6 +62,7 @@ public final class UploadRecordDAO {
                         , rs.getString(FILETYPE)
                         , rs.getString(COMMENTS)
                         , rs.getString(TEMPPATH)
+                        , rs.getString(USERCOMMENT)
                 );
             } catch (Exception e) {
                 e.printStackTrace();

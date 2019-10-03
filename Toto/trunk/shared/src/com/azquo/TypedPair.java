@@ -7,6 +7,7 @@ import java.io.Serializable;
  *
  * Edd after a generic pair, could be useful in a few places but I don't want to over use
  *
+ * Notably I'm now thinking I need to reduce where it's used
  **/
 public class TypedPair<F,S> implements Serializable {
     private final F first;

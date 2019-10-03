@@ -113,10 +113,13 @@ public final class ImportService {
             SpreadsheetService.databasePersist(loggedInUser);
             // add to the uploaded list on the Manage Databases page
             // now jamming the import feedback in the comments
-
+            String comments = ManageDatabasesController.formatUploadedFiles(processedUploadedFiles, -1, true, null);
+            if (comments.length() > 10_000){
+                comments = comments.substring(0, 10_000) + " . . .";
+            }
             UploadRecord uploadRecord = new UploadRecord(0, LocalDateTime.now(), loggedInUser.getUser().getBusinessId()
                     , loggedInUser.getDatabase().getId(), loggedInUser.getUser().getId()
-                    , uploadedFile.getFileName() + (processedUploadedFiles.size() == 1 && processedUploadedFiles.get(0).getReportName() != null ? " - (" + processedUploadedFiles.get(0).getReportName() + ")" : ""), uploadedFile.getFileType() != null ? uploadedFile.getFileType() : "", ManageDatabasesController.formatUploadedFiles(processedUploadedFiles, -1, true, null), originalFilePath);
+                    , uploadedFile.getFileName() + (processedUploadedFiles.size() == 1 && processedUploadedFiles.get(0).getReportName() != null ? " - (" + processedUploadedFiles.get(0).getReportName() + ")" : ""), uploadedFile.getFileType() != null ? uploadedFile.getFileType() : "", comments, originalFilePath, null);
             UploadRecordDAO.store(uploadRecord);
             // and update the counts on the manage database page
             AdminService.updateNameAndValueCounts(loggedInUser, loggedInUser.getDatabase());

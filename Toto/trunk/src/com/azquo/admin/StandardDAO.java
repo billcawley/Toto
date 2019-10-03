@@ -108,6 +108,14 @@ public class StandardDAO {
             jdbcTemplate.update("ALTER TABLE `master_db`.`pending_upload` ADD `team` VARCHAR(255) NULL DEFAULT NULL ;", new HashMap<>());
         }
 
+        if (jdbcTemplate.queryForObject("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS\n" +
+                "    WHERE\n" +
+                "      (table_name = \"upload_record\")\n" +
+                "      AND (table_schema = \"master_db\")\n" +
+                "      AND (column_name = \"user_comment\")", new HashMap<>(), Integer.class) == 0){
+            jdbcTemplate.update("ALTER TABLE `master_db`.`upload_record` ADD `user_comment` text NULL DEFAULT NULL ;", new HashMap<>());
+        }
+
         StandardDAO.jdbcTemplate = jdbcTemplate; // I realise that this is "naughty", see comments at the top.
     }
 

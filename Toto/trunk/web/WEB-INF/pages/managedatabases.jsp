@@ -110,6 +110,7 @@ Created by IntelliJ IDEA.
                     <td></td>
                     <td></td>
                     <td></td>
+                    <td></td>
                 </tr>
                 </thead>
                 <tbody>
@@ -121,6 +122,16 @@ Created by IntelliJ IDEA.
                         <td>${upload.userName}</td>
                         <td>${upload.fileName}</td>
                         <td>${upload.fileType}</td>
+                        <td><a href="/api/UploadRecordComment?urid=${upload.id}" target="new"
+                               class="button inspect small" data-title="Comment" title="Comment" id="comment${upload.id}">
+                            <c:if test="${upload.userComment.length() > 0}">
+                                See Comment
+                            </c:if>
+                            <c:if test="${upload.userComment.length() == 0}">
+                                Comment
+                            </c:if>
+
+                        </a></td>
                         <td><c:if test="${upload.comments.length() > 0}">
                             <a href="/api/ImportResults?urid=${upload.id}" target="new"
                                class="button inspect small" data-title="Import Results" title="View Import Results">Results</a>
@@ -266,7 +277,9 @@ Created by IntelliJ IDEA.
                 <table>
                     <tbody>
                     <tr>
-                        <td><label for="uploadFile">Manually add file for validation : </label> <input type="file" name="uploadFile"></td>
+                        <td><label for="uploadFile">Manually add file for validation : </label> <input type="file"
+                                                                                                       name="uploadFile">
+                        </td>
                         <td>Team <input type="text" name="team"/></td>
                         <td>
                             <label for="uploadDatabase2">Database:</label>

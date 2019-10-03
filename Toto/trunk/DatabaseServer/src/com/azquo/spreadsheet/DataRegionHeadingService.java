@@ -588,7 +588,7 @@ public class DataRegionHeadingService {
 
     */
 
-    static List<List<DataRegionHeading>> permuteHeadings(List<DataRegionHeading> mainHeading, List<List<List<DataRegionHeading>>> subHeadings, Collection<Name> sharedNames, boolean noPermuteTotals) throws Exception {
+    private static List<List<DataRegionHeading>> permuteHeadings(List<DataRegionHeading> mainHeading, List<List<List<DataRegionHeading>>> subHeadings, Collection<Name> sharedNames, boolean noPermuteTotals) throws Exception {
         List<List<DataRegionHeading>> toReturn = new ArrayList<>();
         List<List<DataRegionHeading>> expandedSubheadings = expandHeadings(subHeadings, sharedNames, noPermuteTotals);
         if (mainHeading != null && mainHeading.size() > 0 && mainHeading.get(0).getFunction() == DataRegionHeading.FUNCTION.PERMUTE) {
@@ -666,7 +666,7 @@ public class DataRegionHeadingService {
             if (nextHeading != null && nextHeading.size() > 0 && nextHeading.get(0).getFunction() == DataRegionHeading.FUNCTION.PERMUTE) { // if the first one is permute we assume the lot are
                 toReturn.addAll(findPermutedItems(sharedNames, nextHeading, noPermuteTotals));//assumes only one row of headings, it's a list of the permute names
             } else {        //last column - simply expand, filling spaces where available.
-                List<DataRegionHeading> heading = null;
+                List<DataRegionHeading> heading;
                 boolean workToDo = true;
                 while (headingRowIterator.hasNext() || workToDo) {
                     heading = nextHeading;
@@ -812,9 +812,6 @@ public class DataRegionHeadingService {
     private static List<DataRegionHeading> dataRegionHeadingsFromNames(Collection<Name> names, DataRegionHeading.FUNCTION function, DataRegionHeading.SUFFIX suffix, List<DataRegionHeading> offsetHeadings, Collection<Name> valueFunctionSet, double doubleParameter) {
         return dataRegionHeadingsFromNames(names, function, suffix,offsetHeadings, valueFunctionSet, doubleParameter, null);
     }
-
-
-
 
         private static List<DataRegionHeading> dataRegionHeadingsFromNames(Collection<Name> names, DataRegionHeading.FUNCTION function, DataRegionHeading.SUFFIX suffix, List<DataRegionHeading> offsetHeadings, Collection<Name> valueFunctionSet, double doubleParameter, String description) {
         List<DataRegionHeading> dataRegionHeadings = new ArrayList<>(names.size()); // names could be big, init the Collection with the right size

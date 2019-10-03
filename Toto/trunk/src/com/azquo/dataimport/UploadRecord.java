@@ -21,8 +21,9 @@ public final class UploadRecord extends StandardEntity {
     final private String fileType;
     final private String comments;
     private String tempPath;// where the file might still be!
+    private String userComment;
 
-    public UploadRecord(int id, LocalDateTime date, int businessId, int databaseId, int userId, String fileName, String fileType, String comments, String tempPath) {
+    public UploadRecord(int id, LocalDateTime date, int businessId, int databaseId, int userId, String fileName, String fileType, String comments, String tempPath, String userComment) {
         this.id = id;
         this.date = date;
         this.businessId = businessId;
@@ -32,6 +33,7 @@ public final class UploadRecord extends StandardEntity {
         this.fileType = fileType;
         this.comments = comments;
         this.tempPath = tempPath;
+        this.userComment = userComment;
     }
 
     public LocalDateTime getDate() {
@@ -70,18 +72,27 @@ public final class UploadRecord extends StandardEntity {
         this.tempPath = tempPath;
     }
 
+    public String getUserComment() {
+        return userComment;
+    }
+
+    public void setUserComment(String userComment) {
+        this.userComment = userComment;
+    }
 
     @Override
     public String toString() {
         return "UploadRecord{" +
-                "id=" + id +
-                ", date=" + date +
+                "date=" + date +
                 ", businessId=" + businessId +
                 ", databaseId=" + databaseId +
                 ", userId=" + userId +
                 ", fileName='" + fileName + '\'' +
                 ", fileType='" + fileType + '\'' +
                 ", comments='" + comments + '\'' +
+                ", tempPath='" + tempPath + '\'' +
+                ", userComment='" + userComment + '\'' +
+                ", id=" + id +
                 '}';
     }
 
@@ -97,6 +108,7 @@ public final class UploadRecord extends StandardEntity {
         final String fileType;
         final String comments;
         final boolean downloadable;
+        final String userComment;
 
         public UploadRecordForDisplay(UploadRecord ur, String businessName, String databaseName, String userName, boolean downloadable) {
             this.id = ur.id;
@@ -108,6 +120,7 @@ public final class UploadRecord extends StandardEntity {
             fileType = ur.fileType;
             comments = ur.comments != null ? ur.getComments() : ""; // might NPE
             this.downloadable = downloadable;
+            this.userComment = ur.userComment != null ? ur.userComment : "";
         }
 
         public LocalDateTime getDate() {
@@ -142,6 +155,10 @@ public final class UploadRecord extends StandardEntity {
 
         public String getComments() {
             return comments;
+        }
+
+        public String getUserComment() {
+            return userComment;
         }
 
         public boolean getDownloadable() {

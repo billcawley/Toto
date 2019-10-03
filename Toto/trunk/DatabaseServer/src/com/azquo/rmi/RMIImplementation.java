@@ -434,15 +434,6 @@ class RMIImplementation implements RMIInterface {
     }
 
     @Override
-    public void clearTemporaryNames(DatabaseAccessToken databaseAccessToken) throws RemoteException {
-        try {
-            DSSpreadsheetService.clearTemporaryNames(databaseAccessToken);
-        } catch (Exception e) {
-            throw new RemoteException("Database Server Exception", e);
-        }
-    }
-
-    @Override
     public void sendStopMessageToLog(DatabaseAccessToken databaseAccessToken) throws RemoteException {
         try {
             DSSpreadsheetService.sendStopMessageToLog(databaseAccessToken);

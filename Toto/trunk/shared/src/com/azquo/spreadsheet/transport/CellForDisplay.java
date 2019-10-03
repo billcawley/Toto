@@ -4,9 +4,9 @@ import java.io.Serializable;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
- *
+ * <p>
  * Created by cawley on 11/05/15.
- *
+ * <p>
  * Ok in our new client server idea then there have to be classes to move the data about, this is one such class
  * and the first in the shared module
  */
@@ -100,7 +100,7 @@ public class CellForDisplay implements Serializable {
     }
 
     //after saving - if we don't do this then sequential saves will cause a problem
-    public void setNewValuesToCurrentAfterSaving(){
+    public void setNewValuesToCurrentAfterSaving() {
         stringValue = newStringValue;
         doubleValue = newDoubleValue;
         // as in the constructor

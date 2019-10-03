@@ -751,16 +751,4 @@ public class DSSpreadsheetService {
             return AzquoCellResolver.getAzquoCellForHeadings(azquoMemoryDBCOnnection, rowHeadings.get(unsortedRow), columnHeadings.get(unsortedCol), contextHeadings, unsortedRow, unsortedCol, languages, 0, null, debugInfo);        }
         return null; // no headings match the row/col passed
     }
-
-    // doesn't persist - should it??
-    // note : could be issues with reports which use this running concurrently - as in zap temporary names while they're being used. TODO
-    public static void clearTemporaryNames(DatabaseAccessToken databaseAccessToken) throws Exception {
-        AzquoMemoryDBConnection connectionFromAccessToken = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
-        final Name temporaryNames = NameService.findByName(connectionFromAccessToken, StringLiterals.TEMPORARYNAMES);
-        if (temporaryNames != null) {
-            for (Name temporaryName : temporaryNames.getChildren()) {
-                temporaryName.delete(connectionFromAccessToken);
-            }
-        }
-    }
 }

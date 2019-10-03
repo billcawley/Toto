@@ -16,7 +16,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.nio.file.Paths;
-import java.util.concurrent.TimeUnit;
 
 /*
 Created by EFC 11/09/2018
@@ -35,10 +34,10 @@ public class DownloadBackupController {
             , @RequestParam(value = "id", required = false) String id
             , @RequestParam(value = "justreports", required = false) String justreports
     ) throws Exception {
-        final LoggedInUser  loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
+        final LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
         if (loggedInUser != null) {
             request.getSession().setAttribute("working", "working");
-            try{
+            try {
                 Database db = AdminService.getDatabaseByIdWithBasicSecurityCheck(Integer.parseInt(id), loggedInUser);
                 if (db != null) {
                     DatabaseServer dbs = DatabaseServerDAO.findById(db.getDatabaseServerId());
@@ -47,7 +46,7 @@ public class DownloadBackupController {
                     DownloadController.streamFileToBrowser(Paths.get(tempzip.getAbsolutePath()), response, db.getName() + ".zip");
                 }
                 request.getSession().removeAttribute("working");
-            } catch (Exception e){
+            } catch (Exception e) {
                 // what to do with the error? todo
                 request.getSession().removeAttribute("working");
                 e.printStackTrace();

@@ -11,7 +11,7 @@ public class RegionOptions implements Serializable {
     public final int hideRows;
     public final int hideRowValues;
     public final int hideCols;
-    public final boolean sortable;
+    public final boolean sortable;// unused - remove?
     public final int rowLimit;
     public final int columnLimit;
     public final String sortRow;
@@ -21,7 +21,7 @@ public class RegionOptions implements Serializable {
     public final int highlightDays;
     public final String rowLanguage;
     public final String columnLanguage;
-    public final boolean noSave;
+    public final boolean noSave;// unused - remove?
     public final String database;
     public final boolean lockRequest;
     public final boolean noPermuteTotals;
