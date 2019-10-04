@@ -344,10 +344,14 @@ public final class ImportService {
             if (fileTypeRange != null) {
                 CellReference sheetNameCell = BookUtils.getNameCell(fileTypeRange);
                 if (sheetNameCell != null){
-                    String fileType = book.getSheet(fileTypeRange.getSheetName()).getRow(sheetNameCell.getRow()).getCell(sheetNameCell.getCol()).getStringCellValue();
-                    if (fileType != null){
-                        // note - this means this will only kick in in s single XLSX upload not a zip of them
-                        uploadedFile.setFileType(fileType);
+                    try {
+                        String fileType = book.getSheet(fileTypeRange.getSheetName()).getRow(sheetNameCell.getRow()).getCell(sheetNameCell.getCol()).getStringCellValue();
+                        if (fileType != null) {
+                            // note - this means this will only kick in in s single XLSX upload not a zip of them
+                            uploadedFile.setFileType(fileType);
+                        }
+                    }catch(Exception e){
+                        logger.warn("no file type in az_FileType");
                     }
                 }
             }
