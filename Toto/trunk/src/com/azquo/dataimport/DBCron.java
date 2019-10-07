@@ -369,8 +369,8 @@ public class DBCron {
                 final DocumentBuilder builder = factory.newDocumentBuilder();
                 List<Map<String, String>> premiumsFilesValues = new ArrayList<>();
                 List<Map<String, String>> claimsFilesValues = new ArrayList<>();
-                Set<String> cheadings = new HashSet<>();
-                Set<String> pheadings = new HashSet<>();
+                Collection<String> cheadings = new HashSet<>();
+                Collection<String> pheadings = new HashSet<>();
                 for (Map<String, String> row : all){
                     Map<String, String> thisFileValues = new HashMap<>();
                     boolean claims = true;
@@ -398,7 +398,7 @@ public class DBCron {
                                 }
                             }
                         } else {
-                            thisFileValues.put(col,row.get(col));
+                            thisFileValues.put(col, row.get(col) != null ? row.get(col).replace("\n", "") : null);
                         }
                     }
                     if (claims){
@@ -418,7 +418,8 @@ public class DBCron {
 
                 String csvFileName = System.currentTimeMillis() + "tracking (importtemplate=Tracking;importversion=Claims).tsv";
                 BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(trackingDir.resolve(csvFileName).toFile()));
-                bufferedWriter.write("TrackMessKey\t");
+                cheadings = new ArrayList<>(cheadings);
+                pheadings = new ArrayList<>(pheadings);
                 for (String heading : cheadings) {
                     bufferedWriter.write(heading + "\t");
                 }
@@ -433,7 +434,6 @@ public class DBCron {
                 bufferedWriter.close();
                 csvFileName = System.currentTimeMillis() + "tracking (importtemplate=Tracking;importversion=Premium).tsv";
                 bufferedWriter = new BufferedWriter(new FileWriter(trackingDir.resolve(csvFileName).toFile()));
-                bufferedWriter.write("TrackMessKey\t");
                 for (String heading : pheadings) {
                     bufferedWriter.write(heading + "\t");
                 }

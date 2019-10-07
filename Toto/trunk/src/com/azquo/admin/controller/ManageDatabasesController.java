@@ -218,8 +218,8 @@ public class ManageDatabasesController {
                     for (Database database : databaseList) {
                         boolean isLoaded = AdminService.isDatabaseLoaded(loggedInUser, database);
                         // it seems sometimes databases get stuck on 0 when they are clearly not 0, this is a quick hack to try to catch this when it happens
-                        if (isLoaded && database.getNameCount() == 0){
-                            AdminService.updateNameAndValueCounts(loggedInUser,database);
+                        if (isLoaded && database.getNameCount() == 0) {
+                            AdminService.updateNameAndValueCounts(loggedInUser, database);
                         }
                         displayDataBases.add(new DisplayDataBase(isLoaded, database));
                     }
@@ -305,7 +305,7 @@ public class ManageDatabasesController {
                         File moved = new File(SpreadsheetService.getHomeDir() + "/temp/" + System.currentTimeMillis() + fileName); // timestamp to stop file overwriting
                         uploadFile.transferTo(moved);
                         model.put("error", BackupService.loadBackup(loggedInUser, moved, database));
-                    } else if ("true".equals(template)||  uploadFile.getOriginalFilename().toLowerCase().contains("import templates")) {
+                    } else if ("true".equals(template) || uploadFile.getOriginalFilename().toLowerCase().contains("import templates")) {
                         try {
                             String fileName = uploadFile.getOriginalFilename();
                             File moved = new File(SpreadsheetService.getHomeDir() + "/temp/" + System.currentTimeMillis() + fileName); // timestamp to stop file overwriting
@@ -741,7 +741,7 @@ public class ManageDatabasesController {
                 for (UploadedFile.WarningLine warningLine : uploadedFile.getWarningLines()) {
                     toReturn.append("<tr>");
                     if (checkboxId != -1) {
-                        toReturn.append("<td><div align=\"center\"><input type=\"checkbox\" name=\"" + checkboxId + "-" + warningLine.getLineNo() + "\" /></div></td>");
+                        toReturn.append("<td><div align=\"center\"><input type=\"checkbox\" name=\"" + checkboxId + "-" + warningLine.getLineNo() + "\" id=\"" + checkboxId + "-" + warningLine.getLineNo() + "\" /></div></td>");
                         toReturn.append("<td nowrap><a href=\"#\" onclick=\"doComment('" + checkboxId + "-" + warningLine.getLineNo() + "'); return false;\">" + (comments != null && comments.contains(warningLine.getIdentifier()) ? "See Comment(s)" : "Add Comment") + "</a></td>");
                     }
                     for (String error : errors) {
@@ -758,6 +758,27 @@ public class ManageDatabasesController {
                     }
                     toReturn.append("</tr>");
                 }
+
+
+                if (checkboxId != -1) {
+                    toReturn.append("<tr>");
+                    toReturn.append("<td></td>");
+                    toReturn.append("<td nowrap><a href=\"#\" onclick=\"");
+                    for (UploadedFile.WarningLine warningLine : uploadedFile.getWarningLines()) {
+                        toReturn.append("document.getElementById('" + checkboxId + "-" + warningLine.getLineNo() + "').checked = true;");
+                    }
+                    toReturn.append("return false;\">Select All</a></td>");
+                    for (String ignored : errors) {
+                        toReturn.append("<td nowrap></td>");
+                    }
+                    toReturn.append("<td nowrap></td>");
+                    for (int i = 0; i < maxLineWidth; i++) {
+                        toReturn.append("<td nowrap></td>");
+                    }
+                    toReturn.append("</tr>");
+                }
+
+
                 toReturn.append("\n</tbody></table></div><br/>");
                 if (!noClickableHeadings) {
                     toReturn.append("</div>");
@@ -769,7 +790,7 @@ public class ManageDatabasesController {
             }
 
             if (!uploadedFile.isDataModified()) {
-                if (uploadedFile.isNoData()){
+                if (uploadedFile.isNoData()) {
                     toReturn.append("NO DATA.\n<br/>");
                 } else {
                     toReturn.append("NO DATA MODIFIED.\n<br/>");

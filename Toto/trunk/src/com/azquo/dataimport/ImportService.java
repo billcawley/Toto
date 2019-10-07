@@ -1031,7 +1031,9 @@ public final class ImportService {
                                 for (Integer key : linesWithValuesInColumn.keySet()) {
                                     warningLineMap.computeIfAbsent(key, t -> new UploadedFile.WarningLine(key, keyColumn + ":" + linesWithValuesInColumn.get(key).getFirst(), linesWithValuesInColumn.get(key).getSecond())).addErrors(errorLines.get(linesWithValuesInColumn.get(key).getFirst().toLowerCase()));
                                 }
-                            }// else error?
+                            } else {
+                                throw new Exception("unable to find " + keyColumn + " from validation in uploaded file");
+                            }
                         }
                     }
                 }
@@ -1049,15 +1051,7 @@ public final class ImportService {
         }
         return uploadedFile;
     }
-    private static HeadingWithInterimLookup findTheHeading(String headingToFind, Map<List<String>,HeadingWithInterimLookup> mapping){
-         for (List<String> headings:mapping.keySet()){
-            if (headings.size()==1 && headings.get(0).equalsIgnoreCase(headingToFind)){
-                return mapping.get(headings);
-            }
-        }
 
-        return null;
-    }
    // in this context the custom headings range is for when there are multiple versions of an importer based off a master sheet -
     // e.g. the big Ed Broking import sheet for Risk which will have sub sheets - these sheets will have a named range,
 

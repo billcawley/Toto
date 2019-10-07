@@ -33,7 +33,7 @@ public class DownloadBackupController {
             , HttpServletResponse response
             , @RequestParam(value = "id", required = false) String id
             , @RequestParam(value = "justreports", required = false) String justreports
-    ) throws Exception {
+    ) {
         final LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
         if (loggedInUser != null) {
             request.getSession().setAttribute("working", "working");
