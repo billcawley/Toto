@@ -42,7 +42,7 @@ def fileProcess(Object[] args) {
                        topLine = lineNo;
                        agreementCol = colNum
                     }
-                    if (col.equals("tran_date")){
+                    if (col.equals("tran_date") || col.equals("trans_date")){
                         Map<String, String> newparams = new HashMap<>(uploadedFile.getParameters());
                         // this is a template switch, todo . . . .
                         println("found Tran_Date");
