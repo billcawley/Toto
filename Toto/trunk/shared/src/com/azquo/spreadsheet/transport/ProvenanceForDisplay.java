@@ -88,7 +88,7 @@ public class ProvenanceForDisplay implements Serializable {
         this.valueDetailsForProvenances = valueDetailsForProvenances;
     }
 
-    private final static DateTimeFormatter df = DateTimeFormatter.ofPattern("dd/MM/yy HH:mm");
+    private final static DateTimeFormatter df = DateTimeFormatter.ofPattern("dd/MM/yy HH:mm:ss");
 
     @Override
     public String toString() {
