@@ -467,6 +467,7 @@ public class AzquoCellResolver {
                                 Set<Name> allValueParents = new HashSet<>();
                                 for (Name name:value.getNames()){
                                     allValueParents.addAll(name.findAllParents());
+                                    allValueParents.add(name);
                                 }
                                 //throw in the headings as well - these should be found regardless
                                 for (DataRegionHeading scaleHeading:scaleHeadings){
