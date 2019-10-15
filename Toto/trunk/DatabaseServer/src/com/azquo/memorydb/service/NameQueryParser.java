@@ -156,7 +156,7 @@ public class NameQueryParser {
                     return new ArrayList<>();
                 }
             }*/
-            throw e;
+            throw new Exception("could not parse " + formulaCopy + "(error: " + e.getMessage() + ")");
         }
         setFormula = setFormula.replace(StringLiterals.ASGLOBAL, StringLiterals.ASGLOBALSYMBOL + "").replace(StringLiterals.FILTERBY, StringLiterals.FILTERBYSYMBOL + "");
         setFormula = setFormula.replace(StringLiterals.AS, StringLiterals.ASSYMBOL + "").replace(StringLiterals.CONTAINS, StringLiterals.CONTAINSSYMBOL + "");
