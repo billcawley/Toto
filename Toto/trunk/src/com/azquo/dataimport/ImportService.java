@@ -1163,9 +1163,18 @@ public final class ImportService {
             while (bracketPos >= 0) {
                 bracketPos = fileName.indexOf("(", bracketPos + 1);
                 if (bracketPos > 0) {
+                    int startBrackets = bracketPos;
                     int endBrackets = fileName.indexOf(")", bracketPos);
+                    //there may be parameter names which include backets....
+                    int internalBrackets = bracketPos;
+                    internalBrackets = fileName.indexOf("(", internalBrackets+1);
+                    while (endBrackets > 0 && internalBrackets > 0 && internalBrackets<endBrackets){
+                        endBrackets = fileName.indexOf(")", endBrackets + 1);
+                        internalBrackets = fileName.indexOf("(", internalBrackets+1);
+                     }
                     if (endBrackets > 0) {
-                        String parseString = fileName.substring(bracketPos + 1, endBrackets);
+                        String parseString = fileName.substring(startBrackets + 1, endBrackets);
+                        bracketPos = endBrackets;
                         if (parseString.contains("=")) {
                             StringTokenizer stringTokenizer = new StringTokenizer(parseString, ";");
                             while (stringTokenizer.hasMoreTokens()) {
@@ -1177,6 +1186,8 @@ public final class ImportService {
                                 }
                             }
                         }
+                    }else{
+                        bracketPos = fileName.length();
                     }
                 }
             }
