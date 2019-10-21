@@ -868,7 +868,7 @@ public class ReportExecutor {
                             }
 
 
-                            if (filePrefix != null) {
+                            if (filePrefix != null && !fileName.startsWith(filePrefix)) { // I think above it can be set up with the prefix already
                                 fileName = filePrefix + fileName;
                             }
                             //System.out.println("file name : " + fileName);
@@ -887,6 +887,9 @@ public class ReportExecutor {
                                     CellData cellData = Ranges.range(selectedSheet, row, col).getCellData();
                                     if (cellData != null) {
                                         value = cellData.getFormatText();// I assume means formatted text
+                                        if (cellData.getType() == CellData.CellType.NUMERIC || (cellData.getType() == CellData.CellType.FORMULA && cellData.getResultType() == CellData.CellType.NUMERIC)){
+                                            value = value.replaceAll(",", ""); // a hack for Ed B, the formatting in the cell seems to be ignored in this respect
+                                        }
                                     }
                                 }
                                 // note - this logic assumes he mappings are sorted

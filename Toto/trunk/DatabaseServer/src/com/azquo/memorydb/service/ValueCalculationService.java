@@ -260,7 +260,7 @@ public class ValueCalculationService {
         // there might be numbers at the beginning then strings later, hence scan the lot first to decide if we're dealing with strings or numbers
         boolean stringMode = false;
         for (Value value : values) {
-            if (!value.getText().equals("NULL") && value.getText() != null && value.getText().length() > 0) {
+            if (value.getText() != null && !value.getText().equals("NULL") && value.getText().length() > 0) {
                 if (!NumberUtils.isNumber(value.getText())) {
                     stringMode = true;
                     break;
@@ -269,7 +269,7 @@ public class ValueCalculationService {
         }
         boolean first = true;
         for (Value value : values) {
-            if (!value.getText().equals("NULL") && value.getText() != null && value.getText().length() > 0) {
+            if (value.getText() != null && !value.getText().equals("NULL") && value.getText().length() > 0) {
                 if (!stringMode) {
                     double doubleValue = Double.parseDouble(value.getText());
                     if (first) {
