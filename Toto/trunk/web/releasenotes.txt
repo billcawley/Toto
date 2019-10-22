@@ -1,6 +1,20 @@
+22-10-19 - 2
+
+Bug fix, tweaks for XML feed
+
 21-10-19
 
+Bug fix, tweaks for XML feed
 
+small bugfix in 'scale' - include value names in parent list
+
+Time to the second on provenance display, debug info on Excel save
+
+do not assume strings if cells contain NULL
+
+better error message
+
+Correction when parameters (such as file names) have brackets within them
 
 07-10-19
 

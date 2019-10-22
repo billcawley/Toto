@@ -831,7 +831,11 @@ public class ExcelController {
                     int reportId = loggedInUser.getUser().getReportId();
                     reportName = OnlineReportDAO.findById(reportId).getReportName();
                     loggedInUser.setContext(context);
-                    result = SpreadsheetService.saveData(loggedInUser, reportId, reportName, excelRegionModification.sheet, excelRegionModification.region, false);
+                    if (result.equals("no action taken")){ // hacky, fix later
+                        result = SpreadsheetService.saveData(loggedInUser, reportId, reportName, excelRegionModification.sheet, excelRegionModification.region, false);
+                    } else {
+                        result += (", " + result);
+                    }
                     // so here's the followon execute
                     OnlineReport or = OnlineReportDAO.findById(loggedInUser.getUser().getReportId());
                     String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath +
@@ -843,8 +847,8 @@ public class ExcelController {
                     ReportRenderer.populateBook(book, 0);
                     // ok this crashes due to no book path but I think I'll allow no book path itnernally as
                     ReportExecutor.runExecuteCommandForBook(book, ReportRenderer.FOLLOWON); // that SHOULD do it. It will fail gracefully in the vast majority of times there is no followon
-                    return result;
                 }
+                return result;
             }
         } catch (NullPointerException npe) {
             npe.printStackTrace();

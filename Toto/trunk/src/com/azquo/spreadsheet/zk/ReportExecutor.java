@@ -852,6 +852,7 @@ public class ReportExecutor {
                                 try (OutputStream output = new FileOutputStream(azquoTempDir.resolve((filePrefix != null ? filePrefix : "") + eightCharInt(filePointer) + ".properties").toString())) {
                                     Properties properties = new Properties();
                                     for (String propertyName : xmlExtraInfoColMap.keySet()) {
+                                        Ranges.range(selectedSheet, row, xmlExtraInfoColMap.get(propertyName)).notifyChange();
                                         CellData cellData = Ranges.range(selectedSheet, row, xmlExtraInfoColMap.get(propertyName)).getCellData();
                                         String value = "";
                                         if (cellData != null) {
@@ -884,6 +885,7 @@ public class ReportExecutor {
                                     // the path seems hacky but i can't see a way around that at the mo
                                     value = reportFileName;
                                 } else {
+                                    Ranges.range(selectedSheet, row, col).notifyChange();
                                     CellData cellData = Ranges.range(selectedSheet, row, col).getCellData();
                                     if (cellData != null) {
                                         value = cellData.getFormatText();// I assume means formatted text
