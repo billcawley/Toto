@@ -758,6 +758,10 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
             }
             if (checkCondition(azquoMemoryDBConnection, lineToLoad, condition, compositeIndexResolver, toTest, nearestList, namesFoundCache, attributeNames)) {
                 newCellNameValue(cell, toTest);
+                int indexForChild = cell.getImmutableImportHeading().indexForChild;
+                if (indexForChild>=0 && lineToLoad.get(indexForChild).getLineNames().size() > 0){
+                    toTest.addChildWillBePersisted(lineToLoad.get(indexForChild).getLineNames().iterator().next(), azquoMemoryDBConnection);
+                }
                 return true;
             }
         }
