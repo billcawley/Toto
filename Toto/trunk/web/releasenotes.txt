@@ -1,8 +1,16 @@
-22-10-19 - 2
+23-10-23
+
+Remove validaions from XML accompanying reports
+
+22-10-23
+
+BUg fix - Excel controller
+
+22-10-22 - 2
 
 Bug fix, tweaks for XML feed
 
-21-10-19
+21-10-22
 
 Bug fix, tweaks for XML feed
 

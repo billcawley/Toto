@@ -17,13 +17,11 @@ import com.azquo.spreadsheet.transport.CellForDisplay;
 import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-import org.zkoss.zss.api.Exporter;
-import org.zkoss.zss.api.Exporters;
-import org.zkoss.zss.api.Importers;
-import org.zkoss.zss.api.Ranges;
+import org.zkoss.zss.api.*;
 import org.zkoss.zss.api.model.Book;
 import org.zkoss.zss.api.model.CellData;
 import org.zkoss.zss.api.model.Sheet;
+import org.zkoss.zss.api.model.Validation;
 import org.zkoss.zss.model.CellRegion;
 import org.zkoss.zss.model.SCell;
 import org.zkoss.zss.model.SName;
@@ -832,6 +830,21 @@ public class ReportExecutor {
                                     book.getInternalBook().setAttribute(OnlineController.REPORT_ID, onlineReport.getId());
                                     StringBuilder errorLog = new StringBuilder();
                                     ReportRenderer.populateBook(book, 0, false, true, errorLog); // note true at the end here - keep on logging so users can see changes as they happen
+                                    try {
+                                        for (SName sName : book.getInternalBook().getNames()){
+                                            if (sName.getRefersToSheetName() != null){
+                                                Range chosenRange = Ranges.range(book.getSheet(sName.getRefersToSheetName())
+                                                        ,  sName.getRefersToCellRegion().getRow(), sName.getRefersToCellRegion().getColumn()
+                                                        ,  sName.getRefersToCellRegion().getRow(), sName.getRefersToCellRegion().getColumn()
+                                                );
+                                                if (chosenRange != null){
+                                                    chosenRange.deleteValidation();
+                                                }
+                                            }
+                                        }
+                                    } catch (Exception e){ // I don't think it will exception but this is cosmetic, on the off chance it NPEs for example then carry on
+                                        e.printStackTrace();// do log it though
+                                    }
                                     Exporter exporter = Exporters.getExporter();
 //                                                File file = zipforxmlfiles.resolve((filePrefix != null ? filePrefix : "") + base64int(filePointer) + ".xlsx").toFile();
                                     // like the xml files we now want these to have  a copy in temp too
