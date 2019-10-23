@@ -31,8 +31,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.zkoss.poi.openxml4j.opc.OPCPackage;
+import org.zkoss.poi.openxml4j.opc.PackageAccess;
 import org.zkoss.poi.ss.usermodel.Name;
 import org.zkoss.poi.ss.usermodel.Workbook;
+import org.zkoss.poi.ss.usermodel.WorkbookFactory;
 import org.zkoss.poi.xssf.usermodel.XSSFWorkbook;
 import org.zkoss.zss.api.Importers;
 import org.zkoss.zss.api.model.Book;
@@ -437,7 +439,8 @@ public class ExcelController {
 //                        byte[] bytes = Files.readAllBytes(Paths.get(file.getAbsolutePath()));
                         // will this mess up the file?? who knows!
                         OPCPackage opcPackage = OPCPackage.open(file.getAbsolutePath());
-                        Workbook book = new XSSFWorkbook(opcPackage);
+//                        Workbook book = new XSSFWorkbook(opcPackage);
+                        Workbook book = WorkbookFactory.create(opcPackage);
                         ByteArrayOutputStream baos = new ByteArrayOutputStream();
                         // adding the try catch here so we always close the OPC package which I think causes a problem under windows
                         try {
@@ -453,12 +456,16 @@ public class ExcelController {
                                         }
                                     }
                                 } catch (Exception ignored) { // maybe do something with it later but for the moment don't. Just want it to fix what names it can
+//                                    ignored.printStackTrace();
                                 }
                             }
                             book.write(baos);
                         } catch (Exception ignored){
+//                            ignored.printStackTrace();
                         }
-                        opcPackage.close();
+                        // don't close, it will write!!!
+//                        opcPackage.close();
+//                        opcPackage.revert();// as in don't write back to the damn disk aaaaagh! Hopefully the workbook create also will keep this safe
                         byte[] encodedBytes = Base64.getEncoder().encode(baos.toByteArray());
                         baos.close();
                         String string64 = new String(encodedBytes);
