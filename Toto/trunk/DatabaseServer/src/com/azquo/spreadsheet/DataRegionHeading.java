@@ -46,6 +46,7 @@ public class DataRegionHeading {
         , BESTNAMEVALUEMATCH//                  Value/Name function BESTNAMEVALUEMATCH(<set expression>,<value>) is similar to ‘bestvaluematch’ in finding the values for the particular context, but then shows the name attached to the value found.  In the example above it would show the last date on which a particular product changed price.
         , DICTIONARY//                          Name function       Replacing the dictionary on importing. Passed a set of names and an attribute to look for in those names which will be used to define dictionary criteria, see comments in the code itself for syntax
         , SCALE//                               Value function      uses the 'scale' terms to create a lookup list, which is then applied to the individual values in the rest of the cell names to create a multiplier (e.g. for FX)
+        , DEFAULT//                             Value function      <set, defaultValue>  if nothing found use the string default value
     }
 
     enum SUFFIX {UNLOCKED, LOCKED, SPLIT}
@@ -63,6 +64,7 @@ public class DataRegionHeading {
     private Collection<Name> valueFunctionSet; // just used for valueparentcount and valueset
     private final double doubleParameter; // initially used for percentile, could be others. I think this needs to be rearranged at some point but for the moment make percentile work.
     private final Collection<Name> attributeSet;
+    // todo - this field name is wrong - need to get a better name and change paramaters to reflect this
     private final String calculation; //will later be used as a calculation - coming in from the heading rather than the name, see value service 334
 
     DataRegionHeading(Name name, boolean writeAllowed, FUNCTION function, SUFFIX suffix, String description, Set<Name> valueFunctionSet) {

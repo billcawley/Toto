@@ -389,7 +389,7 @@ public class AzquoCellResolver {
                         }
                         valueFunctionSet = heading.getValueFunctionSet(); // value function e.g. value parent count can allow a name set to be defined
                         if (heading.getDescription()!=null){
-                            description = heading.getDescription().replace("\"","").replace("`","");//USED ONLY IN LASTLOOKUP
+                            description = heading.getDescription().replace("\"","").replace("`","");//USED ONLY IN LASTLOOKUP - EFC note, and default now . . .
                         }
                         if (function == DataRegionHeading.FUNCTION.BESTMATCH
                                 || function == DataRegionHeading.FUNCTION.BESTNAMEVALUEMATCH
@@ -678,6 +678,9 @@ But can use a library?
                             // was isnumber test here to add a double to the
                         } else if (valuesHook.values != null && valuesHook.values.size() > 0) {
                             stringValue = doubleValue + "";
+                        }
+                        if (stringValue.equals("") && function == DataRegionHeading.FUNCTION.DEFAULT){
+                            stringValue = description; // bad parameter names - not the description
                         }
                     } else {
                         stringValue = "";

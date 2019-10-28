@@ -440,6 +440,7 @@ public class ExcelController {
                         // will this mess up the file?? who knows!
                         OPCPackage opcPackage = OPCPackage.open(file.getAbsolutePath());
 //                        Workbook book = new XSSFWorkbook(opcPackage);
+                        // same API call?
                         Workbook book = WorkbookFactory.create(opcPackage);
                         ByteArrayOutputStream baos = new ByteArrayOutputStream();
                         // adding the try catch here so we always close the OPC package which I think causes a problem under windows
@@ -464,8 +465,8 @@ public class ExcelController {
 //                            ignored.printStackTrace();
                         }
                         // don't close, it will write!!!
-//                        opcPackage.close();
-//                        opcPackage.revert();// as in don't write back to the damn disk aaaaagh! Hopefully the workbook create also will keep this safe
+                        // and I have to revert or it won't give the file handler back. Under windows anyway. So just doing nothing not ok either.
+                        opcPackage.revert();
                         byte[] encodedBytes = Base64.getEncoder().encode(baos.toByteArray());
                         baos.close();
                         String string64 = new String(encodedBytes);
