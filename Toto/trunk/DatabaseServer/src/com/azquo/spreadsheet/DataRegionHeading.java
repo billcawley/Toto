@@ -58,31 +58,32 @@ public class DataRegionHeading {
     private final boolean writeAllowed;
     private FUNCTION function;
     private final SUFFIX suffix;
-    // either the name (normally) or the function as written in the case of name count path count etc. Useful for debugging and for storing queries that cna only be resolved later e.g. with [ROWHEADING]
-    private String description;
+    // either the name (normally) or the function as written in the case of name count path count etc.
+    // Useful for debugging and for storing queries that can only be resolved later e.g. with [ROWHEADING]
+    // also used simply as described - when a function has a string parameter or parameters
+    private String stringParameter;
     private final List<DataRegionHeading> offsetHeadings; // used when formatting hierarchy
     private Collection<Name> valueFunctionSet; // just used for valueparentcount and valueset
     private final double doubleParameter; // initially used for percentile, could be others. I think this needs to be rearranged at some point but for the moment make percentile work.
     private final Collection<Name> attributeSet;
-    // todo - this field name is wrong - need to get a better name and change paramaters to reflect this
     private final String calculation; //will later be used as a calculation - coming in from the heading rather than the name, see value service 334
 
-    DataRegionHeading(Name name, boolean writeAllowed, FUNCTION function, SUFFIX suffix, String description, Set<Name> valueFunctionSet) {
-        this(name, writeAllowed,function,suffix, description, null, valueFunctionSet, 0, null);
+    DataRegionHeading(Name name, boolean writeAllowed, FUNCTION function, SUFFIX suffix, String stringParameter, Set<Name> valueFunctionSet) {
+        this(name, writeAllowed,function,suffix, stringParameter, null, valueFunctionSet, 0, null);
     }
 
-    public DataRegionHeading(Name name, boolean writeAllowed, FUNCTION function, SUFFIX suffix, String description, List<DataRegionHeading> offsetHeadings, Collection<Name> valueFunctionSet, double doubleParameter) {
-        this(name, writeAllowed,function,suffix, description, offsetHeadings, valueFunctionSet, doubleParameter, null);
+    public DataRegionHeading(Name name, boolean writeAllowed, FUNCTION function, SUFFIX suffix, String stringParameter, List<DataRegionHeading> offsetHeadings, Collection<Name> valueFunctionSet, double doubleParameter) {
+        this(name, writeAllowed,function,suffix, stringParameter, offsetHeadings, valueFunctionSet, doubleParameter, null);
     }
 
     // todo - maybe factor the constructors a little :)
-    public DataRegionHeading(Name name, boolean writeAllowed, FUNCTION function, SUFFIX suffix, String description, List<DataRegionHeading> offsetHeadings, Collection<Name> valueFunctionSet, double doubleParameter, String calculation) {
+    public DataRegionHeading(Name name, boolean writeAllowed, FUNCTION function, SUFFIX suffix, String stringParameter, List<DataRegionHeading> offsetHeadings, Collection<Name> valueFunctionSet, double doubleParameter, String calculation) {
         this.name = name;
         this.attribute = null;
         this.writeAllowed = writeAllowed;
         this.function = function;
         this.suffix = suffix;
-        this.description = description;
+        this.stringParameter = stringParameter;
         this.offsetHeadings = offsetHeadings;
         this.valueFunctionSet = valueFunctionSet;
         this.doubleParameter = doubleParameter;
@@ -96,7 +97,7 @@ public class DataRegionHeading {
         this.writeAllowed = writeAllowed;
         this.function = null;
         this.suffix = null;
-        this.description = null;
+        this.stringParameter = null;
         this.offsetHeadings = null;
         this.valueFunctionSet = null;
         this.doubleParameter = 0;
@@ -105,13 +106,13 @@ public class DataRegionHeading {
     }
 
     // new thing - function with an attribute, initially just dictionary
-    DataRegionHeading(String attribute, boolean writeAllowed, FUNCTION function, SUFFIX suffix, String description, List<DataRegionHeading> offsetHeadings, Collection<Name> valueFunctionSet, double doubleParameter) {
+    DataRegionHeading(String attribute, boolean writeAllowed, FUNCTION function, SUFFIX suffix, String stringParameter, List<DataRegionHeading> offsetHeadings, Collection<Name> valueFunctionSet, double doubleParameter) {
         this.name = null;
         this.attribute = attribute;
         this.writeAllowed = writeAllowed;
         this.function = function;
         this.suffix = suffix;
-        this.description = description;
+        this.stringParameter = stringParameter;
         this.offsetHeadings = offsetHeadings;
         this.valueFunctionSet = valueFunctionSet;
         this.doubleParameter = doubleParameter;
@@ -126,7 +127,7 @@ public class DataRegionHeading {
     public void amendPermutedHeading(Collection<Name> names){
         name = null;
         if (names !=null){
-            description ="-";
+            stringParameter ="-";
             function = FUNCTION.VALUESET;
             valueFunctionSet = names;
 
@@ -176,8 +177,8 @@ public class DataRegionHeading {
                 + (function != null ? " Function : " + function : "");
     }
 
-    public String getDescription() {
-        return description;
+    public String getStringParameter() {
+        return stringParameter;
     }
 
     List<DataRegionHeading> getOffsetHeadings() {

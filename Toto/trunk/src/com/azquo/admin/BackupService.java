@@ -33,13 +33,11 @@ import org.zeroturnaround.zip.FileSource;
 import org.zeroturnaround.zip.ZipEntrySource;
 import org.zeroturnaround.zip.ZipUtil;
 
-import javax.swing.text.html.HTMLDocument;
 import java.io.*;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -48,10 +46,9 @@ import static com.azquo.dataimport.ImportService.importTemplatesDir;
 
 
 public class BackupService {
-
-    public static final String CATEGORYBREAK = "~~~"; // I'm not proud of this
-    public static final String CATEGORYBREAKOLD = "|||"; // tripped up windows
-    public static final String TYPEBREAK = "~~T~~"; // I'm not proud of this
+    private static final String CATEGORYBREAK = "~~~"; // I'm not proud of this
+    private static final String CATEGORYBREAKOLD = "|||"; // tripped up windows
+    private static final String TYPEBREAK = "~~T~~"; // I'm not proud of this
 
     public static File createDBandReportsAndTemplateBackup(LoggedInUser loggedInUser, boolean justReports) throws Exception {
         // ok, new code to dump a database and all reports. The former being the more difficult bit.
@@ -151,7 +148,7 @@ public class BackupService {
                 dbRestored = true;
             }
         }
-        // I'm going to allow backup restores on just the reports, as we're trying to enable batch report versioning
+        // I'm going to allow backup restores on just the reports, as we're trying to enable batch report and import template versioning
         if (!dbRestored){
             // some copying from Admin service
             Database db = DatabaseDAO.findForNameAndBusinessId(database, loggedInUser.getUser().getBusinessId());
@@ -375,7 +372,7 @@ public class BackupService {
     public static void createDBBackupFile(String databaseName, DatabaseAccessToken databaseAccessToken, String filePath, String databaseServerIP) throws Exception {
         System.out.println("attempting to create backup file " + filePath);
         FileOutputStream fos = new FileOutputStream(filePath);
-        CsvWriter csvW = new CsvWriter(fos, '\t', Charset.forName("UTF-8"));
+        CsvWriter csvW = new CsvWriter(fos, '\t', StandardCharsets.UTF_8);
         csvW.setUseTextQualifier(false);
         csvW.write(databaseName);
         csvW.endRecord();

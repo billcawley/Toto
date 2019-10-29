@@ -92,7 +92,6 @@ public class AzquoCellResolver {
             if (lastHeading!=null&& lastHeading.getAttribute()!=null && lastHeading.getAttribute().equals(".")){
                 hasData = false;
             }
-
         }
         if (!hasData) {
             return new AzquoCell(true, null, rowHeadings, columnHeadings, contextHeadings, rowNo, colNo, "", doubleValue, false, false);
@@ -123,7 +122,7 @@ public class AzquoCellResolver {
             List<String> expressions = new ArrayList<>();
             String ROWHEADING = "[ROWHEADING";
             for (DataRegionHeading expressionFunctionHeading:expressionFunctionHeadings) {
-                String cellQuery = expressionFunctionHeading.getDescription();
+                String cellQuery = expressionFunctionHeading.getStringParameter();
                 if (!rowHeadings.isEmpty()) {
                     if (!cellQuery.contains(ROWHEADING)) {
                         ROWHEADING = ROWHEADING.toLowerCase();
@@ -134,7 +133,7 @@ public class AzquoCellResolver {
                         for (int colNo1 = 0; colNo1 < rowHeadings.size(); colNo1++) {
                             String fillerAll = ROWHEADING + filler + "]";
                             if (cellQuery.contains(fillerAll)) {
-                                String desc = rowHeadings.get(colNo1).getDescription();
+                                String desc = rowHeadings.get(colNo1).getStringParameter();
                                 if (rowHeadings.get(colNo1).getName() == null) {
                                      if (desc==null){
                                         desc = "";
@@ -243,7 +242,7 @@ public class AzquoCellResolver {
                 stringValue = doubleValue + "";
             } else if (expressionFunctionHeadings.get(0).getFunction() == DataRegionHeading.FUNCTION.PATHCOUNT) { // new syntax, before it was name, set now it's set, set. Sticking to very basic , split
                 //todo - this parsing needs to happen in the DateRegionHeadingService and needs to be robust to commas in names!
-                String[] twoSets = expressionFunctionHeadings.get(0).getDescription().split(","); // we assume this will give an array of two, I guess see if this is a problem
+                String[] twoSets = expressionFunctionHeadings.get(0).getStringParameter().split(","); // we assume this will give an array of two, I guess see if this is a problem
                 Set<Name> leftSet = HashObjSets.newMutableSet();
                 Set<Name> rightSet = HashObjSets.newMutableSet();
                 Name rowHeading = null;
@@ -370,7 +369,7 @@ public class AzquoCellResolver {
                 DataRegionHeading functionHeading = null;
                 DataRegionHeading.FUNCTION function = null;
                 Collection<Name> valueFunctionSet = null;
-                String description = null;
+                String stringParameter = null;
                 double functionDoubleParameter = 0;
                 DataRegionHeading redundantHeading = null;
                 // this used to be dealt with at a lower level but since code in the calculation wants the option
@@ -388,8 +387,8 @@ public class AzquoCellResolver {
                             functionDoubleParameter = heading.getDoubleParameter();
                         }
                         valueFunctionSet = heading.getValueFunctionSet(); // value function e.g. value parent count can allow a name set to be defined
-                        if (heading.getDescription()!=null){
-                            description = heading.getDescription().replace("\"","").replace("`","");//USED ONLY IN LASTLOOKUP - EFC note, and default now . . .
+                        if (heading.getStringParameter()!=null){
+                            stringParameter = heading.getStringParameter().replace("\"","").replace("`","");//USED ONLY IN LASTLOOKUP - EFC note, and default now . . .
                         }
                         if (function == DataRegionHeading.FUNCTION.BESTMATCH
                                 || function == DataRegionHeading.FUNCTION.BESTNAMEVALUEMATCH
@@ -501,14 +500,14 @@ public class AzquoCellResolver {
 
                         if ((function == DataRegionHeading.FUNCTION.BESTMATCH
                                 || function == DataRegionHeading.FUNCTION.BESTVALUEMATCH
-                                || function == DataRegionHeading.FUNCTION.BESTNAMEVALUEMATCH)&& valueFunctionSet != null && description!=null) { // last lookup: we're going to override the double value just set
+                                || function == DataRegionHeading.FUNCTION.BESTNAMEVALUEMATCH)&& valueFunctionSet != null && stringParameter!=null) { // last lookup: we're going to override the double value just set
                             // now, find all the parents and cross them with the valueParentCountHeading set
                             String bestFit = "";
                             for (Value v : valuesHook.values) {
                                  for (Name n : v.getNames()) {
                                     if (valueFunctionSet.contains(n)){
                                         String toTry = n.getDefaultDisplayName();
-                                        if (toTry.compareTo(bestFit)>0 && (toTry.compareTo(description)<=0)){
+                                        if (toTry.compareTo(bestFit)>0 && (toTry.compareTo(stringParameter)<=0)){
                                             bestFit = toTry;
                                             if (function == DataRegionHeading.FUNCTION.BESTNAMEVALUEMATCH){
                                                 stringValue = toTry;
@@ -680,7 +679,7 @@ But can use a library?
                             stringValue = doubleValue + "";
                         }
                         if (stringValue.equals("") && function == DataRegionHeading.FUNCTION.DEFAULT){
-                            stringValue = description; // bad parameter names - not the description
+                            stringValue = stringParameter; // bad parameter names - not the description
                         }
                     } else {
                         stringValue = "";
@@ -727,7 +726,7 @@ But can use a library?
 
                     Map<Name, List<ImmutableImportHeading.DictionaryTerm>> dictionaryMap = new HashMap<>();
                     for (Name name : functionHeading.getValueFunctionSet()) {
-                        String term = name.getAttribute(functionHeading.getDescription());
+                        String term = name.getAttribute(functionHeading.getStringParameter());
                         if (term != null) {
                             List<ImmutableImportHeading.DictionaryTerm> dictionaryTerms = new ArrayList<>();
                             boolean exclude = false;

@@ -101,7 +101,7 @@ public class ProvenanceService {
         for (DataRegionHeading rowHeading : azquoCell.getRowHeadings()) {
             if (rowHeading != null) { // apparently it can be . . . is this a concern? Well NPE is no good, could error maggage on the else if this is a problem
                 if (rowHeading.getFunction() == DataRegionHeading.FUNCTION.NAMECOUNT) {
-                    provString.append("namecount(").append(rowHeading.getDescription());
+                    provString.append("namecount(").append(rowHeading.getStringParameter());
                     nameCountHeading = rowHeading.getName();
                 }
                 if (rowHeading.getName() != null) {
@@ -111,7 +111,7 @@ public class ProvenanceService {
         }
         for (DataRegionHeading colHeading : azquoCell.getColumnHeadings()) {
             if (colHeading.getFunction() == DataRegionHeading.FUNCTION.NAMECOUNT) {
-                provString.append("namecount(").append(colHeading.getDescription());
+                provString.append("namecount(").append(colHeading.getStringParameter());
                 nameCountHeading = colHeading.getName();
                 break;
             }
@@ -157,17 +157,17 @@ public class ProvenanceService {
         StringBuilder toReturn = new StringBuilder();
         toReturn.append(checkNumberFormat(azquoCell.getStringValue()));
         for (DataRegionHeading context : azquoCell.getContexts()) {
-            toReturn.append(", ").append(context.getName() != null ? context.getName().getDefaultDisplayName() : context.getDescription());
+            toReturn.append(", ").append(context.getName() != null ? context.getName().getDefaultDisplayName() : context.getStringParameter());
         }
         for (DataRegionHeading rowHeading : azquoCell.getRowHeadings()) {
             if (rowHeading != null) {
-                toReturn.append(", ").append(rowHeading.getName() != null ? rowHeading.getName().getDefaultDisplayName() : rowHeading.getDescription());
+                toReturn.append(", ").append(rowHeading.getName() != null ? rowHeading.getName().getDefaultDisplayName() : rowHeading.getStringParameter());
             }
         }
         for (DataRegionHeading columnHeading : azquoCell.getColumnHeadings()) {
             // could be a blank column heading, a gap on multi line
             if (columnHeading != null) {
-                toReturn.append(", ").append(columnHeading.getName() != null ? columnHeading.getName().getDefaultDisplayName() : columnHeading.getDescription());
+                toReturn.append(", ").append(columnHeading.getName() != null ? columnHeading.getName().getDefaultDisplayName() : columnHeading.getStringParameter());
             }
         }
         return toReturn.toString();

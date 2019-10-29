@@ -227,45 +227,47 @@ public class DBCron {
                                         }
                                     });
                                 }
-                                String csvFileName = fileMillis + "generatedfromxml (importtemplate=BrokasureTemplates;importversion=Brokasure" + rootDocumentName.get() + ").tsv";
-                                BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(tagged.resolve(csvFileName).toFile()));
-                                for (String heading : headings) {
-                                    bufferedWriter.write(heading + "\t");
-                                }
-                                bufferedWriter.newLine();
-                                for (Map<String, String> lineValues : filesValues.values()) {
+                                if (!filesValues.isEmpty()){
+                                    String csvFileName = fileMillis + "generatedfromxml (importtemplate=BrokasureTemplates;importversion=Brokasure" + rootDocumentName.get() + ").tsv";
+                                    BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(tagged.resolve(csvFileName).toFile()));
                                     for (String heading : headings) {
-                                        String value = lineValues.get(heading);
-                                        bufferedWriter.write((value != null ? value : "") + "\t");
+                                        bufferedWriter.write(heading + "\t");
                                     }
                                     bufferedWriter.newLine();
-                                }
-                                bufferedWriter.close();
-                                Path newScannedDir = Files.createDirectories(tagged.resolve(fileMillis + "scanned"));
-                                try (Stream<Path> list = Files.list(tagged)) {
-                                    list.forEach(path -> {
-                                        // Do stuff
-                                        if (!Files.isDirectory(path)) { // skip any directories
-                                            try {
-                                                Files.move(path, newScannedDir.resolve(path.getFileName()));
-                                            } catch (IOException e) {
-                                                e.printStackTrace();
-                                            }
+                                    for (Map<String, String> lineValues : filesValues.values()) {
+                                        for (String heading : headings) {
+                                            String value = lineValues.get(heading);
+                                            bufferedWriter.write((value != null ? value : "") + "\t");
                                         }
-                                    });
-                                }
-                                if (Files.exists(newScannedDir.resolve(csvFileName)) && SpreadsheetService.getXMLScanDB() != null && !SpreadsheetService.getXMLScanDB().isEmpty()) { // it should exist and a database should be set also
-                                    // hacky, need to sort, todo
-                                    Database db = DatabaseDAO.findForNameAndBusinessId(SpreadsheetService.getXMLScanDB(), b.getId());
-                                    LoggedInUser loggedInUser = new LoggedInUser(""
-                                            , new User(0, LocalDateTime.now(), b.getId(), "brokasure", "", "", "", "", "", 0, 0, "", "")
-                                            , DatabaseServerDAO.findById(db.getDatabaseServerId()), db, null, b.getBusinessDirectory());
-                                    final Map<String, String> fileNameParams = new HashMap<>();
-                                    String fileName = newScannedDir.resolve(csvFileName).getFileName().toString();
-                                    ImportService.addFileNameParametersToMap(fileName, fileNameParams);
+                                        bufferedWriter.newLine();
+                                    }
+                                    bufferedWriter.close();
+                                    Path newScannedDir = Files.createDirectories(tagged.resolve(fileMillis + "scanned"));
+                                    try (Stream<Path> list = Files.list(tagged)) {
+                                        list.forEach(path -> {
+                                            // Do stuff
+                                            if (!Files.isDirectory(path)) { // skip any directories
+                                                try {
+                                                    Files.move(path, newScannedDir.resolve(path.getFileName()));
+                                                } catch (IOException e) {
+                                                    e.printStackTrace();
+                                                }
+                                            }
+                                        });
+                                    }
+                                    if (Files.exists(newScannedDir.resolve(csvFileName)) && SpreadsheetService.getXMLScanDB() != null && !SpreadsheetService.getXMLScanDB().isEmpty()) { // it should exist and a database should be set also
+                                        // hacky, need to sort, todo
+                                        Database db = DatabaseDAO.findForNameAndBusinessId(SpreadsheetService.getXMLScanDB(), b.getId());
+                                        LoggedInUser loggedInUser = new LoggedInUser(""
+                                                , new User(0, LocalDateTime.now(), b.getId(), "brokasure", "", "", "", "", "", 0, 0, "", "")
+                                                , DatabaseServerDAO.findById(db.getDatabaseServerId()), db, null, b.getBusinessDirectory());
+                                        final Map<String, String> fileNameParams = new HashMap<>();
+                                        String fileName = newScannedDir.resolve(csvFileName).getFileName().toString();
+                                        ImportService.addFileNameParametersToMap(fileName, fileNameParams);
 
-                                    ImportService.importTheFile(loggedInUser, new UploadedFile(newScannedDir.resolve(csvFileName).toString()
-                                            , new ArrayList<>(Collections.singletonList(fileName)), fileNameParams, false, false), null, null);
+                                        ImportService.importTheFile(loggedInUser, new UploadedFile(newScannedDir.resolve(csvFileName).toString()
+                                                , new ArrayList<>(Collections.singletonList(fileName)), fileNameParams, false, false), null, null);
+                                    }
                                 }
                             }
                         }

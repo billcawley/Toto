@@ -201,12 +201,13 @@ public final class ImportService {
     private static List<UploadedFile> readBook(LoggedInUser loggedInUser, UploadedFile uploadedFile, PendingUploadConfig pendingUploadConfig, HashMap<String, ImportTemplateData> templateCache) throws Exception {
         long time = System.currentTimeMillis();
         Workbook book;
+        OPCPackage opcPackage = null;
         // we now use apache POI which is faster than ZK but it has different implementations for .xls and .xlsx files
         try {
             // so, the try catches are there in case the file extension is incorrect. This has happened!
             if (uploadedFile.getFileName().toLowerCase().endsWith("xlsx")) {
                 // is the opcpackage dangerous under windows - holding a file lock? Not sure . . . .
-                OPCPackage opcPackage = OPCPackage.open(new FileInputStream(new File(uploadedFile.getPath())));
+                opcPackage = OPCPackage.open(new FileInputStream(new File(uploadedFile.getPath())));
                 book = new XSSFWorkbook(opcPackage);
                 //System.out.println("book open time " + (System.currentTimeMillis() - quicktest));
             } else {
@@ -301,7 +302,7 @@ public final class ImportService {
 */
 // ok try to read the converted file!
                         // opcpackage dangerous for filehandling under windows??
-                        OPCPackage opcPackage = OPCPackage.open(new File(uploadedFile.getPath() + "x"));
+                        opcPackage = OPCPackage.open(new File(uploadedFile.getPath() + "x"));
                         book = new XSSFWorkbook(opcPackage);
                     } catch (Exception e) {
                         throw new Exception("unable to fix irregular xls file");
@@ -314,6 +315,7 @@ public final class ImportService {
             if (pendingUploadConfig != null) {
                 pendingUploadConfig.incrementFileCounter();
             }
+            if (opcPackage != null) opcPackage.revert();
             return Collections.singletonList(uploadedFile);
         }
         if (!uploadedFile.isValidationTest()) {
@@ -321,12 +323,14 @@ public final class ImportService {
                 Sheet sheet = book.getSheetAt(sheetNo);
                 if (sheet.getSheetName().equalsIgnoreCase("Import Model")) {
                     if ((loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
+                        if (opcPackage != null) opcPackage.revert();
                         return Collections.singletonList(uploadImportTemplate(uploadedFile, loggedInUser, true));
                     }
                 }
                 // Import Model is one way to detect a template but it's not always there - names beginning az_Headings are a sign also
                 for (Name name : BookUtils.getNamesForSheet(sheet)){
                     if (name.getNameName().startsWith(AZHEADINGS)){
+                        if (opcPackage != null) opcPackage.revert();
                         return Collections.singletonList(uploadImportTemplate(uploadedFile, loggedInUser, true));
                     }
                 }
@@ -335,6 +339,7 @@ public final class ImportService {
             Name importName = BookUtils.getName(book, ReportRenderer.AZIMPORTNAME);
             if (importName != null) {
                 if ((loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
+                    if (opcPackage != null) opcPackage.revert();
                     return Collections.singletonList(uploadImportTemplate(uploadedFile, loggedInUser, true));
                 }
             }
@@ -397,6 +402,7 @@ public final class ImportService {
                     // ---- end report uploading
                     uploadedFile.setReportName(reportName);
                     uploadedFile.setProcessingDuration(System.currentTimeMillis() - time);
+                    if (opcPackage != null) opcPackage.revert();
                     return Collections.singletonList(uploadedFile);
                 }
             }
@@ -404,6 +410,7 @@ public final class ImportService {
 
         if (loggedInUser.getDatabase() == null) {
             uploadedFile.setError("no database set");
+            if (opcPackage != null) opcPackage.revert();
             return Collections.singletonList(uploadedFile);
         }
         Map<String, String> knownValues = new HashMap<>();
@@ -421,6 +428,7 @@ public final class ImportService {
                 toReturn.addAll(uploadedFiles);
             }
         }
+        if (opcPackage != null) opcPackage.revert();
         return toReturn;
     }
 

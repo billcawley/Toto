@@ -347,7 +347,7 @@ public class DataRegionHeadingService {
             if (drh.getName() != null) {
                 permuteNames.add(drh.getName());
                 sharedNamesSets.add(drh.getName().findAllChildren());
-                if ("sorted".equalsIgnoreCase(drh.getDescription())) { // hacky, string literal and the description against a heading is not as clear as it could be!
+                if ("sorted".equalsIgnoreCase(drh.getStringParameter())) { // hacky, string literal and the description against a heading is not as clear as it could be!
                     permuteNamesThatNeedSorting.add(drh.getName());
                 }
             }
