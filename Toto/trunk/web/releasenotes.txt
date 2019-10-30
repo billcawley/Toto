@@ -1,16 +1,20 @@
-23-10-23
+29-10-19
+
+Bug fixes on possible file handler leaks
+
+23-10-19
 
 Remove validaions from XML accompanying reports
 
-22-10-23
+22-10-19
 
 BUg fix - Excel controller
 
-22-10-22 - 2
+22-10-19 - 2
 
 Bug fix, tweaks for XML feed
 
-21-10-22
+21-10-19
 
 Bug fix, tweaks for XML feed
 

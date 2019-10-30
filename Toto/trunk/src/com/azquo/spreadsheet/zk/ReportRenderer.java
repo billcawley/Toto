@@ -614,7 +614,7 @@ public class ReportRenderer {
                 // is printing the stack trace going to jam the logs unnecessarily?
                 Throwable t = re.detail.getCause();
                 if (t != null) {
-                    errorMessage = t.getLocalizedMessage().replace("java.lang.Exception: ","");
+                    errorMessage = t.getLocalizedMessage();
                     t.printStackTrace();
                 } else {
                     errorMessage = re.getMessage();

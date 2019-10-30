@@ -156,8 +156,7 @@ class RegionFillerService {
                         }
                     }
                     rowHeading = rowHeading.replace(StringLiterals.QUOTE + "", "").trim();
-
-                    RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).createFilterSet(loggedInUser.getDataAccessToken(), "az_" + rowHeading, loggedInUser.getUser().getEmail(), new ArrayList<>());
+                    RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).createFilterSet(loggedInUser.getDataAccessToken(), "az_" + rowHeading, loggedInUser.getUser().getEmail(), null);
                     String colHeading = ChoicesService.multiList(loggedInUser, "az_" + rowHeading, "`" + rowHeading + "` children");
                     if (colHeading.equals("[all]")) colHeading = rowHeading;
                     BookUtils.setValue(sheet.getInternalSheet().getCell(hrow, hcol++), colHeading);

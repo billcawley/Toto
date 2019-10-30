@@ -146,6 +146,7 @@ public class DSSpreadsheetService {
         // ok need to work out from the arrays if there is the save zeroes flag on any headings. The arrays are oriented as shown so rows will have a large outer array and columns a large inner array
         int index = 0;
         final String STOREZEROES = "STOREZEROES";
+        // todo - empty column headings?
         for (DataRegionHeading dataRegionHeading : columnHeadingsAsArray.get(columnHeadingsAsArray.size() - 1)) {
             if (dataRegionHeading != null && dataRegionHeading.getName() != null && dataRegionHeading.getName().getAttribute(STOREZEROES, false, null) != null) {
                 if (zeroSavedColumnIndexes == null) {

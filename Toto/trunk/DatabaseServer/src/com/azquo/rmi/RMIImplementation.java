@@ -234,19 +234,18 @@ class RMIImplementation implements RMIInterface {
         }
     }
 
-    @Override
     public void createFilterSet(DatabaseAccessToken databaseAccessToken, String setName, String userName, List<Integer> childrenIds) throws RemoteException {
         try {
-            UserChoiceService.createFilterSet(databaseAccessToken, setName, userName, childrenIds);
+            UserChoiceService.createFilterSetWithQuery(databaseAccessToken, setName, userName, childrenIds);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
     }
 
     @Override
-    public void createFilterSet(DatabaseAccessToken databaseAccessToken, String setName, String userName, String query) throws RemoteException {
+    public void createFilterSetWithQuery(DatabaseAccessToken databaseAccessToken, String setName, String userName, String query) throws RemoteException {
         try {
-            UserChoiceService.createFilterSet(databaseAccessToken, setName, userName, query);
+            UserChoiceService.createFilterSetWithQuery(databaseAccessToken, setName, userName, query);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }

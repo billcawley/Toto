@@ -31,11 +31,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.zkoss.poi.openxml4j.opc.OPCPackage;
-import org.zkoss.poi.openxml4j.opc.PackageAccess;
 import org.zkoss.poi.ss.usermodel.Name;
 import org.zkoss.poi.ss.usermodel.Workbook;
 import org.zkoss.poi.ss.usermodel.WorkbookFactory;
-import org.zkoss.poi.xssf.usermodel.XSSFWorkbook;
 import org.zkoss.zss.api.Importers;
 import org.zkoss.zss.api.model.Book;
 
@@ -302,7 +300,7 @@ public class ExcelController {
             }
 
             if (op.equals("createfilterset")) {
-                RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).createFilterSet(loggedInUser.getDataAccessToken(), choice, loggedInUser.getUser().getEmail(), chosen);
+                RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).createFilterSetWithQuery(loggedInUser.getDataAccessToken(), choice, loggedInUser.getUser().getEmail(), chosen);
                 return jsonError("done");
             }
 

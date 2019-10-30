@@ -59,7 +59,7 @@ public interface RMIInterface extends Remote {
 
     void createFilterSet(DatabaseAccessToken databaseAccessToken, String setName, String userName, List<Integer> childrenIds) throws RemoteException;
 
-    void createFilterSet(DatabaseAccessToken databaseAccessToken, String setName, String userName, String query) throws RemoteException;
+    void createFilterSetWithQuery(DatabaseAccessToken databaseAccessToken, String setName, String userName, String query) throws RemoteException;
 
     String resolveQuery(DatabaseAccessToken databaseAccessToken, String query, String user, List<List<String>> contextSource) throws RemoteException;
 

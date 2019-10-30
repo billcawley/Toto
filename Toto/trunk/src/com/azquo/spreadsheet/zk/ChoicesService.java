@@ -414,7 +414,7 @@ public class ChoicesService {
             if (chosenOptions.size() == 1 && chosenOptions.get(0).startsWith("Error")) { // this stops the error on making the drop down list
                 chosenOptions = allOptions;
                 // and create the set server side, it will no doubt be referenced
-                RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).createFilterSet(loggedInUser.getDataAccessToken(), filterName, loggedInUser.getUser().getEmail(), sourceSet);
+                RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).createFilterSetWithQuery(loggedInUser.getDataAccessToken(), filterName, loggedInUser.getUser().getEmail(), sourceSet);
             }
             if (allOptions.size() < 2)
                 return "[all]"; // EFC - this did return null which I think is inconsistent. If there's only one option should it maybe be all?
