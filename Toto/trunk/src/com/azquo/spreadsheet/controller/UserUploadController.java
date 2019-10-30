@@ -197,7 +197,7 @@ public class UserUploadController {
                             }
                             // windows file write locking paranoia
                             if (opcPackage != null){
-                                opcPackage.close();
+                                opcPackage.revert();
                             }
                             boolean assignTemplateToDatabase = false;
                             if (database != null && !database.isEmpty()) {

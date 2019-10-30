@@ -1559,7 +1559,7 @@ fr.close();
                 }
             }
             // due to windows paranoia, keep an eye on this. Might cause files to be write locked
-            opcPackage.close();
+            opcPackage.revert();
             return importTemplateData;
         }
         return null;
@@ -1602,7 +1602,7 @@ fr.close();
             }
         }
         // worried about write locking the file in windows . . .
-        opcPackage.close();
+        opcPackage.revert();
 
     }
 */

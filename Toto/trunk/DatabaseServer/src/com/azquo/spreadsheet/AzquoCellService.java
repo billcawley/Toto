@@ -634,6 +634,8 @@ public class AzquoCellService {
                 }
             }
         }
+        // the hide cols could make empty rows, this trips up code. Zap the empty rows
+        toReturn.removeIf(List::isEmpty);
 
         // it's at this point we actually have data that's going to be sent to a user in newRow so do the highlighting here I think
         if (regionOptions.highlightDays > 0) {

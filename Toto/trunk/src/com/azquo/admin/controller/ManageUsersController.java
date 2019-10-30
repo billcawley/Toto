@@ -298,7 +298,7 @@ public class ManageUsersController {
                             row++;
                         }
                     }
-                    opcPackage.close();
+                    opcPackage.revert();
                     StringBuilder message = new StringBuilder("User file uploaded.");
                     if (rejected.size() > 0) {
                         message.append("  Some users rejected: ");

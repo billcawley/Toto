@@ -220,7 +220,7 @@ public class ManageReportSchedulesController {
                             row++;
                         }
                     }
-                    opcPackage.close();
+                    opcPackage.revert();
                     // this chunk moved from ImportService - perhaps it could be moved from here but
                     model.put("error", "Report schedules file uploaded");
                 } catch (Exception e) { // now the import has it's on exception catching

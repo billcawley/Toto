@@ -400,7 +400,7 @@ public class PendingUploadController {
                         } catch (Exception e){
                             e.printStackTrace();
                         }
-                        opcPackage.close();
+                        opcPackage.revert();
                     }
                     int maxCounter = Integer.parseInt(maxcounter);
                     for (int i = 0; i <= maxCounter; i++) {
