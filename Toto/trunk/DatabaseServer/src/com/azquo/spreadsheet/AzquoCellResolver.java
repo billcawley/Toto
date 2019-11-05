@@ -187,6 +187,7 @@ public class AzquoCellResolver {
                 //build a set of shared names, and permute names
                 List<Collection<Name>> namesToResolve = new ArrayList<>();
                 List<Name> sharedNames = new ArrayList<>();
+                // EFC note - I'm a little bothered that the DataRegionHeading could be null. Leave for the moment . . .
                 for (DataRegionHeading drh : contextHeadings){
                     if (drh!=null && drh.getName() != null && !usedInExpression.contains(drh.getName())) {
                         sharedNames.add(drh.getName());
@@ -212,7 +213,6 @@ public class AzquoCellResolver {
                         } catch (Exception e) {
                             expressionsValid = false;
                         }
-
                     }
                 }else{
                     namesToResolve.add(found);
@@ -263,7 +263,6 @@ public class AzquoCellResolver {
                             count++;
                         }
                     }
-
                 }else {
                     for (Name child : leftSet) {
                         if (rightSet.contains(child)) {
