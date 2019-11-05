@@ -175,6 +175,9 @@ public class ChoicesService {
         boolean resolveChoices = true;
         Map<String, List<String>> choiceOptionsMap = resolveChoiceOptions(namesForSheet, loggedInUser);
         Map<String, String> userChoices = CommonReportUtils.getUserChoicesMap(loggedInUser);
+        // will explain this below where it's used near the end of the function
+        Map<String, String> choicesSet = new HashMap<>();
+
         StringBuilder context = new StringBuilder();
         while (resolveChoices) {
             context = new StringBuilder();
@@ -230,10 +233,7 @@ public class ChoicesService {
                                     choiceName = choiceName.substring(3);
                                 }
                                 context.append(choiceName).append(" = ").append(userChoice).append(";");
-                                choiceName = choiceName.toLowerCase();
-                                if (!userChoice.equals(userChoices.get(choiceName))){
-                                    SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(),choiceName,userChoice);
-                                }
+                                choicesSet.put(choiceName, userChoice);
                             }
                         }
                         regionsToWatchForMerge.add(chosen);
@@ -264,6 +264,19 @@ public class ChoicesService {
             attempts++;
             if (attempts > 10) {
                 System.out.println("10 attempts at resolving choices, odds on there's some kind of circular reference, stopping");
+            }
+        }
+        /* according to a comment by WFC on this class on 25/06/2019 "Update the user choice saved to disk as soon as an automatic allocation is made."
+         this was above when assigning to the cell but junk got in the sql user choices as choices depend on choices,
+         it runs until choices are not affecting other choices, in the mean time you'd get something like
+         "Error : Exception: could not parse `` children - `Transaction type` level 2(error: Cannot resolve reference to a name )"
+         put in the choice. I don't know why it is required to save the automatic allocations, it would be nice to know. In the mean
+         time preserve the functionality by comparing the choices as set with user choices from the sql
+         */
+
+        for (String choiceName : choicesSet.keySet()){
+            if (!choicesSet.get(choiceName).equals(userChoices.get(choiceName))){
+                SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(),choiceName,choicesSet.get(choiceName));
             }
         }
         loggedInUser.setContext(context.toString());
