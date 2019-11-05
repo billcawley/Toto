@@ -1,10 +1,28 @@
+05-11-19 -2
+
+Under certain circumstances user choices were being lost in ZK. Fixed now.
+
+Risk Aggregate Report - Options named range was incorrect, now there is az_OptionsSlipLines2 with the hide heading errors, Limit the month choice to start at Mar-14. THis stops date errors when selecting the earliest month
+
+05-11-19
+
+Bug fixes on permute headings, the filtersets were being reset on each load. Not now.
+
+OPC package revert─ there should be no closes. And remove totally empty rows from the data sort function - it can interfere with other code
+
+Premium Feed - Changed dates for SSDloyds and DueDate (Due date 3 months after effective, SSDLoyds then 14 days after that)
+
+Self Storage Check - Hidecols set to 0 for the moment, it can't be set back to 1 until a Java patch has gone in. It was resulting in a single empty row which the Java wasn't ready for
+
+Premium feed - reduced formula dependencies which seemed to be tripping ZK (missing last section on non splits fixed)
+
 29-10-19
 
 Bug fixes on possible file handler leaks
 
 23-10-19
 
-Remove validaions from XML accompanying reports
+Remove validations from XML accompanying reports
 
 22-10-19
 
