@@ -785,12 +785,15 @@ public class ReportExecutor {
                             // we now do reports first as if a file is produced then the path to that file might be used by the XML
                             if (reportName != null && !reportSelectionsColMap.isEmpty()) { // I can't see how the reportSelectionsColMap could be empty and valid
                                 for (String choiceName : reportSelectionsColMap.keySet()) {
+                                    // dammit I forgot that! Had annoying consequences. Oh well . . .
+                                    Ranges.range(selectedSheet, row, reportSelectionsColMap.get(choiceName)).notifyChange();
                                     CellData cellData = Ranges.range(selectedSheet, row, reportSelectionsColMap.get(choiceName)).getCellData();
                                     String value = "";
                                     if (cellData != null) {
                                         value = cellData.getFormatText();// I assume means formatted text
                                     }
                                     if (!value.isEmpty()) {
+                                        System.out.println("Xml setting choice : "  + choiceName + " value " + value);
                                         SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choiceName, value);
                                     }
                                 }

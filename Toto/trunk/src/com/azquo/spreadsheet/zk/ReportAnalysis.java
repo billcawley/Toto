@@ -128,6 +128,8 @@ public class ReportAnalysis {
                                     row = sheet.createRow(rowIndex++);
                                 }
                             }
+                        } else {
+                            row = sheet.createRow(rowIndex++);
                         }
                         cellIndex = 0;
                     }
@@ -162,6 +164,8 @@ public class ReportAnalysis {
                                 row = sheet.createRow(rowIndex++);
                             }
                         }
+                    } else {
+                        row = sheet.createRow(rowIndex++);
                     }
                     cellIndex = 0;
                 }
@@ -198,12 +202,12 @@ public class ReportAnalysis {
                             row = sheet.createRow(rowIndex++);
                         }
                     }
+                } else {
+                    row = sheet.createRow(rowIndex++);
                 }
                 cellIndex = 0;
             }
         }
-
-
         return rowIndex;
     }
 

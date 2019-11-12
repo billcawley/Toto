@@ -153,6 +153,7 @@ public class BackupService {
             // some copying from Admin service
             Database db = DatabaseDAO.findForNameAndBusinessId(database, loggedInUser.getUser().getBusinessId());
             if (db != null){
+                loggedInUser.setDatabaseWithServer(DatabaseServerDAO.findById(db.getDatabaseServerId()), db);
                 final List<OnlineReport> reports = OnlineReportDAO.findForDatabaseId(db.getId());
                 DatabaseReportLinkDAO.unLinkDatabase(db.getId());
                 for (OnlineReport or : reports) {
