@@ -10,7 +10,6 @@ import com.azquo.spreadsheet.controller.OnlineController;
 import com.azquo.spreadsheet.*;
 import com.azquo.spreadsheet.transport.CellForDisplay;
 import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
-import org.springframework.security.access.method.P;
 import org.zkoss.zss.api.*;
 import org.zkoss.zss.api.model.*;
 import org.zkoss.zss.api.model.Sheet;
@@ -51,7 +50,7 @@ public class ReportRenderer {
     static final String AZSUPPORTREPORTNAME = "az_supportreportname";
     static final String AZSUPPORTREPORTFILEXMLTAG = "az_supportreportfilexmltag";
     static final String AZSUPPORTREPORTSELECTIONS = "az_supportreportselections";
-    private static final String AZCONTEXT = "az_context";
+     static final String AZCONTEXT = "az_context";
     static final String AZPIVOTFILTERS = "az_pivotfilters";//old version - not to be continued
     static final String AZCONTEXTFILTERS = "az_contextfilters";
     static final String AZCONTEXTHEADINGS = "az_contextheadings";
@@ -65,11 +64,11 @@ public class ReportRenderer {
     static final String AZREPEATSHEET = "az_repeatsheet";
     public static final String AZPDF = "az_pdf";
     static final String AZTOTALFORMAT = "az_totalformat";
-    private static final String AZFASTLOAD = "az_fastload";
+    static final String AZFASTLOAD = "az_fastload";
     static final String AZEMAILADDRESS = "az_emailaddress";
     static final String AZEMAILSUBJECT = "az_emailsubject";
     static final String AZEMAILTEXT = "az_emailtext";
-    private static final String AZCURRENTUSER = "az_currentuser";
+     static final String AZCURRENTUSER = "az_currentuser";
     // on an upload file, should this file be flagged as one that moves with backups and is available for non admin users to download
     public static final String AZFILETYPE = "az_filetype";
 

@@ -8,12 +8,20 @@ import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.controller.LoginController;
+import com.azquo.spreadsheet.zk.ReportAnalysis;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.zkoss.poi.hssf.usermodel.HSSFFont;
+import org.zkoss.poi.hssf.util.HSSFColor;
+import org.zkoss.poi.ss.usermodel.*;
+import org.zkoss.poi.xssf.usermodel.XSSFWorkbook;
 
+import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -50,7 +58,7 @@ public class ManageReportsController {
     }
 
     @RequestMapping
-    public String handleRequest(ModelMap model, HttpServletRequest request,
+    public String handleRequest(ModelMap model, HttpServletRequest request, HttpServletResponse response,
                                 @RequestParam(value = "editId", required = false) String editId
             , @RequestParam(value = "deleteId", required = false) String deleteId
             , @RequestParam(value = "databaseIdList", required = false) String[] databaseIdList // I think this is correct?
@@ -58,6 +66,7 @@ public class ManageReportsController {
             , @RequestParam(value = "explanation", required = false) String explanation
             , @RequestParam(value = "category", required = false) String category
             , @RequestParam(value = "submit", required = false) String submit
+            , @RequestParam(value = "test", required = false) String test
     ) {
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
         // I assume secure until we move to proper spring security
@@ -110,7 +119,50 @@ public class ManageReportsController {
                 }
             }
             // if not editing then very simple
-            model.put("reports", AdminService.getReportList(loggedInUser));
+            List<OnlineReport> reportList = AdminService.getReportList(loggedInUser);
+            if ("test".equals(test)){
+                Workbook wb = new XSSFWorkbook();
+                Sheet analysis = wb.createSheet("Analysis");
+                analysis.setColumnWidth(0, 256*40); // 256 per character . . .
+                analysis.setColumnWidth(1, 256*40);
+                analysis.setColumnWidth(2, 256*40);
+                int rowIndex = 0;
+                int cellIndex = 0;
+                for (OnlineReport or : reportList){
+                    Row row = analysis.createRow(rowIndex++);
+                    Cell cell = row.createCell(cellIndex);
+                    cell.setCellValue(or.getReportName());
+
+                    CellStyle style = wb.createCellStyle();
+                    Font font = wb.createFont();
+                    font.setBoldweight(HSSFFont.BOLDWEIGHT_BOLD);
+                    //font.setFontHeightInPoints((short)(20*20));
+                    style.setFont(font);
+                    cell.setCellStyle(style);
+
+
+                    cellIndex = 0;
+                    analysis.createRow(rowIndex++);
+                    try {
+                        rowIndex = ReportAnalysis.analyseReport(loggedInUser, or, rowIndex, analysis);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    analysis.createRow(rowIndex++);
+                }
+                response.setContentType("application/vnd.ms-excel");
+                response.setHeader("Content-Disposition", "inline; filename=\"ReportAnalysis.xlsx\"");
+                try {
+                    ServletOutputStream outputStream = response.getOutputStream();
+                    wb.write(outputStream);
+                    outputStream.flush();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+
+
+            model.put("reports", reportList);
             model.put("developer", loggedInUser.getUser().isDeveloper());
             AdminService.setBanner(model,loggedInUser);
             return "managereports";

@@ -799,6 +799,7 @@ public class ManageDatabasesController {
 
             if (uploadedFile.getReportName() != null) {
                 toReturn.append("Report uploaded : ").append(uploadedFile.getReportName()).append("\n<br/>");
+//                toReturn.append("Analysis : ").append(uploadedFile.getE()).append("\n<br/>");
             }
 
             if (uploadedFile.isImportTemplate()) {

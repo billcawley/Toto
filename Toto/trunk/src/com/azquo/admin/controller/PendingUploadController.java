@@ -436,7 +436,6 @@ public class PendingUploadController {
                     @SuppressWarnings("unchecked")
                     List<UploadedFile> importResult = (List<UploadedFile>) request.getSession().getAttribute(ManageDatabasesController.IMPORTRESULT);
 
-                    // todo I need to make the interface available as Excel and for it to be uploadable again . . hhhhhnnnnnnngh
                     // for the moment just jam a workbook against the session in case they want it. Need to remember to zap on submit or a new validation
 
 
