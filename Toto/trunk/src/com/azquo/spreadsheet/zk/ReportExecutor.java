@@ -21,7 +21,6 @@ import org.zkoss.zss.api.*;
 import org.zkoss.zss.api.model.Book;
 import org.zkoss.zss.api.model.CellData;
 import org.zkoss.zss.api.model.Sheet;
-import org.zkoss.zss.api.model.Validation;
 import org.zkoss.zss.model.CellRegion;
 import org.zkoss.zss.model.SCell;
 import org.zkoss.zss.model.SName;
@@ -53,15 +52,15 @@ import java.util.regex.Pattern;
  */
 public class ReportExecutor {
 
-    private static final String EXECUTERESULTS = "az_ExecuteResults";
-    private static final String OUTCOME = "az_Outcome";
+    static final String EXECUTERESULTS = "az_ExecuteResults";
+    static final String OUTCOME = "az_Outcome";
     // worth explaining. One use of executing is to gather information e.g. for Ed Broking Query Validation
     // in simple terms if we see this region grab its contents
-    private static final String SYSTEMDATA = "az_SystemData";
+    static final String SYSTEMDATA = "az_SystemData";
 
     // export data from the report. A region where the data is and a region which holds the destination path
     // not so sold on the second but can write then modify
-    private static final String EXPORT = "az_Export";
+    static final String EXPORT = "az_Export";
 
     // now returns a book as it will need to be reloaded at the end
     // provenance id means when you select choices they will be constrained to
@@ -543,13 +542,12 @@ public class ReportExecutor {
                 String region = name.getName().substring(ReportRenderer.AZDATAREGION.length());
                 // possibly the nosave check could be factored, in report service around line 230
                 // this is a bit annoying given that I should be able to get the options from the sent cells but there may be no sent cells. Need to investigate this - nosave is currently being used for different databases, that's the problem
-                SName rowHeadings = book.getInternalBook().getNameByName(ReportRenderer.AZROWHEADINGS + region);
+                String sheetName = name.getRefersToSheetName();
+                Sheet sheet = book.getSheet(sheetName);
+                SName rowHeadings = BookUtils.getNameByName(ReportRenderer.AZROWHEADINGS + region, sheet);
                 if (rowHeadings == null) {
-                    String sheetName = name.getRefersToSheetName();
-                    Sheet sheet = book.getSheet(sheetName);
                     int top = name.getRefersToCellRegion().getRow();
                     int left = name.getRefersToCellRegion().getColumn();
-
                     CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(reportId, sheetName, region);
                     if (cellsAndHeadingsForDisplay != null){ // apparently it can be . . .
                         List<List<CellForDisplay>> data = cellsAndHeadingsForDisplay.getData();
