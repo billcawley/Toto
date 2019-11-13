@@ -408,7 +408,7 @@ public class PendingUploadController {
                             fileLoadFlags.add(i);
                         }
                         // so, we're allowing an excel file to define lines rejected, check if this was uploaded, and use it instead of the checkboxes if it was
-                        if (amendmentsFile == null) {
+                        if (amendmentsFile == null || amendmentsFile.isEmpty()) { // dammit null wasn't good enough! need to check empty too . . .
                             // todo - string literals . . . :|
                             String rejectedLinesString = request.getParameter(i + "-lines");
                             String identifiersString = request.getParameter(i + "-identifier");

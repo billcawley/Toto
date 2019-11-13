@@ -163,7 +163,8 @@ class RegionFillerService {
                 }
             }
         }
-        Ranges.range(sheet, displayRowHeadings.getRow(), displayRowHeadings.getColumn(), displayRowHeadings.lastRow, displayRowHeadings.lastColumn).notifyChange();
+        // for some reason the last row wasn't notifying correctly! I don't know why though it is rather concerning. Anyway, add 1 to the last row  here . . .
+        Ranges.range(sheet, displayRowHeadings.getRow(), displayRowHeadings.getColumn(), displayRowHeadings.lastRow + 1, displayRowHeadings.lastColumn).notifyChange();
     }
 
     //← → ↑ ↓ ↔ ↕ ah I can just paste it here, thanks IntelliJ :)
@@ -240,6 +241,7 @@ class RegionFillerService {
         // for the moment don't allow user column sorting (row heading sorting). Shouldn't be too difficult to add
 /*                if (sortable != null && sortable.equalsIgnoreCase("all")) { // criteria from azquobook to make row heading sortable
                 }*/
+// should it be lastrow + 1 as with display row headings? Or + 1 on the cols?? Watch for this
         Ranges.range(sheet, displayColumnHeadings.getRow(), displayColumnHeadings.getColumn(), displayColumnHeadings.lastRow, displayColumnHeadings.lastColumn).notifyChange();
     }
 
@@ -592,7 +594,8 @@ class RegionFillerService {
                 row++;
             }
         }
-        Ranges.range(sheet, displayDataRegion.getRow(), displayDataRegion.getColumn(), displayDataRegion.lastRow, displayDataRegion.lastColumn).notifyChange();
+        // based off a worrying effect on displayRowHeadings where the last row didn't notify and I put in a lastRow + 1 I'm going to put in a + 1 here
+        Ranges.range(sheet, displayDataRegion.getRow(), displayDataRegion.getColumn(), displayDataRegion.lastRow + 1, displayDataRegion.lastColumn).notifyChange();
 
     }
 }

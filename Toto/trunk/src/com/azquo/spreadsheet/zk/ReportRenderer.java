@@ -360,6 +360,7 @@ public class ReportRenderer {
             );*/
             // all data for that sheet should be populated
             // returns true if data changed by formulae
+            Ranges.range(sheet).notifyChange();
             if (ReportService.checkDataChangeAndSnapCharts(loggedInUser, reportId, book, sheet, fastLoad, useSavedValuesOnFormulae)) {
                 showSave = true;
             }
