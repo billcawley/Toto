@@ -140,7 +140,7 @@ public class BatchImporter implements Callable<Void> {
 
     private static boolean checkCondition(AzquoMemoryDBConnection azquoMemoryDBConnection, List<ImportCellWithHeading> lineToLoad, String condition, CompositeIndexResolver compositeIndexResolver, Name nameToTest, final Map<Name, String> nearestList, Map<String, Name> namesFoundCache, List<String> attributeNames) throws Exception {
         boolean found = false;
-        if (condition.equals("all")) return true;
+        if (condition.toLowerCase().equals("all")) return true;
         List<String> constants = new ArrayList<>();
         List<List<String>> sets = new ArrayList<>();
         Pattern p = Pattern.compile("\"[^\"]*\"");
@@ -242,18 +242,36 @@ public class BatchImporter implements Callable<Void> {
                 for (int i = 0; i < op.length(); i++) {
                     switch (op.charAt(i)) {
                         case '<':
-                            if (LHS.toLowerCase().compareTo(RHS.toLowerCase()) < 0) {
-                                found = true;
+                            try {
+                                if (Double.parseDouble(LHS) < Double.parseDouble(RHS)) {
+                                    found = true;
+                                }
+                            }catch(Exception e) {
+                                if (LHS.toLowerCase().compareTo(RHS.toLowerCase()) < 0) {
+                                    found = true;
+                                }
                             }
                             break;
                         case '=':
-                            if (LHS.equalsIgnoreCase(RHS)) {
-                                found = true;
-                            }
+                            try {
+                                if (Double.parseDouble(LHS) == Double.parseDouble(RHS)) {
+                                    found = true;
+                                }
+                            }catch(Exception e) {
+                                 if (LHS.equalsIgnoreCase(RHS)) {
+                                    found = true;
+                                 }
+                             }
                             break;
                         case '>':
-                            if (LHS.toLowerCase().compareTo(RHS.toLowerCase()) > 0) {
-                                found = true;
+                            try {
+                                if (Double.parseDouble(LHS) > Double.parseDouble(RHS)) {
+                                    found = true;
+                                }
+                            }catch(Exception e) {
+                                if (LHS.toLowerCase().compareTo(RHS.toLowerCase()) > 0) {
+                                    found = true;
+                                }
                             }
                             break;
                         case '~':
