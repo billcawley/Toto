@@ -1123,7 +1123,7 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
     private static Name optionalIncludeInParents(AzquoMemoryDBConnection azquoMemoryDBConnection, ImportCellWithHeading cell, Map<String, Name> namesFoundCache, List<String> attributeNames) throws Exception {
         List<String> languages = setLocalLanguage(cell.getImmutableImportHeading().attribute, attributeNames);
         Name child = null;
-        if (cell.getImmutableImportHeading().optional) {
+        if (cell.getImmutableImportHeading().optional || cell.getImmutableImportHeading().existing) {
             //don't create a new name
             try {
                 child = NameService.findByName(azquoMemoryDBConnection, cell.getImmutableImportHeading().parentNames.iterator().next().getDefaultDisplayName() + "->" + cell.getLineValue(), languages);
