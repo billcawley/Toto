@@ -125,6 +125,7 @@ public class BackupService {
             }
 
             toZip.add(new FileSource(zipPath, new File(SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + onlineReport.getFilenameForDisk())));
+            zipFiles.add(zipPath);
         }
         if (importTemplate != null){
             // this little chunk to stop duplicate entries
@@ -137,6 +138,7 @@ public class BackupService {
                 zipPath = counter + zipPath;
             }
             toZip.add(new FileSource(zipPath, new File(SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.importTemplatesDir + importTemplate.getFilenameForDisk())));
+            zipFiles.add(zipPath);
         }
         // now the typed uploads, need to clearly mark them as such
         for (List<UploadRecord> forType : groupedByFileType.values()){
@@ -151,6 +153,7 @@ public class BackupService {
                     zipPath = counter + zipPath;
                 }
                 toZip.add(new FileSource(zipPath, new File(uploadRecord.getTempPath())));
+                zipFiles.add(zipPath);
             }
         }
 
