@@ -264,7 +264,7 @@ public class ReportService {
                 String region = name.getName().substring(ReportRenderer.AZDATAREGION.length());
                 // todo - factor this chunk? - about to put it in the execute code
                 // this is a bit annoying given that I should be able to get the options from the sent cells but there may be no sent cells. Need to investigate this - nosave is currently being used for different databases, that's the problem
-                SName optionsRegion = book.getInternalBook().getNameByName(ReportRenderer.AZOPTIONS + region);
+                SName optionsRegion = BookUtils.getNameByName(ReportRenderer.AZOPTIONS + region, book.getSheet(name.getRefersToSheetName()));
                 String optionsSource;
                 boolean noSave = false;
                 if (optionsRegion != null) {

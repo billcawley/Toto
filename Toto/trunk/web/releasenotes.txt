@@ -1,3 +1,55 @@
+15-11-19
+
+az_options tolerant of scope
+
+Fixed duplicate entries in the zip bug (was stopping a database backup)
+
+14-11-19
+
+Importing "existing" bug fixed
+
+13-11-19
+
+Java
+
+Bug fix in pending uploads and more notify changes to ensure formulae are being recalculated as required. Might have performance issues but better safe than sorry
+
+Bug fix when restoring just reports on a backup and bug fix to clear formula caches when setting choices on attached summaries for xml feeds. Also bug fix on report analysis.
+
+Report analysis work and some tidying and bug fixing notably when saving a region with no row headings (one which will be converted to tsv for upload) there was a bug checking for the row headings name that didn't check for names in spreadsheet scope as well as outside it
+
+Bug fix that affected the y -> sent
+
+XLSX
+
+Premiums - Corrected wrong Commission %, removed 'Value' from context meaning commissions % pulls through correctly,
+
+Premiums - With 'Brokasure Percentage' as an attribute of the contract year or contract year reporting category
+
+Specify Premiums - Shows the Brokasure Section, as well as the report section
+
+Premium Feed - Removed spurious formula at top (=@az_XMLExtraInfoSplitSections), moved az_ColumnHeadingsSplitSections to relate to the data, changed the name of az_ChosenClaimsQuery to az_ChosenPremiumsQuery, and reformatted F21-F29
+
+Claims Feed - Changed 3 values for the xml to be only to 2 decimal places. GrossAmt, LatestFee and LatestRes.
+
+Claims - changed how report is specified so returned data from brokasure displays correctly when saved against UCR
+
+Claims - changed az_ReportingMonthChoice and chosen to be simply az_Month. This is to stop the display at the top not matching the data.
+
+Miscellaneous tidying (removing redundant names), zapped redundant files (about 10 of them)
+
+Premium - column formatting
+
+Premium Feed -  Includes Brokasure section and commission
+
+Premium feed clear markers - cleaned up - removed old 'summary' data region, renamed 'zSummary', cleaned the formatting and hid columns
+
+Premium Feed - including the 'deduction' subset - also cleaned up
+
+Premium commission - calculates the commission as well as checking. Cleaned up
+
+Premium BI export added back in, don't know where it went
+
 05-11-19 -2
 
 Under certain circumstances user choices were being lost in ZK. Fixed now.

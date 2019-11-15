@@ -157,7 +157,7 @@ class ZKContextMenu {
         // going to put a check on region not being null - should provenance etc work on headings? It will stop it for the mo
         if (region != null) {
             // Edd adding in the user region options that are now required due to column and row languages
-            SName optionsRegion = myzss.getSelectedSheet().getBook().getInternalBook().getNameByName(ReportRenderer.AZOPTIONS + region);
+            SName optionsRegion = BookUtils.getNameByName(ReportRenderer.AZOPTIONS + region, myzss.getSelectedSheet());
             String source = null;
             if (optionsRegion != null) {
                 source = BookUtils.getSnameCell(optionsRegion).getStringValue();

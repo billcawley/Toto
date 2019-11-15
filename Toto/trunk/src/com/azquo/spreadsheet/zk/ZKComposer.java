@@ -205,7 +205,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                 String region = name.getName().substring(ReportRenderer.AZDISPLAYCOLUMNHEADINGS.length());
                 UserRegionOptions userRegionOptions = UserRegionOptionsDAO.findForUserIdReportIdAndRegion(loggedInUser.getUser().getId(), reportId, region);
                 if (userRegionOptions == null) {
-                    SName optionsRegion = event.getSheet().getBook().getInternalBook().getNameByName(ReportRenderer.AZOPTIONS + region);
+                    SName optionsRegion = BookUtils.getNameByName(ReportRenderer.AZOPTIONS + region, book.getSheet(name.getRefersToSheetName()));
                     String source = null;
                     if (optionsRegion != null) {
                         source = BookUtils.getSnameCell(optionsRegion).getStringValue();
