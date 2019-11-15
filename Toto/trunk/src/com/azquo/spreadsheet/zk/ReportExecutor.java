@@ -15,8 +15,11 @@ import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.controller.OnlineController;
 import com.azquo.spreadsheet.transport.CellForDisplay;
 import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
+import org.apache.commons.lang.math.NumberUtils;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 import org.zkoss.zss.api.*;
 import org.zkoss.zss.api.model.Book;
 import org.zkoss.zss.api.model.CellData;
@@ -928,6 +931,17 @@ public class ReportExecutor {
                                     i++;
                                 }
                                 xmlContext.get(xmlContext.size() - 1).appendChild(doc.createTextNode(value));
+                            }
+                            // do we want the ability to have duplicates, in this case for Deduction. SO call them deduction-1,them deduction-2 etc then zap the -1,-2 etc after the document is built
+                            NodeList nodeList = doc.getElementsByTagName("*");
+                            for (int i = 0; i < nodeList.getLength(); i++) {
+                                Node node = nodeList.item(i);
+                                if (node.getNodeType() == Node.ELEMENT_NODE) {
+                                    // do something with the current element
+                                    if (node.getNodeName().contains("-") && NumberUtils.isNumber(node.getNodeName().substring(node.getNodeName().indexOf("-") + 1))){
+                                        doc.renameNode(node, null, node.getNodeName().substring(0, node.getNodeName().indexOf("-")));
+                                    }
+                                }
                             }
                             DOMSource source = new DOMSource(doc);
                             BufferedWriter bufferedWriter = Files.newBufferedWriter(azquoTempDir.resolve(fileName));
