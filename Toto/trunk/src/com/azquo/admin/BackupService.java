@@ -75,6 +75,7 @@ public class BackupService {
             groupedByFileType.computeIfAbsent(uploadRecord.getFileType(), t->new ArrayList<>()).add(uploadRecord);
         }
         int limit = 4;
+        Set<String> zipFiles = new HashSet<>();
         for (String type : groupedByFileType.keySet()){
             List<UploadRecord> forType = groupedByFileType.get(type);
             // check each file exists!
@@ -106,21 +107,50 @@ public class BackupService {
         }
         if (dbFile != null){
             toZip.add(new FileSource(dbFile.getName(), dbFile));
+            zipFiles.add(dbFile.getName());
         }
         for (OnlineReport onlineReport : onlineReports) {
             String category = null;
             if (onlineReport.getCategory() != null && !onlineReport.getCategory().isEmpty()){
                 category = onlineReport.getCategory();
             }
-            toZip.add(new FileSource((category != null ? category + CATEGORYBREAK : "") + onlineReport.getFilename(), new File(SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + onlineReport.getFilenameForDisk())));
+            // this little chunk to stop duplicate entries
+            String zipPath = (category != null ? category + CATEGORYBREAK : "") + onlineReport.getFilename();
+            if (zipFiles.contains(zipPath)){
+                int counter = 0;
+                while (zipFiles.contains(counter + zipPath)){
+                    counter++;
+                }
+                zipPath = counter + zipPath;
+            }
+
+            toZip.add(new FileSource(zipPath, new File(SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + onlineReport.getFilenameForDisk())));
         }
         if (importTemplate != null){
-            toZip.add(new FileSource(importTemplate.getFilenameForDisk(), new File(SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.importTemplatesDir + importTemplate.getFilenameForDisk())));
+            // this little chunk to stop duplicate entries
+            String zipPath = importTemplate.getFilenameForDisk();
+            if (zipFiles.contains(zipPath)){
+                int counter = 0;
+                while (zipFiles.contains(counter + zipPath)){
+                    counter++;
+                }
+                zipPath = counter + zipPath;
+            }
+            toZip.add(new FileSource(zipPath, new File(SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.importTemplatesDir + importTemplate.getFilenameForDisk())));
         }
         // now the typed uploads, need to clearly mark them as such
         for (List<UploadRecord> forType : groupedByFileType.values()){
             for (UploadRecord uploadRecord : forType){
-                toZip.add(new FileSource(uploadRecord.getFileType() + TYPEBREAK + uploadRecord.getFileName(), new File(uploadRecord.getTempPath())));
+                // this little chunk to stop duplicate entries
+                String zipPath = uploadRecord.getFileType() + TYPEBREAK + uploadRecord.getFileName();
+                if (zipFiles.contains(zipPath)){
+                    int counter = 0;
+                    while (zipFiles.contains(counter + zipPath)){
+                        counter++;
+                    }
+                    zipPath = counter + zipPath;
+                }
+                toZip.add(new FileSource(zipPath, new File(uploadRecord.getTempPath())));
             }
         }
 
@@ -187,7 +217,7 @@ public class BackupService {
                             , fileName, type, "From backup restore", uploadFilePath, null);
                     UploadRecordDAO.store(uploadRecord);
 
-                } else { // report or template
+                } else { // report or template. Or data now, setup etc
                     // rename the xlsx file to get rid of the ID that will probably be in front in the backup zip
                     String fileName;
                     if (f.getName().contains("-") && NumberUtils.isNumber(f.getName().substring(0, f.getName().indexOf("-")))) {
