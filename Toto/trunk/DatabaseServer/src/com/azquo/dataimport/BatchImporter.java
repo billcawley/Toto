@@ -38,6 +38,9 @@ public class BatchImporter implements Callable<Void> {
     private final AtomicInteger noLinesRejected;
     private final boolean clearData;
     private final CompositeIndexResolver compositeIndexResolver;
+    private static final int CHECKTRUE = 1;
+    private static final int CHECKFALSE = 0;
+    private static final int CHECKMAYBE = 2;
 
     BatchImporter(AzquoMemoryDBConnection azquoMemoryDBConnection
             , List<LineDataWithLineNumber> dataToLoad
@@ -138,9 +141,11 @@ public class BatchImporter implements Callable<Void> {
     }
 
 
-    private static boolean checkCondition(AzquoMemoryDBConnection azquoMemoryDBConnection, List<ImportCellWithHeading> lineToLoad, String condition, CompositeIndexResolver compositeIndexResolver, Name nameToTest, final Map<Name, String> nearestList, Map<String, Name> namesFoundCache, List<String> attributeNames) throws Exception {
-        boolean found = false;
-        if (condition.toLowerCase().equals("all")) return true;
+    private static int checkCondition(AzquoMemoryDBConnection azquoMemoryDBConnection, List<ImportCellWithHeading> lineToLoad, String condition, CompositeIndexResolver compositeIndexResolver, Name nameToTest, final Map<Name, String> nearestList, Map<String, Name> namesFoundCache, List<String> attributeNames) throws Exception {
+        //returns CHECKTRUE, CHECKFALSE, CHECKMAYBE
+        int found = 0;
+        boolean maybe = false;
+        if (condition.toLowerCase().equals("all")) return CHECKTRUE;
         List<String> constants = new ArrayList<>();
         List<List<String>> sets = new ArrayList<>();
         Pattern p = Pattern.compile("\"[^\"]*\"");
@@ -159,21 +164,21 @@ public class BatchImporter implements Callable<Void> {
         p = Pattern.compile("'[^']*'");
         m = p.matcher(condition);
         while (m.find()) {
-            int fieldNo = compositeIndexResolver.getColumnIndexForHeading(condition.substring(m.start() + 1, m.end() - 1));
-            if (fieldNo < 0) {
-                return false;
-            }
-            ImportCellWithHeading cell = lineToLoad.get(fieldNo);
             String conditionValue = null;
-            if (cell.needsResolving) {
-                conditionValue = getCompositeValue(azquoMemoryDBConnection, cell, cell.getImmutableImportHeading().compositionPattern, lineToLoad, compositeIndexResolver, namesFoundCache, attributeNames);
-            } else {
-                conditionValue = cell.getLineValue();
+            int fieldNo = compositeIndexResolver.getColumnIndexForHeading(condition.substring(m.start() + 1, m.end() - 1));
+            if (fieldNo >= 0) {
+                ImportCellWithHeading cell = lineToLoad.get(fieldNo);
+                if (cell.needsResolving) {
+                    conditionValue = getCompositeValue(azquoMemoryDBConnection, cell, cell.getImmutableImportHeading().compositionPattern, lineToLoad, compositeIndexResolver, namesFoundCache, attributeNames);
+                } else {
+                    conditionValue = cell.getLineValue();
+                }
+                if (conditionValue == null) {
+                    return CHECKFALSE;
+
+                }
             }
-            if (conditionValue == null) {
-                return false;
-            }
-            constants.add(conditionValue);
+            constants.add(conditionValue);//note that a null here means that the field does not exist, so the result may be 'maybe'
             newCondition.append(condition.substring(lastPos, m.start()) + CONSTANTMARKER + ("" + (count++ + 100)).substring(1));
             lastPos = m.end();
         }
@@ -185,7 +190,7 @@ public class BatchImporter implements Callable<Void> {
         while (m.find()) {
             String attribute = nameToTest.getAttribute(condition.substring(m.start() + 1, m.end() - 1));
             if (attribute == null) {
-                return false;
+                return CHECKFALSE;
             }
             constants.add(attribute);
             newCondition.append(condition.substring(lastPos, m.start()) + CONSTANTMARKER + ("" + (count++ + 100)).substring(1));
@@ -214,75 +219,87 @@ public class BatchImporter implements Callable<Void> {
             conditions.add(condition);
         }
         for (String element : conditions) {
-            found = false;
+            found = 0;
             int inPos = element.indexOf(" in ");
             if (inPos > 0) {
                 String fieldSt = element.substring(0, inPos).trim();
                 if (fieldSt.charAt(0) != CONSTANTMARKER) {
-                    return false;
+                    return CHECKFALSE;
                 }
                 String fieldFound = constants.get(Integer.parseInt(fieldSt.substring(1)));
-                List<String> setFound = sets.get(Integer.parseInt(element.substring(inPos + 5)));
-                for (String testField : setFound) {
-                    if (testField.trim().startsWith(CONSTANTMARKER + "")) {
-                        testField = constants.get(Integer.parseInt(testField.trim().substring(1)));
-                    }
-                    if (testField.equalsIgnoreCase(fieldFound)) {
-                        found = true;
-                        break;
+                if (fieldFound == null){
+                    maybe = true;
+                    found = 1;
+                    break;
+                }else {
+                    List<String> setFound = sets.get(Integer.parseInt(element.substring(inPos + 5)));
+                    for (String testField : setFound) {
+                        if (testField.trim().startsWith(CONSTANTMARKER + "")) {
+                            testField = constants.get(Integer.parseInt(testField.trim().substring(1)));
+                        }
+                        if (testField.equalsIgnoreCase(fieldFound)) {
+                            found = 1;
+                            break;
+                        }
                     }
                 }
             } else {
                 p = Pattern.compile("[<=~>]+");
                 m = p.matcher(element);
-                if (!m.find()) return false;
+                if (!m.find()) return CHECKFALSE;
                 String LHS = interpretTerm(constants, element.substring(0, m.start()).trim());
                 String RHS = interpretTerm(constants, element.substring(m.end()).trim());
-                String op = m.group();
-                for (int i = 0; i < op.length(); i++) {
-                    switch (op.charAt(i)) {
-                        case '<':
-                            try {
-                                if (Double.parseDouble(LHS) < Double.parseDouble(RHS)) {
-                                    found = true;
+                if (LHS==null || RHS == null){
+                    maybe = true;
+                    found = 1;
+                }else {
+                    String op = m.group();
+                    for (int i = 0; i < op.length(); i++) {
+                        switch (op.charAt(i)) {
+                            case '<':
+                                try {
+                                    if (Double.parseDouble(LHS) < Double.parseDouble(RHS)) {
+                                        found = 1;
+                                    }
+                                } catch (Exception e) {
+                                    if (LHS.toLowerCase().compareTo(RHS.toLowerCase()) < 0) {
+                                        found = 1;
+                                    }
                                 }
-                            }catch(Exception e) {
-                                if (LHS.toLowerCase().compareTo(RHS.toLowerCase()) < 0) {
-                                    found = true;
+                                break;
+                            case '=':
+                                try {
+                                    if (Double.parseDouble(LHS) == Double.parseDouble(RHS)) {
+                                        found = 1;
+                                    }
+                                } catch (Exception e) {
+                                    if (LHS.equalsIgnoreCase(RHS)) {
+                                        found = 1;
+                                    }
                                 }
-                            }
-                            break;
-                        case '=':
-                            try {
-                                if (Double.parseDouble(LHS) == Double.parseDouble(RHS)) {
-                                    found = true;
+                                break;
+                            case '>':
+                                try {
+                                    if (Double.parseDouble(LHS) > Double.parseDouble(RHS)) {
+                                        found = 1;
+                                    }
+                                } catch (Exception e) {
+                                    if (LHS.toLowerCase().compareTo(RHS.toLowerCase()) > 0) {
+                                        found = 1;
+                                    }
                                 }
-                            }catch(Exception e) {
-                                 if (LHS.equalsIgnoreCase(RHS)) {
-                                    found = true;
-                                 }
-                             }
-                            break;
-                        case '>':
-                            try {
-                                if (Double.parseDouble(LHS) > Double.parseDouble(RHS)) {
-                                    found = true;
+                                break;
+                            case '~':
+                                if (LHS.toLowerCase().compareTo(RHS.toLowerCase()) >= 0) {
+                                    nearestList.put(nameToTest, RHS.toLowerCase());
                                 }
-                            }catch(Exception e) {
-                                if (LHS.toLowerCase().compareTo(RHS.toLowerCase()) > 0) {
-                                    found = true;
-                                }
-                            }
-                            break;
-                        case '~':
-                            if (LHS.toLowerCase().compareTo(RHS.toLowerCase()) >= 0) {
-                                nearestList.put(nameToTest, RHS.toLowerCase());
-                            }
+                        }
                     }
                 }
             }
-            if (!found) return false;
+            if (found==0) return CHECKFALSE;
         }
+        if (maybe) return CHECKMAYBE;
         return found;
     }
 
@@ -769,18 +786,40 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
         if (!m.find()) {
             conditionAttribute = condition;
         }
+        boolean provisional = false;
         Map<Name, String> nearestList = new HashMap<>();
         for (Name toTest : parentSet.getChildren()) {
             if (conditionAttribute != null) {
                 condition = toTest.getAttribute(conditionAttribute);
             }
-            if (checkCondition(azquoMemoryDBConnection, lineToLoad, condition, compositeIndexResolver, toTest, nearestList, namesFoundCache, attributeNames)) {
-                newCellNameValue(cell, toTest);
+            int checkResult = checkCondition(azquoMemoryDBConnection, lineToLoad, condition, compositeIndexResolver, toTest, nearestList, namesFoundCache, attributeNames);
+            if (checkResult ==CHECKTRUE){
                 int indexForChild = cell.getImmutableImportHeading().indexForChild;
-                if (indexForChild>=0 && lineToLoad.get(indexForChild).getLineNames()!=null && lineToLoad.get(indexForChild).getLineNames().size() > 0){
-                    toTest.addChildWillBePersisted(lineToLoad.get(indexForChild).getLineNames().iterator().next(), azquoMemoryDBConnection);
+                int indexForParent = cell.getImmutableImportHeading().exclusiveIndex;
+                if (provisional && indexForParent >=0 && indexForChild >=0){//only set the value if there is not already a value in the database
+                    Set<Name> childNames = lineToLoad.get(indexForChild).getLineNames();
+                    if (childNames==null || childNames.size() == 0 || lineToLoad.get(indexForParent).getLineValue()==null) {
+                        return false; //not enough info yet to decide whether to fill in the value
+                    }
+                    Name childName = childNames.iterator().next();
+                    String existingName = childName.getAttribute(lineToLoad.get(indexForParent).getLineValue());
+                    if (existingName !=null && existingName.length() > 0){
+                        cell.setLineValue(existingName);
+                        cell.addToLineNames(NameService.findByName(azquoMemoryDBConnection,existingName));
+                        return true;
+                    }
+                }
+                else {
+                    newCellNameValue(cell, toTest);
+                    indexForChild = cell.getImmutableImportHeading().indexForChild;
+                    if (indexForChild >= 0 && lineToLoad.get(indexForChild).getLineNames() != null && lineToLoad.get(indexForChild).getLineNames().size() > 0) {
+                        toTest.addChildWillBePersisted(lineToLoad.get(indexForChild).getLineNames().iterator().next(), azquoMemoryDBConnection);
+                    }
                 }
                 return true;
+            }
+            if (checkResult==CHECKMAYBE){
+                provisional = true;
             }
         }
 
