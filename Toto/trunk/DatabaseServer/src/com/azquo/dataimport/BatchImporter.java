@@ -41,6 +41,7 @@ public class BatchImporter implements Callable<Void> {
     private static final int CHECKTRUE = 1;
     private static final int CHECKFALSE = 0;
     private static final int CHECKMAYBE = 2;
+    private static final String PROVISIONAL = "***";
 
     BatchImporter(AzquoMemoryDBConnection azquoMemoryDBConnection
             , List<LineDataWithLineNumber> dataToLoad
@@ -72,6 +73,7 @@ public class BatchImporter implements Callable<Void> {
             try {
                 ImportCellWithHeading first = lineToLoad.get(0);
             /*
+            There's a thought that this should be a whole line check rather than the first column.
             There's a thought that this should be a whole line check rather than the first column.
 
             Skip any line that has a blank in the first column unless the first column had no heading or it's composite
@@ -141,7 +143,7 @@ public class BatchImporter implements Callable<Void> {
     }
 
 
-    private static int checkCondition(AzquoMemoryDBConnection azquoMemoryDBConnection, List<ImportCellWithHeading> lineToLoad, String condition, CompositeIndexResolver compositeIndexResolver, Name nameToTest, final Map<Name, String> nearestList, Map<String, Name> namesFoundCache, List<String> attributeNames) throws Exception {
+    private static int checkCondition(AzquoMemoryDBConnection azquoMemoryDBConnection, List<ImportCellWithHeading> lineToLoad, String condition, CompositeIndexResolver compositeIndexResolver, Name nameToTest, final Map<Name, String> nearestList, Map<String, Name> namesFoundCache, List<String> attributeNames, boolean provisional) throws Exception {
         //returns CHECKTRUE, CHECKFALSE, CHECKMAYBE
         int found = 0;
         boolean maybe = false;
@@ -253,6 +255,16 @@ public class BatchImporter implements Callable<Void> {
                     maybe = true;
                     found = 1;
                 }else {
+                    if (RHS.endsWith(PROVISIONAL)){
+                        //some explanation needed.
+                        /*categorisation of risk searches for three counties in florida.  Areas in Florida outside the three counties are treated differently
+                        * but, if there is no county information, but the state is known to be Florida, the risk is provisionally treated as if in the three counties*/
+                        if (!provisional) {
+                            found = 0;
+                            break;
+                        }
+                        RHS = RHS.substring(0,RHS.indexOf(PROVISIONAL));
+                    }
                     String op = m.group();
                     for (int i = 0; i < op.length(); i++) {
                         switch (op.charAt(i)) {
@@ -792,7 +804,7 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
             if (conditionAttribute != null) {
                 condition = toTest.getAttribute(conditionAttribute);
             }
-            int checkResult = checkCondition(azquoMemoryDBConnection, lineToLoad, condition, compositeIndexResolver, toTest, nearestList, namesFoundCache, attributeNames);
+            int checkResult = checkCondition(azquoMemoryDBConnection, lineToLoad, condition, compositeIndexResolver, toTest, nearestList, namesFoundCache, attributeNames, provisional);
             if (checkResult ==CHECKTRUE){
                 int indexForChild = cell.getImmutableImportHeading().indexForChild;
                 int indexForParent = cell.getImmutableImportHeading().exclusiveIndex;
@@ -806,15 +818,14 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
                     if (existingName !=null && existingName.length() > 0){
                         cell.setLineValue(existingName);
                         cell.addToLineNames(NameService.findByName(azquoMemoryDBConnection,existingName));
+                        cell.needsResolving = false;
                         return true;
                     }
                 }
-                else {
-                    newCellNameValue(cell, toTest);
-                    indexForChild = cell.getImmutableImportHeading().indexForChild;
-                    if (indexForChild >= 0 && lineToLoad.get(indexForChild).getLineNames() != null && lineToLoad.get(indexForChild).getLineNames().size() > 0) {
-                        toTest.addChildWillBePersisted(lineToLoad.get(indexForChild).getLineNames().iterator().next(), azquoMemoryDBConnection);
-                    }
+                newCellNameValue(cell, toTest);
+                indexForChild = cell.getImmutableImportHeading().indexForChild;
+                if (indexForChild >= 0 && lineToLoad.get(indexForChild).getLineNames() != null && lineToLoad.get(indexForChild).getLineNames().size() > 0) {
+                    toTest.addChildWillBePersisted(lineToLoad.get(indexForChild).getLineNames().iterator().next(), azquoMemoryDBConnection);
                 }
                 return true;
             }
