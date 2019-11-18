@@ -272,7 +272,10 @@ public class DSSpreadsheetService {
 
     // it's easiest just to send the CellsAndHeadingsForDisplay back to the back end and look for relevant changed cells
     // could I derive context from cells and headings for display? Also region. Worth considering . . .
-    public static String saveData(DatabaseAccessToken databaseAccessToken, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String user, String userName, String reportName, String context, boolean persist) throws Exception {
+    /* todo - make the difference between user and userName much clearer! Relevant for provenance setting -
+      if user and username are mixed up in the provenance the system can trigger false alarms as in "a different user modified this data"
+      when in fact the difference is betweeen the *same* users logon (or e-mail) and full name!*/
+    public static String saveData(DatabaseAccessToken databaseAccessToken, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String userName, String user, String reportName, String context, boolean persist) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
         boolean changedAtAll = false;
         if (cellsAndHeadingsForDisplay.getRowHeadingsSource()!=null) {
@@ -338,7 +341,7 @@ public class DSSpreadsheetService {
                                     // need to check provenance - if it's the same user then we don't flag the changes, could be an overlapping data region
                                     boolean sameUser = false;
                                     if (listOfValuesOrNamesAndAttributeName != null && listOfValuesOrNamesAndAttributeName.getValues() != null && listOfValuesOrNamesAndAttributeName.getValues().size() == 1) {
-                                        if (listOfValuesOrNamesAndAttributeName.getValues().get(0).getProvenance().getUser().equals(user)) { // it's the same user!
+                                        if (listOfValuesOrNamesAndAttributeName.getValues().get(0).getProvenance().getUser().equals(userName)) { // it's the same user!
                                             sameUser = true;
                                         }
                                     }
@@ -380,7 +383,7 @@ public class DSSpreadsheetService {
                             if (valuesForCell != null) {
                                 Provenance originalProvenance = azquoMemoryDBConnection.getProvenance();
                                 if (cell.getComment() != null && !cell.getComment().isEmpty()) {
-                                    azquoMemoryDBConnection.setProvenance(user, StringLiterals.IN_SPREADSHEET + ", comment : " + cell.getComment(), reportName, context);
+                                    azquoMemoryDBConnection.setProvenance(userName, StringLiterals.IN_SPREADSHEET + ", comment : " + cell.getComment(), reportName, context);
                                 }
                                 //logger.info(columnCounter + ", " + rowCounter + " not locked and modified");
                                 // one thing about these store functions to the value spreadsheet, they expect the provenance on the logged in connection to be appropriate
