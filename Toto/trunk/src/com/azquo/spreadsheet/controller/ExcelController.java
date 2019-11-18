@@ -840,7 +840,7 @@ public class ExcelController {
                     if (result.equals("no action taken")){ // hacky, fix later
                         result = SpreadsheetService.saveData(loggedInUser, reportId, reportName, excelRegionModification.sheet, excelRegionModification.region, false);
                     } else {
-                        result += (", " + result);
+                        result += (", " + SpreadsheetService.saveData(loggedInUser, reportId, reportName, excelRegionModification.sheet, excelRegionModification.region, false));
                     }
                     // so here's the followon execute
                     OnlineReport or = OnlineReportDAO.findById(loggedInUser.getUser().getReportId());
