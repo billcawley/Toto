@@ -481,6 +481,7 @@ public class ManageDatabasesController {
             }
 
             toReturn.append("<br/>\n");
+            // todo - table this? initial attempt was too wide
             toReturn.append("Validation Summary<br/>\n");
             // improved list
             if (!uploadedFile.getErrorHeadings().isEmpty()) {
