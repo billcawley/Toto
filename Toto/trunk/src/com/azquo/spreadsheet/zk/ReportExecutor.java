@@ -547,7 +547,10 @@ public class ReportExecutor {
                 // this is a bit annoying given that I should be able to get the options from the sent cells but there may be no sent cells. Need to investigate this - nosave is currently being used for different databases, that's the problem
                 String sheetName = name.getRefersToSheetName();
                 Sheet sheet = book.getSheet(sheetName);
-                SName rowHeadings = BookUtils.getNameByName(ReportRenderer.AZROWHEADINGS + region, sheet);
+                SName rowHeadings = null;
+                if (sheet != null){ // it seems it can be if names are not arranged properly
+                    rowHeadings = BookUtils.getNameByName(ReportRenderer.AZROWHEADINGS + region, sheet);
+                }
                 if (rowHeadings == null) {
                     int top = name.getRefersToCellRegion().getRow();
                     int left = name.getRefersToCellRegion().getColumn();
@@ -939,7 +942,25 @@ public class ReportExecutor {
                                 if (node.getNodeType() == Node.ELEMENT_NODE) {
                                     // do something with the current element
                                     if (node.getNodeName().contains("-") && NumberUtils.isNumber(node.getNodeName().substring(node.getNodeName().indexOf("-") + 1))){
-                                        doc.renameNode(node, null, node.getNodeName().substring(0, node.getNodeName().indexOf("-")));
+                                        // zap the duplicates that are empty
+                                        boolean empty = true;
+                                        NodeList childNodes = node.getChildNodes();
+                                        for (int j = 0; j < childNodes.getLength(); j++){
+                                            if (childNodes.item(j).hasChildNodes()){
+                                                // that first criteria essentially means say it's not empty if they start adding further nested tags in tags in the duplicate tags
+                                                // may need to deal with that later but for the moment this is fine
+                                                if (childNodes.item(j).getFirstChild().hasChildNodes()
+                                                        || (childNodes.item(j).getFirstChild().getNodeValue() != null && !childNodes.item(j).getFirstChild().getNodeValue().isEmpty())){
+                                                    empty = false;
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                        if (empty){
+                                            node.getParentNode().removeChild(node); // reasonable syntax??
+                                        } else {
+                                            doc.renameNode(node, null, node.getNodeName().substring(0, node.getNodeName().indexOf("-")));
+                                        }
                                     }
                                 }
                             }

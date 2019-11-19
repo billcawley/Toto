@@ -1,8 +1,48 @@
+16-11-19
+
+Adjusted the 'checkCondition' routine so that it would return CHECKMAYBE.
+
+CHECKMAYBE is returned when one or more conditions cannot be evaluated (there is no field to evaluate), but all other conditions are true.
+
+if CHECKMAYBE is returned, a 'provisional' flag is set. If a subsequent test returns CHECKTRUE then the system will check whether this is an 'exclusive' categorisation, and, if so, will only set the value if there is not an existing value.
+
+The net effect should be that such values are only set where there is full information to set them. This requirement originates in Allrisks categorisation of BB304140N, and BB304150N. Categorisation of BB304140N needs county information which is not in the premiums, but categorisation of BB304150N requires commission information which is not in the risk. Thus, in each case, the import with full information should be the defining import.
+
+Note that, if both commission and county are required for a future import, we shall need some further thought!
+
+Adjusted 'checkcondition' to allow for provisional conditions as well as provisional results!
+
 15-11-19
 
 az_options tolerant of scope
 
 Fixed duplicate entries in the zip bug (was stopping a database backup)
+
+XLSX
+
+Included 'Fees' in Import Model and AllrisksPremium import versions
+
+added totals to the bottom of the deductions columns
+
+New import templates with all the unneeded buts for RT, Hannover, etc taken out. Also with greatly reduced 'import model' tab.
+
+Premiums : Adjusted to allow commission % > 0 but < min percentage. Also adjusted parameters to refer to Contrac Year rather than Contract. Needs adjustment to import templates.
+
+added 'Provisional' to Premium templates underwriter and reporting category. Changed postprocessor to remove REO and base commission calculations on contract year
+
+Allrisks Premium templates - Reporting Category is parent of Policy Reference (not Premium Policy Line)
+
+Fees added
+
+Fixed issues in regards to scope and removed all references too and RT functionality
+
+Deduction-2 is the syntax for multiple tags with the same name. Also zapping the split contract definitions, they are in teams
+
+Removed references to 'All risks'
+
+adjusted parameters for fees to Sophie's spec
+
+set deductions always to be positive
 
 14-11-19
 
