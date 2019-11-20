@@ -1,3 +1,29 @@
+19-11-19-2
+
+XLSX
+
+added fees data to the split sections
+
+Risk agg - moved the 'states' vlookup so it work with the copes in both ZK and the plugin.
+
+Tweaked column widths for formatting in the plugin
+
+19-11-19
+
+Stop empty duplicate tags on the xml feed
+
+Fixed inconsistency on user/userName being used on provenance. Caused a false data lock that affected clear premium feed markers
+
+Saving multiple regions plug in bug fixed
+
+XLSX
+
+Removed 'existing' form the import model for 'contract' it was not needed as there is an existing against contract year and it was making identifying other issues harder.
+
+Specify premium - Hid a few columns to tidy it up.
+
+Premium feed added fees data to split sections
+
 16-11-19
 
 Adjusted the 'checkCondition' routine so that it would return CHECKMAYBE.
