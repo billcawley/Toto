@@ -75,6 +75,8 @@ class RegionFillerService {
                     Range headingRange = Ranges.range(sheet, row - 1, selStart, row - 1, selStart + displayRowHeadings.getColumnCount() - 1);
                     if (lineFormat == null) {
                         CellOperationUtil.applyFontBoldweight(selection, Font.Boldweight.BOLD);
+                        // to be consistent with the plugin the default also will make the background blue
+                        CellOperationUtil.applyBackColor(selection, "75bee9");
                     } else {
                         if (totalCount == 1 && totalRow == -1) {
                             totalRow = lineFormat.getRowIndex();

@@ -1,3 +1,7 @@
+20-11-19
+
+Claims V5 tweak to make formatting match the plugin (blue line totals)
+
 19-11-19-2
 
 XLSX
