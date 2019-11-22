@@ -113,11 +113,17 @@ public class DSImportService {
                         System.out.println("less than 1,000,000, dropping batch size to 10k");
                         batchSize = 10_000;
                     }
-                    if (firstLine.contains("|")) {
-                        delimiter = '|';
-                    }
-                    if (firstLine.contains("\t")) {
+                    // hack based off an Ed Broking file that tripped us up - if it's converted from a worksheet then it's
+                    // *always* tab separated, if not then try to detect from the file
+                    if (uploadedFile.isConvertedFromWorksheet()){
                         delimiter = '\t';
+                    } else {
+                        if (firstLine.contains("|")) {
+                            delimiter = '|';
+                        }
+                        if (firstLine.contains("\t")) {
+                            delimiter = '\t';
+                        }
                     }
                 } catch (MalformedInputException e) {
                     throw new Exception(uploadedFile.getFileName() + ": Unable to read any data (perhaps due to an empty file in a zip or an empty sheet in a workbook)");
