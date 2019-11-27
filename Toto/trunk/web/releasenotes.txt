@@ -1,3 +1,15 @@
+22-11-19
+
+If it's converted from a worksheet then it's *always* tab separated, if not then try to detect from the file - fixes problem with validation on 302860N premiums flagged yesterday,
+
+XLSX
+
+Add a (hidden) display row headings - will cause the total formatting to kick in
+
+Added 'Y' to the limnet flag. Also all the old limnet headings were not in, so added them.
+
+Adjusted Limnet xml tag names based off the spec
+
 20-11-19
 
 Claims V5 tweak to make formatting match the plugin (blue line totals)

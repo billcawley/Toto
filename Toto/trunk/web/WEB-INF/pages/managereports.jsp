@@ -14,8 +14,9 @@
             -->
 			<td>Database</td>
 			<td>Author</td>
+			<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
 			<td>Report Name</td>
-			<td>Category</td>
+<!--			<td>Category</td> -->
 		<!-- <td>File Name</td> -->
 			<td>Explanation</td>
 			<td></td>
@@ -23,6 +24,16 @@
 		</thead>
 		<tbody>
 		<c:forEach items="${reports}" var="report">
+			<c:if test="${report.category != ''}">
+				<tr>
+					<td></td>
+					<td></td>
+					<td colspan="2"><b>${report.category}</b></td>
+					<td></td>
+					<td></td>
+				</tr>
+
+			</c:if>
 			<tr>
 				<!--
 				 <td>${report.id}</td>
@@ -30,11 +41,11 @@
 				 -->
 				<td>${report.database}</td>
 				<td>${report.author}</td>
+				<td></td>
 				<!-- should reportid be 1??? -->
 				<td><c:if test="${report.database != 'None'}"><a href="/api/Online?reportid=${report.id}&amp;database=${report.database}" target="_blank"></c:if>
 					<span class="fa fa-table"></span>  ${report.untaggedReportName}<c:if test="${report.database != 'None'}"></a></c:if></td>
 				<!-- <td>${report.filename}</td> -->
-				<td>${report.category}</td>
 				<td>${report.explanation}</td>
 				<td><a href="/api/ManageReports?editId=${report.id}"  title="Edit ${report.reportName}" class="button small fa fa-edit"></a>
 					<a href="/api/ManageReports?deleteId=${report.id}" onclick="return confirm('Are you sure you want to delete ${report.reportName}?')" class="button small" title="Delete ${report.reportName}"><span class="fa fa-trash" title="Delete"></span> </a>

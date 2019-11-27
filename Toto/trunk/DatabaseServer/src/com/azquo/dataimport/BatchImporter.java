@@ -1105,6 +1105,7 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
                       "All Categories-Swimwear->Mens" for example. Notable that nested name syntax (with "->") is allowed in the cells and
                       might well have been built using the composite functionality above so it's possible another azquo upload could have jammed "White Poplin Shirt"
                       somewhere under "All Categories" many levels below. */
+                    // todo - address mismatch between comment "findAllChildren() not just getChildren()" and SVN change 2375 which changed it to getChildren()
                         // given that we now have multiple names on a line we run through the child ones checking as necessary
                         //we are checking whether we can put the child name into the parent within the exclusiveName set
                         for (Name childCellName : childCell.getLineNames()) {
