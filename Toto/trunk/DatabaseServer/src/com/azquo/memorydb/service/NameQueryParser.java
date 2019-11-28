@@ -413,6 +413,7 @@ public class NameQueryParser {
                     || !check.getDefaultDisplayName().toLowerCase().contains(toFind));
         }
         // I believe this is the correct place to put this, after resolving the set but before sorting/ordering etc. This will of course likely totally transform the set
+        // todo - attributeSetString can be blank so this will index out of bounds, sort that
         if (attributeSetString != null) {
             String resolvedString = strings.get(Integer.parseInt(attributeSetString.substring(1, 3))).toLowerCase();
             namesFound = attributeSet(azquoMemoryDBConnection, resolvedString, namesFound);

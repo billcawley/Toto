@@ -24,7 +24,7 @@ The actual loading and complex heading resolution should be done in other classe
 The cell on a line can be a value or an attribute or a name - or a part of another cell via composite. Or, now, an attribute name.
 
  */
-public class ValuesImport {
+class ValuesImport {
 
     static void valuesImport(AzquoMemoryDBConnection connection, MappingIterator<String[]> lineIterator
             , UploadedFile uploadedFile, List<ImmutableImportHeading> importHeadings

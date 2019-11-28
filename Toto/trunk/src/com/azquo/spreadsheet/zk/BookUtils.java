@@ -30,7 +30,7 @@ import java.util.*;
  */
 public class BookUtils {
 
-    static List<List<String>> nameToStringLists(LoggedInUser loggedInUser, SName sName) {
+    public static List<List<String>> nameToStringLists(LoggedInUser loggedInUser, SName sName) {
         return nameToStringLists(loggedInUser, sName, null, 0, 0);
     }
 

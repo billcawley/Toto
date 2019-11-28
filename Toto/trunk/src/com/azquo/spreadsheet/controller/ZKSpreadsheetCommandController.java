@@ -123,19 +123,29 @@ public class ZKSpreadsheetCommandController {
                         Exporter exporter = Exporters.getExporter();
                         Book book = ss.getBook();
                         File file = File.createTempFile(Long.toString(System.currentTimeMillis()), "temp");
-                        FileOutputStream fos = null;
-                        try {
-                            fos = new FileOutputStream(file);
+                        try (FileOutputStream fos = new FileOutputStream(file)) {
                             exporter.export(book, fos);
-                        } finally {
-                            if (fos != null) {
-                                fos.close();
-                            }
                         }
                         int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
+
                         OnlineReport onlineReport = OnlineReportDAO.findById(reportId);
-                        loggedInUser.userLog("Save : " + onlineReport.getReportName() + ".xlsx");
-                        Filedownload.save(new AMedia(onlineReport.getReportName() + ".xlsx", null, null, file, true));
+                        StringBuilder choices = new StringBuilder();
+                        Set<String> usedChoices = new HashSet<>();
+                        for (SName name : book.getInternalBook().getNames()){
+                            if (name.getName().toLowerCase().endsWith("chosen")){
+                                List<List<String>> lists = BookUtils.nameToStringLists(loggedInUser, name);
+                                if (!lists.isEmpty() && !lists.get(0).isEmpty() && !lists.get(0).get(0).isEmpty()){
+                                    String value = lists.get(0).get(0);
+                                    String choice = name.getName().substring(0, name.getName().toLowerCase().indexOf("chosen")).trim();
+                                    if (!usedChoices.contains(choice)){
+                                        usedChoices.add(choice);
+                                        choices.append(", ").append(choice).append("=").append(value);
+                                    }
+                                }
+                            }
+                        }
+                        loggedInUser.userLog("Save : " + onlineReport.getReportName() + choices.toString() + ".xlsx");
+                        Filedownload.save(new AMedia(onlineReport.getReportName() + choices.toString() + ".xlsx", null, null, file, true));
                         Clients.clearBusy();
                     }
 
