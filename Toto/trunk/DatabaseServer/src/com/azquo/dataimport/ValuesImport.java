@@ -42,7 +42,7 @@ public class ValuesImport {
             final Map<Integer, List<String>> linesRejected = new ConcurrentHashMap<>(); // track line numbers rejected
             final AtomicInteger noLinesRejected = new AtomicInteger(); // track line numbers rejected
             int linesImported = 0; // just for some feedback at the end
-            while (lineIterator.hasNext()) { // the main line reading loop. Unfortunately it can error here
+            while (lineIterator.hasNext()) linesLoop:{ // the main line reading loop. Unfortunately it can error here
                 lineNo++; // we are now on line number 1, line 0 wouldn't mean anything for user feedback
                 boolean corrupt = false;
                 String[] lineValues;
@@ -50,7 +50,7 @@ public class ValuesImport {
                     lineValues = lineIterator.next();
                     // I'm currently working on the principle that the line no is the current location -1
                     // while rather than if as rejected lines could well be sequential!
-                    while (uploadedFile.getIgnoreLines() != null && uploadedFile.getIgnoreLines().containsKey(lineIterator.getCurrentLocation().getLineNr() - 1) && lineIterator.hasNext()) {
+                    while (uploadedFile.getIgnoreLines() != null && uploadedFile.getIgnoreLines().containsKey(lineIterator.getCurrentLocation().getLineNr() - 1)) {
                         StringBuilder sb = new StringBuilder();
                         sb.append("Deliberately skipping line ").append(lineIterator.getCurrentLocation().getLineNr() - 1).append(", ");
                         for (String cell : lineValues) {
@@ -58,8 +58,13 @@ public class ValuesImport {
                         }
                         System.out.println(sb.toString());
                         uploadedFile.getIgnoreLinesValues().put(lineIterator.getCurrentLocation().getLineNr() - 1, sb.toString());
+                        // break the outer loop if we've run out of lines . . .
+                        if (!lineIterator.hasNext()){
+                            break linesLoop;
+                        }
                         lineValues = lineIterator.next();
                     }
+
 
                     linesImported++;
                     List<ImportCellWithHeading> importCellsWithHeading = new ArrayList<>();
