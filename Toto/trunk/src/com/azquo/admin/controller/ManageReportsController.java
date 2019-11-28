@@ -164,7 +164,7 @@ public class ManageReportsController {
             }
             String c = null;
             for (OnlineReport or : reportList){
-                if (or.getCategory().equals(c)){
+                if (or.getCategory() != null && or.getCategory().equals(c)){
                     or.setCategory("");
                 } else {
                     c = or.getCategory();
