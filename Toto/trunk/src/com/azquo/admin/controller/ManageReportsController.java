@@ -162,14 +162,6 @@ public class ManageReportsController {
                     e.printStackTrace();
                 }
             }
-            String c = null;
-            for (OnlineReport or : reportList){
-                if (or.getCategory() != null && or.getCategory().equals(c)){
-                    or.setCategory("");
-                } else {
-                    c = or.getCategory();
-                }
-            }
 
             model.put("reports", reportList);
             model.put("developer", loggedInUser.getUser().isDeveloper());

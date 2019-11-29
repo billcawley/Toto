@@ -275,6 +275,17 @@ this may now not work at all, perhaps delete?
             }
         }
         reportList.sort(Comparator.comparing(o -> (o.getDatabase() + getVal(o.getCategory()) + getVal(o.getExplanation()))));
+        // for formatting purposes, displaying the report list with useful categories
+        // - notably this could cause problems if one of these were saved but I'm not that bothered for the moment
+        String c = null;
+        for (OnlineReport or : reportList){
+            if (or.getCategory() == null || or.getCategory().equals(c)){
+                or.setCategory("");
+            } else {
+                c = or.getCategory();
+            }
+        }
+
         return reportList;
     }
 
