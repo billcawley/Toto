@@ -145,7 +145,7 @@ public class BatchImporter implements Callable<Void> {
 
     private static int checkCondition(AzquoMemoryDBConnection azquoMemoryDBConnection, List<ImportCellWithHeading> lineToLoad, String condition, CompositeIndexResolver compositeIndexResolver, Name nameToTest, final Map<Name, String> nearestList, Map<String, Name> namesFoundCache, List<String> attributeNames, boolean provisional) throws Exception {
         //returns CHECKTRUE, CHECKFALSE, CHECKMAYBE
-        int found = 0;
+        int found = CHECKFALSE;
         boolean maybe = false;
         if (condition.toLowerCase().equals("all")) return CHECKTRUE;
         List<String> constants = new ArrayList<>();
@@ -221,7 +221,7 @@ public class BatchImporter implements Callable<Void> {
             conditions.add(condition);
         }
         for (String element : conditions) {
-            found = 0;
+            found = CHECKFALSE;
             int inPos = element.indexOf(" in ");
             if (inPos > 0) {
                 String fieldSt = element.substring(0, inPos).trim();
@@ -260,7 +260,7 @@ public class BatchImporter implements Callable<Void> {
                         /*categorisation of risk searches for three counties in florida.  Areas in Florida outside the three counties are treated differently
                         * but, if there is no county information, but the state is known to be Florida, the risk is provisionally treated as if in the three counties*/
                         if (!provisional) {
-                            found = 0;
+                            found = CHECKFALSE;
                             break;
                         }
                         RHS = RHS.substring(0,RHS.indexOf(PROVISIONAL));
@@ -271,33 +271,33 @@ public class BatchImporter implements Callable<Void> {
                             case '<':
                                 try {
                                     if (Double.parseDouble(LHS) < Double.parseDouble(RHS)) {
-                                        found = 1;
+                                        found = CHECKTRUE;
                                     }
                                 } catch (Exception e) {
                                     if (LHS.toLowerCase().compareTo(RHS.toLowerCase()) < 0) {
-                                        found = 1;
+                                        found = CHECKTRUE;
                                     }
                                 }
                                 break;
                             case '=':
                                 try {
                                     if (Double.parseDouble(LHS) == Double.parseDouble(RHS)) {
-                                        found = 1;
+                                        found = CHECKTRUE;
                                     }
                                 } catch (Exception e) {
                                     if (LHS.equalsIgnoreCase(RHS)) {
-                                        found = 1;
+                                        found = CHECKTRUE;
                                     }
                                 }
                                 break;
                             case '>':
                                 try {
                                     if (Double.parseDouble(LHS) > Double.parseDouble(RHS)) {
-                                        found = 1;
+                                        found = CHECKTRUE;
                                     }
                                 } catch (Exception e) {
                                     if (LHS.toLowerCase().compareTo(RHS.toLowerCase()) > 0) {
-                                        found = 1;
+                                        found = CHECKTRUE;
                                     }
                                 }
                                 break;
@@ -309,7 +309,7 @@ public class BatchImporter implements Callable<Void> {
                     }
                 }
             }
-            if (found==0) return CHECKFALSE;
+            if (found==CHECKFALSE) return CHECKFALSE;
         }
         if (maybe) return CHECKMAYBE;
         return found;
@@ -830,7 +830,9 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
                 return true;
             }
             if (checkResult==CHECKMAYBE){
-                provisional = true;
+                provisional = true;//applies to the next condition only
+            }else{
+                provisional = false;
             }
         }
 
