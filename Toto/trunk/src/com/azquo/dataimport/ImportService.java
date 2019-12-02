@@ -1237,7 +1237,12 @@ public final class ImportService {
             if (returnNumber % 1 == 0) {
                 // specific condition - integer and format all 000, then actually use the format. For zip codes
                 if (dataFormat.length() > 1 && dataFormat.contains("0") && dataFormat.replace("0", "").isEmpty()) {
-                    returnString = df.formatCellValue(cell);
+                    // easylife tripped up this "zipcode" conditional by having a formula in there, requires a formula evaluator be passed
+                    if (cell.getCellType() == Cell.CELL_TYPE_FORMULA){
+                        returnString = df.formatCellValue(cell, cell.getSheet().getWorkbook().getCreationHelper().createFormulaEvaluator()); // performance issues on the formula evaluator??
+                    } else {
+                        returnString = df.formatCellValue(cell);
+                    }
                 } else {
                     returnString = returnNumber.longValue() + "";
                 }
