@@ -47,7 +47,6 @@ public class StringLiterals {
     static final String EDIT = "edit";
     static final String NEW = "new";
     public static final String DELETE = "delete";
-    public static final String COMPAREWITH = "comparewith";
     public static final String AS = "as";
     public static final String ASGLOBAL = "asglobal";
     static final String ASGLOBAL2 = "->";

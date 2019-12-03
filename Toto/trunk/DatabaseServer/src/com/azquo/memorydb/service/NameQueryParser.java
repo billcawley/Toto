@@ -329,7 +329,6 @@ public class NameQueryParser {
         final String sorted = StringUtils.getInstruction(setTerm, StringLiterals.SORTED);
         String toString = StringUtils.getInstruction(setTerm, StringLiterals.TO);
         String countString = StringUtils.getInstruction(setTerm, StringLiterals.COUNT);
-        final String compareWithString = StringUtils.getInstruction(setTerm, StringLiterals.COMPAREWITH);
         String selectString = StringUtils.getInstruction(setTerm, StringLiterals.SELECT);
         // now attribute set goes in here
         final String attributeSetString = StringUtils.getInstruction(setTerm, StringLiterals.ATTRIBUTESET);
@@ -433,7 +432,7 @@ public class NameQueryParser {
         if (countString == null) countString = "";
         if (fromString.length() > 0 || toString.length() > 0 || countString.length() > 0) {
             if (namesFound.list != null) { // yeah I know some say this is not best practice but hey ho
-                namesFound = NameFilterFunctions.constrainNameListFromToCount(namesFound, fromString, toString, countString, offsetString, compareWithString, referencedNames);
+                namesFound = NameFilterFunctions.constrainNameListFromToCount(namesFound, fromString, toString, countString, offsetString, referencedNames);
             } else {
                 System.out.println("can't from/to/count a non-list, " + setFormula);
             }

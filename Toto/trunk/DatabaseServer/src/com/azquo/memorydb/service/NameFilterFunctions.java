@@ -110,7 +110,7 @@ class NameFilterFunctions {
         return toReturn; // its appropriate member collection should have been modified via namesToFilter above, return it
     }
 
-    static NameSetList constrainNameListFromToCount(NameSetList nameSetList, String fromString, String toString, final String countString, final String offsetString, final String compareWithString, List<Name> referencedNames) throws Exception {
+    static NameSetList constrainNameListFromToCount(NameSetList nameSetList, String fromString, String toString, final String countString, final String offsetString, List<Name> referencedNames) throws Exception {
         if (!nameSetList.mutable) {
             nameSetList = new NameSetList(null, new ArrayList<>(nameSetList.list), true);// then make it mutable
         }
@@ -143,8 +143,7 @@ class NameFilterFunctions {
         int to = -10000;
         int from = 1;
         int offset = NameQueryParser.parseInt(offsetString, 0);
-        int compareWith = NameQueryParser.parseInt(compareWithString, 0);
-        int space = 1; //spacing between 'compare with' fields
+        //int space = 1; //spacing between 'compare with' fields
         //first look for integers and encoded names...
 
         if (toString.length() > 0 && fromString.length() == 0) {
@@ -187,27 +186,19 @@ class NameFilterFunctions {
             to = sortList.size() + to;
         }
         int added = 0;
+        // todo - double check logic now we've zapped comparewith
         for (int i = -offset; i < sortList.size() - offset; i++) {
             if (position == from || (i >= 0 && i < sortList.size() && fromString.equals(sortList.get(i).getDefaultDisplayName()))) {
                 inSet = true;
             }
             if (inSet && i + offset < sortList.size()) {
                 toReturn.add(sortList.get(i + offset));
-                if (compareWith != 0) {
-                    toReturn.add(sortList.get(i + offset + compareWith));
-                    for (int j = 0; j < space; j++) {
-                        toReturn.add(null);
-                    }
-                }
                 added++;
             }
             if (position == to || (i >= 0 && i < sortList.size() && toString.equals(sortList.get(i).getDefaultDisplayName())) || added == count) {
                 inSet = false;
             }
             position++;
-        }
-        while (added++ < count) {
-            toReturn.add(null); // nulls added to make up the count?? EFC wary of this . . .
         }
         return new NameSetList(null, toReturn, true);
     }

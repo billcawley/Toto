@@ -110,6 +110,11 @@ public class ProvenanceService {
             }
         }
         for (DataRegionHeading colHeading : azquoCell.getColumnHeadings()) {
+            if (colHeading == null){
+                System.out.println("null column heading, column headings " + azquoCell.getColumnHeadings());
+                System.out.println("row headings " + azquoCell.getRowHeadings());
+                System.out.println("context " + azquoCell.getContexts());
+            }
             if (colHeading.getFunction() == DataRegionHeading.FUNCTION.NAMECOUNT) {
                 provString.append("namecount(").append(colHeading.getStringParameter());
                 nameCountHeading = colHeading.getName();

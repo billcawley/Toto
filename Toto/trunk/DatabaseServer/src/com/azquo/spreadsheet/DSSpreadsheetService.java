@@ -275,7 +275,7 @@ public class DSSpreadsheetService {
     /* todo - make the difference between user and userName much clearer! Relevant for provenance setting -
       if user and username are mixed up in the provenance the system can trigger false alarms as in "a different user modified this data"
       when in fact the difference is betweeen the *same* users logon (or e-mail) and full name!*/
-    public static String saveData(DatabaseAccessToken databaseAccessToken, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String userName, String user, String reportName, String context, boolean persist) throws Exception {
+    public static String saveData(DatabaseAccessToken databaseAccessToken, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String user,String userName, String reportName, String context, boolean persist) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
         boolean changedAtAll = false;
         if (cellsAndHeadingsForDisplay.getRowHeadingsSource()!=null) {

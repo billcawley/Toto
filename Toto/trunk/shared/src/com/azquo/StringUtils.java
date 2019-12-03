@@ -231,7 +231,7 @@ I should be ok for StringTokenizer at this point
                 || term.equalsIgnoreCase(StringLiterals.TO) || term.equalsIgnoreCase(StringLiterals.COUNT)
                 || term.equalsIgnoreCase(StringLiterals.SORTED) || term.equalsIgnoreCase(StringLiterals.CHILDREN)
                 || term.equalsIgnoreCase(StringLiterals.PARENTS) || term.equalsIgnoreCase(StringLiterals.ATTRIBUTESET)
-                || term.equalsIgnoreCase(StringLiterals.OFFSET) || term.equalsIgnoreCase(StringLiterals.COMPAREWITH)
+                || term.equalsIgnoreCase(StringLiterals.OFFSET)
                 || term.equalsIgnoreCase(StringLiterals.AS) || term.equalsIgnoreCase(StringLiterals.ASGLOBAL)
                 || term.equalsIgnoreCase(StringLiterals.BACKSTEP) || term.equalsIgnoreCase(StringLiterals.CREATE)
                 || term.equalsIgnoreCase(StringLiterals.EDIT) || term.equalsIgnoreCase(StringLiterals.NEW)

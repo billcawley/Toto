@@ -116,6 +116,16 @@ public class StandardDAO {
             jdbcTemplate.update("ALTER TABLE `master_db`.`upload_record` ADD `user_comment` text NULL DEFAULT NULL ;", new HashMap<>());
         }
 
+        // modify the user table's indexes so we can have multiple with the same logon if different businesses
+        if (jdbcTemplate.queryForObject("SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS\n" +
+                "    WHERE\n" +
+                "      (table_name = \"user\")\n" +
+                "      AND (table_schema = \"master_db\")\n" +
+                "      AND (index_name = \"email\")", new HashMap<>(), Integer.class) == 1){
+            jdbcTemplate.update("ALTER table `master_db`.`user` ADD UNIQUE INDEX email_business_id (`email`, `business_id`);\n", new HashMap<>());
+            jdbcTemplate.update("ALTER table `master_db`.`user` DROP INDEX email;\n", new HashMap<>());
+        }
+
         StandardDAO.jdbcTemplate = jdbcTemplate; // I realise that this is "naughty", see comments at the top.
     }
 

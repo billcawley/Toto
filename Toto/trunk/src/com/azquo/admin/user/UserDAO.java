@@ -85,6 +85,10 @@ public class UserDAO {
 
     private static final UserRowMapper userRowMapper = new UserRowMapper();
 
+    /* so, originally the email (login) was unique across businesses. Now, due to requirements from Ed Broking, different businesses can have the same user logon
+     hence this can return a list of users, this will cause a knock on in changes to logic, the end result is that a valid login for more than one business
+     will mean that user can select which business they'd like to be logged in for
+    */
     public static User findByEmail(final String email) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(EMAIL, email);

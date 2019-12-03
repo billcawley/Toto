@@ -15,5 +15,7 @@
         <name>org.zkoss.zss.import.cache</name>
         <value>true</value> <!-- turn the import cache on; default is false if not specified -->
     </library-property>
-
+<!--    <listener>
+        <listener-class>support.FormulaEngineInit</listener-class>
+    </listener> -->
 </zk>
