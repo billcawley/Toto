@@ -320,7 +320,7 @@ public class DSSpreadsheetService {
             // new logic - get this out here and use it for the cells. Means the region is re resolved regardless but we're getting bottlenecks resolving every cell in this
             // function, executes are slowing it down
             List<List<AzquoCell>> currentData = AzquoCellService.getDataRegion(azquoMemoryDBConnection, cellsAndHeadingsForDisplay.getRegion(), cellsAndHeadingsForDisplay.getRowHeadingsSource(), cellsAndHeadingsForDisplay.getColHeadingsSource(), cellsAndHeadingsForDisplay.getContextSource()
-                    , cellsAndHeadingsForDisplay.getOptions(), userName, 0, true);
+                    , cellsAndHeadingsForDisplay.getOptions(), user, 0, true);
             if (modifiedInTheMeanTime) { // then we need to compare data as sent to what it is now before trying to save - assuming this is not relevant to the import style above
                 List<List<CellForDisplay>> sentData = cellsAndHeadingsForDisplay.getData();
                 if (currentData.size() != sentData.size()/*&& redundantNames==null*/) {// overlapping editable ranges change size if there are redundant names
