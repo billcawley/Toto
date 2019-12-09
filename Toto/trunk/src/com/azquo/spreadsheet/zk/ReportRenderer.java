@@ -73,21 +73,21 @@ public class ReportRenderer {
     public static final String AZFILETYPE = "az_filetype";
 
 
-    public static boolean populateBook(Book book, int valueId) {
+    public static boolean populateBook(Book book, int valueId) throws Exception{
         return populateBook(book, valueId, false, false, null, true);
     }
 
-    public static void populateBook(Book book, int valueId, boolean useRepeats) {
+    public static void populateBook(Book book, int valueId, boolean useRepeats) throws Exception{
         populateBook(book, valueId, false, false, null, useRepeats);
     }
 
 
-    public static boolean populateBook(Book book, int valueId, boolean useSavedValuesOnFormulae, boolean executeMode, StringBuilder errors) { // todo - make more elegant? error hack . . .
+    public static boolean populateBook(Book book, int valueId, boolean useSavedValuesOnFormulae, boolean executeMode, StringBuilder errors) throws Exception{ // todo - make more elegant? error hack . . .
         return populateBook(book, valueId, useSavedValuesOnFormulae, executeMode, errors, true);
     }
 
     // todo - is it possible to extract some of this to a pre importer? Can't put it all in there . . .
-    private static boolean populateBook(Book book, int valueId, boolean useSavedValuesOnFormulae, boolean executeMode, StringBuilder errors, boolean useRepeats) { // todo - make more elegant? error hack . . .
+    private static boolean populateBook(Book book, int valueId, boolean useSavedValuesOnFormulae, boolean executeMode, StringBuilder errors, boolean useRepeats)throws Exception { // todo - make more elegant? error hack . . .
 
         BookUtils.removeNamesWithNoRegion(book); // should protect against some errors.
 
@@ -312,6 +312,10 @@ public class ReportRenderer {
                             }
                             errors.append("ERROR : ").append(error);
                         }
+                        if (userRegionOptions.getPreSave()){
+                            ReportService.checkDataChangeAndSnapCharts(loggedInUser, reportId, book, sheet, fastLoad, useSavedValuesOnFormulae);
+                            SpreadsheetService.saveData(loggedInUser, reportId, "report", sheet.getSheetName(), region, false);
+                        }
                     }
                 }
             }
@@ -455,7 +459,7 @@ public class ReportRenderer {
     }
 
     // return the error, executing reports might want it
-    private static String populateRegionSet(Sheet sheet, int reportId, final String sheetName, final String region, int valueId, UserRegionOptions userRegionOptions, LoggedInUser loggedInUser, boolean quiet, Set<String> repeatRegionTracker) {
+    private static String populateRegionSet(Sheet sheet, int reportId, final String sheetName, final String region, int valueId, UserRegionOptions userRegionOptions, LoggedInUser loggedInUser, boolean quiet, Set<String> repeatRegionTracker)throws Exception {
         CellRegion queryRegion = BookUtils.getCellRegionForSheetAndName(sheet,"az_query"+region);
         SName contextDescription = BookUtils.getNameByName(AZCONTEXT + region, sheet);
         if (queryRegion!=null){
@@ -485,6 +489,10 @@ public class ReportRenderer {
             // note the col headings source is going in here as is without processing as in the case of ad-hoc it is not dynamic (i.e. an Azquo query), it's import file column headings
             CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = new CellsAndHeadingsForDisplay(region, colHeadings, rowHeadings, null, null, dataRegionCells, null, null, null, 0, userRegionOptions.getRegionOptionsForTransport(), null);// todo - work out what to do with the timestamp here! Might be a moot point given now row headings
             loggedInUser.setSentCells(reportId, sheetName, region, cellsAndHeadingsForDisplay);
+            if (userRegionOptions.getPreSave()){
+                ReportService.checkDataChangeAndSnapCharts(loggedInUser, reportId, sheet.getBook(), sheet, false, false);
+                SpreadsheetService.saveData(loggedInUser, reportId, "report", sheet.getSheetName(), region, false);
+            }
             return null;
         }
         if (columnHeadingsDescription != null) {
@@ -652,7 +660,7 @@ public class ReportRenderer {
                 return "no region found for " + AZDATAREGION + region;
             }
         }
-        return null; // will it get here ever?
+          return null; // will it get here ever?
     }
 
     private static void expandDataRegionBasedOnHeadings(LoggedInUser loggedInUser, Sheet sheet, String region, CellRegion displayDataRegion, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, int maxCol, UserRegionOptions userRegionOptions) {

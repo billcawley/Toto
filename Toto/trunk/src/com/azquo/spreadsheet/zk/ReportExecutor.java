@@ -601,7 +601,7 @@ public class ReportExecutor {
         return indent;
     }
 
-    public static int generateXMLFilesAndSupportingReports(LoggedInUser loggedInUser, Sheet selectedSheet, Path destdir) throws ParserConfigurationException, TransformerException, IOException {
+    public static int generateXMLFilesAndSupportingReports(LoggedInUser loggedInUser, Sheet selectedSheet, Path destdir) throws ParserConfigurationException, TransformerException, IOException, Exception {
         int fileCount = 0;
         // ok try to find the relevant regions
         List<SName> namesForSheet = BookUtils.getNamesForSheet(selectedSheet);
