@@ -36,11 +36,12 @@ public class UserRegionOptions extends StandardEntity {
     private String rowLanguage;
     private String columnLanguage;
     private boolean ignoreHeadingErrors;
+    private boolean preSave;
 
 
     UserRegionOptions(int id, int userId, int reportId, String region, int hideRows, int hideRowValues, int hideCols, boolean sortable
             , int rowLimit, int columnLimit, String sortRow, boolean sortRowAsc, String sortColumn
-            , boolean sortColumnAsc, int highlightDays, boolean noSave, String databaseName, String rowLanguage, String columnLanguage, boolean userLocked, boolean noPermuteTotals, boolean ignoreHeadingErrors) {
+            , boolean sortColumnAsc, int highlightDays, boolean noSave, String databaseName, String rowLanguage, String columnLanguage, boolean userLocked, boolean noPermuteTotals, boolean ignoreHeadingErrors, boolean preSave) {
         this.id = id;
         this.userId = userId;
         this.reportId = reportId;
@@ -63,6 +64,7 @@ public class UserRegionOptions extends StandardEntity {
         this.noPermuteTotals = noPermuteTotals;
         this.userLocked = userLocked;
         this.ignoreHeadingErrors = ignoreHeadingErrors;
+        this.preSave = preSave;
     }
 
     // to read the format of options from the spreadsheet, code adapted from azquobook.
@@ -101,6 +103,7 @@ public class UserRegionOptions extends StandardEntity {
             this.userLocked = spreadsheetSource.toLowerCase().contains("userlocked"); // the get option thing is no good for just an "exists with no value" check, this is the same
             this.noPermuteTotals = spreadsheetSource.toLowerCase().contains("nopermutetotals");
             this.ignoreHeadingErrors = spreadsheetSource.contains("ignoreheadingerrors");
+            this.preSave = spreadsheetSource.contains("presave");
         } else {
             this.sortable = false;
             this.rowLimit = 0;
@@ -110,6 +113,7 @@ public class UserRegionOptions extends StandardEntity {
             this.databaseName = null;
             this.userLocked = false;
             this.ignoreHeadingErrors = false;
+            this.preSave = false;
         }
         this.sortRow = null;
         this.sortRowAsc = false;
@@ -265,7 +269,7 @@ public class UserRegionOptions extends StandardEntity {
 
     // As mentioned in RegionOptions,
     public RegionOptions getRegionOptionsForTransport() {
-        return new RegionOptions(hideRows, hideRowValues, hideCols, sortable, rowLimit, columnLimit, sortRow, sortRowAsc, sortColumn, sortColumnAsc, highlightDays, rowLanguage, columnLanguage, noSave, databaseName, userLocked, noPermuteTotals, ignoreHeadingErrors);
+        return new RegionOptions(hideRows, hideRowValues, hideCols, sortable, rowLimit, columnLimit, sortRow, sortRowAsc, sortColumn, sortColumnAsc, highlightDays, rowLanguage, columnLanguage, noSave, databaseName, userLocked, noPermuteTotals, ignoreHeadingErrors, preSave);
     }
 
     public String getRowLanguage() {
@@ -310,6 +314,10 @@ public class UserRegionOptions extends StandardEntity {
 
     public void setIgnoreHeadingErrors(boolean ignoreHeadingErrors) {
         this.ignoreHeadingErrors = ignoreHeadingErrors;
+    }
+
+    public boolean getPreSave() {
+        return preSave;
     }
 
     @Override
