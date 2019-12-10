@@ -45,7 +45,7 @@ public class AdminService {
 
     // after uncommenting to use it won't requite the activation email initially
 
-    public static void registerBusiness(final String email
+    public static Business registerBusiness(final String email
             , final String userName
             , final String password
             , final String businessName
@@ -54,26 +54,19 @@ public class AdminService {
             , final String address3
             , final String address4
             , final String postcode
-            , final String telephone, final String website) throws Exception {
+            , final String telephone, final String website, String bannerColor, String logo) throws Exception {
         // we need to check for existing businesses
         final String key = shaHash(System.currentTimeMillis() + "");
         final Business.BusinessDetails bd = new Business.BusinessDetails(address1, address2, address3, address4, postcode, telephone, website, key);
-        final Business business = new Business(0, businessName, bd, null, null);
+        final Business business = new Business(0, businessName, bd, bannerColor, logo);
         final Business existing = BusinessDAO.findByName(businessName);
         if (existing != null) {
             throw new Exception(businessName + " already registered");
         }
-        User existingUser = UserDAO.findByEmail(email);
-        if (existingUser != null) {
-            if (existingUser.getEndDate().isAfter(LocalDateTime.now())) { // active user
-                throw new Exception(email + " already registered");
-            } else {
-                UserDAO.removeById(existingUser); // it will be created again
-            }
-        }
+        // remove the user existing check, on a new business any user is allowed
         BusinessDAO.store(business);
         final String salt = shaHash(System.currentTimeMillis() + "salt");
-        final User user = new User(0, LocalDateTime.now().plusYears(30), business.getId(), email, userName, User.STATUS_ADMINISTRATOR, encrypt(password, salt), salt, "register business", 0, 0, null, null);// Admin with
+        final User user = new User(0, LocalDateTime.now().plusYears(30), business.getId(), email, userName, User.STATUS_ADMINISTRATOR, encrypt(password, salt), salt, "register business", 0, 0, "", null);// Admin with
         UserDAO.store(user);
         /*
         azquoMailer.sendEMail(user.getEmail()
@@ -85,6 +78,7 @@ public class AdminService {
                 , "Azquo Support"
                 , "Azquo account activation for " + businessName
                 , "<html>Dear " + user.getName() + "<br/><br/>Welcome to Azquo!<br/><br/>Your account key is : " + key + "</html>");*/
+        return business;
     }
 /*
 this may now not work at all, perhaps delete?
@@ -226,7 +220,7 @@ this may now not work at all, perhaps delete?
         return null;
     }
 
-    public static List<OnlineReport> getReportList(final LoggedInUser loggedInUser) {
+    public static List<OnlineReport> getReportList(final LoggedInUser loggedInUser, boolean webFormat) {
         List<OnlineReport> reportList = new ArrayList<>();
         if (!loggedInUser.getUser().isAdministrator() && !loggedInUser.getUser().isDeveloper()) {
             int reportId = loggedInUser.getUser().getReportId();
@@ -275,14 +269,16 @@ this may now not work at all, perhaps delete?
             }
         }
         reportList.sort(Comparator.comparing(o -> (o.getDatabase() + getVal(o.getCategory()) + getVal(o.getExplanation()))));
-        // for formatting purposes, displaying the report list with useful categories
-        // - notably this could cause problems if one of these were saved but I'm not that bothered for the moment
-        String c = null;
-        for (OnlineReport or : reportList){
-            if (or.getCategory() == null || or.getCategory().equals(c)){
-                or.setCategory("");
-            } else {
-                c = or.getCategory();
+        if (webFormat){ // for the web interface, don't do it for the plugin for example
+            // for formatting purposes, displaying the report list with useful categories
+            // - notably this could cause problems if one of these were saved but I'm not that bothered for the moment
+            String c = null;
+            for (OnlineReport or : reportList){
+                if (or.getCategory() == null || or.getCategory().equals(c)){
+                    or.setCategory("");
+                } else {
+                    c = or.getCategory();
+                }
             }
         }
 

@@ -81,7 +81,7 @@ public class ManageReportSchedulesController {
             if (request.getParameter("new") != null && databaseListForBusiness != null) {
                 // note, this will fail with no reports or databases
                 ReportSchedule reportSchedule = new ReportSchedule(0, "DAILY", "", LocalDateTime.now().plusYears(30)
-                        , databaseListForBusiness.get(0).getId(), AdminService.getReportList(loggedInUser).get(0).getId(), "", "", "");
+                        , databaseListForBusiness.get(0).getId(), AdminService.getReportList(loggedInUser, false).get(0).getId(), "", "", "");
                 ReportScheduleDAO.store(reportSchedule);
             }
             final List<ReportSchedule> reportSchedules = AdminService.getReportScheduleList(loggedInUser);
@@ -156,7 +156,7 @@ public class ManageReportSchedulesController {
             if (error.length() > 0) {
                 model.put("error", error.toString());
             }
-            model.put("reports", AdminService.getReportList(loggedInUser));
+            model.put("reports", AdminService.getReportList(loggedInUser, true));
             model.put("databases", databaseListForBusiness);
             AdminService.setBanner(model,loggedInUser);
             return "managereportschedules";

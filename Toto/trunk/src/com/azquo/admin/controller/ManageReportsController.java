@@ -98,7 +98,7 @@ public class ManageReportsController {
                         theReport.setExplanation(explanation);
                         theReport.setCategory(category);
                         OnlineReportDAO.store(theReport);
-                        model.put("reports", AdminService.getReportList(loggedInUser));
+                        model.put("reports", AdminService.getReportList(loggedInUser, true));
                         AdminService.setBanner(model,loggedInUser);
                         return "managereports";
                     }
@@ -121,7 +121,7 @@ public class ManageReportsController {
                 }
             }
             // if not editing then very simple
-            List<OnlineReport> reportList = AdminService.getReportList(loggedInUser);
+            List<OnlineReport> reportList = AdminService.getReportList(loggedInUser, true);
             if ("test".equals(test)){
                 Workbook wb = new XSSFWorkbook();
                 Sheet analysis = wb.createSheet("Analysis");

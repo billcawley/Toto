@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -40,11 +41,10 @@ import org.zkoss.zss.api.model.Book;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
+import java.net.URLDecoder;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-
-import static com.azquo.spreadsheet.controller.LoginController.LOGGED_IN_USER_SESSION;
 
 /**
  * Created by edward on 29/03/16.
@@ -55,8 +55,10 @@ import static com.azquo.spreadsheet.controller.LoginController.LOGGED_IN_USER_SE
 @RequestMapping("/Excel")
 public class ExcelController {
 
-    // todo - get rid of this? There's an issue with the audit ergh . . .
+    // I would liked to have zapped this but the audit seems to open a new window with a new session. Hence can't use standard servlet session tracking
     public static final Map<String, LoggedInUser> excelConnections = new ConcurrentHashMap<>();// simple, for the moment should do it
+    // ok we need support for a user being in more than one business
+    public static final Map<String, List<LoggedInUser>> excelMultiUserConnections = new ConcurrentHashMap<>();
 
     /* Parameters are sent as Json . . . posted via https should be secure enough for the moment */
 
@@ -125,11 +127,13 @@ public class ExcelController {
 
     public static class LoginInfo {
         public String sessionId;
-        public String userType;
+        public List<String> userIds;
+        public List<String> userDescriptions;
 
-        public LoginInfo(String sessionId, String userType) {
+        public LoginInfo(String sessionId, List<String> userIds, List<String> userDescriptions) {
             this.sessionId = sessionId;
-            this.userType = userType;
+            this.userIds = userIds;
+            this.userDescriptions = userDescriptions;
         }
     }
 
@@ -154,6 +158,7 @@ public class ExcelController {
     @RequestMapping(headers = "content-type=multipart/*")
     public String handleRequest(HttpServletRequest request, HttpServletResponse response
             , @RequestParam(value = "sessionid", required = false) String sessionId
+            , @RequestParam(value = "userid", required = false) String userId
             , @RequestParam(value = "op", required = false) String op
             , @RequestParam(value = "database", required = false) String database
             , @RequestParam(value = "form", required = false) String form
@@ -193,39 +198,56 @@ public class ExcelController {
 
         try {
             LoggedInUser loggedInUser = null;
-            if (sessionId != null) {
-                loggedInUser = excelConnections.get(sessionId);
-                if (loggedInUser == null) {
-                    return "invalid sessionid";
+            // todo - try to tidy up the login ogic if possible. Hacked to support users that cross businesses
+            if (op.equals("logon")) {
+                if (NumberUtils.isNumber(userId) && sessionId != null){ // then try to select from a multi usr session
+                    if (excelMultiUserConnections.get(sessionId) != null){
+                        for (LoggedInUser check : excelMultiUserConnections.get(sessionId)) {
+                            if (check.getUser().getId() == Integer.parseInt(userId)) {
+                                loggedInUser = check;
+                            }
+                        }
+                    }
                 } else {
-                    request.getSession().setAttribute(LOGGED_IN_USER_SESSION, loggedInUser);
+                    List<LoggedInUser> loggedInUsers = LoginService.loginLoggedInUser(request.getSession().getId(), database, logon, URLDecoder.decode(password, "UTF-8"));
+                    if (!loggedInUsers.isEmpty()) {
+                        if (loggedInUsers.size() > 1) { // new criteria, need to pick the user! Replicate website functionality, keep functionality the same for single user
+                            //session.setAttribute(LOGGED_IN_USERS_SESSION, loggedInUsers);
+                            List<String> userIds = new ArrayList<>();
+                            List<String> userDescriptions = new ArrayList<>();
+                            for (LoggedInUser l : loggedInUsers) {
+                                userIds.add(l.getUser().getId() + "");
+                                userDescriptions.add(l.getUser().getBusinessName() + " - " + l.getUser().getStatus());
+                            }
+                            excelMultiUserConnections.put(request.getSession().getId(), loggedInUsers);
+                            return jacksonMapper.writeValueAsString(new LoginInfo(request.getSession().getId(), userIds, userDescriptions));
+                        }
+                        loggedInUser = loggedInUsers.get(0);
+                    }
                 }
-            }
-
-            if (loggedInUser == null) {
-                loggedInUser = LoginService.loginLoggedInUser(request.getSession().getId(), database, logon, java.net.URLDecoder.decode(password, "UTF-8"), false);
                 if (loggedInUser == null) {
                     System.out.println("login attempt by " + logon + " with incorrect details");
                     return jsonError("incorrect login details");
                 } else {
-                    //find existing if already logged in, and remember the current report, database, server
+                    //find existing if already logged in. And clean up any duplicates if they're there
                     boolean newUser = true;
+                    // ok we might be logging on passing a session id if in the case of multi user selection - already logged in really but have to select the user
+                    // . Hence override the request session if session Id passed here
+                    String currentSession = sessionId != null ? sessionId : request.getSession().getId();
                     for (String existingSessionId : excelConnections.keySet()) {
                         LoggedInUser existingUser = excelConnections.get(existingSessionId);
                         if (existingUser.getUser().getId() == loggedInUser.getUser().getId()) {
-                            excelConnections.put(request.getSession().getId(), existingUser);
-                            if (!existingSessionId.equals(request.getSession().getId())) {
+                            excelConnections.put(currentSession, existingUser);
+                            if (!existingSessionId.equals(currentSession)) {
                                 excelConnections.remove(existingSessionId);
                             }
                             loggedInUser = existingUser;
                             newUser = false;
                         }
                     }
-                    request.getSession().setAttribute(LOGGED_IN_USER_SESSION, loggedInUser);
                     if (newUser) {
-                        excelConnections.put(request.getSession().getId() + "", loggedInUser);
+                        excelConnections.put(currentSession + "", loggedInUser);
                     }
-
                     if (!loggedInUser.getUser().isAdministrator() && !loggedInUser.getUser().isDeveloper() && loggedInUser.getUser().getReportId() != 0) {// then we need to load in the permissions
                         // typically loading in the permissions would be done in online report controller. I'm going to paste relevant code here, it might be factored later
                         OnlineReport or = OnlineReportDAO.findById(loggedInUser.getUser().getReportId());
@@ -238,12 +260,19 @@ public class ExcelController {
                         ReportRenderer.populateBook(book, 0);
                     }
 
-                    if (op.equals("logon")) {
-                        LoginInfo li = new LoginInfo(request.getSession().getId(), loggedInUser.getUser().getStatus());
-                        //System.out.println("login response : " + jacksonMapper.writeValueAsString(li));
-                        return jacksonMapper.writeValueAsString(li);
-                    }
+                    LoginInfo li = new LoginInfo(currentSession, null, null);
+                    //System.out.println("login response : " + jacksonMapper.writeValueAsString(li));
+                    return jacksonMapper.writeValueAsString(li);
                 }
+            }
+
+            // slight logic shift - logon goes first then session id check, can't see a problem. Moved due to multi user functionality
+            if (sessionId != null) {
+                loggedInUser = excelConnections.get(sessionId);
+            }
+
+            if (loggedInUser == null) {
+                return "invalid sessionid";
             }
 
             if (database != null && database.length() > 0) {
@@ -255,10 +284,24 @@ public class ExcelController {
                 loggedInUser.setOnlineReport(OnlineReportDAO.findForDatabaseIdAndName(loggedInUser.getDatabase().getId(), reportName.trim()));
             }
 
-            if (op.equals("admin")) {
-                //ManageDatabasesController.handleRequest(request);
-                response.sendRedirect("/api/ManageDatabases");
+            if (op.equals("multiuserstatus")) {
+                if (excelMultiUserConnections.get(sessionId) != null){
+                    return "Logged in under : " + loggedInUser.getUser().getBusinessName() + ". Switch business.";
+                }
                 return "";
+            }
+
+            if (op.equals("checkmultiuser")) {
+                if (excelMultiUserConnections.get(sessionId) != null){
+                    List<String> userIds = new ArrayList<>();
+                    List<String> userDescriptions = new ArrayList<>();
+                    for (LoggedInUser l : excelMultiUserConnections.get(sessionId) ) {
+                        userIds.add(l.getUser().getId() + "");
+                        userDescriptions.add(l.getUser().getBusinessName() + " - " + l.getUser().getStatus());
+                    }
+                    return jacksonMapper.writeValueAsString(new LoginInfo(sessionId, userIds, userDescriptions));
+                }
+                return jacksonMapper.writeValueAsString(new LoginInfo(sessionId, null, null));
             }
 
             if (op.equals("audit")) {
@@ -368,7 +411,7 @@ public class ExcelController {
                     OnlineReport onlineReport = null;
                     if ((reportName.length() == 0) && (database == null || database.length() == 0)) {
                         //get initial menu
-                        List<OnlineReport> reports = AdminService.getReportList(loggedInUser);
+                        List<OnlineReport> reports = AdminService.getReportList(loggedInUser, false);
                         if (reports.size() == 1 && !reports.get(0).getReportName().equals("No reports found")) {
                             onlineReport = reports.get(0);
                             downloadName = onlineReport.getReportName();
@@ -459,7 +502,7 @@ public class ExcelController {
                                 }
                             }
                             book.write(baos);
-                        } catch (Exception ignored){
+                        } catch (Exception ignored) {
 //                            ignored.printStackTrace();
                         }
                         // don't close, it will write!!!
@@ -497,7 +540,7 @@ public class ExcelController {
             }
             if (op.equals("allowedreports")) {
                 List<DatabaseReport> databaseReports = new ArrayList<>();
-                List<OnlineReport> allowedReports = AdminService.getReportList(loggedInUser);
+                List<OnlineReport> allowedReports = AdminService.getReportList(loggedInUser, false);
 
                 if (allowedReports.size() == 1) {
                     //OnlineReport or = allowedReports.get(0);
@@ -667,7 +710,7 @@ public class ExcelController {
                                             // now put in our one line of data
                                             bufferedWriter.newLine();
                                             for (String name : formFields) {
-                                                bufferedWriter.write(request.getParameter(name) != null ? request.getParameter(name)  : "" + "\t");
+                                                bufferedWriter.write(request.getParameter(name) != null ? request.getParameter(name) : "" + "\t");
                                             }
                                             bufferedWriter.newLine();
                                         }
@@ -681,7 +724,7 @@ public class ExcelController {
                                         } else if (postProcessor != null) { // deal with execute. More specifically execute needs to be used by the claims header thing
                                             // set user choices to submitted fields
                                             for (String name : formFields) {
-                                                if (request.getParameter(name) != null){
+                                                if (request.getParameter(name) != null) {
                                                     System.out.println(name + " : " + request.getParameter(name));
                                                     SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), name, request.getParameter(name));
                                                 }
@@ -710,10 +753,10 @@ public class ExcelController {
                 ExcelJsonRequest excelJsonRequest = jacksonMapper.readValue(json, ExcelJsonRequest.class);
                 try {
                     long time = System.currentTimeMillis();
-                    if (excelJsonRequest.query != null){
-                        for (List<String> strings: excelJsonRequest.query){
-                            for (String string:strings){
-                                if (string!=null && string.length() > 0) {
+                    if (excelJsonRequest.query != null) {
+                        for (List<String> strings : excelJsonRequest.query) {
+                            for (String string : strings) {
+                                if (string != null && string.length() > 0) {
                                     string = CommonReportUtils.replaceUserChoicesInQuery(loggedInUser, string);
                                     CommonReportUtils.getDropdownListForQuery(loggedInUser, string);
                                 }
@@ -754,9 +797,9 @@ public class ExcelController {
                         // todo : find out how, in particular after a list of states, the arrays can not be square, that is to say that the bottom one has an extra blank
                         CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = SpreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser,
                                 excelJsonRequest.region, 0,
-                                replaceUserChoicesInHeadings(loggedInUser,excelJsonRequest.rowHeadings),
-                                replaceUserChoicesInHeadings(loggedInUser,excelJsonRequest.columnHeadings),
-                                replaceUserChoicesInHeadings(loggedInUser,excelJsonRequest.context),
+                                replaceUserChoicesInHeadings(loggedInUser, excelJsonRequest.rowHeadings),
+                                replaceUserChoicesInHeadings(loggedInUser, excelJsonRequest.columnHeadings),
+                                replaceUserChoicesInHeadings(loggedInUser, excelJsonRequest.context),
                                 userRegionOptions, true, null);
                         RegionOptions holdOptions = cellsAndHeadingsForDisplay.getOptions();//don't want to send these to Excel
                         cellsAndHeadingsForDisplay.setOptions(null);
@@ -782,7 +825,7 @@ public class ExcelController {
                     );
                     data.add(row);
                     errorHeading.add(error);
-                    return jacksonMapper.writeValueAsString(new CellsAndHeadingsForExcel( null, new CellsAndHeadingsForDisplay(
+                    return jacksonMapper.writeValueAsString(new CellsAndHeadingsForExcel(null, new CellsAndHeadingsForDisplay(
                             excelJsonRequest.region,
                             errorHeading,
                             errorHeading,
@@ -820,13 +863,13 @@ public class ExcelController {
                 List<ExcelRegionModification> excelRegionModifications = jacksonMapper.readValue(json, jacksonMapper.getTypeFactory().constructCollectionType(List.class, ExcelRegionModification.class));
                 // todo - set the context which is a choice list really, see ChoicesService.resolveAndSetChoiceOptions
                 //loggedInUser.setContext(context);
-                for (ExcelRegionModification excelRegionModification : excelRegionModifications){
+                for (ExcelRegionModification excelRegionModification : excelRegionModifications) {
                     CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(loggedInUser.getUser().getReportId(), excelRegionModification.sheet, excelRegionModification.region);
                     List<List<CellForDisplay>> data = cellsAndHeadingsForDisplay.getData();
-                    for (ExcelRegionModification.CellModification cellModification : excelRegionModification.cellModifications){
-                        if (cellModification.row < data.size()){
+                    for (ExcelRegionModification.CellModification cellModification : excelRegionModification.cellModifications) {
+                        if (cellModification.row < data.size()) {
                             List<CellForDisplay> row = data.get(cellModification.row);
-                            if (cellModification.col < row.size()){
+                            if (cellModification.col < row.size()) {
                                 CellForDisplay cell = row.get(cellModification.col);
                                 if (!isEqual(cell.getStringValue(), cellModification.newValue)) {
                                     cell.setNewStringValue(cellModification.newValue);
@@ -837,7 +880,7 @@ public class ExcelController {
                     int reportId = loggedInUser.getUser().getReportId();
                     reportName = OnlineReportDAO.findById(reportId).getReportName();
                     loggedInUser.setContext(context);
-                    if (result.equals("no action taken")){ // hacky, fix later
+                    if (result.equals("no action taken")) { // hacky, fix later
                         result = SpreadsheetService.saveData(loggedInUser, reportId, reportName, excelRegionModification.sheet, excelRegionModification.region, false);
                     } else {
                         result += (", " + SpreadsheetService.saveData(loggedInUser, reportId, reportName, excelRegionModification.sheet, excelRegionModification.region, false));
@@ -866,12 +909,12 @@ public class ExcelController {
         return jsonError(result);
     }
 
-    private static List<List<String>>replaceUserChoicesInHeadings(LoggedInUser loggedInUser,List<List<String>>headings){
-        List<List<String>>toReturn = new ArrayList<>();
-        for (List<String>row:headings){
-            List<String>newRow = new ArrayList<>();
-            for (String heading:row){
-                newRow.add(CommonReportUtils.replaceUserChoicesInQuery(loggedInUser,heading));
+    private static List<List<String>> replaceUserChoicesInHeadings(LoggedInUser loggedInUser, List<List<String>> headings) {
+        List<List<String>> toReturn = new ArrayList<>();
+        for (List<String> row : headings) {
+            List<String> newRow = new ArrayList<>();
+            for (String heading : row) {
+                newRow.add(CommonReportUtils.replaceUserChoicesInQuery(loggedInUser, heading));
 
             }
             toReturn.add(newRow);
@@ -900,6 +943,7 @@ public class ExcelController {
     @RequestMapping
     public String handleRequest(HttpServletRequest request, HttpServletResponse response
             , @RequestParam(value = "sessionid", required = false) String sessionId
+            , @RequestParam(value = "userid", required = false) String userId
             , @RequestParam(value = "op", required = false) String op
             , @RequestParam(value = "database", required = false) String database
             , @RequestParam(value = "form", required = false) String form
@@ -918,6 +962,6 @@ public class ExcelController {
             , @RequestParam(value = "json", required = false) String json
 
     ) {
-        return handleRequest(request, response, sessionId, op, database, form, formsubmit, reportName, sheetName, logon, password, region, options, regionrow, regioncol, choice, chosen, context, json, "true");
+        return handleRequest(request, response, sessionId, userId,  op, database, form, formsubmit, reportName, sheetName, logon, password, region, options, regionrow, regioncol, choice, chosen, context, json, "true");
     }
 }

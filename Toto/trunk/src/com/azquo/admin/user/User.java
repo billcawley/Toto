@@ -1,6 +1,8 @@
 package com.azquo.admin.user;
 
 import com.azquo.admin.StandardEntity;
+import com.azquo.admin.business.Business;
+import com.azquo.admin.business.BusinessDAO;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseDAO;
 import com.azquo.admin.onlinereport.OnlineReport;
@@ -151,6 +153,12 @@ public final class User extends StandardEntity implements Serializable {
     public String getReportName() {
         final OnlineReport byId = OnlineReportDAO.findById(reportId);
         return byId != null ? byId.getReportName() : "";
+    }
+
+    // for display
+    public String getBusinessName() {
+        Business byId = BusinessDAO.findById(businessId);
+        return byId != null ? byId.getBusinessName() : "";
     }
 
     public void setReportId(int reportId) {

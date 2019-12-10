@@ -23,57 +23,62 @@ public class LoginService {
 
     private static final Logger logger = Logger.getLogger(LoginService.class);
 
-    public static LoggedInUser loginLoggedInUser(final String sessionId, String databaseName, final String userEmail, final String password, boolean loggedIn) throws Exception {
-        User user = UserDAO.findByEmail(userEmail);
-        if (user != null && (loggedIn || AdminService.encrypt(password.trim(), user.getSalt()).equals(user.getPassword()))) {
-            Database database = null;
-            if (databaseName == null){
-                databaseName = "";
-            }
-            // new logic run regardless of whether we were passed a db as we want to default if there's only one DB (this was lost and it knackered some magento uploads)
-            if (user.isAdministrator()) {
-                final List<Database> forBusinessId = DatabaseDAO.findForBusinessId(user.getBusinessId());
-                if (forBusinessId.size() == 1) {
-                    database = forBusinessId.get(0);
-                } else {
-                    for (Database database1 : forBusinessId) {
-                        if (database1.getName().equalsIgnoreCase(databaseName)) {
-                            database = database1;
-                            break;
+    // newer logic based off requirements from Ed Broking - can have users with the same login for different businesses. Hence a login attempt can return more than one Logged in user.
+    // The user then must pick one
+    public static List<LoggedInUser> loginLoggedInUser(final String sessionId, String databaseName, final String userEmail, final String password) throws Exception {
+        List<User> users = UserDAO.findByEmail(userEmail);
+        List<LoggedInUser> toReturn = new ArrayList<>();
+        for (User user : users){
+            if (AdminService.encrypt(password.trim(), user.getSalt()).equals(user.getPassword())) {
+                Database database = null;
+                if (databaseName == null){
+                    databaseName = "";
+                }
+                // new logic run regardless of whether we were passed a db as we want to default if there's only one DB (this was lost and it knackered some magento uploads)
+                if (user.isAdministrator()) {
+                    final List<Database> forBusinessId = DatabaseDAO.findForBusinessId(user.getBusinessId());
+                    if (forBusinessId.size() == 1) {
+                        database = forBusinessId.get(0);
+                    } else {
+                        for (Database database1 : forBusinessId) {
+                            if (database1.getName().equalsIgnoreCase(databaseName)) {
+                                database = database1;
+                                break;
+                            }
+                        }
+                    }
+                } else if (user.isDeveloper()) {// a bit wordy? can perhaps be factored later
+                    final List<Database> forBusinessId = DatabaseDAO.findForBusinessId(user.getBusinessId());
+                    if (forBusinessId.size() == 1 && forBusinessId.get(0).getUserId() == user.getId()) {
+                        database = forBusinessId.get(0);
+                    } else {
+                        for (Database database1 : forBusinessId) {
+                            if (database1.getName().equalsIgnoreCase(databaseName) && database1.getUserId() == user.getId()) {
+                                database = database1;
+                                break;
+                            }
                         }
                     }
                 }
-            } else if (user.isDeveloper()) {// a bit wordy? can perhaps be factored later
-                final List<Database> forBusinessId = DatabaseDAO.findForBusinessId(user.getBusinessId());
-                if (forBusinessId.size() == 1 && forBusinessId.get(0).getUserId() == user.getId()) {
-                    database = forBusinessId.get(0);
-                } else {
-                    for (Database database1 : forBusinessId) {
-                        if (database1.getName().equalsIgnoreCase(databaseName) && database1.getUserId() == user.getId()) {
-                            database = database1;
-                            break;
-                        }
-                    }
+                if (database == null) { // now we have a DB against the user we could perhaps remove the defaults to a single one above? Perhaps different for admin or developer
+                    database = DatabaseDAO.findById(user.getDatabaseId());
                 }
-            }
-            if (database == null) { // now we have a DB against the user we could perhaps remove the defaults to a single one above? Perhaps different for admin or developer
-                database = DatabaseDAO.findById(user.getDatabaseId());
-            }
 
-            DatabaseServer databaseServer = null;
-            if (database != null) {
-                databaseServer = DatabaseServerDAO.findById(database.getDatabaseServerId());
-            } else {
-                databaseServer = DatabaseServerDAO.findAll().get(0); // bit of a hack, currently we don't deal with selecting different servers
-            }
+                DatabaseServer databaseServer;
+                if (database != null) {
+                    databaseServer = DatabaseServerDAO.findById(database.getDatabaseServerId());
+                } else {
+                    databaseServer = DatabaseServerDAO.findAll().get(0); // bit of a hack, currently we don't deal with selecting different servers
+                }
 
-            Business b = BusinessDAO.findById(user.getBusinessId());
-            if (b == null) {
-                throw new Exception("Business not found for user! Business id : " + user.getBusinessId());
+                Business b = BusinessDAO.findById(user.getBusinessId());
+                if (b == null) {
+                    throw new Exception("Business not found for user! Business id : " + user.getBusinessId());
+                }
+                toReturn.add(new LoggedInUser(sessionId, user, databaseServer, database, null, b.getBusinessDirectory()));
             }
-            return new LoggedInUser(sessionId, user, databaseServer, database, null, b.getBusinessDirectory());// null the read/write list for the mo
         }
-        return null;
+        return toReturn;
     }
 
 

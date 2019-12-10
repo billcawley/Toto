@@ -160,7 +160,7 @@ public class ManageUsersController {
                     }
                 }
                 model.put("databases", AdminService.getDatabaseListForBusinessWithBasicSecurity(loggedInUser));
-                model.put("reports", AdminService.getReportList(loggedInUser));
+                model.put("reports", AdminService.getReportList(loggedInUser, true));
                 AdminService.setBanner(model, loggedInUser);
                 return "edituser";
             }

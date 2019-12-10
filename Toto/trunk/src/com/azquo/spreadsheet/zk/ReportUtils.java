@@ -44,7 +44,7 @@ class ReportUtils {
         return tryDate(maybeDate.length() > 10 ? maybeDate.substring(0, 10) : maybeDate, ukdf5);
     }
 
-    static String interpretLockWarnings(String lockWarnings) {
+    static String interpretLockWarnings(String lockWarnings, int businessId) {
         //makes the warning more 'user-friendly'
         int pos = 0;
         while (lockWarnings.indexOf("by ", pos) > 0) {
@@ -53,7 +53,7 @@ class ReportUtils {
             String user = lockWarnings.substring(startName + 3, endName);
             String userName;
             try {
-                userName = UserDAO.findByEmail(user.trim()).getName();
+                userName = UserDAO.findByEmailAndBusinessId(user.trim(), businessId).getName();
             } catch (Exception e) {
                 userName = user;
             }

@@ -331,7 +331,7 @@ public class ReportRenderer {
                 }
             }
             if (lockWarnings.length() > 0) {
-                sheet.getBook().getInternalBook().setAttribute(OnlineController.LOCKED_RESULT, ReportUtils.interpretLockWarnings(lockWarnings.toString()));
+                sheet.getBook().getInternalBook().setAttribute(OnlineController.LOCKED_RESULT, ReportUtils.interpretLockWarnings(lockWarnings.toString(), loggedInUser.getUser().getBusinessId()));
                 // any locks applied need to be let go
                 if (sheet.getBook().getInternalBook().getAttribute(OnlineController.LOCKED).equals(Boolean.TRUE)) { // I think that's allowed, it was locked then unlock and switch the flag
                     try {

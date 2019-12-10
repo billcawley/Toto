@@ -20,6 +20,7 @@ import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.Collections;
 import java.util.Date;
+import java.util.List;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
@@ -52,7 +53,12 @@ public class MagentoController {
             if (op == null) op = "";// can this happen with the annotation above?
             System.out.println("==================== logon : " + logon +  "db sent  : " + db + " op= " + op);
             //for testing only
-            LoggedInUser loggedInUser = LoginService.loginLoggedInUser("", db, logon, password, false);
+            LoggedInUser loggedInUser = null;
+            List<LoggedInUser> loggedInUsers = LoginService.loginLoggedInUser("", db, logon, password);
+            // not doing a multi business login for Magento
+            if (!loggedInUsers.isEmpty()){
+                loggedInUser = loggedInUsers.get(0);
+            }
             if (loggedInUser == null) {
                 return "error: user " + logon + " with this password does not exist";
             }

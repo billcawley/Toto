@@ -89,10 +89,17 @@ public class UserDAO {
      hence this can return a list of users, this will cause a knock on in changes to logic, the end result is that a valid login for more than one business
      will mean that user can select which business they'd like to be logged in for
     */
-    public static User findByEmail(final String email) {
+    public static List<User> findByEmail(final String email) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(EMAIL, email);
-        return StandardDAO.findOneWithWhereSQLAndParameters(" WHERE `" + EMAIL + "` = :" + EMAIL, TABLENAME, userRowMapper, namedParams);
+        return StandardDAO.findListWithWhereSQLAndParameters(" WHERE `" + EMAIL + "` = :" + EMAIL, TABLENAME, userRowMapper, namedParams);
+    }
+
+    public static User findByEmailAndBusinessId(final String email, final int businessId) {
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(EMAIL, email);
+        namedParams.addValue(BUSINESSID, businessId);
+        return StandardDAO.findOneWithWhereSQLAndParameters(" WHERE `" + EMAIL + "` = :" + EMAIL + " and "+ BUSINESSID + " = :" + BUSINESSID, TABLENAME, userRowMapper, namedParams);
     }
 
     public static List<User> findForBusinessId(final int businessId) {

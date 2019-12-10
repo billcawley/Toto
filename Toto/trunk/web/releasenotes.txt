@@ -1,3 +1,11 @@
+10-12-19
+
+
+
+Plugin
+
+Added new functionality for users that span more than one business. When inserting rows then insert the whole row, this will shift row formatting down (fixes hidden row bug on Specify claims feed to Broaksure)
+
 22-11-19
 
 If it's converted from a worksheet then it's *always* tab separated, if not then try to detect from the file - fixes problem with validation on 302860N premiums flagged yesterday,

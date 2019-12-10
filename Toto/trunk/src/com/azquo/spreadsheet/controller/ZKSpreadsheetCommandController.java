@@ -136,6 +136,8 @@ public class ZKSpreadsheetCommandController {
                                 List<List<String>> lists = BookUtils.nameToStringLists(loggedInUser, name);
                                 if (!lists.isEmpty() && !lists.get(0).isEmpty() && !lists.get(0).get(0).isEmpty()){
                                     String value = lists.get(0).get(0);
+                                    value = value.replace("/", "");
+                                    value = value.replace("\\", "");
                                     String choice = name.getName().substring(0, name.getName().toLowerCase().indexOf("chosen")).trim();
                                     if (!usedChoices.contains(choice)){
                                         usedChoices.add(choice);

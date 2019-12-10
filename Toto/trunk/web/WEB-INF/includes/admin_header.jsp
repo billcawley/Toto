@@ -48,6 +48,9 @@
 	</div>
 	<nav class="nav">
 	<ul>
+		<c:if test="${sessionScope.LOGGED_IN_USERS_SESSION != null}">
+			<li><a href="/api/Login?select=true">Logged in under : ${sessionScope.LOGGED_IN_USER_SESSION.user.businessName}. Switch business.</a></li>
+		</c:if>
 <!--		<li><span  class="tickspan">Excel<input name="excel" type="checkbox" id="excelinterface" <c:if test="${sessionScope.excelToggle}"> checked</c:if> onchange="pingExcelInterfaceFlag(this.checked)"></span></li> -->
 		<li><a href="/api/ManageReports"${fn:startsWith(requestScope['javax.servlet.forward.path_info'], '/ManageReports') ? ' class="on"' : ''}>Reports</a></li>
 		<li><a href="/api/ManageDatabases"${fn:startsWith(requestScope['javax.servlet.forward.path_info'], '/ManageDatabases') ? ' class="on"' : ''}>Databases</a></li>

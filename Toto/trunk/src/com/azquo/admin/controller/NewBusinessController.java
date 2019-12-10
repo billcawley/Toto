@@ -1,6 +1,8 @@
 package com.azquo.admin.controller;
 
 import com.azquo.admin.AdminService;
+import com.azquo.admin.business.Business;
+import com.azquo.admin.business.BusinessDAO;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.controller.LoginController;
@@ -10,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.List;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
@@ -60,8 +63,19 @@ public class NewBusinessController {
                     error.append("password and confirm do not match<br/>");
                 }
                 if (error.length() == 0) {
-                    AdminService.registerBusiness(emailUsername, businessName, password, businessName, address1, address2, address3, address4, postcode, telephone, website);
-                    loggedInUser = LoginService.loginLoggedInUser(request.getSession().getId(), null, emailUsername, password, false);
+                    Business b = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
+                    Business newBusiness = AdminService.registerBusiness(emailUsername, businessName, password, businessName, address1, address2, address3, address4, postcode, telephone, website, b.getBannerColor(), b.getLogo());
+                    List<LoggedInUser> loggedInUsers = LoginService.loginLoggedInUser(request.getSession().getId(), null, emailUsername, password);
+                    loggedInUser = null; // null it to be reset. If we can't find it we have a problem . . .
+                    if (loggedInUsers.size() > 1){
+                        request.getSession().setAttribute(LoginController.LOGGED_IN_USERS_SESSION, loggedInUsers);
+                    }
+                    for (LoggedInUser liu : loggedInUsers){
+                        if (liu.getUser().getBusinessId() == newBusiness.getId()){
+                            loggedInUser = liu;
+                            break;
+                        }
+                    }
                     if (loggedInUser != null) {
                         request.getSession().setAttribute(LoginController.LOGGED_IN_USER_SESSION, loggedInUser);
                     }
