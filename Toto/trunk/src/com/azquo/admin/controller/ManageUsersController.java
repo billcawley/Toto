@@ -100,7 +100,7 @@ public class ManageUsersController {
                     } else {
                         email = email.trim();
                     }
-                    if (toEdit == null && UserDAO.findByEmail(email) != null) {
+                    if (toEdit == null && UserDAO.findByEmailAndBusinessId(email, loggedInUser.getUser().getBusinessId()) != null) {
                         error.append("User Exists<br/>");
                     }
                     if (name == null || name.isEmpty()) {

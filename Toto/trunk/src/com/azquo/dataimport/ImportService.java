@@ -337,7 +337,8 @@ public final class ImportService {
             }
             // is it the type of import template as required by Ben Jones
             Name importName = BookUtils.getName(book, ReportRenderer.AZIMPORTNAME);
-            if (importName != null) {
+            // also just do a simple check on the file name
+            if (importName != null || uploadedFile.getFileName().toLowerCase().contains("import templates")) {
                 if ((loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
                     if (opcPackage != null) opcPackage.revert();
                     return Collections.singletonList(uploadImportTemplate(uploadedFile, loggedInUser, true));

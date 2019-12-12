@@ -1,6 +1,44 @@
 10-12-19
 
+Bug fix on register business. Bug fix on new menu formatting.
 
+New functionality where a user can be in more than one business so they then need to select a business on logging in.
+
+executes 'presave' if that option exists
+
+Zapping comparewith and fixing a nasty user/username swap on saving. Also sql patch preparing for one user being in multiple businesses
+
+Bug thrown up by EL import - a bit more robust to integer formatted formulae
+
+report list formatting stuff
+
+'provisional' on condition checks only lasts to next check
+
+A little tidying, zapping duff PDF option, add choices to downloaded reports' name
+
+fix nasty bug that could stop the last line in a file being rejected during validation
+
+Indent the admin reports list according to category
+
+XLSX
+
+new template for 'AllRisksClassify' replaces 'AllRisksSplitContracts'
+
+Claims contract year categorisation -  Hid some lines, removed 'Month' from context, and changed choice from 'ReportingMonth' to 'Month'
+
+Specified Claim County as 'language claim county'
+
+Changed derivation of 'Policy Ref' on 'AllrisksPremiumSplitContracts'
+
+Including many 'N' contracts in the All Risks list
+
+Added a template to import BB304140 corrections
+
+Premium - patch to XML structure (added PremiumTrans)
+
+Self Storage - Moves categorisation from Policy Ref level to Policy Lines level, while also creating Liability Section 1 and checking 80-20 split.
+
+Limnet - reverted back to the previous version - I had an old reference file. Limnet was correct. Or more correct anyway.
 
 Plugin
 
