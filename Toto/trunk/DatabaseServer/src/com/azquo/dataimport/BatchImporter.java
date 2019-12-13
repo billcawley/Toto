@@ -102,8 +102,13 @@ public class BatchImporter implements Callable<Void> {
                     }
                     // composite might do things that affect only and existing hence do it before
                     if (rejectionReason == null) {
-                        resolveCompositeValues(azquoMemoryDBConnection, namesFoundCache, attributeNames, lineToLoad, lineNumber, compositeIndexResolver);
+                        //the check for only and existing must be done before composite values create new names.
+                        //WFC has inserted a check for 'needsResolving' on checkOnly' to ensure that the check does not find null records
                         rejectionReason = checkOnlyAndExisting(azquoMemoryDBConnection, lineToLoad, attributeNames);
+                        if (rejectionReason == null) {
+                            resolveCompositeValues(azquoMemoryDBConnection, namesFoundCache, attributeNames, lineToLoad, lineNumber, compositeIndexResolver);
+                            rejectionReason = checkOnlyAndExisting(azquoMemoryDBConnection, lineToLoad, attributeNames);
+                        }
                     }
                     if (rejectionReason == null) {
                         try {
@@ -347,7 +352,7 @@ public class BatchImporter implements Callable<Void> {
     private static String checkOnlyAndExisting(AzquoMemoryDBConnection azquoMemoryDBConnection, List<ImportCellWithHeading> cells, List<String> languages) {
         //returns the error
         for (ImportCellWithHeading cell : cells) {
-            if (cell.getImmutableImportHeading().only != null) {
+            if (cell.getLineValue()!=null && cell.getImmutableImportHeading().only != null) {
                 //`only' can have wildcards  '*xxx*'
                 String only = cell.getImmutableImportHeading().only.toLowerCase();
                 String lineValue = cell.getLineValue().toLowerCase();
@@ -371,7 +376,7 @@ public class BatchImporter implements Callable<Void> {
             }
             // this assumes composite has been run if required
             // note that the code assumes there can only be one "existing" per line, it will exit this function on the first one.
-            if (!cell.needsResolving && cell.getImmutableImportHeading().existing) {
+            if (cell.getLineValue()!=null && cell.getImmutableImportHeading().existing) {
                 boolean cellOk = false;
                 if (cell.getImmutableImportHeading().attribute != null && cell.getImmutableImportHeading().attribute.length() > 0) {
                     languages = new ArrayList<>();
