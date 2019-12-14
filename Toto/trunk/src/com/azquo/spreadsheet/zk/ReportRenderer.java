@@ -312,10 +312,6 @@ public class ReportRenderer {
                             }
                             errors.append("ERROR : ").append(error);
                         }
-                        if (userRegionOptions.getPreSave()){
-                            ReportService.checkDataChangeAndSnapCharts(loggedInUser, reportId, book, sheet, fastLoad, useSavedValuesOnFormulae);
-                            SpreadsheetService.saveData(loggedInUser, reportId, "report", sheet.getSheetName(), region, false);
-                        }
                     }
                 }
             }
@@ -660,7 +656,11 @@ public class ReportRenderer {
                 return "no region found for " + AZDATAREGION + region;
             }
         }
-          return null; // will it get here ever?
+        if (userRegionOptions.getPreSave()){
+            ReportService.checkDataChangeAndSnapCharts(loggedInUser, reportId, sheet.getBook(), sheet, false, false);
+            SpreadsheetService.saveData(loggedInUser, reportId, "report", sheet.getSheetName(), region, false);
+        }
+        return null; // will it get here ever?
     }
 
     private static void expandDataRegionBasedOnHeadings(LoggedInUser loggedInUser, Sheet sheet, String region, CellRegion displayDataRegion, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, int maxCol, UserRegionOptions userRegionOptions) {
