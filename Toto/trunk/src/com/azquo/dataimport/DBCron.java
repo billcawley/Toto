@@ -359,8 +359,8 @@ public class DBCron {
             SpreadsheetService.runScheduledReports();
         }
     }
-
-    @Scheduled(cron = "0 0 * * * *")
+    // todo - stop loading the data again and again??
+    @Scheduled(cron = "0 0 0 * * *")// set to daily for the mo, stop files building so fast
     public void extractEdBrokingTrackingData() throws Exception {
         synchronized (this) { // one at a time
             String trackingdb = SpreadsheetService.getTrackingDb();

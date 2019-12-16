@@ -1,12 +1,15 @@
 package com.azquo.spreadsheet.zk;
 
 import com.azquo.TypedPair;
+import com.azquo.admin.database.Database;
+import com.azquo.admin.database.DatabaseServer;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.user.UserRegionOptions;
 import com.azquo.admin.user.UserRegionOptionsDAO;
 import com.azquo.StringLiterals;
 import com.azquo.spreadsheet.LoggedInUser;
+import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.controller.OnlineController;
 import com.azquo.spreadsheet.transport.*;
@@ -164,7 +167,24 @@ class ZKContextMenu {
             }
             UserRegionOptions userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), reportId, region, source);
             try {
-                final ProvenanceDetailsForDisplay provenanceDetailsForDisplay = SpreadsheetService.getProvenanceDetailsForDisplay(loggedInUser, reportId, myzss.getSelectedSheetName(), region, userRegionOptions, regionRow, regionColumn, 1000);
+                // copy pasted from ReportRenderer about line 300, maybe factor?
+                String databaseName = userRegionOptions.getDatabaseName();
+                // fairly simple addition to allow multiple databases on the same report
+                // todo - support when saving . . .
+                ProvenanceDetailsForDisplay provenanceDetailsForDisplay = null;
+                if (databaseName != null) { // then switch database, fill and switch back!
+                    Database origDatabase = loggedInUser.getDatabase();
+                    DatabaseServer origServer = loggedInUser.getDatabaseServer();
+                    try {
+                        LoginService.switchDatabase(loggedInUser, databaseName);
+                        provenanceDetailsForDisplay = SpreadsheetService.getProvenanceDetailsForDisplay(loggedInUser, reportId, myzss.getSelectedSheetName(), region, userRegionOptions, regionRow, regionColumn, 1000);
+                    } catch (Exception e) {
+                        e.printStackTrace(); // might want to do user feedback?
+                    }
+                    loggedInUser.setDatabaseWithServer(origServer, origDatabase);
+                } else {
+                    provenanceDetailsForDisplay = SpreadsheetService.getProvenanceDetailsForDisplay(loggedInUser, reportId, myzss.getSelectedSheetName(), region, userRegionOptions, regionRow, regionColumn, 1000);
+                }
                 if (provenanceDetailsForDisplay.getAuditForDisplayList() != null && !provenanceDetailsForDisplay.getAuditForDisplayList().isEmpty()) {
                     buildContextMenuProvenance(provenanceDetailsForDisplay, myzss);
                     buildContextMenuProvenanceDownload(provenanceDetailsForDisplay, reportId);
