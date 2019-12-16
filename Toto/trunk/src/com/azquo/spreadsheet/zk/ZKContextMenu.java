@@ -166,6 +166,8 @@ class ZKContextMenu {
                 source = BookUtils.getSnameCell(optionsRegion).getStringValue();
             }
             UserRegionOptions userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), reportId, region, source);
+            Database origDatabase = null;
+            DatabaseServer origServer = null;
             try {
                 // copy pasted from ReportRenderer about line 300, maybe factor?
                 String databaseName = userRegionOptions.getDatabaseName();
@@ -173,15 +175,14 @@ class ZKContextMenu {
                 // todo - support when saving . . .
                 ProvenanceDetailsForDisplay provenanceDetailsForDisplay = null;
                 if (databaseName != null) { // then switch database, fill and switch back!
-                    Database origDatabase = loggedInUser.getDatabase();
-                    DatabaseServer origServer = loggedInUser.getDatabaseServer();
+                    origDatabase = loggedInUser.getDatabase();
+                    origServer = loggedInUser.getDatabaseServer();
                     try {
                         LoginService.switchDatabase(loggedInUser, databaseName);
                         provenanceDetailsForDisplay = SpreadsheetService.getProvenanceDetailsForDisplay(loggedInUser, reportId, myzss.getSelectedSheetName(), region, userRegionOptions, regionRow, regionColumn, 1000);
                     } catch (Exception e) {
                         e.printStackTrace(); // might want to do user feedback?
                     }
-                    loggedInUser.setDatabaseWithServer(origServer, origDatabase);
                 } else {
                     provenanceDetailsForDisplay = SpreadsheetService.getProvenanceDetailsForDisplay(loggedInUser, reportId, myzss.getSelectedSheetName(), region, userRegionOptions, regionRow, regionColumn, 1000);
                 }
@@ -195,10 +196,13 @@ class ZKContextMenu {
 //                                    event -> System.out.println("audit menu item clicked"));
                     buildContextMenuDrillDownIfApplicable(myzss.getSelectedSheetName(), region, regionRow, regionColumn);
                 }
+                buildContextMenuDebug(myzss.getSelectedSheetName(), region, userRegionOptions, regionRow, regionColumn);
             } catch (Exception e) {
                 e.printStackTrace();
             }
-            buildContextMenuDebug(myzss.getSelectedSheetName(), region, userRegionOptions, regionRow, regionColumn);
+            if (origServer != null && origDatabase != null){
+                loggedInUser.setDatabaseWithServer(origServer, origDatabase);
+            }
             buildContextMenuInstructions(myzss.getSelectedSheetName(), region);
 
             popupChild = highlightPopup.getFirstChild();
