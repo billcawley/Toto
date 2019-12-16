@@ -100,13 +100,14 @@ public class BatchImporter implements Callable<Void> {
                             }
                         }
                     }
-                    // composite might do things that affect only and existing hence do it before
+                    // we need to check only and existing before composition then not proceed if there's a problem, then try again after
+                    // if we only check after resolveCompositeValues might do all sorts of name creation on a line that will then be rejected
                     if (rejectionReason == null) {
-                        //the check for only and existing must be done before composite values create new names.
-                        //WFC has inserted a check for 'needsResolving' on checkOnly' to ensure that the check does not find null records
+                        initialNeedsResolvingCheck(lineToLoad);
                         rejectionReason = checkOnlyAndExisting(azquoMemoryDBConnection, lineToLoad, attributeNames);
                         if (rejectionReason == null) {
                             resolveCompositeValues(azquoMemoryDBConnection, namesFoundCache, attributeNames, lineToLoad, lineNumber, compositeIndexResolver);
+                            // yes this will mean certain cells will be checked twice
                             rejectionReason = checkOnlyAndExisting(azquoMemoryDBConnection, lineToLoad, attributeNames);
                         }
                     }
@@ -352,7 +353,7 @@ public class BatchImporter implements Callable<Void> {
     private static String checkOnlyAndExisting(AzquoMemoryDBConnection azquoMemoryDBConnection, List<ImportCellWithHeading> cells, List<String> languages) {
         //returns the error
         for (ImportCellWithHeading cell : cells) {
-            if (cell.getLineValue()!=null && cell.getImmutableImportHeading().only != null) {
+            if (!cell.needsResolving && cell.getImmutableImportHeading().only != null) {
                 //`only' can have wildcards  '*xxx*'
                 String only = cell.getImmutableImportHeading().only.toLowerCase();
                 String lineValue = cell.getLineValue().toLowerCase();
@@ -376,7 +377,7 @@ public class BatchImporter implements Callable<Void> {
             }
             // this assumes composite has been run if required
             // note that the code assumes there can only be one "existing" per line, it will exit this function on the first one.
-            if (cell.getLineValue()!=null && cell.getImmutableImportHeading().existing) {
+            if (!cell.needsResolving && cell.getImmutableImportHeading().existing) {
                 boolean cellOk = false;
                 if (cell.getImmutableImportHeading().attribute != null && cell.getImmutableImportHeading().attribute.length() > 0) {
                     languages = new ArrayList<>();
@@ -401,13 +402,7 @@ public class BatchImporter implements Callable<Void> {
         return null;
     }
 
-    // replace things in quotes with values from the other columns. So `A column name`-`another column name` might be created as 123-235 if they were the values
-    // Now supports basic excel like string operations, left right and mid, also simple single operator calculation on the results.
-    // Calcs simple for the moment - if required could integrate the shunting yard algorithm
-
-    private static void resolveCompositeValues(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFoundCache, List<String> attributeNames, List<ImportCellWithHeading> cells, int importLine, CompositeIndexResolver compositeIndexResolver) throws Exception {
-        boolean adjusted = true;
-        int timesLineIsModified = 0;
+    private static void initialNeedsResolvingCheck(List<ImportCellWithHeading> cells) {
         // first pass, sort overrides and flag what might need resolving
         for (ImportCellWithHeading cell : cells) {
             // we try to resolve if there's a composition pattern *and* no value in the cell. If there's a value in the cell we don't override it with a composite value *unless* it's flagged as headless according to an import template - see DSImportService line 270
@@ -418,11 +413,22 @@ public class BatchImporter implements Callable<Void> {
                 cell.setLineValue(cell.getImmutableImportHeading().override);
                 cell.needsResolving = false;
             }
+        }
+    }
+
+    // replace things in quotes with values from the other columns. So `A column name`-`another column name` might be created as 123-235 if they were the values
+    // Now supports basic excel like string operations, left right and mid, also simple single operator calculation on the results.
+    // Calcs simple for the moment - if required could integrate the shunting yard algorithm
+
+    private static void resolveCompositeValues(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFoundCache, List<String> attributeNames, List<ImportCellWithHeading> cells, int importLine, CompositeIndexResolver compositeIndexResolver) throws Exception {
+        boolean adjusted = true;
+        int timesLineIsModified = 0;
+        // no longer doing the initial check on needsResolving, this is done in the function above. Need to do it before an initial "only and existing" check
+        for (ImportCellWithHeading cell : cells) {
             //resolve some line names ASAP particularly to handle lookups (parent and element are separate cells)
             if (cell.getImmutableImportHeading().lineNameRequired && cell.getLineNames() == null && cell.getLineValue() != null && cell.getLineValue().length() > 0) {
                 optionalIncludeInParents(azquoMemoryDBConnection, cell, namesFoundCache, attributeNames);
             }
-
         }
         int loopLimit = 10;
         // loops in case there are multiple levels of dependencies. The compositionPattern stays the same but on each pass the result may be different.
