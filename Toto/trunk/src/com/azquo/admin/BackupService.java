@@ -157,7 +157,9 @@ public class BackupService {
             }
         }
 
-        File tempzip = File.createTempFile(loggedInUser.getDatabase().getName(), ".zip");
+        String dbName = loggedInUser.getDatabase().getName();
+        if (dbName.length() < 3) dbName = dbName + "xx";
+        File tempzip = File.createTempFile(dbName, ".zip");
         System.out.println("temp zip " + tempzip.getPath());
         ZipEntrySource[] zes = new ZipEntrySource[toZip.size()];
         toZip.toArray(zes);
