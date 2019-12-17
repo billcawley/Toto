@@ -88,12 +88,12 @@ public class OnlineReportDAO {
         return StandardDAO.findOneWithWhereSQLAndParameters("  WHERE " + StandardDAO.ID + " = :" + StandardDAO.ID + " and " + USERID + " = :" + USERID, TABLENAME, onlineReportRowMapper, namedParams);
     }
 
-    // case insensetive - todo - is this a security concern??
+    // changed to straight equals, like seemed tripped up by ampersand. Still case insensitive it seems, useful though maybe a security bug for some things
     public static OnlineReport findForNameAndBusinessId(final String name, int businessId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(REPORTNAME, name);
         namedParams.addValue(BUSINESSID, businessId);
-        return StandardDAO.findOneWithWhereSQLAndParameters("  WHERE " + REPORTNAME + " LIKE :" + REPORTNAME + " and " + BUSINESSID + " = :" + BUSINESSID, TABLENAME, onlineReportRowMapper, namedParams);
+        return StandardDAO.findOneWithWhereSQLAndParameters("  WHERE " + REPORTNAME + " =:" + REPORTNAME + " and " + BUSINESSID + " = :" + BUSINESSID, TABLENAME, onlineReportRowMapper, namedParams);
     }
 
     public static OnlineReport findForNameAndUserId(final String name, int userId) {

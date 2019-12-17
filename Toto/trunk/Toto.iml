@@ -53,5 +53,6 @@
     <orderEntry type="library" name="org.mariadb.jdbc:mariadb-java-client:2.4.0" level="project" />
     <orderEntry type="library" name="commons-codec:commons-codec:1.11" level="project" />
     <orderEntry type="library" name="com.fasterxml.jackson.dataformat:jackson-dataformat-csv:2.9.2" level="project" />
+    <orderEntry type="library" name="com.microsoft.azure:adal4j:1.6.4" level="project" />
   </component>
 </module>

@@ -20,8 +20,6 @@ import com.azquo.spreadsheet.transport.json.JsonChildren;
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.OperatingSystemMXBean;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.rmi.RemoteException;
 import java.text.NumberFormat;
 import java.util.List;
@@ -382,7 +380,8 @@ class RMIImplementation implements RMIInterface {
         try {
             StringBuilder toReturn = new StringBuilder();
             OperatingSystemMXBean operatingSystemMXBean = ManagementFactory.getOperatingSystemMXBean();
-            double percent = -1;
+            NumberFormat nf = NumberFormat.getInstance();
+/*            double percent = -1;
             for (Method method : operatingSystemMXBean.getClass().getDeclaredMethods()) {
                 method.setAccessible(true);
                 if (method.getName().equals("getSystemCpuLoad")
@@ -396,8 +395,9 @@ class RMIImplementation implements RMIInterface {
 //                    toReturn.append(method.getName() + " = " + value);
                 } // if
             } // for            // variable here is a bit easier to read and makes intellij happier
-            NumberFormat nf = NumberFormat.getInstance();
-            String message = "--- CPU USAGE :  " + nf.format(percent * 100) + "%";
+            */
+//            String message = "--- CPU USAGE :  " + nf.format(percent * 100) + "%";
+            String message = "--- System load average :  " + nf.format(operatingSystemMXBean.getSystemLoadAverage());
             toReturn.append(message);
             return toReturn.toString();
         } catch (Exception e) {

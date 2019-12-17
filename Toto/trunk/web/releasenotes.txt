@@ -1,3 +1,15 @@
+12-12-19
+
+Bug fix detecting import templates on upload and creating new users given new criteria that users can exist for more than one business
+
+initial version of hanover permium groovy to sort the section and contract years
+
+XLSX
+
+Created Hanover directory
+
+Limnet off for the mo on Allrisks
+
 10-12-19
 
 Bug fix on register business. Bug fix on new menu formatting.

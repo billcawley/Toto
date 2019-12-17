@@ -432,7 +432,6 @@ public class ExcelController {
                                 database = loggedInUser.getDatabase().getName();
                             }
                             if (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()) {
-                                //report id is assumed to be integer - sent from the website
                                 onlineReport = OnlineReportDAO.findForNameAndBusinessId(reportName, loggedInUser.getUser().getBusinessId());
                                 onlineReport.setDatabase(database);
                                 loggedInUser.getUser().setReportId(onlineReport.getId());
@@ -551,12 +550,17 @@ public class ExcelController {
                     //book.getInternalBook().setAttribute(REPORT_ID, or.getId());
                     //ReportRenderer.populateBook(book, 0);
                     Map<String, TypedPair<Integer, Integer>> reports = loggedInUser.getReportIdDatabaseIdPermissions();
-                    for (String reportName2 : reports.keySet()) {
-                        TypedPair<Integer, Integer> tp = reports.get(reportName2);
-                        OnlineReport or = OnlineReportDAO.findById(tp.getFirst());
-                        Database db = DatabaseDAO.findById(tp.getSecond());
-                        databaseReports.add(new DatabaseReport(or.getFilename(), or.getAuthor(), or.getUntaggedReportName(), db.getName(), or.getCategory()));
-                        databaseReports.sort(Comparator.comparing(o -> (o.getCategory() + o.getSheetName())));
+                    if (!reports.isEmpty()){
+                        for (String reportName2 : reports.keySet()) {
+                            TypedPair<Integer, Integer> tp = reports.get(reportName2);
+                            OnlineReport or = OnlineReportDAO.findById(tp.getFirst());
+                            Database db = DatabaseDAO.findById(tp.getSecond());
+                            databaseReports.add(new DatabaseReport(or.getFilename(), or.getAuthor(), or.getUntaggedReportName(), db.getName(), or.getCategory()));
+                            databaseReports.sort(Comparator.comparing(o -> (o.getCategory() + o.getSheetName())));
+                        }
+                    } else { // a developer or admin who happens to have one report
+                        OnlineReport or = allowedReports.get(0);
+                        databaseReports.add(new DatabaseReport(or.getFilename(), or.getAuthor(), or.getUntaggedReportName(), or.getDatabase(), or.getCategory()));
                     }
                 } else {
                     // admin
