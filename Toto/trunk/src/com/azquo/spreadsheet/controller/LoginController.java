@@ -49,9 +49,14 @@ public class LoginController {
             , @RequestParam(value = "connectionid", required = false) String connectionid // only for the magento plugin and Javascript (connectionId = "javascript")
             , @RequestParam(value = "userid", required = false) String userid // if a user exists in more than one business then
             , @RequestParam(value = "select", required = false) String select
+            , @RequestParam(value = "azure", required = false) String azure
     ) throws Exception {
         if (session.getAttribute(LOGGED_IN_USERS_SESSION) != null) {
             List<LoggedInUser> loggedInUsers = (List<LoggedInUser>) session.getAttribute(LOGGED_IN_USERS_SESSION);
+            if ("true".equals(azure)) {
+                return "utf8page";
+            }
+
             if ("true".equals(select)) {
                 List<User> usersToShow = new ArrayList<>();
                 for (LoggedInUser l : loggedInUsers) {

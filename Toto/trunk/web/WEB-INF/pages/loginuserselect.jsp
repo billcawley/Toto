@@ -5,11 +5,6 @@
 
 <main class="basicDialog">
 	<div class="basic-box-container">
-		<div class="basic-head">
-			<div class="logo">
-				<img src="/images/logo_alt.png" alt="azquo">
-			</div>
-		</div>
 		<div class="basic-box">
 			<h3>Please select a business</h3>
 			<c:forEach items="${users}" var="user">

@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.MappingIterator;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -134,7 +135,7 @@ class ValuesImport {
                 // I guess watch for possible performance issues . . .
                 // this try should gracefully release the resources
                 long time = System.currentTimeMillis();
-                try (BufferedReader br = Files.newBufferedReader(Paths.get(uploadedFile.getPath()), StandardCharsets.UTF_8)) {
+                try (BufferedReader br = Files.newBufferedReader(Paths.get(uploadedFile.getPath()), uploadedFile.getParameter(DSImportService.FILEENCODING) != null ? Charset.forName(uploadedFile.getParameter(DSImportService.FILEENCODING)) : StandardCharsets.UTF_8)) {
                     lineNo = 0;
                     String line;
                     // I assume the line no as given by the json iterator starts at line 1, might have to check this . . .

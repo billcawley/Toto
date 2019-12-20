@@ -37,7 +37,7 @@ import java.util.*;
  */
 public class DSImportService {
 
-    private static final String FILEENCODING = "fileencoding";
+    public static final String FILEENCODING = "fileencoding";
 
     // called by RMIImplementation, the entry point from the report server
     public static UploadedFile readPreparedFile(final DatabaseAccessToken databaseAccessToken, UploadedFile uploadedFile, final String user) throws Exception {
@@ -477,16 +477,21 @@ public class DSImportService {
         char delimiter = ',';
 //        System.out.println("get lines with values and column, col index : " + columnIndex);
 //        System.out.println("get lines with values and column, values to check : " + valuesToCheck);
-        try (BufferedReader br = Files.newBufferedReader(Paths.get(uploadedFile.getPath()), StandardCharsets.UTF_8)) {
-            // grab the first line to check on delimiters
-            String firstLine = br.readLine();
-            if (firstLine.contains("|")) {
-                delimiter = '|';
-            }
-            if (firstLine.contains("\t")) {
-                delimiter = '\t';
+        if (uploadedFile.isConvertedFromWorksheet()){
+            delimiter = '\t';
+        } else {
+            try (BufferedReader br = Files.newBufferedReader(Paths.get(uploadedFile.getPath()), StandardCharsets.UTF_8)) {
+                // grab the first line to check on delimiters
+                String firstLine = br.readLine();
+                if (firstLine.contains("|")) {
+                    delimiter = '|';
+                }
+                if (firstLine.contains("\t")) {
+                    delimiter = '\t';
+                }
             }
         }
+
         CsvMapper csvMapper = new CsvMapper();
         csvMapper.enable(CsvParser.Feature.WRAP_AS_ARRAY);
         CsvSchema schema = csvMapper.schemaFor(String[].class)

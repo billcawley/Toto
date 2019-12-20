@@ -1,3 +1,11 @@
+17-12-19
+
+Adjustments to checkOnlyAndExisting to stop the "names being created by composite on a line that's then rejected bug"
+
+Bug fix on auditing when that region is from a different database, don't scan tracking evey hour, make it every day
+
+Bug fixes in the excel controller where there's one report. Lookup reports by name where the name has ampersand in it
+
 12-12-19
 
 Bug fix detecting import templates on upload and creating new users given new criteria that users can exist for more than one business

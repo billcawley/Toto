@@ -172,7 +172,7 @@ class ZKContextMenu {
                 // copy pasted from ReportRenderer about line 300, maybe factor?
                 String databaseName = userRegionOptions.getDatabaseName();
                 // fairly simple addition to allow multiple databases on the same report
-                // todo - support when saving . . .
+                // also - can we deal with repeat regions?
                 ProvenanceDetailsForDisplay provenanceDetailsForDisplay = null;
                 if (databaseName != null) { // then switch database, fill and switch back!
                     origDatabase = loggedInUser.getDatabase();

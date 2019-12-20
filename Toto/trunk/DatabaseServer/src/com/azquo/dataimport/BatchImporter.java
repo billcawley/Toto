@@ -424,6 +424,7 @@ public class BatchImporter implements Callable<Void> {
         boolean adjusted = true;
         int timesLineIsModified = 0;
         // no longer doing the initial check on needsResolving, this is done in the function above. Need to do it before an initial "only and existing" check
+        // should this be in there?
         for (ImportCellWithHeading cell : cells) {
             //resolve some line names ASAP particularly to handle lookups (parent and element are separate cells)
             if (cell.getImmutableImportHeading().lineNameRequired && cell.getLineNames() == null && cell.getLineValue() != null && cell.getLineValue().length() > 0) {

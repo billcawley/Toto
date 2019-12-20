@@ -117,7 +117,6 @@ public class ReportRenderer {
 
             Set<String> repeatRegionTracker = new HashSet<>();
             Sheet sheet = book.getSheetAt(sheetNumber);
-
             SName az_CurrentUser = BookUtils.getNameByName(AZCURRENTUSER, sheet);
             if (az_CurrentUser != null){
                 BookUtils.getSnameCell(az_CurrentUser).setStringValue(loggedInUser.getUser().getEmail());
@@ -374,6 +373,13 @@ public class ReportRenderer {
                 ChoicesService.resolveDependentChoiceOptions(sheet.getSheetName().replace(" ", ""), dependentRanges, book, loggedInUser);
             }
         }
+        for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {
+            Sheet s =  book.getSheetAt(sheetNumber);
+            if (s.getSheetName().startsWith("-")){
+                book.getInternalBook().moveSheetTo(s.getInternalSheet(), book.getNumberOfSheets()-1);
+            }
+        }
+
         for (Map.Entry<Sheet, String> sheetNewName : sheetsToRename.entrySet()) {
             Sheet sheet = sheetNewName.getKey();
             String newName = sheetNewName.getValue();
