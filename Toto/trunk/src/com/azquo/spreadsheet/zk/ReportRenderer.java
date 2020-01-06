@@ -493,7 +493,8 @@ public class ReportRenderer {
             loggedInUser.setSentCells(reportId, sheetName, region, cellsAndHeadingsForDisplay);
             if (userRegionOptions.getPreSave()){
                 ReportService.checkDataChangeAndSnapCharts(loggedInUser, reportId, sheet.getBook(), sheet, false, false);
-                SpreadsheetService.saveData(loggedInUser, reportId, "report", sheet.getSheetName(), region, false);
+                // see comment on other pre save b-t - should we just pass through online report?
+                SpreadsheetService.saveData(loggedInUser, reportId, loggedInUser.getOnlineReport().getReportName(), sheet.getSheetName(), region, false);
             }
             return null;
         }
@@ -664,7 +665,8 @@ public class ReportRenderer {
         }
         if (userRegionOptions.getPreSave()){
             ReportService.checkDataChangeAndSnapCharts(loggedInUser, reportId, sheet.getBook(), sheet, false, false);
-            SpreadsheetService.saveData(loggedInUser, reportId, "report", sheet.getSheetName(), region, false);
+            // I'm using the logged in user to get the report and the report name - should this be used for report id? Or pass through the report?
+            SpreadsheetService.saveData(loggedInUser, reportId, loggedInUser.getOnlineReport().getReportName(), sheet.getSheetName(), region, false);
         }
         return null; // will it get here ever?
     }

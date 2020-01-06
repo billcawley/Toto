@@ -34,7 +34,6 @@ import org.zeroturnaround.zip.ZipEntrySource;
 import org.zeroturnaround.zip.ZipUtil;
 
 import java.io.*;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -53,11 +52,11 @@ public class BackupService {
     public static File createDBandReportsAndTemplateBackup(LoggedInUser loggedInUser, boolean justReports) throws Exception {
         // ok, new code to dump a database and all reports. The former being the more difficult bit.
         String dname = loggedInUser.getDatabase().getName();
-        if (dname.length() < 3){
+        if (dname.length() < 3) {
             dname += "---";
         }
         File dbFile = null;
-        if (!justReports){
+        if (!justReports) {
             dbFile = File.createTempFile(dname, ".db");
             String tempPath = dbFile.getPath();
             createDBBackupFile(loggedInUser.getDatabase().getName(), loggedInUser.getDataAccessToken(), tempPath, loggedInUser.getDatabaseServer().getIp());
@@ -71,33 +70,29 @@ public class BackupService {
         // ok now need to check for uploads with file types
         List<UploadRecord> forDatabaseIdWithFileType = UploadRecordDAO.findForDatabaseIdWithFileType(loggedInUser.getDatabase().getId());
         Map<String, List<UploadRecord>> groupedByFileType = new HashMap<>();
-        for (UploadRecord uploadRecord : forDatabaseIdWithFileType){
-            groupedByFileType.computeIfAbsent(uploadRecord.getFileType(), t->new ArrayList<>()).add(uploadRecord);
+        for (UploadRecord uploadRecord : forDatabaseIdWithFileType) {
+            groupedByFileType.computeIfAbsent(uploadRecord.getFileType(), t -> new ArrayList<>()).add(uploadRecord);
         }
         int limit = 4;
         Set<String> zipFiles = new HashSet<>();
-        for (String type : groupedByFileType.keySet()){
+        for (String type : groupedByFileType.keySet()) {
             List<UploadRecord> forType = groupedByFileType.get(type);
             // check each file exists!
-            for (UploadRecord uploadRecord : forType){
-                if (!Files.exists(Paths.get(uploadRecord.getTempPath()))){
-                    forType.remove(uploadRecord);
-                }
-            }
+            forType.removeIf(uploadRecord -> !Files.exists(Paths.get(uploadRecord.getTempPath())));
             // date sort for dedupe and trimming
             forType.sort((uploadRecord, t1) -> {
                 return -uploadRecord.getDate().compareTo(t1.getDate()); // - as we want descending
             });
 
-            if (forType.size() > limit){
-                forType = forType.subList(0,limit);
+            if (forType.size() > limit) {
+                forType = forType.subList(0, limit);
             }
             // iterator can remove
             Iterator<UploadRecord> uploadRecordIterator = forType.iterator();
             String lastName = null;
-            while (uploadRecordIterator.hasNext()){
+            while (uploadRecordIterator.hasNext()) {
                 UploadRecord check = uploadRecordIterator.next();
-                if (check.getFileName().equalsIgnoreCase(lastName)){
+                if (check.getFileName().equalsIgnoreCase(lastName)) {
                     uploadRecordIterator.remove();
                 } else {
                     lastName = check.getFileName();
@@ -105,20 +100,20 @@ public class BackupService {
             }
             groupedByFileType.put(type, forType); // re set it as forType may have been reassigned by sublist
         }
-        if (dbFile != null){
+        if (dbFile != null) {
             toZip.add(new FileSource(dbFile.getName(), dbFile));
             zipFiles.add(dbFile.getName());
         }
         for (OnlineReport onlineReport : onlineReports) {
             String category = null;
-            if (onlineReport.getCategory() != null && !onlineReport.getCategory().isEmpty()){
+            if (onlineReport.getCategory() != null && !onlineReport.getCategory().isEmpty()) {
                 category = onlineReport.getCategory();
             }
             // this little chunk to stop duplicate entries
             String zipPath = (category != null ? category + CATEGORYBREAK : "") + onlineReport.getFilename();
-            if (zipFiles.contains(zipPath)){
+            if (zipFiles.contains(zipPath)) {
                 int counter = 0;
-                while (zipFiles.contains(counter + zipPath)){
+                while (zipFiles.contains(counter + zipPath)) {
                     counter++;
                 }
                 zipPath = counter + zipPath;
@@ -127,12 +122,12 @@ public class BackupService {
             toZip.add(new FileSource(zipPath, new File(SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + onlineReport.getFilenameForDisk())));
             zipFiles.add(zipPath);
         }
-        if (importTemplate != null){
+        if (importTemplate != null) {
             // this little chunk to stop duplicate entries
             String zipPath = importTemplate.getFilenameForDisk();
-            if (zipFiles.contains(zipPath)){
+            if (zipFiles.contains(zipPath)) {
                 int counter = 0;
-                while (zipFiles.contains(counter + zipPath)){
+                while (zipFiles.contains(counter + zipPath)) {
                     counter++;
                 }
                 zipPath = counter + zipPath;
@@ -141,13 +136,13 @@ public class BackupService {
             zipFiles.add(zipPath);
         }
         // now the typed uploads, need to clearly mark them as such
-        for (List<UploadRecord> forType : groupedByFileType.values()){
-            for (UploadRecord uploadRecord : forType){
+        for (List<UploadRecord> forType : groupedByFileType.values()) {
+            for (UploadRecord uploadRecord : forType) {
                 // this little chunk to stop duplicate entries
                 String zipPath = uploadRecord.getFileType() + TYPEBREAK + uploadRecord.getFileName();
-                if (zipFiles.contains(zipPath)){
+                if (zipFiles.contains(zipPath)) {
                     int counter = 0;
-                    while (zipFiles.contains(counter + zipPath)){
+                    while (zipFiles.contains(counter + zipPath)) {
                         counter++;
                     }
                     zipPath = counter + zipPath;
@@ -169,6 +164,7 @@ public class BackupService {
     }
 
     public static String loadBackup(LoggedInUser loggedInUser, File file, String database) throws Exception {
+        //long time = System.currentTimeMillis();
         StringBuilder toReturn = new StringBuilder();
         System.out.println("attempting backup restore on " + file.getPath());
         ZipUtil.explode(file);
@@ -184,10 +180,10 @@ public class BackupService {
             }
         }
         // I'm going to allow backup restores on just the reports, as we're trying to enable batch report and import template versioning
-        if (!dbRestored){
+        if (!dbRestored) {
             // some copying from Admin service
             Database db = DatabaseDAO.findForNameAndBusinessId(database, loggedInUser.getUser().getBusinessId());
-            if (db != null){
+            if (db != null) {
                 loggedInUser.setDatabaseWithServer(DatabaseServerDAO.findById(db.getDatabaseServerId()), db);
                 final List<OnlineReport> reports = OnlineReportDAO.findForDatabaseId(db.getId());
                 DatabaseReportLinkDAO.unLinkDatabase(db.getId());
@@ -211,7 +207,7 @@ public class BackupService {
         for (File f : files) {
             if (!f.getName().endsWith(".db")) {
                 // deal with the moved (typed) uploads first
-                if (f.getName().contains(TYPEBREAK)){
+                if (f.getName().contains(TYPEBREAK)) {
                     // fragments of the code to make an upload record without actually uploading
                     String type = f.getName().substring(0, f.getName().indexOf(TYPEBREAK));
                     String fileName = f.getName().substring(f.getName().indexOf(TYPEBREAK) + TYPEBREAK.length());
@@ -243,21 +239,30 @@ public class BackupService {
                     List<UploadedFile> uploadedFiles = ImportService.importTheFile(loggedInUser
                             , new UploadedFile(f.getAbsolutePath(), Collections.singletonList(fileName), false), null, null);
                     // EFC : got to hack the category in, I don't like this . . .
-                    if (category != null){
-                        for (UploadedFile uploadedFile : uploadedFiles){
-                            if (uploadedFile.getReportName() != null){
+                    if (category != null) {
+                        for (UploadedFile uploadedFile : uploadedFiles) {
+                            if (uploadedFile.getReportName() != null) {
                                 OnlineReport or = OnlineReportDAO.findForNameAndUserId(uploadedFile.getReportName(), loggedInUser.getUser().getId());
-                                if (or != null){
+                                if (or != null) {
                                     or.setCategory(category);
                                     OnlineReportDAO.store(or);
                                 }
                             }
                         }
                     }
-                    toReturn.append(ManageDatabasesController.formatUploadedFiles(uploadedFiles,-1, false, null)).append("<br/>");
+                    toReturn.append(ManageDatabasesController.formatUploadedFiles(uploadedFiles, -1, false, null)).append("<br/>");
                 }
             }
         }
+/*        long secondstaken = (System.currentTimeMillis() - time) / 1000;
+        System.gc();
+        final Runtime runtime = Runtime.getRuntime();
+        final int mb = 1024 * 1024;
+        NumberFormat nf = NumberFormat.getInstance();
+        // variable here is a bit easier to read and makes intellij happier
+        System.out.println("--- MEMORY USED :  " + nf.format((runtime.totalMemory() - runtime.freeMemory()) / mb) + "MB of " + nf.format(runtime.totalMemory() / mb) + "MB, max allowed " + nf.format(runtime.maxMemory() / mb));
+        System.out.println("time taken to restore backup : " + secondstaken);*/
+
         return toReturn.toString();
     }
 
@@ -404,6 +409,7 @@ public class BackupService {
             e.printStackTrace();
         }
     }
+
     // todo - use Path for paths? applies everywhere!
     public static void createDBBackupFile(String databaseName, DatabaseAccessToken databaseAccessToken, String filePath, String databaseServerIP) throws Exception {
         System.out.println("attempting to create backup file " + filePath);

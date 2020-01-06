@@ -92,10 +92,10 @@ public final class Name extends AzquoMemoryDBEntity {
         this.provenance = provenance;
     }
 
+    private static AtomicInteger newName3Count = new AtomicInteger(0);
+
     // For loading, it should only be used by the NameDAO, I can't really restrict it and make it non public without rearranging the package I don't think.
     // yes I am exposing "this". Seems ok so far. Interning the attributes should help memory usage.
-
-    private static AtomicInteger newName3Count = new AtomicInteger(0);
 
     public Name(final AzquoMemoryDB azquoMemoryDB, int id, int provenanceId, String attributes, int noParents, int noValues) throws Exception {
         this(azquoMemoryDB, id, provenanceId,null, attributes, noParents, noValues, false);
@@ -232,6 +232,11 @@ public final class Name extends AzquoMemoryDBEntity {
         }
         parents = newList.toArray(new Name[newList.size()]);
     }
+
+    // should only be called on loading, potential to break things. lock this down. todo
+    /*synchronized void normaliseParents(Name source) {
+        parents = source.parents;
+    }*/
 
     // no duplication is while loading, to reduce work
     private static AtomicInteger addToValuesCount = new AtomicInteger(0);
@@ -548,7 +553,7 @@ public final class Name extends AzquoMemoryDBEntity {
 
     private static AtomicInteger finaAllChildrenCount = new AtomicInteger(0);
 
-    private void findAllChildren(Name name, final Set<Name> allChildren) {
+    private static void findAllChildren(Name name, final Set<Name> allChildren) {
         finaAllChildrenCount.incrementAndGet();
         // similar to optimisation for get all parents
         // and we'll know if we look at the log. If this happened a local reference to the array should sort it, save the pointer garbage for the mo
@@ -670,6 +675,7 @@ public final class Name extends AzquoMemoryDBEntity {
         return childrenAsSet != null || children.length > 0;
     }
 
+    // todo - new implementations might mean that a false to true race condition may result in a null array reference. Since it won't go set->array then trying for the array first would be the thing to do
     public boolean hasChildrenAsSet() {
         return childrenAsSet != null;
     }

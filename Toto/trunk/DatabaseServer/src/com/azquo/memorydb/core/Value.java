@@ -25,7 +25,7 @@ public final class Value extends AzquoMemoryDBEntity {
 
     private Provenance provenance;
     // todo, consider alternate value representation. Double option with this null? Char array?
-    // Notable that getText is used in all of 19 places so this is doable though it would need changes to the DAO also.
+    //
     // Empty String is about 40 bytes I think so maybe 30 bytes saved if there's a null pointer and double instead.
     private String text;//no longer final.   May be adjusted during imports (if duplicate lines are found will sum...)
 

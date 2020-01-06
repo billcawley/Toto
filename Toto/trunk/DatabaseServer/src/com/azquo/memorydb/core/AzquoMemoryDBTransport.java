@@ -5,6 +5,8 @@ import com.azquo.memorydb.dao.JsonRecordDAO;
 import com.azquo.memorydb.dao.JsonRecordTransport;
 import com.azquo.memorydb.dao.NameDAO;
 import com.azquo.memorydb.dao.ValueDAO;
+import net.openhft.koloboke.collect.map.hash.HashObjObjMaps;
+import org.apache.commons.lang.math.NumberUtils;
 
 import java.text.NumberFormat;
 import java.util.*;
@@ -291,6 +293,148 @@ class AzquoMemoryDBTransport {
         logInSessionLogAndSystem("Total load time for " + persistenceName + " " + (System.currentTimeMillis() - startTime) / 1000 + " second(s)");
         //azquoMemoryDB.getIndex().printIndexStats();
         //AzquoMemoryDB.printAllCountStats();
+        // stuff Ed added to profile data
+        NumberFormat nf = NumberFormat.getInstance();
+/*
+        int namesWithOnlyDefaultDisplayName = 0;
+        int namesRequiringAttributes = 0;
+        int namesWithOnlyOneParent = 0;
+        int namesWithMoreThanOneParent = 0;
+        int namesWithNoValues = 0;
+        int namesWithArrayValues = 0;
+        int namesWithSetValues = 0;
+        int namesWithNoChildremn = 0;
+        int namesWithArrayChildren = 0;
+        int namesWithSetChildren = 0;
+        int totalNameCount = azquoMemoryDB.getAllNames().size();
+        Map<List<Name>, Name> existingParents = HashObjObjMaps.newMutableMap();;
+        for (Name n : azquoMemoryDB.getAllNames()){
+            if (n.getDefaultDisplayName() != null && n.getAttributeKeys().size() == 1) {
+                namesWithOnlyDefaultDisplayName++;
+            } else { // I don't think it can be 0
+                namesRequiringAttributes++;
+            }
+            if (n.getParents().size() == 1){
+                namesWithOnlyOneParent++;
+            } else if (n.getParents().size() > 1){
+                namesWithMoreThanOneParent++;
+            }
+            if (n.getValues().isEmpty()){
+                namesWithNoValues++;
+            } else if (n.getValueCount() < Name.ARRAYTHRESHOLD){
+                namesWithArrayValues++;
+            } else {
+                namesWithSetValues++;
+            }
+            if (n.getChildren().isEmpty()){
+                namesWithNoChildremn++;
+            } else if (n.getChildren().size() < Name.ARRAYTHRESHOLD){
+                namesWithArrayChildren++;
+            } else {
+                namesWithSetChildren++;
+            }
+            if (!n.getParents().isEmpty()){
+                List<Name> parents = new ArrayList<>(n.getParents());
+                parents.sort(Comparator.comparing(Name::getId));
+                if (existingParents.containsKey(parents)){
+                    n.normaliseParents(existingParents.get(parents));
+                } else {
+                    existingParents.put(parents, n);
+                }
+            }
+        }
+        existingParents = null;*/
+    /*    if (totalNameCount > 0){
+            List<Map.Entry<List<Name>, AtomicInteger>> toSort = new ArrayList<>(parentsTrack.entrySet());
+            toSort.sort(Comparator.comparing(listAtomicIntegerEntry -> listAtomicIntegerEntry.getValue().get()));
+            int count = 0;
+            //Collections.reverse(toSort);
+            for (Map.Entry<List<Name>, AtomicInteger> entry : toSort){
+                int noNames = entry.getValue().get();
+                String namesDesc = new String();
+                for (Name parent : entry.getKey()){
+                    namesDesc += ", " + parent.getDefaultDisplayName();// I suppose may get some nulls, not so botered right now
+                }
+                System.out.println("Names with the following parents : " + namesDesc + " : " + nf.format(noNames) + ", " + nf.format((100*noNames)/totalNameCount) + "%");
+                if (count > 100){
+                    break;
+                }
+                count++;
+            }
+            System.out.println("namesWithOnlyDefaultDisplayName : " + nf.format(namesWithOnlyDefaultDisplayName) + ", " + nf.format((100*namesWithOnlyDefaultDisplayName)/totalNameCount) + "%");
+            System.out.println("namesRequiringAttributes : " + nf.format(namesRequiringAttributes) + ", " + nf.format((100*namesRequiringAttributes)/totalNameCount) + "%");
+            System.out.println("namesWithOnlyOneParent : " + nf.format(namesWithOnlyOneParent) + ", " + nf.format((100*namesWithOnlyOneParent)/totalNameCount) + "%");
+            System.out.println("namesWithMoreThanOneParent : " + nf.format(namesWithMoreThanOneParent) + ", " + nf.format((100*namesWithMoreThanOneParent)/totalNameCount) + "%");
+            System.out.println("namesWithNoValues : " + nf.format(namesWithNoValues) + ", " + nf.format((100*namesWithNoValues)/totalNameCount) + "%");
+            System.out.println("namesWithArrayValues : " + nf.format(namesWithArrayValues) + ", " + nf.format((100*namesWithArrayValues)/totalNameCount) + "%");
+            System.out.println("namesWithSetValues : " + nf.format(namesWithSetValues) + ", " + nf.format((100*namesWithSetValues)/totalNameCount) + "%");
+            System.out.println("namesWithNoChildremn : " + nf.format(namesWithNoChildremn) + ", " + nf.format((100*namesWithNoChildremn)/totalNameCount) + "%");
+            System.out.println("namesWithArrayChildren : " + nf.format(namesWithArrayChildren) + ", " + nf.format((100*namesWithArrayChildren)/totalNameCount) + "%");
+            System.out.println("namesWithSetChildren : " + nf.format(namesWithSetChildren) + ", " + nf.format((100*namesWithSetChildren)/totalNameCount) + "%");
+        }*/
+        /*
+        Risk solutions example
+        namesWithOnlyDefaultDisplayName : 143,581, 46%
+namesRequiringAttributes : 166,892, 53%
+namesWithOnlyOneParent : 77,081, 24%
+namesWithMoreThanOneParent : 233,360, 75%
+namesWithNoValues : 130,342, 41%
+namesWithArrayValues : 180,074, 57%
+namesWithSetValues : 57, 0%
+namesWithNoChildremn : 124,457, 40%
+namesWithArrayChildren : 185,818, 59%
+namesWithSetChildren : 198, 0%
+easylife example
+namesWithOnlyDefaultDisplayName : 1,940,309, 54%
+namesRequiringAttributes : 1,616,234, 45%
+namesWithOnlyOneParent : 671,409, 18%
+namesWithMoreThanOneParent : 2,885,100, 81%
+namesWithNoValues : 709,597, 19%
+namesWithArrayValues : 2,846,913, 80%
+namesWithSetValues : 33, 0%
+namesWithNoChildremn : 1,939,665, 54%
+namesWithArrayChildren : 1,615,642, 45%
+namesWithSetChildren : 1,236, 0%
+
+        // now for some Value analysis . . .
+        int valuesWhichAreNumbers = 0;
+        int valuesWhichAreNotNumbers = 0;
+        int sopCount = 0;
+        Set<String> printed = new HashSet<>();
+        for (Value v : azquoMemoryDB.getAllValues()){
+            if (NumberUtils.isNumber(v.getText())){
+                valuesWhichAreNumbers++;
+            } else {
+                valuesWhichAreNotNumbers++;
+                if (sopCount < 100 && printed.add(v.getText())){
+                    System.out.println("non numeric value : " + v.getText());
+                    sopCount++;
+                }
+            }
+        }
+        System.out.println("valuesWhichAreNumbers : " + nf.format(valuesWhichAreNumbers) + ", " + nf.format((100*valuesWhichAreNumbers)/azquoMemoryDB.getAllValues().size()) + "%");
+        System.out.println("valuesWhichAreNotNumbers : " + nf.format(valuesWhichAreNotNumbers) + ", " + nf.format((100*valuesWhichAreNotNumbers)/azquoMemoryDB.getAllValues().size()) + "%");
+        /*
+        Risk solutions
+        non numeric value : B0702BB302040LAB
+        valuesWhichAreNumbers : 1,535,568, 95%
+valuesWhichAreNotNumbers : 68,278, 4%
+easylife
+non numeric value : xxx
+non numeric value : RN0472881
+valuesWhichAreNumbers : 4,887,985, 98%
+valuesWhichAreNotNumbers : 72,974, 1%
+         */
+
+        if (memoryTrack) {
+            marker = System.currentTimeMillis();
+            // using system.gc before and after loading to get an idea of DB memory overhead
+            System.gc();
+            System.out.println("gc time : " + (System.currentTimeMillis() - marker));
+            long newUsed = (runtime.totalMemory() - runtime.freeMemory()) / mb;
+            System.out.println("Guess at DB size after attempting parents normalisation " + nf.format(newUsed - usedMB) + "MB");
+            System.out.println("--- MEMORY USED :  " + nf.format((runtime.totalMemory() - runtime.freeMemory()) / mb) + "MB of " + nf.format(runtime.totalMemory() / mb) + "MB, max allowed " + nf.format(runtime.maxMemory() / mb));
+        }
     }
 
 

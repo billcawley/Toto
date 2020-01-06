@@ -74,7 +74,6 @@ public class BatchImporter implements Callable<Void> {
                 ImportCellWithHeading first = lineToLoad.get(0);
             /*
             There's a thought that this should be a whole line check rather than the first column.
-            There's a thought that this should be a whole line check rather than the first column.
 
             Skip any line that has a blank in the first column unless the first column had no heading or it's composite
             happy for the check to remain in here - more stuff for the multi threaded bit

@@ -92,6 +92,7 @@ public final class ValueService {
                     }
                     // note - this doesn't currently automatically flag the value for persisting but in this circumstance it will have been flagged already.
                     // Still, it's a moment to watch for - perhaps setText should just flag for persisting anyway?
+                    // this is the only use of set text, should it be there?
                     existingValue.setText(valueString);
                 } catch (Exception e) {
                     // use the latest value

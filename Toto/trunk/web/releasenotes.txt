@@ -1,3 +1,19 @@
+20-12-19
+
+Checked for database names of two letters or less - download backup bug
+
+Hanover claim groovy added
+
+Validation bug fix required for Hanover (converted from spreadsheet is always tab separated)
+
+Charset fix on lines rejected list
+
+Preparation for Azure authentication
+
+XLSX
+
+Limnet not just off but XML tags removed for the moment
+
 17-12-19
 
 Adjustments to checkOnlyAndExisting to stop the "names being created by composite on a line that's then rejected bug"

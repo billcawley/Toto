@@ -80,7 +80,7 @@ public class DBCron {
     // need to think of how to define this
     @Scheduled(cron = "0 * * * * *")
     public void directoryScan() throws Exception {
-        final long millisOldThreshold = 300_000;
+        final long millisOldThreshold = 300_000; // must be at least 5 mins old. Don't catch a file that's being transferred
         synchronized (this) { // one at a time
             if (SpreadsheetService.getScanBusiness() != null && SpreadsheetService.getScanBusiness().length() > 0) {
                 Business b = BusinessDAO.findByName(SpreadsheetService.getScanBusiness());
@@ -94,7 +94,7 @@ public class DBCron {
                         }
 
                         Path p = Paths.get(SpreadsheetService.getScanDir());
-                        try (Stream<Path> list = Files.list(p)) {
+                        try (Stream<Path> list = Files.list(p).sorted()) { // go alphabetical, might be important for upload order . . .
                             list.forEach(path -> {
                                 // Do stuff
                                 if (!Files.isDirectory(path)) { // skip any directories
