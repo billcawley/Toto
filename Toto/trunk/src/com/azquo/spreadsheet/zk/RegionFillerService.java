@@ -81,7 +81,10 @@ class RegionFillerService {
                         if (totalCount == 1 && totalRow == -1) {
                             totalRow = lineFormat.getRowIndex();
                         }
-                        if (totalCount == 1 && totalRow > displayRowHeadings.getRow()) {
+                        // EFC commenting the block below - it is breaking LSB and I can't see what it is for. Since it relates to formatting commenting it won't break any figures
+                        // the break was that a line below the data region was being pulled into the data region so do NOT just uncomment this code, it will break things
+                        // Svn 1892 the comment from WFC was Will accept formulae based on local totals in pivot tables
+                        /*if (totalCount == 1 && totalRow > displayRowHeadings.getRow()) {
                             //copy the total row and the line above to the current position, then copy the line above into the intermediate rows
                             int dataStart = displayDataRegion.getColumn();
                             int copyRows = row - lastTotalRow - 2;
@@ -106,7 +109,7 @@ class RegionFillerService {
                                 CellOperationUtil.insert(Ranges.range(sheet, lastTotalRow + 2, dataStart, row - 3, selEnd), Range.InsertShift.DOWN, Range.InsertCopyOrigin.FORMAT_NONE);
                                 CellOperationUtil.paste(Ranges.range(sheet, lastTotalRow + 1, dataStart, lastTotalRow + 1, selEnd), Ranges.range(sheet, lastTotalRow + 2, dataStart, row - 3, selEnd));
                             }
-                        }
+                        }*/
                         CellOperationUtil.applyBackColor(selection, lineFormat.getCellStyle().getBackColor().getHtmlColor());
                         CellOperationUtil.applyFontColor(selection, lineFormat.getCellStyle().getFont().getColor().getHtmlColor());
                         Range formatRange = Ranges.range(sheet.getBook().getSheet(lineFormat.getSheet().getSheetName()), lineFormat.getRowIndex(), lineFormat.getColumnIndex());
