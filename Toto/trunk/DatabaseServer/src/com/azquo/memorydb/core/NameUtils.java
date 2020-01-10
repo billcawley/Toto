@@ -92,4 +92,45 @@ public class NameUtils {
             counter.set(0);
         }
     }
+
+    // these three added for prototyping - will be removed later
+
+    // note these two should be called in synchronized blocks if acting on things like parents, children etc
+    // doesn't check contains, there is logic after the contains when adding which can't go in here (as in are we going to switch to set?)
+
+    static NewName[] nameArrayAppend(NewName[] source, NewName toAppend) {
+        NewName[] newArray = new NewName[source.length + 1];
+        System.arraycopy(source, 0, newArray, 0, source.length); // intellij simplified it to this, should be fine. TODO - saw a warning about this on twitter, maybe double check performance implications?
+        newArray[source.length] = toAppend;
+        return newArray;
+    }
+
+    // I realise some of this stuff is probably very like the internal workings of ArrayList! Important here to save space with vanilla arrays I'm rolling my own.
+
+    static NewName[] nameArrayRemoveIfExists(NewName[] source, NewName toRemove) {
+        List<NewName> sourceList = Arrays.asList(source);
+        if (sourceList.contains(toRemove)) {
+            return nameArrayRemove(source, toRemove);
+        } else {
+            return source;
+        }
+    }
+
+    // note, assumes it is in there! Otherwise will be an exception
+
+    static NewName[] nameArrayRemove(NewName[] source, NewName toRemove) {
+        NewName[] newArray = new NewName[source.length - 1];
+        int newArrayPosition = 0;// gotta have a separate index on the new array, they will go out of sync
+        for (NewName name : source) { // do one copy skipping the element we want removed
+            if (name != toRemove) { // if it's not the one we want to return then copy
+                newArray[newArrayPosition] = name;
+                newArrayPosition++;
+            }
+        }
+        return newArray;
+    }
+
+
+
+
 }

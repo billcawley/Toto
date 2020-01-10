@@ -1,4 +1,4 @@
-package com.azquo.memorydb.core;
+package com.azquo.memorydb.core.namedata;
 
 /*
 
@@ -23,16 +23,18 @@ Low level dealing with attributes (just default display name or more), values an
  */
 
 import com.azquo.memorydb.AzquoMemoryDBConnection;
+import com.azquo.memorydb.core.Name;
+import com.azquo.memorydb.core.Value;
 
 import java.util.*;
 
 public interface NameData {
 
+    public static final int ARRAYTHRESHOLD = 512; // if arrays which need distinct members hit above this switch to sets. A bit arbitrary, might be worth testing (speed vs memory usage)
+
     boolean hasValues();
 
-    void checkValue(final Value value, boolean backupRestore) throws Exception;
-
-    void valueArrayCheck();
+    void valueArrayCheck() throws UnsupportedOperationException;
 
     void addToValues(final Value value, boolean backupRestore) throws Exception;
 
@@ -45,6 +47,7 @@ public interface NameData {
     boolean canAddValue();
 
     NameData getImplementationThatCanAddValue();
+
 
 
     boolean hasChildren();
@@ -67,9 +70,14 @@ public interface NameData {
 
     List<String> getAttributeKeys();
 
-    void setAttributeWillBePersisted(String attributeName, String attributeValue, AzquoMemoryDBConnection azquoMemoryDBConnection) throws Exception;
+    boolean canSetAttributesOtherThanDefaultDisplayName();
 
-    void removeAttributeWillBePersisted(String attributeName, AzquoMemoryDBConnection azquoMemoryDBConnection) throws Exception;
+    NameData getImplementationThatCanSetAttributesOtherThanDefaultDisplayName();
+
+    // error or not??
+    void setAttributeWillBePersisted(String attributeName, String attributeValue) throws Exception;
+
+    void removeAttributeWillBePersisted(String attributeName) throws Exception;
 
     // need check function that the implementation supports adding attributes
 }
