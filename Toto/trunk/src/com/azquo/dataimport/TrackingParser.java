@@ -59,11 +59,12 @@ public class TrackingParser {
         }
     }
 
-    // really to check if a report should be zapped
+    // ok the tracking db is going to be big. Unless I start zapping what's in there I need to select where TRACKMESSKEY > something or it will be selecting 2 million records
     public static List<Map<String, String>> findAll() {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(TRACKMESSKEY, 2_000_000); // greater than 2 million for the moment
 //        namedParams.addValue(REPORTID, reportId);
-        final String SQL_SELECT = "Select `" + SpreadsheetService.getTrackingDb() + "`.`" + TABLENAME + "`.* from `" + SpreadsheetService.getTrackingDb() + "`.`" + TABLENAME + "`";
+        final String SQL_SELECT = "Select `" + SpreadsheetService.getTrackingDb() + "`.`" + TABLENAME + "`.* from `" + SpreadsheetService.getTrackingDb() + "`.`" + TABLENAME + "` where " + TRACKMESSKEY + " >  :" + TRACKMESSKEY;
         return StandardDAO.getJdbcTemplate().query(SQL_SELECT, namedParams, userRowMapper);
     }
 
