@@ -34,6 +34,8 @@ public interface NameData {
 
     boolean hasValues();
 
+    Collection<Value> getValues();
+
     void valueArrayCheck() throws UnsupportedOperationException;
 
     void addToValues(final Value value, boolean backupRestore) throws Exception;
@@ -51,6 +53,8 @@ public interface NameData {
 
 
     boolean hasChildren();
+
+    Collection<Name> getChildren();
 
     void addToChildren(final Name name, boolean backupRestore) throws Exception;
 

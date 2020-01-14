@@ -5,9 +5,7 @@ import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.Value;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class DefaultDisplayNameOnly implements NameData{
 
@@ -20,6 +18,11 @@ public class DefaultDisplayNameOnly implements NameData{
     @Override
     public boolean hasValues() {
         return false;
+    }
+
+    @Override
+    public Collection<Value> getValues() {
+        return Collections.emptyList();
     }
 
     @Override
@@ -60,6 +63,11 @@ public class DefaultDisplayNameOnly implements NameData{
     @Override
     public boolean hasChildren() {
         return false;
+    }
+
+    @Override
+    public Collection<Name> getChildren() {
+        return Collections.emptyList();
     }
 
     @Override

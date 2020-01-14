@@ -1,3 +1,15 @@
+10-01-20
+
+Azure authentication preparation
+
+tidying, bug fix on presave provenance report name and preparatory work for new core memory db structures and possible Azure authentication
+
+start at 2 million on the tracking db, don't load data for the last 10 years!
+
+XLSX
+
+Claims Feed - Changed how the contract year for the split sections is specified. It now uses a formula based on the split contract reporting section, not 'Brokasure Contract Year' in column G
+
 20-12-19
 
 Checked for database names of two letters or less - download backup bug
@@ -6,8 +18,7 @@ Hanover claim groovy added
 
 Validation bug fix required for Hanover (converted from spreadsheet is always tab separated)
 
-Charset fix on lines rejected list
-
+Charset fix on lines rejected
 Preparation for Azure authentication
 
 XLSX

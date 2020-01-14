@@ -51,7 +51,8 @@ public class UserChoiceService {
         Name filterSets = NameService.findOrCreateNameInParent(connectionFromAccessToken, "Filter sets", null, false); // no languages - typically the set will exist
         Name set = NameService.findOrCreateNameInParent(connectionFromAccessToken, setName, filterSets, true, justUserNameLanguages);//must be a local name in 'Filter sets' and be for this user
         set.setAttributeWillBePersisted(StringLiterals.DEFAULT_DISPLAY_NAME, null, connectionFromAccessToken);
-        set.setChildrenWillBePersisted(NameQueryParser.parseQuery(connectionFromAccessToken, query), connectionFromAccessToken);
+        // EFC modified to use NameService.getDefaultLanguagesList(userName), a multi may be mased on another multi from the same user, make sure you can find it . . .
+        set.setChildrenWillBePersisted(NameQueryParser.parseQuery(connectionFromAccessToken, query, NameService.getDefaultLanguagesList(userName), false), connectionFromAccessToken);
     }
 
     // This class and two functions are to make qualified listings on a drop down, adding parents to qualify where necessary.

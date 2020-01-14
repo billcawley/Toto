@@ -145,7 +145,8 @@ public class NameQueryParser {
         try {
             referencedNames = getNameListFromStringList(nameStrings, azquoMemoryDBConnection, languages);
         } catch (Exception e) {
-            if (setFormula.toLowerCase().equals(StringLiterals.NAMEMARKER + "00 children")) return new ArrayList<>();
+            // EFC commenting 13/01/2020, this really should never have been in here, need to test to make sure this doesn't break stuff
+            //if (setFormula.toLowerCase().equals(StringLiterals.NAMEMARKER + "00 children")) return new ArrayList<>();
                /* sometimes excel formulae generate dependent sets that do not exist (e.g. `2012 Transactions`
             in that case it is better to return a null rather than an exception as temporary names may still be set incorrectly
             if (setFormula.contains(StringLiterals.AS)) {

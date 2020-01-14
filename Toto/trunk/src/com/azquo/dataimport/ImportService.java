@@ -382,6 +382,13 @@ public final class ImportService {
                     // used to only overwrite if uploaded by this user, we;ll go back to replacing one for the same business
                     //OnlineReport or = OnlineReportDAO.findForNameAndUserId(reportName, loggedInUser.getUser().getId());
                     OnlineReport or = OnlineReportDAO.findForNameAndBusinessId(reportName, loggedInUser.getUser().getBusinessId());
+/* todo - category names here as with the backup restore
+                    String category = null;
+                    if (fileName.contains(CATEGORYBREAK)) {
+                        category = fileName.substring(0, fileName.indexOf(CATEGORYBREAK));
+                        fileName = f.getName().substring(fileName.indexOf(CATEGORYBREAK) + CATEGORYBREAK.length());
+                    }
+                    */
                     if (or != null) {
                         // zap the old one first
                         try {

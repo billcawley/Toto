@@ -50,5 +50,4 @@ import java.util.concurrent.atomic.AtomicInteger;
  * I'm going to attempt to hive off everything except parents and provenance to a name data class. Prototyping in NewName first then move into name and comment properly when it's tested todo
  *
  */
-public final class NewName {
-}
+public final class NewName {}
