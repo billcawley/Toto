@@ -16,6 +16,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
+import java.io.IOException;
+import java.nio.file.*;
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -51,6 +54,19 @@ public class LoginController {
             , @RequestParam(value = "select", required = false) String select
             , @RequestParam(value = "azure", required = false) String azure
     ) throws Exception {
+        // stack overflow code, will be modified
+        NumberFormat nf = NumberFormat.getNumberInstance();
+        long percentUsable = 100; // if it cna't be worked out default to ok. Maybe change this . . .
+        try {
+            FileStore store = Files.getFileStore(Paths.get(SpreadsheetService.getHomeDir()));
+            percentUsable = (100 * store.getUsableSpace()) / store.getTotalSpace();
+
+        } catch (IOException e) {
+            System.out.println("error querying space: " + e.toString());
+        }
+        if (percentUsable <= 10) {
+            model.put("error", "***DISK SPACE WARNING***");
+        }
         if (session.getAttribute(LOGGED_IN_USERS_SESSION) != null) {
             List<LoggedInUser> loggedInUsers = (List<LoggedInUser>) session.getAttribute(LOGGED_IN_USERS_SESSION);
             if ("true".equals(azure)) {
