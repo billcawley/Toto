@@ -48,6 +48,8 @@ public class SpreadsheetService {
     public static final String host;
 
     static {
+        System.out.println("Setting JVM locale to UK");
+        Locale.setDefault(Locale.UK);
         System.out.println("attempting properties load from classpath");
         try {
             azquoProperties.load(SpreadsheetService.class.getClassLoader().getResourceAsStream("azquo.properties"));

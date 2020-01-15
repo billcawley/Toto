@@ -641,6 +641,7 @@ public final class Name extends AzquoMemoryDBEntity {
 
     // synchronized? Not sure if it matters, don't need immediate visibility and the cache read should (!) be thread safe.
     // The read uses synchronized to stop creating the cache more than necessary rather than to be totally up to date
+    // todo this is all well and good, are we clearing the clearing the parent's caches? Should we?? Some thought required!
     private static AtomicInteger clearChildrenCachesCount = new AtomicInteger(0);
 
     void clearChildrenCaches() {

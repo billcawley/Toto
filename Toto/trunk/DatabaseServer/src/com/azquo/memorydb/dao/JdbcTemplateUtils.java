@@ -7,6 +7,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 import java.net.InetAddress;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -40,7 +41,16 @@ public class JdbcTemplateUtils {
             e.printStackTrace(); // Not exactly sure what it might be
         }
         System.out.println("host : " + thost);
+        System.out.println("Setting JVM locale to UK");
+        Locale.setDefault(Locale.UK);
+        Locale currentLocale = Locale.getDefault();
+        System.out.println(currentLocale.getDisplayLanguage());
+        System.out.println(currentLocale.getDisplayCountry());
+        System.out.println(currentLocale.getLanguage()); // still as US sometimes but the date issue is fixed?
+        System.out.println(currentLocale.getCountry());
 
+        System.out.println(System.getProperty("user.country"));
+        System.out.println(System.getProperty("user.language"));
         if (jdbcTemplate == null){
             throw new Exception("Ack!, null data source passed to JdbcTemplateUtils, Azquo won't be able to access transport!");
         }
