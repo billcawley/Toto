@@ -553,7 +553,7 @@ public final class Name extends AzquoMemoryDBEntity {
 
     private static AtomicInteger finaAllChildrenCount = new AtomicInteger(0);
 
-    private static void findAllChildren(Name name, final Set<Name> allChildren) {
+    private void findAllChildren(Name name, final Set<Name> allChildren) {
         finaAllChildrenCount.incrementAndGet();
         // similar to optimisation for get all parents
         // and we'll know if we look at the log. If this happened a local reference to the array should sort it, save the pointer garbage for the mo

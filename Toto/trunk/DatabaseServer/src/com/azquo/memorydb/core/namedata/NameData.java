@@ -22,7 +22,7 @@ Low level dealing with attributes (just default display name or more), values an
 
  */
 
-import com.azquo.memorydb.AzquoMemoryDBConnection;
+import com.azquo.StringLiterals;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.Value;
 
@@ -30,58 +30,90 @@ import java.util.*;
 
 public interface NameData {
 
-    public static final int ARRAYTHRESHOLD = 512; // if arrays which need distinct members hit above this switch to sets. A bit arbitrary, might be worth testing (speed vs memory usage)
+    int ARRAYTHRESHOLD = 512; // if arrays which need distinct members hit above this switch to sets. A bit arbitrary, might be worth testing (speed vs memory usage)
 
-    boolean hasValues();
+    default boolean hasValues(){
+        return false;
+    }
 
-    Collection<Value> getValues();
+    default Collection<Value> getValues(){
+        return Collections.emptyList();
+    }
 
-    void valueArrayCheck() throws UnsupportedOperationException;
+    default void valueArrayCheck(){};
 
-    void addToValues(final Value value, boolean backupRestore) throws Exception;
+    default void addToValues(Value value, boolean backupRestore) throws Exception {
+        throw new UnsupportedOperationException();
+    }
 
-    void removeFromValues(final Value value);
+    default boolean removeFromValues(Value value) {
+        // existing behavior is to do nothing if asked to remove a value that isn't there
+        return false;
+    }
 
-    Value[] directArrayValues();
+    // should provide direct access to the field - replacing the direct access calls used before. Often implementations might return null.
+    default Value[] directArrayValues() {
+        return null;
+    }
 
-    Set<Value> directSetValues();
+    default Set<Value> directSetValues() {
+        return null;
+    }
 
-    boolean canAddValue();
+    default boolean canAddValue() {
+        return false;
+    }
 
     NameData getImplementationThatCanAddValue();
 
 
 
-    boolean hasChildren();
+    default boolean hasChildren() {
+        return false;
+    }
 
-    Collection<Name> getChildren();
+    default Collection<Name> getChildren() {
+        return Collections.emptyList();
+    }
 
-    void addToChildren(final Name name, boolean backupRestore) throws Exception;
+    default void addToChildren(Name name, boolean backupRestore) throws Exception {
+        throw new UnsupportedOperationException();
+    }
 
-    void removeFromChildren(final Name name);
+    default void removeFromChildren(Name name) {
+        // as with values just do nothing, we have no children here
+    }
 
-    // should provide direct access to the field - replacing the direct access calls used before. Often implementations might return null.
-    Name[] directArrayChildren();
+    default Name[] directArrayChildren() {
+        return null;
+    }
 
-    Set<Name> directSetChildren();
+    default Set<Name> directSetChildren() {
+        return null;
+    }
 
-    boolean canAddChild();
+    default boolean canAddChild() {
+        return false;
+    }
 
     NameData getImplementationThatCanAddChild();
 
+
+    String getDefaultDisplayName();
+
+    default boolean canSetAttributesOtherThanDefaultDisplayName() {
+        return false;
+    }
 
     Map<String, String> getAttributes();
 
     List<String> getAttributeKeys();
 
-    boolean canSetAttributesOtherThanDefaultDisplayName();
-
     NameData getImplementationThatCanSetAttributesOtherThanDefaultDisplayName();
 
+    // need check function that the implementation supports adding attributes
     // error or not??
     void setAttributeWillBePersisted(String attributeName, String attributeValue) throws Exception;
 
-    void removeAttributeWillBePersisted(String attributeName) throws Exception;
-
-    // need check function that the implementation supports adding attributes
+    void removeAttributeWillBePersisted(String attributeName);
 }
