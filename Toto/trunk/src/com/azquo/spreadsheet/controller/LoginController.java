@@ -65,7 +65,11 @@ public class LoginController {
             System.out.println("error querying space: " + e.toString());
         }
         if (percentUsable <= 10) {
-            model.put("error", "***DISK SPACE WARNING***");
+            // log as well
+            System.out.println("***WARNING, LOW DISK SPACE***");
+            System.out.println("***WARNING, LOW DISK SPACE***");
+            System.out.println("***WARNING, LOW DISK SPACE***");
+            model.put("error", "***WARNING, LOW DISK SPACE***");
         }
         if (session.getAttribute(LOGGED_IN_USERS_SESSION) != null) {
             List<LoggedInUser> loggedInUsers = (List<LoggedInUser>) session.getAttribute(LOGGED_IN_USERS_SESSION);
