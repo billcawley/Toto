@@ -5,12 +5,15 @@ import com.azquo.spreadsheet.transport.HeadingWithInterimLookup;
 import com.azquo.util.CommandLineCalls;
 import org.apache.commons.lang.SystemUtils;
 import org.apache.log4j.Logger;
-import org.apache.poi.poifs.crypt.Decryptor;
-import org.apache.poi.poifs.crypt.EncryptionInfo;
-import org.apache.poi.poifs.filesystem.POIFSFileSystem;
+//import org.apache.poi.poifs.crypt.Decryptor;
+//import org.apache.poi.poifs.crypt.EncryptionInfo;
+//import org.apache.poi.poifs.filesystem.POIFSFileSystem;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
+import org.zkoss.poi.poifs.crypt.Decryptor;
+import org.zkoss.poi.poifs.crypt.EncryptionInfo;
+import org.zkoss.poi.poifs.filesystem.POIFSFileSystem;
 import org.zkoss.poi.ss.usermodel.BuiltinFormats;
 import org.zkoss.poi.ss.usermodel.DataFormatter;
 import org.zkoss.poi.xssf.model.StylesTable;
@@ -104,6 +107,11 @@ public final class ImportService {
         if (loggedInUser.getDatabase() == null) {
             throw new Exception("No database set");
         }
+        /*
+        *         *
+        * */
+
+
         String fileName = uploadedFile.getFileName();
         String originalFilePath = uploadedFile.getPath();
         Path tempFile = Files.createTempFile(fileName.substring(0, fileName.length() - 4) + "_", fileName.substring(fileName.length() - 4));
@@ -215,7 +223,7 @@ public final class ImportService {
                     book = new XSSFWorkbook(opcPackage);
                 } catch (org.zkoss.poi.openxml4j.exceptions.InvalidFormatException ife){
                     // Hanover may send 'em encrypted
-                    POIFSFileSystem fileSystem = new POIFSFileSystem(new File(uploadedFile.getPath()), true);
+                    POIFSFileSystem fileSystem = new POIFSFileSystem(new FileInputStream(uploadedFile.getPath()));
                     EncryptionInfo info = new EncryptionInfo(fileSystem);
                     Decryptor decryptor = Decryptor.getInstance(info);
                     if (!decryptor.verifyPassword("b0702")) { // currently hardcoded, this will change

@@ -2,6 +2,8 @@
 
 Match files from Brokasure back to their original database and initial decryption code for Hanover files
 
+Default choices are slightly more robust
+
 XLSX
 
 Changed the commission formula to calculate by the correct number of decimal places (Hanover)
