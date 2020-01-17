@@ -121,7 +121,7 @@ public class PendingUploadController {
                 // on general principle
                 session.removeAttribute(WARNINGSWORKBOOK);
                 if ("true".equalsIgnoreCase(reject)) {
-                    Path loaded = Paths.get(SpreadsheetService.getScanDir() + "/loaded");
+                    Path loaded = Paths.get(SpreadsheetService.getFilesToImportDir() + "/loaded");
                     if (!Files.exists(loaded)) {
                         Files.createDirectories(loaded);
                     }
@@ -636,7 +636,7 @@ public class PendingUploadController {
                             }
                             // pack up the directory
                             ZipUtil.unexplode(zipforpendinguploadresult.toFile());
-                            Path loaded = Paths.get(SpreadsheetService.getScanDir() + "/loaded");
+                            Path loaded = Paths.get(SpreadsheetService.getFilesToImportDir() + "/loaded");
                             if (!Files.exists(loaded)) {
                                 Files.createDirectories(loaded);
                             }

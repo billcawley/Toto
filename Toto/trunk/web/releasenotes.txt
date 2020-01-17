@@ -1,4 +1,26 @@
+16-01-20
+
+XLSX
+
+Section is now 'provisional' on the import model
+
 15-01-20
+
+Force JVM locale to UK to stop any date handling confusion on server side XLSX processing
+
+added disk space warning
+
+XLSX
+
+Self storage - Filters current contract year only!
+
+AllRisks Validations All Risks -> All Risks, LTD, I don't think it stopped it working but this is best practice
+
+Split contracts workbook, Removed 'reportingmonth'
+
+added 'county' to Premium imports
+
+rename setup so its loaded first if in a zip. Perhaps not necessary but better safe than sorry
 
 10-01-20
 

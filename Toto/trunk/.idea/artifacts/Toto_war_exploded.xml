@@ -35,6 +35,7 @@
           <element id="library" level="project" name="com.fasterxml.jackson.dataformat:jackson-dataformat-csv:2.9.2" />
           <element id="library" level="project" name="com.microsoft.azure:adal4j:1.6.4" />
           <element id="library" level="project" name="org.json:json:20190722" />
+          <element id="library" level="project" name="org.apache.poi:poi-ooxml:4.1.0" />
         </element>
       </element>
     </root>

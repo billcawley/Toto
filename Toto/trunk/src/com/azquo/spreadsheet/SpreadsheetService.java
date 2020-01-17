@@ -83,15 +83,12 @@ public class SpreadsheetService {
     private static final String AZQUOHOME = "azquo.home";
     private static final String DEVMACHINE = "dev.machine";
     private static final String ALIAS = "alias";
-    private static final String SCANDIR = "scandir";
+    private static final String FILESTOIMPORTDIR = "filestoimportdir";
     private static final String DIRECTUPLOADDIR = "directuploaddir";
-    private static final String SCANBUSINESS = "scanbusiness";
     // where to scan the XML, initially a path
     private static final String XMLSCANDIR = "xmlscandir";
     // where to put XML
     private static final String XMLDESTINATIONDIR = "xmldestinationdir";
-    // if XML is scanned which db to put it into
-    private static final String XMLSCANDB = "xmlscandb";
 
     private static final String TRACKINGDB = "trackingdb";
 
@@ -136,16 +133,12 @@ public class SpreadsheetService {
         return devMachine != 1;
     }
 
-    public static String getScanDir() {
-        return getProperty(SCANDIR);
+    public static String getFilesToImportDir() {
+        return getProperty(FILESTOIMPORTDIR);
     }
 
     public static String getXMLScanDir() {
         return getProperty(XMLSCANDIR);
-    }
-
-    public static String getXMLScanDB() {
-        return getProperty(XMLSCANDB);
     }
 
     public static String getDirectUploadDir() {
@@ -155,10 +148,6 @@ public class SpreadsheetService {
     // where we'll put generated XML for Ed Broking
     public static String getXMLDestinationDir() {
         return getProperty(XMLDESTINATIONDIR);
-    }
-
-    public static String getScanBusiness() {
-        return getProperty(SCANBUSINESS);
     }
 
     public static String getTrackingDb() {

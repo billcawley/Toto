@@ -5,6 +5,9 @@ import com.azquo.spreadsheet.transport.HeadingWithInterimLookup;
 import com.azquo.util.CommandLineCalls;
 import org.apache.commons.lang.SystemUtils;
 import org.apache.log4j.Logger;
+import org.apache.poi.poifs.crypt.Decryptor;
+import org.apache.poi.poifs.crypt.EncryptionInfo;
+import org.apache.poi.poifs.filesystem.POIFSFileSystem;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
@@ -207,8 +210,20 @@ public final class ImportService {
             // so, the try catches are there in case the file extension is incorrect. This has happened!
             if (uploadedFile.getFileName().toLowerCase().endsWith("xlsx")) {
                 // is the opcpackage dangerous under windows - holding a file lock? Not sure . . . .
-                opcPackage = OPCPackage.open(new FileInputStream(new File(uploadedFile.getPath())));
-                book = new XSSFWorkbook(opcPackage);
+                try {
+                    opcPackage = OPCPackage.open(new FileInputStream(new File(uploadedFile.getPath())));
+                    book = new XSSFWorkbook(opcPackage);
+                } catch (org.zkoss.poi.openxml4j.exceptions.InvalidFormatException ife){
+                    // Hanover may send 'em encrypted
+                    POIFSFileSystem fileSystem = new POIFSFileSystem(new File(uploadedFile.getPath()), true);
+                    EncryptionInfo info = new EncryptionInfo(fileSystem);
+                    Decryptor decryptor = Decryptor.getInstance(info);
+                    if (!decryptor.verifyPassword("b0702")) { // currently hardcoded, this will change
+                        throw new RuntimeException("Unable to process: document is encrypted.");
+                    }
+                    InputStream dataStream = decryptor.getDataStream(fileSystem);
+                    book = new XSSFWorkbook(dataStream);
+                }
                 //System.out.println("book open time " + (System.currentTimeMillis() - quicktest));
             } else {
                 try {

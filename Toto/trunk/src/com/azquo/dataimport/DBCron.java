@@ -40,6 +40,8 @@ public class DBCron {
 
     private static final String dbBackupsDirectory = "DBBACKUPS";
 
+    public static final String AZQUODATABASEPERSISTENCENAME = "AZQUODATABASEPERSISTENCENAME";
+
     @Scheduled(cron = "0 * * * * *")
     public void demoServiceMethod() {
 //        System.out.println("every minute?" + LocalDateTime.now());
@@ -82,84 +84,39 @@ public class DBCron {
     public void directoryScan() throws Exception {
         final long millisOldThreshold = 300_000; // must be at least 5 mins old. Don't catch a file that's being transferred
         synchronized (this) { // one at a time
-            if (SpreadsheetService.getScanBusiness() != null && SpreadsheetService.getScanBusiness().length() > 0) {
-                Business b = BusinessDAO.findByName(SpreadsheetService.getScanBusiness());
-                if (b != null) {
-                    if (SpreadsheetService.getScanDir() != null && SpreadsheetService.getScanDir().length() > 0) {
-                        //System.out.println("running file scan");
-                        // todo - move tagged out of here if the scan dir is a mapped drive as it may become
-                        Path tagged = Paths.get(SpreadsheetService.getScanDir() + "/tagged");
-                        if (!Files.exists(tagged)) {
-                            Files.createDirectories(tagged);
-                        }
+            if (SpreadsheetService.getXMLScanDir() != null && SpreadsheetService.getXMLScanDir().length() > 0) {
+                // make tagged as before but this time the plan is to parse all found XML files into a single CSV and upload it
+                // note - have moved tagged to temp as on Ed Broking's servers the scan dir is a remote network drive, don't want to do "work" in there
+                Path tagged = Paths.get(SpreadsheetService.getHomeDir() + "/temp/tagged");
+                if (!Files.exists(tagged)) {
+                    Files.createDirectories(tagged);
+                }
+                // extra bit of logic. It seems Brokasure process files *slow* so I need to check that the newest file is at least 5 mins old or it could be in the middle of a batch
+                // fragment off t'internet to get the most recent file
+                Path p = Paths.get(SpreadsheetService.getXMLScanDir());
+                // need to do try with resources or it leaks file handlers
+                try (Stream<Path> list1 = Files.list(p)) {
+                    Optional<Path> lastFilePath = list1    // here we get the stream with full directory listing
+                            .filter(f -> (!Files.isDirectory(f) && f.getFileName().toString().endsWith("xml")))  // exclude subdirectories and non xml files from listing
+                            .max(Comparator.comparingLong(f -> f.toFile().lastModified()));  // finally get the last file using simple comparator by lastModified field
+                    // 300 seconds, 5 minutes, I want the most recent file to be at least that old before I start doing things to them
+                    if (lastFilePath.isPresent() && (System.currentTimeMillis() - Files.getLastModifiedTime(lastFilePath.get()).toMillis()) > millisOldThreshold) {
+                        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+                        final DocumentBuilder builder = factory.newDocumentBuilder();
+                        long fileMillis = System.currentTimeMillis();
+                        //if (lastModifiedTime.toMillis() < (timestamp - 120_000)) {
+                        // I'm going to allow for the possiblity that different files might have different fields
+                        Set<String> headings = new HashSet<>();
+                        headings.add("Date");
+                        headings.add("Error");
 
-                        Path p = Paths.get(SpreadsheetService.getScanDir());
-                        try (Stream<Path> list = Files.list(p).sorted()) { // go alphabetical, might be important for upload order . . .
+                        Map<String, Map<String, String>> filesValues = new HashMap<>();// filename, values
+                        AtomicReference<String> rootDocumentName = new AtomicReference<>();
+                        try (Stream<Path> list = Files.list(p)) {
                             list.forEach(path -> {
                                 // Do stuff
                                 if (!Files.isDirectory(path)) { // skip any directories
                                     try {
-                                        String origName = path.getFileName().toString();
-                                        FileTime lastModifiedTime;
-                                        lastModifiedTime = Files.getLastModifiedTime(path);
-                                        long timestamp = System.currentTimeMillis();
-                                        if (lastModifiedTime.toMillis() < (timestamp - 120_000)) {
-                                            Files.move(path, tagged.resolve(timestamp + origName));
-                                            // ok it's moved now make the pending upload record
-                                            // todo - assign the database and team automatically!
-                                            PendingUpload pendingUpload = new PendingUpload(0, b.getId()
-                                                    , LocalDateTime.ofInstant(lastModifiedTime.toInstant(), ZoneId.systemDefault())
-                                                    , null
-                                                    , origName
-                                                    , tagged.resolve(timestamp + origName).toString()
-                                                    , -1
-                                                    , -1
-                                                    , 1
-                                                    , null, null);
-                                            PendingUploadDAO.store(pendingUpload);
-                                        } else {
-                                            System.out.println("file found for pending but it's only " + ((timestamp - lastModifiedTime.toMillis()) / 1_000) + " seconds old, needs to be 120 seconds old");
-                                        }
-                                    } catch (IOException e) {
-                                        e.printStackTrace();
-                                    }
-                                }
-                            });
-                        }
-                    }
-
-                    if (SpreadsheetService.getXMLScanDir() != null && SpreadsheetService.getXMLScanDir().length() > 0) {
-                        // make tagged as before but this time the plan is to parse all found XML files into a single CSV and upload it
-                        // note - have moved tagged to temp as on Ed Broking's servers the scan dir is a remote network drive, don't want to do "work" in there
-                        Path tagged = Paths.get(SpreadsheetService.getHomeDir() + "/temp/tagged");
-                        if (!Files.exists(tagged)) {
-                            Files.createDirectories(tagged);
-                        }
-                        // extra bit of logic. It seems Brokasure process files *slow* so I need to check that the newest file is at least 5 mins old or it could be in the middle of a batch
-                        // fragment off t'internet to get the most recent file
-                        Path p = Paths.get(SpreadsheetService.getXMLScanDir());
-                        // need to do try with resources or it leaks file handlers
-                        try (Stream<Path> list1 = Files.list(p)) {
-                            Optional<Path> lastFilePath = list1    // here we get the stream with full directory listing
-                                    .filter(f -> (!Files.isDirectory(f) && f.getFileName().toString().endsWith("xml")))  // exclude subdirectories and non xml files from listing
-                                    .max(Comparator.comparingLong(f -> f.toFile().lastModified()));  // finally get the last file using simple comparator by lastModified field
-                            // 300 seconds, 5 minutes, I want the most recent file to be at least that old before I start doing things to them
-                            if (lastFilePath.isPresent() && (System.currentTimeMillis() - Files.getLastModifiedTime(lastFilePath.get()).toMillis()) > millisOldThreshold) {
-                                DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-                                final DocumentBuilder builder = factory.newDocumentBuilder();
-                                long fileMillis = System.currentTimeMillis();
-                                //if (lastModifiedTime.toMillis() < (timestamp - 120_000)) {
-                                // I'm going to allow for the possiblity that different files might have different fields
-                                Set<String> headings = new HashSet<>();
-                                headings.add("Date");
-                                headings.add("Error");
-                                Map<String, Map<String, String>> filesValues = new HashMap<>();// filename, values
-                                AtomicReference<String> rootDocumentName = new AtomicReference<>();
-                                try (Stream<Path> list = Files.list(p)) {
-                                    list.forEach(path -> {
-                                        // Do stuff
-                                        if (!Files.isDirectory(path)) { // skip any directories
-                                            try {
                                             /*
 
                                             Note : I was assuming files being returned in pairs but it seems not,
@@ -167,107 +124,127 @@ public class DBCron {
 
                                              */
 
-                                                String origName = path.getFileName().toString();
-                                                if (origName.toLowerCase().contains(".xml")) {
-                                                    String fileKey = origName.substring(0, origName.indexOf("-"));
-                                                    boolean error = origName.toLowerCase().contains("error");
-                                                    FileTime lastModifiedTime = Files.getLastModifiedTime(path);
-                                                    // todo - match to the source file when it hits an error response
+                                        String origName = path.getFileName().toString();
+                                        if (origName.toLowerCase().contains(".xml")) {
+                                            String fileKey = origName.substring(0, origName.indexOf("-"));
+                                            boolean error = origName.toLowerCase().contains("error");
+                                            FileTime lastModifiedTime = Files.getLastModifiedTime(path);
+                                            // todo - match to the source file when it hits an error response
 
-                                                    long timestamp = System.currentTimeMillis();
-                                                    System.out.println("file : " + origName);
-                                                    // newer logic, start with the original sent data then add anything from brokasure on. Will help Bill/Nic to parse
-                                                    // further to this we'll only process files that have a corresponding temp file as Dev and UAT share directories so if there's no matching file in temp don't do anything
-                                                    if (Files.exists(Paths.get(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".xml"))) {
-                                                        readXML(fileKey, filesValues, null, builder, Paths.get(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".xml"), headings, lastModifiedTime);
-                                                        // todo what if root tags don't match between the existing file and the one from BS??
-                                                        // add in extra info, initial reason it was required was for section info not suitable for Brokasure but required to load the data back in
-                                                        if (Files.exists(Paths.get(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".properties"))) {
-                                                            try (InputStream is = new FileInputStream(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".properties")) {
-                                                                Properties properties = new Properties();
-                                                                properties.load(is);
-                                                                Map<String, String> thisFileValues = filesValues.computeIfAbsent(fileKey, t -> new HashMap<>());
-                                                                for (String propertyName : properties.stringPropertyNames()) {
-                                                                    headings.add(propertyName);
-                                                                    thisFileValues.put(propertyName, properties.getProperty(propertyName));
-                                                                }
-                                                            }
+                                            long timestamp = System.currentTimeMillis();
+                                            System.out.println("file : " + origName);
+                                            // newer logic, start with the original sent data then add anything from brokasure on. Will help Bill/Nic to parse
+                                            // further to this we'll only process files that have a corresponding temp file as Dev and UAT share directories so if there's no matching file in temp don't do anything
+                                            if (Files.exists(Paths.get(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".xml"))) {
+                                                readXML(fileKey, filesValues, null, builder, Paths.get(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".xml"), headings, lastModifiedTime);
+                                                // todo what if root tags don't match between the existing file and the one from BS??
+                                                // add in extra info, initial reason it was required was for section info not suitable for Brokasure but required to load the data back in
+                                                if (Files.exists(Paths.get(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".properties"))) {
+                                                    try (InputStream is = new FileInputStream(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".properties")) {
+                                                        Properties properties = new Properties();
+                                                        properties.load(is);
+                                                        Map<String, String> thisFileValues = filesValues.computeIfAbsent(fileKey, t -> new HashMap<>());
+                                                        for (String propertyName : properties.stringPropertyNames()) {
+                                                            headings.add(propertyName);
+                                                            thisFileValues.put(propertyName, properties.getProperty(propertyName));
                                                         }
-                                                        // ok I need to stop fields of a different type mixing, read xml will return false if the root document name doesn't match. Under those circumstances leave the file there
-                                                        if (readXML(fileKey, filesValues, rootDocumentName, builder, path, headings, lastModifiedTime)) {
-                                                            Files.move(path, tagged.resolve(timestamp + origName));
-                                                        }
-                                                        // check the xlsx isn't still in the inbox - zap it if it is
-                                                        Path leftoverXLSX = Paths.get(SpreadsheetService.getXMLDestinationDir()).resolve(fileKey + ".xlsx");
-                                                        if (Files.exists(leftoverXLSX)) {
-                                                            Files.delete(leftoverXLSX);
-                                                        } else if (fileKey.toLowerCase().startsWith("cs") && !error) { // it was zapped (as in ok!) - in the case of CS claim settlements the original file which will be in temp now needs to go in the outbox - if there was no error of course!
-                                                            Path xlsxFileToMove = Paths.get(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".xlsx");
-                                                            if (Files.exists(xlsxFileToMove)) {
-                                                                System.out.println("moving file back to the out box " + fileKey + ".xlsx");
-                                                                Files.move(xlsxFileToMove, Paths.get(SpreadsheetService.getXMLScanDir()).resolve(fileKey + ".xlsx"));
-                                                            }
-                                                        }
-                                                    } else {
-                                                        System.out.println("Can't find corresponding temp xml file " + fileKey + ".xml, perhaps it was generated by another server");
                                                     }
-                                                } else {
-                                                    // supress this for the mo as we're putting xlsx files back in here. Todo - clarify what's going on there!
-                                                    //System.out.println("non XML file found?? " + origName);
                                                 }
-                                            } catch (Exception e) {
+                                                // ok I need to stop fields of a different type mixing, read xml will return false if the root document name doesn't match. Under those circumstances leave the file there
+                                                if (readXML(fileKey, filesValues, rootDocumentName, builder, path, headings, lastModifiedTime)) {
+                                                    Files.move(path, tagged.resolve(timestamp + origName));
+                                                }
+                                                // check the xlsx isn't still in the inbox - zap it if it is
+                                                Path leftoverXLSX = Paths.get(SpreadsheetService.getXMLDestinationDir()).resolve(fileKey + ".xlsx");
+                                                if (Files.exists(leftoverXLSX)) {
+                                                    Files.delete(leftoverXLSX);
+                                                } else if (fileKey.toLowerCase().startsWith("cs") && !error) { // it was zapped (as in ok!) - in the case of CS claim settlements the original file which will be in temp now needs to go in the outbox - if there was no error of course!
+                                                    Path xlsxFileToMove = Paths.get(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".xlsx");
+                                                    if (Files.exists(xlsxFileToMove)) {
+                                                        System.out.println("moving file back to the out box " + fileKey + ".xlsx");
+                                                        Files.move(xlsxFileToMove, Paths.get(SpreadsheetService.getXMLScanDir()).resolve(fileKey + ".xlsx"));
+                                                    }
+                                                }
+                                            } else {
+                                                System.out.println("Can't find corresponding temp xml file " + fileKey + ".xml, perhaps it was generated by another server");
+                                            }
+                                        } else {
+                                            // supress this for the mo as we're putting xlsx files back in here. Todo - clarify what's going on there!
+                                            //System.out.println("non XML file found?? " + origName);
+                                        }
+                                    } catch (Exception e) {
+                                        e.printStackTrace();
+                                        // try to move the file if it failed - unclog the outbox
+                                        try {
+                                            Files.move(path, Paths.get(SpreadsheetService.getHomeDir() + "/temp/" + path.getFileName()));
+                                        } catch (IOException ex) {
+                                            ex.printStackTrace();
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                        // dev = allri_risksolutions
+                        // uat = edbr_risksolutions
+                        // prod = edbr_risksolutions
+                        // these may change, we're only concerned with a hopefully small possibility of XML being sent by the old code and being picked up by this new code
+                        // , in that case default the database. edbr_risksolutions wins.
+                        final String defaultAzquoDatabasePersistenceName = "edbr_risksolutions";
+
+                        if (!filesValues.isEmpty()) {
+                            // now Hanover has been added there's an issue that files can come back and go in different databases
+                            // so we may need to make more than one file for a block of parsed files, batch them up
+                            Map<String, List<Map<String, String>>> linesByDatabase = new HashMap<>(); // could go koloboke, not bothered at the mo
+                            for (Map<String, String> lineValues : filesValues.values()) {
+                                if (lineValues.get(AZQUODATABASEPERSISTENCENAME) != null && !lineValues.get(AZQUODATABASEPERSISTENCENAME).isEmpty()){ // could it be empty?
+                                    linesByDatabase.computeIfAbsent(lineValues.get(AZQUODATABASEPERSISTENCENAME), t -> new ArrayList<>()).add(lineValues); // single threaded this should be fine
+                                } else {
+                                    linesByDatabase.computeIfAbsent(defaultAzquoDatabasePersistenceName, t -> new ArrayList<>()).add(lineValues);
+                                }
+                            }
+                            for (String databasePersistenceName : linesByDatabase.keySet()){
+                                List<Map<String, String>> lines = linesByDatabase.get(databasePersistenceName);
+                                // base the file name off the db name also
+                                String csvFileName = fileMillis + "-" + databasePersistenceName + " (importtemplate=BrokasureTemplates;importversion=Brokasure" + rootDocumentName.get() + ").tsv";
+                                BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(tagged.resolve(csvFileName).toFile()));
+                                for (String heading : headings) {
+                                    bufferedWriter.write(heading + "\t");
+                                }
+                                bufferedWriter.newLine();
+                                for (Map<String, String> lineValues : lines) {
+                                    for (String heading : headings) {
+                                        String value = lineValues.get(heading);
+                                        bufferedWriter.write((value != null ? value : "") + "\t");
+                                    }
+                                    bufferedWriter.newLine();
+                                }
+                                bufferedWriter.close();
+                                Path newScannedDir = Files.createDirectories(tagged.resolve(fileMillis + "scanned"));
+                                try (Stream<Path> list = Files.list(tagged)) {
+                                    list.forEach(path -> {
+                                        // Do stuff
+                                        if (!Files.isDirectory(path)) { // skip any directories
+                                            try {
+                                                Files.move(path, newScannedDir.resolve(path.getFileName()));
+                                            } catch (IOException e) {
                                                 e.printStackTrace();
-                                                // try to move the file if it failed - unclog the outbox
-                                                try {
-                                                    Files.move(path, Paths.get(SpreadsheetService.getHomeDir() + "/temp/" + path.getFileName()));
-                                                } catch (IOException ex) {
-                                                    ex.printStackTrace();
-                                                }
                                             }
                                         }
                                     });
                                 }
-                                if (!filesValues.isEmpty()){
-                                    String csvFileName = fileMillis + "generatedfromxml (importtemplate=BrokasureTemplates;importversion=Brokasure" + rootDocumentName.get() + ").tsv";
-                                    BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(tagged.resolve(csvFileName).toFile()));
-                                    for (String heading : headings) {
-                                        bufferedWriter.write(heading + "\t");
-                                    }
-                                    bufferedWriter.newLine();
-                                    for (Map<String, String> lineValues : filesValues.values()) {
-                                        for (String heading : headings) {
-                                            String value = lineValues.get(heading);
-                                            bufferedWriter.write((value != null ? value : "") + "\t");
-                                        }
-                                        bufferedWriter.newLine();
-                                    }
-                                    bufferedWriter.close();
-                                    Path newScannedDir = Files.createDirectories(tagged.resolve(fileMillis + "scanned"));
-                                    try (Stream<Path> list = Files.list(tagged)) {
-                                        list.forEach(path -> {
-                                            // Do stuff
-                                            if (!Files.isDirectory(path)) { // skip any directories
-                                                try {
-                                                    Files.move(path, newScannedDir.resolve(path.getFileName()));
-                                                } catch (IOException e) {
-                                                    e.printStackTrace();
-                                                }
-                                            }
-                                        });
-                                    }
-                                    if (Files.exists(newScannedDir.resolve(csvFileName)) && SpreadsheetService.getXMLScanDB() != null && !SpreadsheetService.getXMLScanDB().isEmpty()) { // it should exist and a database should be set also
-                                        // hacky, need to sort, todo
-                                        Database db = DatabaseDAO.findForNameAndBusinessId(SpreadsheetService.getXMLScanDB(), b.getId());
-                                        LoggedInUser loggedInUser = new LoggedInUser(""
-                                                , new User(0, LocalDateTime.now(), b.getId(), "brokasure", "", "", "", "", "", 0, 0, "", "")
-                                                , DatabaseServerDAO.findById(db.getDatabaseServerId()), db, null, b.getBusinessDirectory());
-                                        final Map<String, String> fileNameParams = new HashMap<>();
-                                        String fileName = newScannedDir.resolve(csvFileName).getFileName().toString();
-                                        ImportService.addFileNameParametersToMap(fileName, fileNameParams);
 
-                                        ImportService.importTheFile(loggedInUser, new UploadedFile(newScannedDir.resolve(csvFileName).toString()
-                                                , new ArrayList<>(Collections.singletonList(fileName)), fileNameParams, false, false), null, null);
-                                    }
+                                Database db = DatabaseDAO.findForPersistenceName(databasePersistenceName);
+                                if (Files.exists(newScannedDir.resolve(csvFileName)) && db != null) { // it should exist and a database should be set also
+                                    Business b = BusinessDAO.findById(db.getBusinessId());
+                                    LoggedInUser loggedInUser = new LoggedInUser(""
+                                            , new User(0, LocalDateTime.now(), b.getId(), "brokasure", "", "", "", "", "", 0, 0, "", "")
+                                            , DatabaseServerDAO.findById(db.getDatabaseServerId()), db, null, b.getBusinessDirectory());
+                                    final Map<String, String> fileNameParams = new HashMap<>();
+                                    String fileName = newScannedDir.resolve(csvFileName).getFileName().toString();
+                                    ImportService.addFileNameParametersToMap(fileName, fileNameParams);
+
+                                    ImportService.importTheFile(loggedInUser, new UploadedFile(newScannedDir.resolve(csvFileName).toString()
+                                            , new ArrayList<>(Collections.singletonList(fileName)), fileNameParams, false, false), null, null);
                                 }
                             }
                         }
@@ -359,12 +336,13 @@ public class DBCron {
             SpreadsheetService.runScheduledReports();
         }
     }
+
     // todo - stop loading the data again and again??
     @Scheduled(cron = "0 0 0 * * *")// set to daily for the mo, stop files building so fast
     public void extractEdBrokingTrackingData() throws Exception {
         synchronized (this) { // one at a time
             String trackingdb = SpreadsheetService.getTrackingDb();
-            if (trackingdb != null && !trackingdb.trim().isEmpty()){
+            if (trackingdb != null && !trackingdb.trim().isEmpty()) {
                 List<Map<String, String>> all = TrackingParser.findAll();
                 // I don't think I can use the other XMl code, too different
                 DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
@@ -373,24 +351,24 @@ public class DBCron {
                 List<Map<String, String>> claimsFilesValues = new ArrayList<>();
                 Collection<String> cheadings = new HashSet<>();
                 Collection<String> pheadings = new HashSet<>();
-                for (Map<String, String> row : all){
+                for (Map<String, String> row : all) {
                     Map<String, String> thisFileValues = new HashMap<>();
                     boolean claims = true;
-                    for (String col : row.keySet()){
-                        if (col.equals(TrackingParser.TMXMLDATA)){
+                    for (String col : row.keySet()) {
+                        if (col.equals(TrackingParser.TMXMLDATA)) {
                             Document xml = builder.parse(new InputSource(new StringReader(row.get(col))));
                             xml.normalizeDocument();
                             Element documentElement = xml.getDocumentElement();
                             for (int index = 0; index < documentElement.getChildNodes().getLength(); index++) {
                                 Node node = documentElement.getChildNodes().item(index);
                                 if (node.hasChildNodes()) {
-                                    if (node.getChildNodes().getLength() > 1){
-                                        if (claims && node.getNodeName().startsWith("P1_")){
+                                    if (node.getChildNodes().getLength() > 1) {
+                                        if (claims && node.getNodeName().startsWith("P1_")) {
                                             claims = false;
                                         }
                                         for (int index1 = 0; index1 < node.getChildNodes().getLength(); index1++) {
                                             Node node1 = node.getChildNodes().item(index1);
-                                            if (!node1.getNodeName().equalsIgnoreCase("#text") && node1.getFirstChild() != null){
+                                            if (!node1.getNodeName().equalsIgnoreCase("#text") && node1.getFirstChild() != null) {
                                                 thisFileValues.put(node.getNodeName() + "-" + node1.getNodeName(), node1.getFirstChild().getNodeValue().replace("\n", ""));
                                             }
                                         }
@@ -403,7 +381,7 @@ public class DBCron {
                             thisFileValues.put(col, row.get(col) != null ? row.get(col).replace("\n", "") : null);
                         }
                     }
-                    if (claims){
+                    if (claims) {
                         claimsFilesValues.add(thisFileValues);
                         cheadings.addAll(thisFileValues.keySet());
                     } else {
@@ -426,7 +404,7 @@ public class DBCron {
                     bufferedWriter.write(heading + "\t");
                 }
                 bufferedWriter.newLine();
-                for (Map<String, String> row  : claimsFilesValues) {
+                for (Map<String, String> row : claimsFilesValues) {
                     for (String heading : cheadings) {
                         String value = row.get(heading);
                         bufferedWriter.write((value != null ? value : "") + "\t");
@@ -440,7 +418,7 @@ public class DBCron {
                     bufferedWriter.write(heading + "\t");
                 }
                 bufferedWriter.newLine();
-                for (Map<String, String> row  : premiumsFilesValues) {
+                for (Map<String, String> row : premiumsFilesValues) {
                     for (String heading : pheadings) {
                         String value = row.get(heading);
                         bufferedWriter.write((value != null ? value : "") + "\t");

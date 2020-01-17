@@ -227,7 +227,7 @@ public class UserUploadController {
                                 LoginService.switchDatabase(loggedInUser, db);
                             }
                             if (team != null) { // Pending uploads
-                                String targetPath = SpreadsheetService.getScanDir() + "/tagged/" + System.currentTimeMillis() + uploadFile.getOriginalFilename();
+                                String targetPath = SpreadsheetService.getFilesToImportDir() + "/tagged/" + System.currentTimeMillis() + uploadFile.getOriginalFilename();
                                 uploadFile.transferTo(new File(targetPath));
                                 // ok it's moved now make the pending upload record
                                 // todo - assign the database and team automatically!

@@ -103,7 +103,8 @@ this may now not work at all, perhaps delete?
 
     private static String getSQLDatabaseName(final DatabaseServer databaseServer, Business b, final String databaseName) throws Exception {
         StringBuilder candidate = new StringBuilder(getBusinessPrefix(b) + "_" + databaseName.replaceAll("[^A-Za-z0-9_]", "").toLowerCase());
-        while (RMIClient.getServerInterface(databaseServer.getIp()).databaseWithNameExists(candidate.toString())) {
+        // this did just check against the database server. I'm now going to say persistence names should be unique. Should probably make the key unique. todo
+        while (DatabaseDAO.findForPersistenceName(candidate.toString()) == null && RMIClient.getServerInterface(databaseServer.getIp()).databaseWithNameExists(candidate.toString())) {
             candidate.append("Z");
         }
         return candidate.toString();

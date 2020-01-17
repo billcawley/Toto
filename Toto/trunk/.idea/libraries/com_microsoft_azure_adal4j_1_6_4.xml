@@ -11,7 +11,7 @@
       <root url="jar://$PROJECT_DIR$/lib/accessors-smart-1.2.jar!/" />
       <root url="jar://$PROJECT_DIR$/lib/asm-5.0.4.jar!/" />
       <root url="jar://$PROJECT_DIR$/lib/lang-tag-1.4.4.jar!/" />
-      <root url="jar://$PROJECT_DIR$/lib/nimbus-jose-jwt-8.3.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/nimbus-jose-jwt-8.4.jar!/" />
       <root url="jar://$PROJECT_DIR$/lib/gson-2.8.0.jar!/" />
       <root url="jar://$PROJECT_DIR$/lib/slf4j-api-1.7.21.jar!/" />
       <root url="jar://$PROJECT_DIR$/lib/commons-codec-1.11.jar!/" />

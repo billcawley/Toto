@@ -6,6 +6,7 @@ import com.azquo.admin.database.Database;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.user.UserRegionOptions;
+import com.azquo.dataimport.DBCron;
 import com.azquo.dataimport.ImportService;
 import com.azquo.StringLiterals;
 import com.azquo.rmi.RMIClient;
@@ -181,7 +182,7 @@ public class ReportExecutor {
                     // if not a for each I guess we just execute? Will check for "do"
                 } else if (trimmedLine.toLowerCase().startsWith("do")) {
                     boolean debug = false;
-                    if (trimmedLine.toLowerCase().endsWith("debug")){
+                    if (trimmedLine.toLowerCase().endsWith("debug")) {
                         debug = true;
                         trimmedLine = trimmedLine.substring(0, trimmedLine.length() - "debug".length()).trim();
                     }
@@ -263,11 +264,11 @@ public class ReportExecutor {
                         SName systemDataName = book.getInternalBook().getNameByName(SYSTEMDATA);
                         if (systemDataName != null && systemData2DArrays != null) {
                             // gather debug info
-                            systemData2DArrays.add(BookUtils.nameToStringLists(loggedInUser,systemDataName));
+                            systemData2DArrays.add(BookUtils.nameToStringLists(loggedInUser, systemDataName));
                         }
 
                         //stuff added by edd, need an option for the user to see these files for debug purposes
-                        if (debug){
+                        if (debug) {
                             Exporter exporter = Exporters.getExporter();
                             File file = File.createTempFile("debug" + System.currentTimeMillis(), "temp.xlsx");
                             try (FileOutputStream fos = new FileOutputStream(file)) {
@@ -476,15 +477,15 @@ public class ReportExecutor {
 
                     } else {
 
-                            String result = null;
-                            try{
-                                result = CommonReportUtils.resolveQuery(loggedInUser, trimmedLine.substring(4), null);
-                            }catch (Exception e) {
-                                return new TypedPair<String, Double>(result + "Not found:" + trimmedLine.substring(4), 0.0);
-                            }
+                        String result = null;
+                        try {
+                            result = CommonReportUtils.resolveQuery(loggedInUser, trimmedLine.substring(4), null);
+                        } catch (Exception e) {
+                            return new TypedPair<String, Double>(result + "Not found:" + trimmedLine.substring(4), 0.0);
+                        }
 
-                            RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).addToLog(loggedInUser.getDataAccessToken(), result);
-                     }
+                        RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).addToLog(loggedInUser.getDataAccessToken(), result);
+                    }
                 } else if (trimmedLine.toLowerCase().startsWith("if ")) {
                     String result = CommonReportUtils.resolveQuery(loggedInUser, trimmedLine.substring(4), null);
                     if (result.toLowerCase().startsWith("error")) {
@@ -548,14 +549,14 @@ public class ReportExecutor {
                 String sheetName = name.getRefersToSheetName();
                 Sheet sheet = book.getSheet(sheetName);
                 SName rowHeadings = null;
-                if (sheet != null){ // it seems it can be if names are not arranged properly
+                if (sheet != null) { // it seems it can be if names are not arranged properly
                     rowHeadings = BookUtils.getNameByName(ReportRenderer.AZROWHEADINGS + region, sheet);
                 }
                 if (rowHeadings == null) {
                     int top = name.getRefersToCellRegion().getRow();
                     int left = name.getRefersToCellRegion().getColumn();
                     CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(reportId, sheetName, region);
-                    if (cellsAndHeadingsForDisplay != null){ // apparently it can be . . .
+                    if (cellsAndHeadingsForDisplay != null) { // apparently it can be . . .
                         List<List<CellForDisplay>> data = cellsAndHeadingsForDisplay.getData();
                         for (int rowNo = 0; rowNo < data.size(); rowNo++) {
                             for (int colNo = 0; colNo < data.get(0).size(); colNo++) {
@@ -740,7 +741,7 @@ public class ReportExecutor {
                             if (row >= refersToCellRegion.row && row <= refersToCellRegion.getLastRow()) {
                                 SCell cell = selectedSheet.getInternalSheet().getCell(row, refersToCellRegion.column);
                                 if (cell != null) { // not sure how it could be null
-                                    if (cell.getType() != SCell.CellType.STRING || !"Y".equalsIgnoreCase(cell.getStringValue())){
+                                    if (cell.getType() != SCell.CellType.STRING || !"Y".equalsIgnoreCase(cell.getStringValue())) {
                                         go = false;
                                     }
                                 }
@@ -799,7 +800,7 @@ public class ReportExecutor {
                                         value = cellData.getFormatText();// I assume means formatted text
                                     }
                                     if (!value.isEmpty()) {
-                                        System.out.println("Xml setting choice : "  + choiceName + " value " + value);
+                                        System.out.println("Xml setting choice : " + choiceName + " value " + value);
                                         SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choiceName, value);
                                     }
                                 }
@@ -838,18 +839,18 @@ public class ReportExecutor {
                                     StringBuilder errorLog = new StringBuilder();
                                     ReportRenderer.populateBook(book, 0, false, true, errorLog); // note true at the end here - keep on logging so users can see changes as they happen
                                     try {
-                                        for (SName sName : book.getInternalBook().getNames()){
-                                            if (sName.getRefersToSheetName() != null){
+                                        for (SName sName : book.getInternalBook().getNames()) {
+                                            if (sName.getRefersToSheetName() != null) {
                                                 Range chosenRange = Ranges.range(book.getSheet(sName.getRefersToSheetName())
-                                                        ,  sName.getRefersToCellRegion().getRow(), sName.getRefersToCellRegion().getColumn()
-                                                        ,  sName.getRefersToCellRegion().getRow(), sName.getRefersToCellRegion().getColumn()
+                                                        , sName.getRefersToCellRegion().getRow(), sName.getRefersToCellRegion().getColumn()
+                                                        , sName.getRefersToCellRegion().getRow(), sName.getRefersToCellRegion().getColumn()
                                                 );
-                                                if (chosenRange != null){
+                                                if (chosenRange != null) {
                                                     chosenRange.deleteValidation();
                                                 }
                                             }
                                         }
-                                    } catch (Exception e){ // I don't think it will exception but this is cosmetic, on the off chance it NPEs for example then carry on
+                                    } catch (Exception e) { // I don't think it will exception but this is cosmetic, on the off chance it NPEs for example then carry on
                                         e.printStackTrace();// do log it though
                                     }
                                     Exporter exporter = Exporters.getExporter();
@@ -868,26 +869,27 @@ public class ReportExecutor {
                                 }
                             }
                             // then I need to create a simple properties file with the extra info
-                            if (!xmlExtraInfoColMap.isEmpty()) {
-                                try (OutputStream output = new FileOutputStream(azquoTempDir.resolve((filePrefix != null ? filePrefix : "") + eightCharInt(filePointer) + ".properties").toString())) {
-                                    Properties properties = new Properties();
-                                    for (String propertyName : xmlExtraInfoColMap.keySet()) {
-                                        Ranges.range(selectedSheet, row, xmlExtraInfoColMap.get(propertyName)).notifyChange();
-                                        CellData cellData = Ranges.range(selectedSheet, row, xmlExtraInfoColMap.get(propertyName)).getCellData();
-                                        String value = "";
-                                        if (cellData != null) {
-                                            value = cellData.getFormatText();// I assume means formatted text
-                                        }
-                                        if (!value.isEmpty()) {
-                                            properties.put(propertyName, value);
-                                        }
+                            // since we're adding Hanover as another business and there may be many more we need to know where to load data when it comes back from Brokasure
+                            // the easiest way to do this is to add the database in this properties file so make one regardless of whether the XML feed spec requires it and add the database persistence name
+                            // key used defined in the DB cron as that's where it's used
+                            try (OutputStream output = new FileOutputStream(azquoTempDir.resolve((filePrefix != null ? filePrefix : "") + eightCharInt(filePointer) + ".properties").toString())) {
+                                Properties properties = new Properties();
+                                for (String propertyName : xmlExtraInfoColMap.keySet()) {
+                                    Ranges.range(selectedSheet, row, xmlExtraInfoColMap.get(propertyName)).notifyChange();
+                                    CellData cellData = Ranges.range(selectedSheet, row, xmlExtraInfoColMap.get(propertyName)).getCellData();
+                                    String value = "";
+                                    if (cellData != null) {
+                                        value = cellData.getFormatText();// I assume means formatted text
                                     }
-                                    properties.store(output, null);
-                                } catch (IOException io) {
-                                    io.printStackTrace();
+                                    if (!value.isEmpty()) {
+                                        properties.put(propertyName, value);
+                                    }
                                 }
+                                properties.put(DBCron.AZQUODATABASEPERSISTENCENAME, loggedInUser.getDatabase().getPersistenceName());
+                                properties.store(output, null);
+                            } catch (IOException io) {
+                                io.printStackTrace();
                             }
-
 
                             if (filePrefix != null && !fileName.startsWith(filePrefix)) { // I think above it can be set up with the prefix already
                                 fileName = filePrefix + fileName;
@@ -909,7 +911,7 @@ public class ReportExecutor {
                                     CellData cellData = Ranges.range(selectedSheet, row, col).getCellData();
                                     if (cellData != null) {
                                         value = cellData.getFormatText();// I assume means formatted text
-                                        if (cellData.getType() == CellData.CellType.NUMERIC || (cellData.getType() == CellData.CellType.FORMULA && cellData.getResultType() == CellData.CellType.NUMERIC)){
+                                        if (cellData.getType() == CellData.CellType.NUMERIC || (cellData.getType() == CellData.CellType.FORMULA && cellData.getResultType() == CellData.CellType.NUMERIC)) {
                                             value = value.replaceAll(",", ""); // a hack for Ed B, the formatting in the cell seems to be ignored in this respect
                                         }
                                     }
@@ -941,22 +943,22 @@ public class ReportExecutor {
                                 Node node = nodeList.item(i);
                                 if (node.getNodeType() == Node.ELEMENT_NODE) {
                                     // do something with the current element
-                                    if (node.getNodeName().contains("-") && NumberUtils.isNumber(node.getNodeName().substring(node.getNodeName().indexOf("-") + 1))){
+                                    if (node.getNodeName().contains("-") && NumberUtils.isNumber(node.getNodeName().substring(node.getNodeName().indexOf("-") + 1))) {
                                         // zap the duplicates that are empty
                                         boolean empty = true;
                                         NodeList childNodes = node.getChildNodes();
-                                        for (int j = 0; j < childNodes.getLength(); j++){
-                                            if (childNodes.item(j).hasChildNodes()){
+                                        for (int j = 0; j < childNodes.getLength(); j++) {
+                                            if (childNodes.item(j).hasChildNodes()) {
                                                 // that first criteria essentially means say it's not empty if they start adding further nested tags in tags in the duplicate tags
                                                 // may need to deal with that later but for the moment this is fine
                                                 if (childNodes.item(j).getFirstChild().hasChildNodes()
-                                                        || (childNodes.item(j).getFirstChild().getNodeValue() != null && !childNodes.item(j).getFirstChild().getNodeValue().isEmpty())){
+                                                        || (childNodes.item(j).getFirstChild().getNodeValue() != null && !childNodes.item(j).getFirstChild().getNodeValue().isEmpty())) {
                                                     empty = false;
                                                     break;
                                                 }
                                             }
                                         }
-                                        if (empty){
+                                        if (empty) {
                                             node.getParentNode().removeChild(node); // reasonable syntax??
                                         } else {
                                             doc.renameNode(node, null, node.getNodeName().substring(0, node.getNodeName().indexOf("-")));
