@@ -24,6 +24,7 @@ Low level dealing with attributes (just default display name or more), values an
 
 import com.azquo.StringLiterals;
 import com.azquo.memorydb.core.Name;
+import com.azquo.memorydb.core.NewName;
 import com.azquo.memorydb.core.Value;
 
 import java.util.*;
@@ -72,23 +73,23 @@ public interface NameData {
         return false;
     }
 
-    default Collection<Name> getChildren() {
+    default Collection<NewName> getChildren() {
         return Collections.emptyList();
     }
 
-    default void addToChildren(Name name, boolean backupRestore) throws Exception {
+    default void addToChildren(NewName name, boolean backupRestore) throws Exception {
         throw new UnsupportedOperationException();
     }
 
-    default void removeFromChildren(Name name) {
+    default void removeFromChildren(NewName name) {
         // as with values just do nothing, we have no children here
     }
 
-    default Name[] directArrayChildren() {
+    default NewName[] directArrayChildren() {
         return null;
     }
 
-    default Set<Name> directSetChildren() {
+    default Set<NewName> directSetChildren() {
         return null;
     }
 
@@ -101,6 +102,8 @@ public interface NameData {
 
     String getDefaultDisplayName();
 
+    String getAttribute(String attribute);
+
     default boolean canSetAttributesOtherThanDefaultDisplayName() {
         return false;
     }
@@ -109,11 +112,13 @@ public interface NameData {
 
     List<String> getAttributeKeys();
 
+    String getAttributesForFastStore();
+
     NameData getImplementationThatCanSetAttributesOtherThanDefaultDisplayName();
 
     // need check function that the implementation supports adding attributes
     // error or not??
-    void setAttributeWillBePersisted(String attributeName, String attributeValue) throws Exception;
+    boolean setAttribute(String attributeName, String attributeValue) throws Exception;
 
-    void removeAttributeWillBePersisted(String attributeName);
+    boolean removeAttribute(String attributeName);
 }

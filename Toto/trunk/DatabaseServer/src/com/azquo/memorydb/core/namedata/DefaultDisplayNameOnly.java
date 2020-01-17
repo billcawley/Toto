@@ -17,19 +17,27 @@ public class DefaultDisplayNameOnly implements NameData{
         return defaultDisplayName;
     }
 
+
+
     @Override
-    public void setAttributeWillBePersisted(String attributeName, String attributeValue) throws Exception {
+    public boolean setAttribute(String attributeName, String attributeValue) throws Exception {
         if (!attributeName.equals(StringLiterals.DEFAULT_DISPLAY_NAME)){
             throw new UnsupportedOperationException();
         }
-        defaultDisplayName = attributeValue;
+        if (!defaultDisplayName.equals(attributeValue)){
+            defaultDisplayName = attributeValue;
+            return true;
+        }
+        return false;
     }
 
     @Override
-    public void removeAttributeWillBePersisted(String attributeName) {
-        if (attributeName.equals(StringLiterals.DEFAULT_DISPLAY_NAME)){
+    public boolean removeAttribute(String attributeName) {
+        if (attributeName.equals(StringLiterals.DEFAULT_DISPLAY_NAME) && defaultDisplayName != null){
             defaultDisplayName = null; // will cause NPEs but this emulates NameAttributes
+            return true;
         }
+        return false;
     }
 
     @Override
@@ -54,6 +62,20 @@ public class DefaultDisplayNameOnly implements NameData{
 
     @Override
     public NameData getImplementationThatCanSetAttributesOtherThanDefaultDisplayName() {
+        return null;
+    }
+
+    @Override
+    public String getAttribute(String attribute) {
+        if (attribute.equals(StringLiterals.DEFAULT_DISPLAY_NAME)){
+            return defaultDisplayName;
+        }
+        return null;
+    }
+
+    @Override
+    public String getAttributesForFastStore() {
+        // todo
         return null;
     }
 }

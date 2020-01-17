@@ -1,3 +1,13 @@
+17-01-20
+
+Match files from Brokasure back to their original database and initial decryption code for Hanover files
+
+XLSX
+
+Changed the commission formula to calculate by the correct number of decimal places (Hanover)
+
+First set of reports for Hanover.
+
 16-01-20
 
 XLSX
