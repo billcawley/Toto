@@ -5,15 +5,15 @@ import com.azquo.spreadsheet.transport.HeadingWithInterimLookup;
 import com.azquo.util.CommandLineCalls;
 import org.apache.commons.lang.SystemUtils;
 import org.apache.log4j.Logger;
-//import org.apache.poi.poifs.crypt.Decryptor;
-//import org.apache.poi.poifs.crypt.EncryptionInfo;
-//import org.apache.poi.poifs.filesystem.POIFSFileSystem;
+import org.apache.poi.poifs.crypt.Decryptor;
+import org.apache.poi.poifs.crypt.EncryptionInfo;
+import org.apache.poi.poifs.filesystem.POIFSFileSystem;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
-import org.zkoss.poi.poifs.crypt.Decryptor;
-import org.zkoss.poi.poifs.crypt.EncryptionInfo;
-import org.zkoss.poi.poifs.filesystem.POIFSFileSystem;
+//import org.zkoss.poi.poifs.crypt.Decryptor;
+//import org.zkoss.poi.poifs.crypt.EncryptionInfo;
+//import org.zkoss.poi.poifs.filesystem.POIFSFileSystem;
 import org.zkoss.poi.ss.usermodel.BuiltinFormats;
 import org.zkoss.poi.ss.usermodel.DataFormatter;
 import org.zkoss.poi.xssf.model.StylesTable;
@@ -197,6 +197,14 @@ public final class ImportService {
                 return f1.getName().compareTo(f2.getName());
             });
             int counter = 1;
+            /*
+
+            So, we want to add support for adding a results file to a zip. That is to say a file saying
+            "don't load these files" and "don't load these lines from a file we are loading"
+
+            todo . . .
+
+             */
             for (File f : files) {
                 if (files.size() > 1 && session != null) {
                     session.setAttribute(ManageDatabasesController.IMPORTSTATUS, counter + "/" + files.size());
@@ -253,6 +261,7 @@ public final class ImportService {
                     book = new XSSFWorkbook(opcPackage);
                 } catch (org.zkoss.poi.openxml4j.exceptions.InvalidFormatException ife) {
                     // Hanover may send 'em encrypted
+                    System.out.println("trying for decryption");
                     POIFSFileSystem fileSystem = new POIFSFileSystem(new FileInputStream(uploadedFile.getPath()));
                     EncryptionInfo info = new EncryptionInfo(fileSystem);
                     Decryptor decryptor = Decryptor.getInstance(info);

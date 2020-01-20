@@ -1,3 +1,11 @@
+20-01-20
+
+Pending clear before upload - template parameter is pendingdataclear
+
+XLSX
+
+Hanover - Changed the commission formula to calculate by the correct number of decimal places
+
 17-01-20
 
 Match files from Brokasure back to their original database and initial decryption code for Hanover files
