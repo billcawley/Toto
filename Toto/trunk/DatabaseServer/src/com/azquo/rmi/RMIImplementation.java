@@ -120,6 +120,15 @@ class RMIImplementation implements RMIInterface {
         }
     }
 
+    @Override
+    public void checkTemporaryCopyExists(DatabaseAccessToken databaseAccessToken) throws RemoteException {
+        try {
+            DSImportService.checkTemporaryCopyExists(databaseAccessToken);
+        } catch (Exception e) {
+            throw new RemoteException("Database Server Exception", e);
+        }
+    }
+
     // to lookup error lines based off report feedback, for Ed Broking pending uploads
     @Override
     public Map<Integer, TypedPair<String, String>> getLinesWithValuesInColumn(UploadedFile uploadedFile, int columnIndex, Set<String> valuesToCheck) throws RemoteException {
@@ -198,7 +207,7 @@ class RMIImplementation implements RMIInterface {
     @Override
     public List<String> getDropDownListForQuery(DatabaseAccessToken databaseAccessToken, String query, String user, boolean justUser, int provenanceId) throws RemoteException {
         try {
-            return UserChoiceService.getDropDownListForQuery(databaseAccessToken, query, user,null, justUser, provenanceId);
+            return UserChoiceService.getDropDownListForQuery(databaseAccessToken, query, user, null, justUser, provenanceId);
         } catch (Exception e) {
             throw new RemoteException(e.getMessage(), e);
         }
@@ -319,7 +328,7 @@ class RMIImplementation implements RMIInterface {
                     () -> {
                         // braces and a belt, as this is in a new thread its possible a persist might be called on a copied database when it's been zapped so check here
                         // more careful handling of temporary databases will hopefully make this redundant
-                        if (!databaseAccessToken.getPersistenceName().startsWith(StringLiterals.copyPrefix)){
+                        if (!databaseAccessToken.getPersistenceName().startsWith(StringLiterals.copyPrefix)) {
                             DSSpreadsheetService.persistDatabase(databaseAccessToken);
                         }
                     }

@@ -18,11 +18,13 @@ public class PendingUploadConfig {
     private final Set<Integer> filesToReject;
     private final Map<Integer, Map<Integer, String>> fileRejectLines;
     private final AtomicInteger counter;
+    private final String pendingDataClearCommand;
 
-    public PendingUploadConfig(Map<String, Map<String, String>> parametersPerFile, Set<Integer> filesToReject, Map<Integer, Map<Integer, String>> fileRejectLines) {
+    public PendingUploadConfig(Map<String, Map<String, String>> parametersPerFile, Set<Integer> filesToReject, Map<Integer, Map<Integer, String>> fileRejectLines, String pendingDataClearCommand) {
         this.parametersPerFile = parametersPerFile;
         this.filesToReject = filesToReject;
         this.fileRejectLines = fileRejectLines;
+        this.pendingDataClearCommand = pendingDataClearCommand;
         counter = new AtomicInteger(0);
     }
 
@@ -43,5 +45,9 @@ public class PendingUploadConfig {
             return null;
         }
         return parametersPerFile.get(name);
+    }
+
+    public String getPendingDataClearCommand() {
+        return pendingDataClearCommand;
     }
 }

@@ -40,6 +40,8 @@ public interface RMIInterface extends Remote {
 
     UploadedFile readPreparedFile(DatabaseAccessToken databaseAccessToken, UploadedFile uploadedFile, String user) throws RemoteException;
 
+    void checkTemporaryCopyExists(DatabaseAccessToken databaseAccessToken) throws RemoteException;
+
     Map<Integer, TypedPair<String, String>> getLinesWithValuesInColumn(UploadedFile uploadedFile, int columnIndex, Set<String> valuesToCheck) throws RemoteException;
 
     CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(DatabaseAccessToken databaseAccessToken, String user, String regionName, int valueId, List<List<String>> rowHeadingsSource

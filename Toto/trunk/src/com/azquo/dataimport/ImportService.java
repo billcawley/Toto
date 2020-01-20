@@ -108,8 +108,38 @@ public final class ImportService {
             throw new Exception("No database set");
         }
         /*
-        *         *
-        * */
+         * so, pending uploads will have an option to do data clearing before any import. This will apply validation or not, it's an execute
+         * */
+        if (pendingUploadConfig != null && pendingUploadConfig.getPendingDataClearCommand() != null) {
+            System.out.println("*****");
+            System.out.println("*****");
+            System.out.println("*****");
+            System.out.println("*****");
+            System.out.print("Clear data before import ");
+            // set user choices to file params, could be useful to the execute
+            for (String choice : uploadedFile.getParameters().keySet()) {
+                System.out.println(choice + " : " + uploadedFile.getParameter(choice));
+                SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choice, uploadedFile.getParameter(choice));
+            }
+            /*. so there's a bit of confusing logic which is worth flagging and perhaps tidying if it's not difficult. The importer and this check will look up
+            a temporary copy explicitly server side based off the original name. When in copy mode it just accesses the copy and will fail if it's not there.
+             This works but perhaps copyMode should be put on the data accesstoken and it will do it server side? todo
+             */
+            if (uploadedFile.isValidationTest()){
+                RMIClient.getServerInterface(loggedInUser.getDatabaseServer().getIp()).checkTemporaryCopyExists(loggedInUser.getDataAccessToken());
+                loggedInUser.copyMode = true;
+            }
+            try {
+                System.out.println(ReportExecutor.runExecute(loggedInUser, pendingUploadConfig.getPendingDataClearCommand(), null, uploadedFile.getProvenanceId(), false));
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            System.out.println("*****");
+            System.out.println("*****");
+            System.out.println("*****");
+            System.out.println("*****");
+            loggedInUser.copyMode = false;
+        }
 
 
         String fileName = uploadedFile.getFileName();
@@ -125,7 +155,7 @@ public final class ImportService {
             // add to the uploaded list on the Manage Databases page
             // now jamming the import feedback in the comments
             String comments = ManageDatabasesController.formatUploadedFiles(processedUploadedFiles, -1, true, null);
-            if (comments.length() > 10_000){
+            if (comments.length() > 10_000) {
                 comments = comments.substring(0, 10_000) + " . . .";
             }
             UploadRecord uploadRecord = new UploadRecord(0, LocalDateTime.now(), loggedInUser.getUser().getBusinessId()
@@ -221,7 +251,7 @@ public final class ImportService {
                 try {
                     opcPackage = OPCPackage.open(new FileInputStream(new File(uploadedFile.getPath())));
                     book = new XSSFWorkbook(opcPackage);
-                } catch (org.zkoss.poi.openxml4j.exceptions.InvalidFormatException ife){
+                } catch (org.zkoss.poi.openxml4j.exceptions.InvalidFormatException ife) {
                     // Hanover may send 'em encrypted
                     POIFSFileSystem fileSystem = new POIFSFileSystem(new FileInputStream(uploadedFile.getPath()));
                     EncryptionInfo info = new EncryptionInfo(fileSystem);
@@ -351,8 +381,8 @@ public final class ImportService {
                     }
                 }
                 // Import Model is one way to detect a template but it's not always there - names beginning az_Headings are a sign also
-                for (Name name : BookUtils.getNamesForSheet(sheet)){
-                    if (name.getNameName().startsWith(AZHEADINGS)){
+                for (Name name : BookUtils.getNamesForSheet(sheet)) {
+                    if (name.getNameName().startsWith(AZHEADINGS)) {
                         if (opcPackage != null) opcPackage.revert();
                         return Collections.singletonList(uploadImportTemplate(uploadedFile, loggedInUser, true));
                     }
@@ -372,14 +402,14 @@ public final class ImportService {
             Name fileTypeRange = BookUtils.getName(book, ReportRenderer.AZFILETYPE);
             if (fileTypeRange != null) {
                 CellReference sheetNameCell = BookUtils.getNameCell(fileTypeRange);
-                if (sheetNameCell != null){
+                if (sheetNameCell != null) {
                     try {
                         String fileType = book.getSheet(fileTypeRange.getSheetName()).getRow(sheetNameCell.getRow()).getCell(sheetNameCell.getCol()).getStringCellValue();
                         if (fileType != null) {
                             // note - this means this will only kick in in s single XLSX upload not a zip of them
                             uploadedFile.setFileType(fileType);
                         }
-                    }catch(Exception e){
+                    } catch (Exception e) {
                         logger.warn("no file type in az_FileType");
                     }
                 }
@@ -391,7 +421,7 @@ public final class ImportService {
             Name reportRange = BookUtils.getName(book, ReportRenderer.AZREPORTNAME);
             if (reportRange != null) {
                 CellReference sheetNameCell = BookUtils.getNameCell(reportRange);
-                if (sheetNameCell != null){
+                if (sheetNameCell != null) {
                     reportName = book.getSheet(reportRange.getSheetName()).getRow(sheetNameCell.getRow()).getCell(sheetNameCell.getCol()).getStringCellValue();
                 }
             }
@@ -664,8 +694,8 @@ public final class ImportService {
     // things that can be read from "Parameters" in an import template sheet
     private static final String PRE_PROCESSOR = "pre-processor";
     private static final String PREPROCESSOR = "preprocessor";
-    private static final String ADDITIONALDATAPROCESSOR = "additionaldataprocessor";
     public static final String POSTPROCESSOR = "postprocessor";
+    public static final String PENDINGDATACLEAR = "pendingdataclear";
     private static final String VALIDATION = "validation";
     private static final String NOFILEHEADINGS = "nofileheadings";
     private static final String LANGUAGE = "language";
@@ -708,14 +738,14 @@ public final class ImportService {
                 // scan first for the main model
                 List<List<String>> template;
                 boolean hasImportModel = false;
-                if (importVersion!=null) {
+                if (importVersion != null) {
                     template = importTemplateData.getSheets().get("Import Model");
                     if (template == null) {
                         template = sheetInfo(importTemplateData, importVersion);//case insensitive
-                    }else{
+                    } else {
                         hasImportModel = true;
                     }
-                }else{
+                } else {
                     template = sheetInfo(importTemplateData, templateName);//case insensitive
                 }
                 if (template != null) {
@@ -739,8 +769,8 @@ public final class ImportService {
                     List<List<String>> headingReference = new ArrayList<>();
                     // a "version" - similar to the import model parsing but the headings can be multi level (double decker) and not at the top thus allowing for top headings
                     if (hasImportModel) {
-                        template = sheetInfo(importTemplateData,importVersion);
-                        if (template!=null){
+                        template = sheetInfo(importTemplateData, importVersion);
+                        if (template != null) {
                             // unlike the "default" mode there can be a named range for the headings here so
                             AreaReference headingsName = importTemplateData.getName(AZHEADINGS + importVersion);
                             if (headingsName != null) { // we have to have it or don't bother!
@@ -847,7 +877,7 @@ public final class ImportService {
                                 }
                                 // ok the extraVersionClauses were part of azquoClauses but there was a problem - what happens if the import model has context headings - a pipe then another heading?
                                 // The extra clauses would only apply to the last context heading when they should apply to all or rather the first heading before pipe so then the others all inherit
-                                if (azquoHeadingsAsString.indexOf("|") != -1){
+                                if (azquoHeadingsAsString.indexOf("|") != -1) {
                                     String secondHalf = azquoHeadingsAsString.substring(azquoHeadingsAsString.indexOf("|"), azquoHeadingsAsString.length());
                                     azquoHeadingsAsString.setLength(azquoHeadingsAsString.indexOf("|"));
                                     // so, as mentioned in the previous comment, jam the extra clauses before the first pipe if it exists
@@ -902,14 +932,14 @@ public final class ImportService {
                                 headingsNoFileHeadingsWithInterimLookup.add(new HeadingWithInterimLookup(azquoHeadingsAsString.toString(), standardHeadingsColumn.get(0)));
                             }
                         }
-                        if (uploadedFile.getTemplateParameter("category lookups")!=null){
+                        if (uploadedFile.getTemplateParameter("category lookups") != null) {
                             //add lookups for the categorisation statements
                             String[] catLookups = uploadedFile.getTemplateParameter("category lookups").split(";");
-                            for (String catLookup:catLookups){
+                            for (String catLookup : catLookups) {
                                 String[] vals = catLookup.split("=");
                                 String newHeading = vals[0].trim();
                                 HeadingWithInterimLookup headingWithInterimLookup = new HeadingWithInterimLookup(newHeading + ";composition " + vals[1], newHeading);
-                                 headingsNoFileHeadingsWithInterimLookup.add(headingWithInterimLookup);
+                                headingsNoFileHeadingsWithInterimLookup.add(headingWithInterimLookup);
 
                             }
                         }
@@ -984,7 +1014,7 @@ public final class ImportService {
                 throw e;
             }
         }
-
+// perhaps redundant? Seems just vanilla execute is being used for validation
         if (uploadedFile.getTemplateParameter(VALIDATION) != null && uploadedFile.isValidationTest()) {
             // set user choices to file params, could be useful to the execute
             for (String choice : uploadedFile.getParameters().keySet()) {
@@ -1038,14 +1068,14 @@ public final class ImportService {
                         // going to try based on feedback in the processed file
                         if (uploadedFile.getFileHeadings() != null) { // if we don't have the original set of headings we won't be able to check the file
                             int index = 0;
-                            if ("lineno".equalsIgnoreCase(keyColumn)){
+                            if ("lineno".equalsIgnoreCase(keyColumn)) {
                                 index = -1; // special case - the value IS the line number
-                                for (String errorKey : new HashSet<>(errorLines.keySet())){
+                                for (String errorKey : new HashSet<>(errorLines.keySet())) {
                                     // worth an explanation, line no can hit other files so if it has a - in it then take the file name from before the -
                                     // and then check the uploadedFile file name contains it otherwise ditch the error line
-                                    if (errorKey.contains("-")){
+                                    if (errorKey.contains("-")) {
                                         Map<String, String> errorLine = errorLines.remove(errorKey);
-                                        if (uploadedFile.getFileName().toLowerCase().contains(errorKey.toLowerCase().substring(0, errorKey.indexOf("-")))){
+                                        if (uploadedFile.getFileName().toLowerCase().contains(errorKey.toLowerCase().substring(0, errorKey.indexOf("-")))) {
                                             errorLines.put(errorKey.substring(errorKey.indexOf("-") + 1), errorLine);
                                         }
                                     }
@@ -1091,12 +1121,12 @@ public final class ImportService {
         return uploadedFile;
     }
 
-   // in this context the custom headings range is for when there are multiple versions of an importer based off a master sheet -
+    // in this context the custom headings range is for when there are multiple versions of an importer based off a master sheet -
     // e.g. the big Ed Broking import sheet for Risk which will have sub sheets - these sheets will have a named range,
 
-    private static List<List<String>> sheetInfo(ImportTemplateData importTemplateData, String toTest){
-        for (String sheetName: importTemplateData.getSheets().keySet()){
-            if (sheetName.equalsIgnoreCase(toTest)){
+    private static List<List<String>> sheetInfo(ImportTemplateData importTemplateData, String toTest) {
+        for (String sheetName : importTemplateData.getSheets().keySet()) {
+            if (sheetName.equalsIgnoreCase(toTest)) {
                 return importTemplateData.getSheets().get(sheetName);
             }
         }
@@ -1105,7 +1135,7 @@ public final class ImportService {
 
     enum ImportSheetScanMode {OFF, TOPHEADINGS, CUSTOMHEADINGS, STANDARDHEADINGS, PARAMETERS}
 
-    private static void importSheetScan(List<List<String>> sheet
+    public static void importSheetScan(List<List<String>> sheet
             , Map<RowColumn, String> topHeadings
             , List<List<String>> standardHeadings
             , List<List<String>> customHeadings
@@ -1206,11 +1236,11 @@ public final class ImportService {
                     int endBrackets = fileName.indexOf(")", bracketPos);
                     //there may be parameter names which include backets....
                     int internalBrackets = bracketPos;
-                    internalBrackets = fileName.indexOf("(", internalBrackets+1);
-                    while (endBrackets > 0 && internalBrackets > 0 && internalBrackets<endBrackets){
+                    internalBrackets = fileName.indexOf("(", internalBrackets + 1);
+                    while (endBrackets > 0 && internalBrackets > 0 && internalBrackets < endBrackets) {
                         endBrackets = fileName.indexOf(")", endBrackets + 1);
-                        internalBrackets = fileName.indexOf("(", internalBrackets+1);
-                     }
+                        internalBrackets = fileName.indexOf("(", internalBrackets + 1);
+                    }
                     if (endBrackets > 0) {
                         String parseString = fileName.substring(startBrackets + 1, endBrackets);
                         bracketPos = endBrackets;
@@ -1225,7 +1255,7 @@ public final class ImportService {
                                 }
                             }
                         }
-                    }else{
+                    } else {
                         bracketPos = fileName.length();
                     }
                 }
@@ -1269,7 +1299,7 @@ public final class ImportService {
                 // specific condition - integer and format all 000, then actually use the format. For zip codes
                 if (dataFormat.length() > 1 && dataFormat.contains("0") && dataFormat.replace("0", "").isEmpty()) {
                     // easylife tripped up this "zipcode" conditional by having a formula in there, requires a formula evaluator be passed
-                    if (cell.getCellType() == Cell.CELL_TYPE_FORMULA){
+                    if (cell.getCellType() == Cell.CELL_TYPE_FORMULA) {
                         returnString = df.formatCellValue(cell, cell.getSheet().getWorkbook().getCreationHelper().createFormulaEvaluator()); // performance issues on the formula evaluator??
                     } else {
                         returnString = df.formatCellValue(cell);
@@ -1600,48 +1630,49 @@ fr.close();
         }
         return null;
     }
-/*
-    // note - am making these all lower case as we want case insensitive checks
-    private static void getSheetAndNamedRangesNamesQuicklyFromXLSX(String xlsxPath, Set<String> sheetNames, Set<String> namedRangesNames) throws Exception {
-        OPCPackage opcPackage = OPCPackage.open(new File(xlsxPath));
-        XSSFReader xssfReader = new XSSFReader(opcPackage);
 
-        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-        DocumentBuilder builder = factory.newDocumentBuilder();
-//        System.out.println(IOUtils.toString(xssfReader.getWorkbookData()));
-        Document workbookXML = builder.parse(xssfReader.getWorkbookData());
-        workbookXML.getDocumentElement().normalize(); // probably fine on smaller XML, don't want to do on the big stuff
-        NodeList nList = workbookXML.getElementsByTagName("definedName");
-        for (int temp = 0; temp < nList.getLength(); temp++) {
-            Node nNode = nList.item(temp);
-            if (nNode.getNodeType() == Node.ELEMENT_NODE) {
-                Element eElement = (Element) nNode;
-                String nameName = eElement.getAttribute("name");
-                if (nameName != null) {
-                    namedRangesNames.add(nameName.toLowerCase());
-                }
-                //System.out.println("name : "  + eElement.getAttribute("name"));
-                //System.out.println("address : " + eElement.getTextContent());
-            }
-        }
-        nList = workbookXML.getElementsByTagName("sheet");
-        for (int temp = 0; temp < nList.getLength(); temp++) {
-            Node nNode = nList.item(temp);
-            if (nNode.getNodeType() == Node.ELEMENT_NODE) {
-                Element eElement = (Element) nNode;
-                String sheetName = eElement.getAttribute("name");
-                if (sheetName != null) {
-                    sheetNames.add(sheetName.trim().toLowerCase()); // it seems it might need trimming
-                }
-                //System.out.println("name : "  + eElement.getAttribute("name"));
-                //System.out.println("address : " + eElement.getTextContent());
-            }
-        }
-        // worried about write locking the file in windows . . .
-        opcPackage.revert();
+    /*
+        // note - am making these all lower case as we want case insensitive checks
+        private static void getSheetAndNamedRangesNamesQuicklyFromXLSX(String xlsxPath, Set<String> sheetNames, Set<String> namedRangesNames) throws Exception {
+            OPCPackage opcPackage = OPCPackage.open(new File(xlsxPath));
+            XSSFReader xssfReader = new XSSFReader(opcPackage);
 
-    }
-*/
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder builder = factory.newDocumentBuilder();
+    //        System.out.println(IOUtils.toString(xssfReader.getWorkbookData()));
+            Document workbookXML = builder.parse(xssfReader.getWorkbookData());
+            workbookXML.getDocumentElement().normalize(); // probably fine on smaller XML, don't want to do on the big stuff
+            NodeList nList = workbookXML.getElementsByTagName("definedName");
+            for (int temp = 0; temp < nList.getLength(); temp++) {
+                Node nNode = nList.item(temp);
+                if (nNode.getNodeType() == Node.ELEMENT_NODE) {
+                    Element eElement = (Element) nNode;
+                    String nameName = eElement.getAttribute("name");
+                    if (nameName != null) {
+                        namedRangesNames.add(nameName.toLowerCase());
+                    }
+                    //System.out.println("name : "  + eElement.getAttribute("name"));
+                    //System.out.println("address : " + eElement.getTextContent());
+                }
+            }
+            nList = workbookXML.getElementsByTagName("sheet");
+            for (int temp = 0; temp < nList.getLength(); temp++) {
+                Node nNode = nList.item(temp);
+                if (nNode.getNodeType() == Node.ELEMENT_NODE) {
+                    Element eElement = (Element) nNode;
+                    String sheetName = eElement.getAttribute("name");
+                    if (sheetName != null) {
+                        sheetNames.add(sheetName.trim().toLowerCase()); // it seems it might need trimming
+                    }
+                    //System.out.println("name : "  + eElement.getAttribute("name"));
+                    //System.out.println("address : " + eElement.getTextContent());
+                }
+            }
+            // worried about write locking the file in windows . . .
+            opcPackage.revert();
+
+        }
+    */
     private static void processSheet(
             StylesTable styles,
             ReadOnlySharedStringsTable strings,

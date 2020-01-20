@@ -97,6 +97,7 @@ public class PendingUploadController {
             AdminService.setBanner(model, loggedInUser);
             final PendingUpload pu = PendingUploadDAO.findById(Integer.parseInt(id));
             HttpSession session = request.getSession();
+            boolean runClearExecute = request.getParameter("runClearExecute") != null;
             // todo - pending upload security for non admin users?
             if (pu.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
                 Set<Integer> nonAdminDBids = null;
@@ -135,7 +136,7 @@ public class PendingUploadController {
                     pu.setProcessedByUserId(loggedInUser.getUser().getId());
                     pu.setProcessedDate(LocalDateTime.now());
                     PendingUploadDAO.store(pu);
-                    if (nonAdminDBids != null){
+                    if (nonAdminDBids != null) {
                         return "redirect:/api/UserUpload?uploadreports=true#tab2";
                     } else {
                         return "redirect:/api/ManageDatabases?uploadreports=true#tab4";
@@ -163,7 +164,7 @@ public class PendingUploadController {
                 model.put("id", pu.getId());
                 model.put("filename", mainFileName);
                 if (NumberUtils.isDigits(databaseId)) {
-                    if (nonAdminDBids != null && !nonAdminDBids.contains(Integer.parseInt(databaseId))){
+                    if (nonAdminDBids != null && !nonAdminDBids.contains(Integer.parseInt(databaseId))) {
                         return "redirect:/api/Login";
                     }
                     pu.setDatabaseId(Integer.parseInt(databaseId));
@@ -188,7 +189,7 @@ public class PendingUploadController {
                 Database database = DatabaseDAO.findById(pu.getDatabaseId());
                 if (database == null) {
                     model.put("dbselect", "true");
-                    if (databaseList != null){
+                    if (databaseList != null) {
                         model.put("databases", databaseList);
                     } else {
                         model.put("databases", AdminService.getDatabaseListForBusinessWithBasicSecurity(loggedInUser));
@@ -205,6 +206,7 @@ public class PendingUploadController {
                 // we're going to need to move to an import template object I think
                 ImportTemplateData importTemplateForUploadedFile = ImportService.getImportTemplateForUploadedFile(loggedInUser, null, null);
                 List<List<String>> lookupSheet = null;
+                String runClearExecuteCommand  = null;
                 if (importTemplateForUploadedFile == null) {
                     model.put("error", "Import template not found for " + database.getName() + ", please upload one for it.");
                     return "pendingupload";
@@ -213,6 +215,17 @@ public class PendingUploadController {
                     for (String sheetName : importTemplateForUploadedFile.getSheets().keySet()) {
                         if (sheetName.equalsIgnoreCase(importVersion)) {
                             found = true;
+                            // a paste from import service stripped down to find just the parameters
+                            Map<String, String> templateParameters = new HashMap<>(); // things like pre processor, file encoding etc
+                            List<List<String>> standardHeadings = new ArrayList<>();// required to stop NPE internally, perhaps can zap . . .
+                            ImportService.importSheetScan(importTemplateForUploadedFile.getSheets().get(sheetName), null, standardHeadings, null, templateParameters, null);
+                            if (templateParameters.get(ImportService.PENDINGDATACLEAR) != null){
+                                runClearExecuteCommand = templateParameters.get(ImportService.PENDINGDATACLEAR);
+                                if (session.getAttribute(ManageDatabasesController.IMPORTRESULT) == null){// only show the tickbox on the first screen, it makes no sense on the validation results screen
+                                    model.put("runClearExecute", true);
+                                }
+                            }
+
                         }
                         if (sheetName.equalsIgnoreCase(LOOKUPS + importVersion)) {
                             lookupSheet = importTemplateForUploadedFile.getSheets().get(sheetName);
@@ -357,7 +370,7 @@ public class PendingUploadController {
                         Workbook book = new XSSFWorkbook(opcPackage);
                         Sheet warnings = book.getSheet("Warnings");
                         // try catch as I need to make sure the package is closed under windows
-                        try{
+                        try {
                             if (warnings != null) {
                                 boolean inData = false;
                                 // first two always load and comment, look up the other two
@@ -397,7 +410,7 @@ public class PendingUploadController {
                                     }
                                 }
                             }
-                        } catch (Exception e){
+                        } catch (Exception e) {
                             e.printStackTrace();
                         }
                         opcPackage.revert();
@@ -580,6 +593,10 @@ public class PendingUploadController {
                     }
                     counter++;
                 }
+                if (runClearExecute) {
+                    lookupValuesForFilesHTML.append("<input name=\"runClearExecute\" id=\"runClearExecute\" value=\"true\" type=\"hidden\" />\n");
+                }
+
 
                 final Map<String, Map<String, String>> finalLookupValuesForFiles = lookupValuesForFiles;
                 if (!actuallyImport) { // before running validation grab the latest provenance - if it doesn't match when the actual import happens then warn the user about concurrent modification
@@ -588,13 +605,14 @@ public class PendingUploadController {
                     session.removeAttribute(LATESTPROVENANCE);
                 }
                 boolean finalActuallyImport = actuallyImport;
+                String finalRunClearExecuteCommand = runClearExecute ? runClearExecuteCommand : null;// pass it through if they checked it . . .
                 new Thread(() -> {
                     if (finalLookupValuesForFiles != null && finalLookupValuesForFiles.get(pu.getFileName()) != null) { // could happen on a single xlsx upload. Apparently always zips but I'm concerned it may not be . . .
                         params.putAll(finalLookupValuesForFiles.get(pu.getFileName()));
                     }
                     UploadedFile uploadedFile = new UploadedFile(pu.getFilePath(), Collections.singletonList(pu.getFileName()), params, false, !finalActuallyImport);
                     try {
-                        PendingUploadConfig puc = new PendingUploadConfig(finalLookupValuesForFiles, fileLoadFlags, fileRejectLines);
+                        PendingUploadConfig puc = new PendingUploadConfig(finalLookupValuesForFiles, fileLoadFlags, fileRejectLines, finalRunClearExecuteCommand);
                         List<UploadedFile> uploadedFiles = ImportService.importTheFile(loggedInUser, uploadedFile, session, puc);
                         if (!finalActuallyImport) {
                             session.setAttribute(PARAMSPASSTHROUGH, lookupValuesForFilesHTML.toString());
@@ -649,7 +667,7 @@ public class PendingUploadController {
                             pu.setProcessedDate(LocalDateTime.now());
                             pu.setFileName(pu.getFileName() + " - " + "results"); // to make clear to users they'll be downloading results not the source file. See no harm in adjusting this thought perhaps some kind extra field should be used
                             PendingUploadDAO.store(pu);
-                            if (loggedInUser.getUser().isAdministrator()){
+                            if (loggedInUser.getUser().isAdministrator()) {
                                 session.setAttribute(ManageDatabasesController.IMPORTURLSUFFIX, "?uploadreports=true#tab4"); // if actually importing will land back on the pending uploads page
                             } else {
                                 session.setAttribute(ManageDatabasesController.IMPORTURLSUFFIX, "?uploadreports=true#tab2");
@@ -666,7 +684,7 @@ public class PendingUploadController {
                 // will be nothing if there's no manual paramteres
                 model.put("paramspassthrough", lookupValuesForFilesHTML.toString());
                 if (actuallyImport) {
-                    if (loggedInUser.getUser().isAdministrator()){
+                    if (loggedInUser.getUser().isAdministrator()) {
                         model.addAttribute("targetController", "ManageDatabases");
                     } else {
                         model.addAttribute("targetController", "UserUpload");

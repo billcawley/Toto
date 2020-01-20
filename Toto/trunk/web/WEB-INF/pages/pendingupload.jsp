@@ -90,6 +90,9 @@
         <h2>Month : ${month}</h2>
         <div class="error">${error}</div>
         <!-- params passed if they need to be set-->
+        <c:if test="${runClearExecute == true}">
+            <h3>Clear ${month} data before upload : <input type="checkbox" name="runClearExecute"></h3>
+        </c:if>
         <c:if test="${setparams == true}">
             <h2>Please confirm parameters :</h2>
         </c:if>

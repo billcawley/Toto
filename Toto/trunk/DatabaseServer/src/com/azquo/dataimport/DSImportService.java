@@ -56,6 +56,12 @@ public class DSImportService {
         return toReturn;
     }
 
+    // now we have on pending uploads the possibility that an execute (to clear data) will be run on a temporary database before any data is loaded (as in readPreparedFile above)
+    // so that temporary database may not exist causing an error. This will make it if required.
+    public static void checkTemporaryCopyExists(final DatabaseAccessToken databaseAccessToken) throws Exception {
+        AzquoMemoryDBConnection.getTemporaryCopyConnectionFromAccessToken(databaseAccessToken);
+    }
+
     // Called by above but also directly from DSSpreadsheet service when it has prepared a CSV from data entered ad-hoc into a sheet
     public static UploadedFile readPreparedFile(AzquoMemoryDBConnection azquoMemoryDBConnection, UploadedFile uploadedFile) throws Exception {
         // ok the thing he is to check if the memory db object lock is free, more specifically don't start an import if persisting is going on, since persisting never calls import there should be no chance of a deadlock from this

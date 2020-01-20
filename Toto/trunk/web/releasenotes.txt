@@ -4,6 +4,8 @@ Match files from Brokasure back to their original database and initial decryptio
 
 Default choices are slightly more robust
 
+Zapped POI, reflection crossover, decryption broken again
+
 XLSX
 
 Changed the commission formula to calculate by the correct number of decimal places (Hanover)
