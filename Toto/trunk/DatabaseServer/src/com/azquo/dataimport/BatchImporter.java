@@ -321,7 +321,7 @@ public class BatchImporter implements Callable<Void> {
     }
 
     private static String interpretTerm(List<String> constants, String term) {
-        term = term.trim();
+        term = term.replace(Character.toString((char)160) ,"").trim();
         if (term.charAt(0) == CONSTANTMARKER) {
             return constants.get(Integer.parseInt(term.substring(1)));
         }
