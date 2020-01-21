@@ -1,5 +1,6 @@
 package com.azquo.dataimport;
 
+import com.azquo.StringLiterals;
 import com.azquo.ThreadPools;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.core.Name;
@@ -53,7 +54,7 @@ class ValuesImport {
                     // while rather than if as rejected lines could well be sequential!
                     while (uploadedFile.getIgnoreLines() != null && uploadedFile.getIgnoreLines().containsKey(lineIterator.getCurrentLocation().getLineNr() - 1)) {
                         StringBuilder sb = new StringBuilder();
-                        sb.append("Deliberately skipping line ").append(lineIterator.getCurrentLocation().getLineNr() - 1).append(", ");
+                        sb.append(StringLiterals.DELIBERATELYSKIPPINGLINE).append(lineIterator.getCurrentLocation().getLineNr() - 1).append(", ");
                         for (String cell : lineValues) {
                             sb.append("\t").append(cell);
                         }

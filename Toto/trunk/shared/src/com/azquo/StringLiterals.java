@@ -64,4 +64,8 @@ public class StringLiterals {
     public static final char GREATEROREQUAL = '$';//NOT TOO HAPPY WITH ALL THESE SYMBOLS - USEFUL WHEN DEBUGGING, BUT MAYBE REPLACE WITH NON-PRINTABLES (ascii nos 1-25) later
     public static final char LESSOREQUAL = '!';
     public static final String copyPrefix = "TEMPORARY COPY"; // spaces shouldn't be there for normal persistence names so shouldn't clash
+    public static final String DELIBERATELYSKIPPINGLINE = "Deliberately skipping line ";
+    public static final String REJECTEDBYUSER = "Rejected by user";
+    public static final String PARAMETERS = "Parameters";
+    public static final String MANUALLYREJECTEDLINES = "Manually Rejected Lines";
 }

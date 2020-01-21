@@ -315,6 +315,36 @@ public class ManageDatabasesController {
                             UploadedFile uploadedFile = new UploadedFile(moved.getAbsolutePath(), Collections.singletonList(fileName), new HashMap<>(), false, false);
                             // wary of windows locking files, need to see how it goes
                             FileInputStream fs = new FileInputStream(new File(uploadedFile.getPath()));
+                            /*
+
+                            Caused by: org.apache.xmlbeans.XmlException: error: Content is not allowed in trailing section.
+	at org.apache.xmlbeans.impl.store.Locale$SaxLoader.load(Locale.java:3448)
+	at org.apache.xmlbeans.impl.store.Locale.parseToXmlObject(Locale.java:1272)
+	at org.apache.xmlbeans.impl.store.Locale.parseToXmlObject(Locale.java:1259)
+	at org.apache.xmlbeans.impl.schema.SchemaTypeLoaderBase.parse(SchemaTypeLoaderBase.java:345)
+	at org.apache.xmlbeans.XmlObject$Factory.parse(XmlObject.java:722)
+	at org.zkoss.poi.xssf.usermodel.XSSFVMLDrawing.read(XSSFVMLDrawing.java:108)
+	at org.zkoss.poi.xssf.usermodel.XSSFVMLDrawing.<init>(XSSFVMLDrawing.java:103)
+	... 16 more
+Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; columnNumber: 18; Content is not allowed in trailing section.
+	at java.xml/com.sun.org.apache.xerces.internal.util.ErrorHandlerWrapper.createSAXParseException(ErrorHandlerWrapper.java:204)
+	at java.xml/com.sun.org.apache.xerces.internal.util.ErrorHandlerWrapper.fatalError(ErrorHandlerWrapper.java:178)
+	at java.xml/com.sun.org.apache.xerces.internal.impl.XMLErrorReporter.reportError(XMLErrorReporter.java:400)
+	at java.xml/com.sun.org.apache.xerces.internal.impl.XMLErrorReporter.reportError(XMLErrorReporter.java:327)
+	at java.xml/com.sun.org.apache.xerces.internal.impl.XMLScanner.reportFatalError(XMLScanner.java:1471)
+	at java.xml/com.sun.org.apache.xerces.internal.impl.XMLDocumentScannerImpl$TrailingMiscDriver.next(XMLDocumentScannerImpl.java:1433)
+	at java.xml/com.sun.org.apache.xerces.internal.impl.XMLDocumentScannerImpl.next(XMLDocumentScannerImpl.java:605)
+	at java.xml/com.sun.org.apache.xerces.internal.impl.XMLNSDocumentScannerImpl.next(XMLNSDocumentScannerImpl.java:112)
+	at java.xml/com.sun.org.apache.xerces.internal.impl.XMLDocumentFragmentScannerImpl.scanDocument(XMLDocumentFragmentScannerImpl.java:541)
+	at java.xml/com.sun.org.apache.xerces.internal.parsers.XML11Configuration.parse(XML11Configuration.java:888)
+	at java.xml/com.sun.org.apache.xerces.internal.parsers.XML11Configuration.parse(XML11Configuration.java:824)
+	at java.xml/com.sun.org.apache.xerces.internal.parsers.XMLParser.parse(XMLParser.java:141)
+	at java.xml/com.sun.org.apache.xerces.internal.parsers.AbstractSAXParser.parse(AbstractSAXParser.java:1216)
+	at java.xml/com.sun.org.apache.xerces.internal.jaxp.SAXParserImpl$JAXPSAXParser.parse(SAXParserImpl.java:635)
+	at org.apache.xmlbeans.impl.store.Locale$SaxLoader.load(Locale.java:3422)
+
+                             */
+
                             if (uploadedFile.getFileName().endsWith("xlsx")) {
                                 OPCPackage opcPackage = OPCPackage.open(fs);
                                 book = new XSSFWorkbook(opcPackage);
@@ -353,6 +383,7 @@ public class ManageDatabasesController {
                             }
                         } catch (Exception e) {
                             model.put("error", e.getMessage());
+                            e.printStackTrace();
                         }
                     } else if (database != null) {
                         if (database.isEmpty()) {

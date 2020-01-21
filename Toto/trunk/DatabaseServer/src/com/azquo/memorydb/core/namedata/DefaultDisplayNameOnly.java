@@ -17,8 +17,6 @@ public class DefaultDisplayNameOnly implements NameData{
         return defaultDisplayName;
     }
 
-
-
     @Override
     public boolean setAttribute(String attributeName, String attributeValue) throws Exception {
         if (!attributeName.equals(StringLiterals.DEFAULT_DISPLAY_NAME)){

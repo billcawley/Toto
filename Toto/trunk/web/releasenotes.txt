@@ -1,3 +1,11 @@
+21-01-20
+
+POI back out! Some frustration as we try to make ZK and apache play ball
+
+21-01-20
+
+Latest POI back in, ZK version of xml beans zapped. Hanover decryption re-enabled if the JVM supports it.
+
 20-01-20
 
 Pending clear before upload - template parameter is pendingdataclear

@@ -1,6 +1,7 @@
 package com.azquo.admin.controller;
 
 import com.azquo.RowColumn;
+import com.azquo.StringLiterals;
 import com.azquo.TypedPair;
 import com.azquo.admin.AdminService;
 import com.azquo.admin.database.*;
@@ -13,6 +14,7 @@ import com.azquo.spreadsheet.controller.LoginController;
 import com.azquo.spreadsheet.transport.HeadingWithInterimLookup;
 import com.azquo.spreadsheet.transport.UploadedFile;
 import com.azquo.spreadsheet.zk.BookUtils;
+import groovy.util.MapEntry;
 import org.apache.commons.lang.math.NumberUtils;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
@@ -353,7 +355,7 @@ public class PendingUploadController {
                 }
 
                 // note, unlike the lookup parameters I can't do this by file name, it will be per spreadsheet and there may be more than one . . .
-                Set<Integer> fileLoadFlags = new HashSet<>();
+                Set<Integer> fileRejectFlags = new HashSet<>();
                 Map<Integer, Map<Integer, String>> fileRejectLines = new HashMap<>();
                 // as in go ahead and import
                 boolean actuallyImport = false;
@@ -418,7 +420,7 @@ public class PendingUploadController {
                     int maxCounter = Integer.parseInt(maxcounter);
                     for (int i = 0; i <= maxCounter; i++) {
                         if (request.getParameter("load-" + i) == null) { // not ticked to save it . . .
-                            fileLoadFlags.add(i);
+                            fileRejectFlags.add(i);
                         }
                         // so, we're allowing an excel file to define lines rejected, check if this was uploaded, and use it instead of the checkboxes if it was
                         if (amendmentsFile == null || amendmentsFile.isEmpty()) { // dammit null wasn't good enough! need to check empty too . . .
@@ -612,7 +614,7 @@ public class PendingUploadController {
                     }
                     UploadedFile uploadedFile = new UploadedFile(pu.getFilePath(), Collections.singletonList(pu.getFileName()), params, false, !finalActuallyImport);
                     try {
-                        PendingUploadConfig puc = new PendingUploadConfig(finalLookupValuesForFiles, fileLoadFlags, fileRejectLines, finalRunClearExecuteCommand);
+                        PendingUploadConfig puc = new PendingUploadConfig(finalLookupValuesForFiles, fileRejectFlags, fileRejectLines, finalRunClearExecuteCommand);
                         List<UploadedFile> uploadedFiles = ImportService.importTheFile(loggedInUser, uploadedFile, session, puc);
                         if (!finalActuallyImport) {
                             session.setAttribute(PARAMSPASSTHROUGH, lookupValuesForFilesHTML.toString());
@@ -627,7 +629,7 @@ public class PendingUploadController {
                             // also nested zips might not work at the mo
                             Set<String> filesRejected = new HashSet<>(); // gather level two files - those that will be zip entries. Set due to the point above - if there are multiple sheets in a file
                             for (UploadedFile rejectCheck : uploadedFiles) {
-                                if (rejectCheck.getFileNames().size() > 1 && "Rejected by user".equalsIgnoreCase(rejectCheck.getError())) {// todo - string literals
+                                if (rejectCheck.getFileNames().size() > 1 && StringLiterals.REJECTEDBYUSER.equals(rejectCheck.getError())) {// todo - string literals
                                     filesRejected.add(rejectCheck.getFileNames().get(1));
                                 }
                             }
@@ -945,6 +947,21 @@ public class PendingUploadController {
             cellIndex = 0;
             sheet.createRow(rowIndex++);
             sheet.createRow(rowIndex++);
+            // need to jam in parameters. Firstly as it's useful info and secondly as it will be needed if doing a reimport based on this file
+            if (uploadedFile.getParameters() != null && !uploadedFile.getParameters().isEmpty()){
+                row = sheet.createRow(rowIndex++);
+                row.createCell(cellIndex).setCellValue(StringLiterals.PARAMETERS);
+                for (Map.Entry<String, String> pair : uploadedFile.getParameters().entrySet()){
+                    cellIndex = 0;
+                    row = sheet.createRow(rowIndex++);
+                    row.createCell(cellIndex++).setCellValue(pair.getKey());
+                    row.createCell(cellIndex).setCellValue(pair.getValue());
+                }
+                cellIndex = 0;
+                sheet.createRow(rowIndex++);
+                sheet.createRow(rowIndex++);
+            }
+
             // We're going to need descriptions of the errors, put them all in a set
             Set<String> errorsSet = new HashSet<>();
             for (UploadedFile.WarningLine warningLine : uploadedFile.getWarningLines()) {
@@ -954,7 +971,7 @@ public class PendingUploadController {
             rowIndex = lineWarningsForSheet(pu, uploadedFile, rowIndex, sheet, errors, true, null, fileIndex);
             if (uploadedFile.getIgnoreLinesValues() != null) {
                 row = sheet.createRow(rowIndex++);
-                row.createCell(cellIndex).setCellValue("Manually Rejected Lines");
+                row.createCell(cellIndex).setCellValue(StringLiterals.MANUALLYREJECTEDLINES);
                 // jumping the cell index across align it with the table above
                 cellIndex = errors.size();
                 row = sheet.createRow(rowIndex++);
@@ -972,7 +989,10 @@ public class PendingUploadController {
                     row.createCell(cellIndex++).setCellValue(lineNo);
                     String[] split = uploadedFile.getIgnoreLinesValues().get(lineNo).split("\t");
                     for (String cell : split) {
-                        row.createCell(cellIndex++).setCellValue(cell);
+                        // redundant and it stops things being lined up
+                        if (!cell.startsWith(StringLiterals.DELIBERATELYSKIPPINGLINE)){
+                            row.createCell(cellIndex++).setCellValue(cell);
+                        }
                     }
                     cellIndex = errors.size();
                     row = sheet.createRow(rowIndex++);
