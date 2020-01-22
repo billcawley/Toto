@@ -261,6 +261,8 @@ public final class ImportService {
                     }
                     InputStream dataStream = decryptor.getDataStream(fileSystem);
                     book = new XSSFWorkbook(dataStream);
+                    //InputStream dataStream2 = decryptor.getDataStream(fileSystem);
+                    //Files.copy(dataStream2, Paths.get("/home/edward/Downloads/test111.xlsx"));
                 }
                 //System.out.println("book open time " + (System.currentTimeMillis() - quicktest));
             } else {
