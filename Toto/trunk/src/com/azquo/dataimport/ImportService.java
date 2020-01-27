@@ -125,7 +125,7 @@ public final class ImportService {
             a temporary copy explicitly server side based off the original name. When in copy mode it just accesses the copy and will fail if it's not there.
              This works but perhaps copyMode should be put on the data accesstoken and it will do it server side? todo
              */
-            if (uploadedFile.isValidationTest()){
+            if (uploadedFile.isValidationTest()) {
                 RMIClient.getServerInterface(loggedInUser.getDatabaseServer().getIp()).checkTemporaryCopyExists(loggedInUser.getDataAccessToken());
                 loggedInUser.copyMode = true;
             }
@@ -197,6 +197,90 @@ public final class ImportService {
                 return f1.getName().compareTo(f2.getName());
             });
             int counter = 1;
+            /*
+
+            So, we want to add support for adding a results file to a zip. That is to say a file saying
+            "don't load these files" and "don't load these lines from a file we are loading"
+            it will be called uploadreport.xlsx
+
+*/
+            Iterator<File> fileIterator = files.iterator();
+            while (fileIterator.hasNext()) {
+                File check = fileIterator.next();
+                if (check.getName().equals("uploadreport.xlsx")) {
+                    FileInputStream fs = new FileInputStream(check);
+                    OPCPackage opcPackage = OPCPackage.open(fs);
+                    XSSFWorkbook book = new XSSFWorkbook(opcPackage);
+                    Sheet summarySheet = book.getSheet("Summary"); // literals not best practice, could it be factored between this and the xlsx file?
+                    if (summarySheet != null) {
+                        Cell topLeft = summarySheet.getRow(0).getCell(0);
+                        if (topLeft != null) {
+                            System.out.println("top left value " + topLeft.getStringCellValue());
+                            if (topLeft.getStringCellValue().equals(uploadedFile.getFileName())) {
+                                fileIterator.remove();
+                                // we're assuming parameters per file not per sheet
+                                Map<String, Map<String, String>> lookupValuesForFiles = new HashMap<>();
+                                Map<Integer, Map<Integer, String>> fileRejectLines = new HashMap<>();
+                                boolean parametersMode = false;
+                                boolean readingRejectedLinesMode = false;
+                                String fileName = null;
+                                String sheetName = null;
+                                int sheetCounter = 0;
+                                // file load means the index of "final" files to load that is to say the things read by readPreparedFile
+                                Set<Integer> fileRejectFlags = new HashSet<>();
+                                int lineSkipCol = -1; // as in which column has the lines we need to skip?
+                                for (Row row : summarySheet) {
+                                    if (readingRejectedLinesMode) {
+                                        if (lineSkipCol == -1) {
+                                            for (int col = 0; col < 100; col++) {
+                                                if (row.getCell(col) != null && row.getCell(col).getCellType() == Cell.CELL_TYPE_STRING
+                                                        && row.getCell(col).getStringCellValue().equals("#")) {
+                                                    lineSkipCol = col;
+                                                    break;
+                                                }
+                                            }
+                                        } else if (row.getCell(lineSkipCol) != null && row.getCell(lineSkipCol).getCellType() == Cell.CELL_TYPE_NUMERIC) {
+                                            // that blank string is used in other circumstances to store the value used to look up the line in the file. In other circumstances used to identify comments which isn't relevant here
+                                            fileRejectLines.computeIfAbsent(sheetCounter, t -> new HashMap<>()).put(new Double(row.getCell(lineSkipCol).getNumericCellValue()).intValue(), "");
+                                        }
+
+                                    }
+                                    if (row.getCell(0) == null || row.getCell(0).getStringCellValue().isEmpty()) {
+                                        parametersMode = false;
+
+                                    } else {
+                                        if (parametersMode) {
+                                            lookupValuesForFiles.computeIfAbsent(fileName, t -> new HashMap<>()).put(row.getCell(0).getStringCellValue(), row.getCell(1).getStringCellValue());
+                                        } else if (row.getCell(0).getStringCellValue().equals(uploadedFile.getFileName())) {// it's a line indicating the next (or first) file
+                                            readingRejectedLinesMode = false;
+                                            // if it goes down further levels this might get tripped up
+                                            fileName = row.getCell(1).getStringCellValue();
+                                            sheetName = row.getCell(2).getStringCellValue();
+                                            if (row.getCell(3) != null && StringLiterals.REJECTEDBYUSER.equals(row.getCell(3).getStringCellValue())) {
+                                                fileRejectFlags.add(sheetCounter);
+                                            }
+                                            sheetCounter++;
+                                        } else if (row.getCell(0).getStringCellValue().equals(StringLiterals.PARAMETERS)) {
+                                            parametersMode = true;
+                                        } else if (row.getCell(0).getStringCellValue().equals(StringLiterals.MANUALLYREJECTEDLINES)) {
+                                            lineSkipCol = -1;
+                                            readingRejectedLinesMode = true;
+                                        }
+                                    }
+                                }
+
+                                // notably if pending upload config isn't null can we still do this?
+                                if (pendingUploadConfig == null) {
+                                    // going for a null on the clear command,
+                                    pendingUploadConfig = new PendingUploadConfig(lookupValuesForFiles, fileRejectFlags, fileRejectLines, null);
+                                }
+                            }
+                        }
+                    }
+                    opcPackage.close();
+                }
+            }
+
             for (File f : files) {
                 if (files.size() > 1 && session != null) {
                     session.setAttribute(ManageDatabasesController.IMPORTSTATUS, counter + "/" + files.size());
@@ -285,77 +369,7 @@ public final class ImportService {
                         };
 
                         CommandLineCalls.runCommand(null, commandArray, true, null);
-/*                    com.sun.star.uno.XComponentContext xContext = null;
-                    com.sun.star.frame.XComponentLoader xCompLoader = null;
-                    try {
-                        // get the remote office component context
-                        xContext = com.sun.star.comp.helper.Bootstrap.bootstrap();
-                        System.out.println("Connected to a running office ...");
-
-                        // get the remote office service manager
-                        com.sun.star.lang.XMultiComponentFactory xMCF =
-                                xContext.getServiceManager();
-
-                        Object oDesktop = xMCF.createInstanceWithContext(
-                                "com.sun.star.frame.Desktop", xContext);
-
-                        xCompLoader = UnoRuntime.queryInterface(com.sun.star.frame.XComponentLoader.class,
-                                oDesktop);
-
-                        String sUrl = "file:///" + uploadedFile.getPath().replace( '\\', '/' );
-
-                        // Loading the wanted document
-                        com.sun.star.beans.PropertyValue propertyValues[] =
-                                new com.sun.star.beans.PropertyValue[1];
-                        propertyValues[0] = new com.sun.star.beans.PropertyValue();
-                        propertyValues[0].Name = "Hidden";
-                        propertyValues[0].Value = Boolean.TRUE;
-
-                        Object oDocToStore = xCompLoader.loadComponentFromURL(sUrl, "_blank", 0, propertyValues);
-
-                        // Getting an object that will offer a simple way to store
-                        // a document to a URL.
-                        com.sun.star.frame.XStorable xStorable =
-                                UnoRuntime.queryInterface(
-                                        com.sun.star.frame.XStorable.class, oDocToStore );
-
-                        // Preparing properties for converting the document
-                        propertyValues = new com.sun.star.beans.PropertyValue[2];
-                        // Setting the flag for overwriting
-                        propertyValues[0] = new com.sun.star.beans.PropertyValue();
-                        propertyValues[0].Name = "Overwrite";
-                        propertyValues[0].Value = Boolean.TRUE;
-                        // Setting the filter name
-                        propertyValues[1] = new com.sun.star.beans.PropertyValue();
-                        propertyValues[1].Name = "FilterName";
-                        propertyValues[1].Value = "Calc MS Excel 2007 XML";
-
-                        // Storing and converting the document
-            //            xStorable.storeAsURL(sUrl + "x", propertyValues);
-                        xStorable.storeAsURL("file:////home/edward/Downloads/apache-tomcat-8.0.21/temp/convert.xlsx", propertyValues);
-
-                        // Closing the converted document. Use XCloseable.close if the
-                        // interface is supported, otherwise use XComponent.dispose
-                        com.sun.star.util.XCloseable xCloseable =
-                                UnoRuntime.queryInterface(
-                                        com.sun.star.util.XCloseable.class, xStorable);
-
-                        if ( xCloseable != null ) {
-                            xCloseable.close(false);
-                        } else {
-                            com.sun.star.lang.XComponent xComp =
-                                    UnoRuntime.queryInterface(
-                                            com.sun.star.lang.XComponent.class, xStorable);
-
-                            xComp.dispose();
-                        }
-
-                    } catch( Exception e ) {
-                        e.printStackTrace();
-                    }
-
-*/
-// ok try to read the converted file!
+                        // ok try to read the converted file!
                         // opcpackage dangerous for filehandling under windows??
                         opcPackage = OPCPackage.open(new File(uploadedFile.getPath() + "x"));
                         book = new XSSFWorkbook(opcPackage);
