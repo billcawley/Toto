@@ -246,6 +246,9 @@ public class DSSpreadsheetService {
         bw.flush();
         bw.close();
         UploadedFile uploadedFile = new UploadedFile(tempPath, Collections.singletonList("csv-" + cellsAndHeadingsForDisplay.getRegion()), false);
+        Map<String,String> parameters = new HashMap<>();
+        parameters.put("cleardata","true");
+        uploadedFile.setParameters(parameters);
         DSImportService.readPreparedFile(azquoMemoryDBConnection, uploadedFile);
         // persist no longer automatic on importing so just do it here
         /*
