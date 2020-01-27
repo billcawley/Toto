@@ -427,10 +427,22 @@ class RegionFillerService {
         repeatColumn = 0;
         repeatRow = 0;
         // and now do the data, separate loop otherwise I'll be copy/pasting data from the first area
+        // requirement from WFC - only show first display row/col headings if they're outside the repeat region
+        boolean showColumnHeadings = displayColumnHeadings != null;
+        boolean showRowHeadings = displayRowHeadings != null;
         if (repeatList2 != null && repeatItem2 != null) { // new cols x rows according to two repeat lists logic
             for (String item2 : repeatListItems2) {
                 for (String item : repeatListItems) {
-                    repeatRegionFill(loggedInUser, reportId, sheet, region, userRegionOptions, displayRowHeadings, displayColumnHeadings, rowHeadingDescription, columnHeadingsDescription, contextDescription, valueId, quiet, repeatRegion, repeatRegionWidth, repeatRegionHeight, rootRow, rootCol, repeatColumn, repeatRow, repeatDataRowOffset, repeatDataColumnOffset, repeatDataLastRowOffset, repeatDataLastColumnOffset);
+                    repeatRegionFill(loggedInUser, reportId, sheet, region, userRegionOptions,  showRowHeadings ? displayRowHeadings : null, showColumnHeadings ? displayColumnHeadings : null,rowHeadingDescription, columnHeadingsDescription, contextDescription, valueId, quiet, repeatRegion, repeatRegionWidth, repeatRegionHeight, rootRow, rootCol, repeatColumn, repeatRow, repeatDataRowOffset, repeatDataColumnOffset, repeatDataLastRowOffset, repeatDataLastColumnOffset);
+                    // after the first time check to see if we should keep showing the row headings or column headings
+                    if (repeatColumn == 0 && repeatRow == 0){
+                        if (showColumnHeadings && displayColumnHeadings.row < repeatRegion.getRefersToCellRegion().row){
+                            showColumnHeadings = false;
+                        }
+                        if (showRowHeadings && displayRowHeadings.column < repeatRegion.getRefersToCellRegion().column){
+                            showRowHeadings = false;
+                        }
+                    }
                     repeatColumn++;
                 }
                 repeatColumn = 0;
@@ -438,7 +450,16 @@ class RegionFillerService {
             }
         } else {
             for (String item : repeatListItems) {
-                repeatRegionFill(loggedInUser, reportId, sheet, region, userRegionOptions, displayRowHeadings, displayColumnHeadings, rowHeadingDescription, columnHeadingsDescription, contextDescription, valueId, quiet, repeatRegion, repeatRegionWidth, repeatRegionHeight, rootRow, rootCol, repeatColumn, repeatRow, repeatDataRowOffset, repeatDataColumnOffset, repeatDataLastRowOffset, repeatDataLastColumnOffset);
+                repeatRegionFill(loggedInUser, reportId, sheet, region, userRegionOptions,  showRowHeadings ? displayRowHeadings : null, showColumnHeadings ? displayColumnHeadings : null, rowHeadingDescription, columnHeadingsDescription, contextDescription, valueId, quiet, repeatRegion, repeatRegionWidth, repeatRegionHeight, rootRow, rootCol, repeatColumn, repeatRow, repeatDataRowOffset, repeatDataColumnOffset, repeatDataLastRowOffset, repeatDataLastColumnOffset);
+                // after the first time check to see if we should keep showing the row headings or column headings
+                if (repeatColumn == 0 && repeatRow == 0){
+                    if (showColumnHeadings && displayColumnHeadings.row < repeatRegion.getRefersToCellRegion().row){
+                        showColumnHeadings = false;
+                    }
+                    if (showRowHeadings && displayRowHeadings.column < repeatRegion.getRefersToCellRegion().column){
+                        showRowHeadings = false;
+                    }
+                }
                 repeatColumn++;
                 if (repeatColumn == repeatColumns) { // zap if back to the first column
                     repeatColumn = 0;
