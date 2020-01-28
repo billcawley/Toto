@@ -1,3 +1,21 @@
+28-01-20
+
+initial version of file to re read the uploads back in with uploadreport.xlsx (automatically replicate the boxes ticked on pending upload)
+
+Don't repeat display row and column headings if they're outside the repeat region. Initial test is fine though it may need more testing
+
+Yet another attempt at POI hacking back in for Hanover decryption. This time by hacking out the line which breaks on decryption. Not pretty but it seems to work, has been on data.azquo.com for a week. Requires the OPenJDK upgrade.
+
+XLSX
+
+Rolling back Nov 28th XML patch on Premiums feed
+
+adjusted the formula to stop the segregation of FL for the 'N' year
+
+added 'provisional' to the premium county in the import model
+
+Inserted a check for Brokasure reporting section errors and disabled the 'No SLA' error
+
 21-01-20
 
 POI back out! Some frustration as we try to make ZK and apache play ball
