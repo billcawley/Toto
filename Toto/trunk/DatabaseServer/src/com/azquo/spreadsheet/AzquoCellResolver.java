@@ -17,6 +17,7 @@ import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
 import org.apache.commons.math3.stat.descriptive.rank.Percentile;
 
 
+import javax.xml.crypto.Data;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -644,6 +645,18 @@ But can use a library?
                             doubleValue = sd.evaluate(forSD);
                         }
                         // these two functions must be right before the default assigning of stringValue to stop is as necessary as they will explicitly set string even if there's just one value
+                        boolean hasCalc = !DataRegionHeadingService.calcsFromDataRegionHeadings(headingsForThisCell).isEmpty();
+                        if (!hasCalc){ // check for other calc type, if I don't a bit of code below could mess things up where a calc resolves correctly but there's only one value ( (non existing value) - (existing value))
+                            for (DataRegionHeading dataRegionHeading : headingsForThisCell){
+                                if (dataRegionHeading != null
+                                        && dataRegionHeading.getName() != null
+                                        && dataRegionHeading.getName().getAttribute(StringLiterals.CALCULATION) != null){
+                                    hasCalc = true;
+                                    break;
+                                }
+                            }
+                        }
+
                         if (function == DataRegionHeading.FUNCTION.AUDITDATE) {
                             LocalDateTime latest = null;
                             for (Value v : valuesHook.values) {
@@ -663,7 +676,7 @@ But can use a library?
                                 }
                             }
 
-                        } else if (valuesHook.values != null && valuesHook.values.size() == 1 && (!locked.isTrue//if there's only one value, treat it as text (it may be text, or may include £,$,%)
+                        } else if (!hasCalc && valuesHook.values != null && valuesHook.values.size() == 1 && (!locked.isTrue//if there's only one value, treat it as text (it may be text, or may include £,$,%)
                                 || function == DataRegionHeading.FUNCTION.MAX
                                 || function == DataRegionHeading.FUNCTION.MIN
                                 || function == null)) { // locked conditional added back in by Edd, required or counts of one for example won't work. Also allowing null function to be a string now, logic added up here as a small refactor from a WFC change
