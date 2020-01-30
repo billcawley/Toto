@@ -346,6 +346,11 @@ public class DSImportService {
                         if (!buildHeadingsFromVerticallyListedClauses(headings, lineIterator)) {
                             uploadedFile.setError("Unable to find suitable stacked headings.");
                             return uploadedFile;
+                        } else {
+                            if (!lineIterator.hasNext()){ // if we just jammed some headings together from the total contents of a file that's no good either
+                                uploadedFile.setError("Unable to find suitable stacked headings.");
+                                return uploadedFile;
+                            }
                         }
                     }
                 }
