@@ -629,7 +629,7 @@ public class PendingUploadController {
                             // also nested zips might not work at the mo
                             Set<String> filesRejected = new HashSet<>(); // gather level two files - those that will be zip entries. Set due to the point above - if there are multiple sheets in a file
                             for (UploadedFile rejectCheck : uploadedFiles) {
-                                if (rejectCheck.getFileNames().size() > 1 && StringLiterals.REJECTEDBYUSER.equals(rejectCheck.getError())) {// todo - string literals
+                                if (rejectCheck.getFileNames().size() > 1 && StringLiterals.REJECTEDBYUSER.equals(rejectCheck.getError())) {
                                     filesRejected.add(rejectCheck.getFileNames().get(1));
                                 }
                             }
@@ -928,7 +928,7 @@ public class PendingUploadController {
     // overview that will hopefully be useful to the user
     private static void summaryUploadFeedbackForSheet(List<UploadedFile> uploadedFiles, Sheet sheet, PendingUpload pu) {
         int rowIndex = 0;
-        int cellIndex = 0;
+        int cellIndex;
         int fileIndex = 0;
         for (UploadedFile uploadedFile : uploadedFiles) {
             cellIndex = 0;
@@ -955,7 +955,16 @@ public class PendingUploadController {
                     cellIndex = 0;
                     row = sheet.createRow(rowIndex++);
                     row.createCell(cellIndex++).setCellValue(pair.getKey());
-                    row.createCell(cellIndex).setCellValue(pair.getValue());
+                    if (pair.getKey().equalsIgnoreCase(ImportService.IMPORTVERSION)){ // then knock off any trailing numbers
+                        String value = pair.getValue();
+                        String end = value.substring(value.length() - 1); // should be last char
+                        if (NumberUtils.isNumber(end)){
+                            value = value.substring(0, value.length() - 1);
+                        }
+                        row.createCell(cellIndex).setCellValue(value);
+                    } else {
+                        row.createCell(cellIndex).setCellValue(pair.getValue());
+                    }
                 }
                 cellIndex = 0;
                 sheet.createRow(rowIndex++);

@@ -225,7 +225,7 @@ public final class ImportService {
                                 boolean readingRejectedLinesMode = false;
                                 String fileName = null;
                                 String sheetName = null;
-                                int sheetCounter = 0;
+                                int sheetCounter = -1;
                                 // file load means the index of "final" files to load that is to say the things read by readPreparedFile
                                 Set<Integer> fileRejectFlags = new HashSet<>();
                                 int lineSkipCol = -1; // as in which column has the lines we need to skip?
@@ -243,15 +243,19 @@ public final class ImportService {
                                             // that blank string is used in other circumstances to store the value used to look up the line in the file. In other circumstances used to identify comments which isn't relevant here
                                             fileRejectLines.computeIfAbsent(sheetCounter, t -> new HashMap<>()).put(new Double(row.getCell(lineSkipCol).getNumericCellValue()).intValue(), "");
                                         }
-
                                     }
                                     if (row.getCell(0) == null || row.getCell(0).getStringCellValue().isEmpty()) {
                                         parametersMode = false;
-
                                     } else {
-                                        if (parametersMode) {
+                                        if (row.getCell(0).getStringCellValue().equals(StringLiterals.PARAMETERS)) {
+                                            parametersMode = true;
+                                        } else if (row.getCell(0).getStringCellValue().equals(StringLiterals.MANUALLYREJECTEDLINES)) {
+                                            lineSkipCol = -1;
+                                            readingRejectedLinesMode = true;
+                                        } else if (parametersMode) {
                                             lookupValuesForFiles.computeIfAbsent(fileName, t -> new HashMap<>()).put(row.getCell(0).getStringCellValue(), row.getCell(1).getStringCellValue());
                                         } else if (row.getCell(0).getStringCellValue().equals(uploadedFile.getFileName())) {// it's a line indicating the next (or first) file
+                                            sheetCounter++;
                                             readingRejectedLinesMode = false;
                                             // if it goes down further levels this might get tripped up
                                             fileName = row.getCell(1).getStringCellValue();
@@ -259,12 +263,6 @@ public final class ImportService {
                                             if (row.getCell(3) != null && StringLiterals.REJECTEDBYUSER.equals(row.getCell(3).getStringCellValue())) {
                                                 fileRejectFlags.add(sheetCounter);
                                             }
-                                            sheetCounter++;
-                                        } else if (row.getCell(0).getStringCellValue().equals(StringLiterals.PARAMETERS)) {
-                                            parametersMode = true;
-                                        } else if (row.getCell(0).getStringCellValue().equals(StringLiterals.MANUALLYREJECTEDLINES)) {
-                                            lineSkipCol = -1;
-                                            readingRejectedLinesMode = true;
                                         }
                                     }
                                 }
@@ -725,7 +723,7 @@ public final class ImportService {
         if (pendingUploadConfig != null) {
             if (pendingUploadConfig.isFileToReject()) {
                 pendingUploadConfig.incrementFileCounter();
-                uploadedFile.setError("Rejected by user");
+                uploadedFile.setError(StringLiterals.REJECTEDBYUSER);
                 return uploadedFile;
             }
             if (pendingUploadConfig.getFileRejectLines() != null) {

@@ -82,6 +82,7 @@ class NameFilterFunctions {
                     int comp = valLhs.compareTo(valRhs);
                     switch (op) {
                         case '=':
+                            // todo - add string wildcards, shouldn't be too difficult. Use * as that's what excel uses
                             if (comp == 0) OK = true;
                             break;
                         case '<':
