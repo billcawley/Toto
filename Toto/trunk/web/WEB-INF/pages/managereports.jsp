@@ -18,7 +18,7 @@
 			<td>Report Name</td>
 <!--			<td>Category</td> -->
 		<!-- <td>File Name</td> -->
-			<td>Explanation</td>
+			<td style="max-width:500px">Explanation</td>
 			<td></td>
 		</tr>
 		</thead>
@@ -40,14 +40,14 @@
 				 <td>${report.businessId}</td>
 				 -->
 				<td>${report.database}</td>
-				<td>${report.author}</td>
+				<td style="white-space: nowrap">${report.author}</td>
 				<td></td>
 				<!-- should reportid be 1??? -->
-				<td><c:if test="${report.database != 'None'}"><a href="/api/Online?reportid=${report.id}&amp;database=${report.database}" target="_blank"></c:if>
+				<td style="white-space:nowrap"><c:if test="${report.database != 'None'}"><a href="/api/Online?reportid=${report.id}&amp;database=${report.database}" target="_blank"></c:if>
 					<span class="fa fa-table"></span>  ${report.untaggedReportName}<c:if test="${report.database != 'None'}"></a></c:if></td>
 				<!-- <td>${report.filename}</td> -->
 				<td>${report.explanation}</td>
-				<td><a href="/api/ManageReports?editId=${report.id}"  title="Edit ${report.reportName}" class="button small fa fa-edit"></a>
+				<td style="width:100px"><a href="/api/ManageReports?editId=${report.id}"  title="Edit ${report.reportName}" class="button small fa fa-edit"></a>
 					<a href="/api/ManageReports?deleteId=${report.id}" onclick="return confirm('Are you sure you want to delete ${report.reportName}?')" class="button small" title="Delete ${report.reportName}"><span class="fa fa-trash" title="Delete"></span> </a>
 					<a href="/api/DownloadTemplate?reportId=${report.id}" class="button small" title="Download"><span class="fa fa-download" title="Download"></span> </a>
 				</td>
