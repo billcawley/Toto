@@ -2,7 +2,7 @@ package com.azquo.memorydb.core;
 
 import com.azquo.StringLiterals;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
-import com.azquo.memorydb.core.namedata.DefaultDisplayNameOnly;
+import com.azquo.memorydb.core.namedata.DefaultDisplayName;
 import com.azquo.memorydb.core.namedata.NameData;
 import com.azquo.memorydb.service.NameService;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
@@ -69,7 +69,7 @@ public final class NewName extends AzquoMemoryDBEntity {
         super(azquoMemoryDB, 0);
         newNameCount.incrementAndGet();
         parents = new NewName[0];
-        nameData = new DefaultDisplayNameOnly();
+        nameData = new DefaultDisplayName();
         //getAzquoMemoryDB().addNameToDb(this);
         newNameCount.incrementAndGet();
         this.provenance = provenance;
@@ -107,7 +107,7 @@ public final class NewName extends AzquoMemoryDBEntity {
         } else {
             String[] attsArray = attributes.split(StringLiterals.ATTRIBUTEDIVIDER);
             if (attsArray.length == 0 || (attsArray.length == 2 && attsArray[0].equalsIgnoreCase(StringLiterals.DEFAULT_DISPLAY_NAME))){
-                nameData = new DefaultDisplayNameOnly();
+                nameData = new DefaultDisplayName();
             } else if (attsArray.length%2 == 0){
                 // then name data with full attributes - todo
                 String[] attributeKeys = new String[attsArray.length / 2];
@@ -259,7 +259,7 @@ public final class NewName extends AzquoMemoryDBEntity {
             if (!nameData.canAddValue()) {
                 nameData = nameData.getImplementationThatCanAddValue();
             }
-            nameData.addToValues(value, backupRestore);
+            nameData.addToValues(value, backupRestore, databaseIsLoading);
         }
         setNeedsPersisting(); // will be ignored on loading. Best to put in here to be safe. Could maybe check it's actually necessary above if performance an issue.
     }
@@ -671,7 +671,7 @@ public final class NewName extends AzquoMemoryDBEntity {
                 nameData = nameData.getImplementationThatCanAddChild();
             }
             // todo check changed
-            nameData.addToChildren(child, false);
+            changed = nameData.addToChildren(child);
 
             if (changed) { // new logic, only do these things if something was changed
                 child.addToParents(this);//synchronized internally with this also so will not deadlock

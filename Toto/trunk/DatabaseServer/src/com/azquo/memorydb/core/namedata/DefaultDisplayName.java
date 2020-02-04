@@ -1,15 +1,11 @@
 package com.azquo.memorydb.core.namedata;
 
-import com.azquo.memorydb.core.Value;
-
-public class DefaultDisplayNameArrayValues implements DefaultDisplayNameInterface, ArrayValuesInterface {
+public class DefaultDisplayName implements DefaultDisplayNameInterface {
 
     private volatile String defaultDisplayName;
-    private volatile Value[] values;
 
-    public DefaultDisplayNameArrayValues(){
+    public DefaultDisplayName(){
         defaultDisplayName = null;
-        values = new Value[0];
     }
 
     @Override
@@ -24,7 +20,7 @@ public class DefaultDisplayNameArrayValues implements DefaultDisplayNameInterfac
 
     @Override
     public NameData getImplementationThatCanAddValue() {
-        return this;
+        return null;
     }
 
     @Override
@@ -42,13 +38,4 @@ public class DefaultDisplayNameArrayValues implements DefaultDisplayNameInterfac
         return null;
     }
 
-    @Override
-    public Value[] internalGetValues() {
-        return values;
-    }
-
-    @Override
-    public void internalSetValues(Value[] values) {
-        this.values = values;
-    }
 }

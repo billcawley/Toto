@@ -25,11 +25,11 @@ import java.util.Map;
  * <p>
  * All fields final, means the constructor should complete before the object reference is generated and the object is published. Immutable as mentioned above.
  */
-final class NameAttributes {
+public class NameAttributes {
     private final String[] attributeKeys;
     private final String[] attributeValues;
 
-    NameAttributes(List<String> attributeKeys, List<String> attributeValues) throws Exception {
+    public NameAttributes(List<String> attributeKeys, List<String> attributeValues) throws Exception {
         if (attributeKeys.size() != attributeValues.size()) {
             throw new Exception("Keys and values for attributes must match!");
         }
@@ -45,16 +45,16 @@ final class NameAttributes {
         this.attributeValues = attributeValues;
     }
 
-    NameAttributes() { // blank default. Fine.
+    public NameAttributes() { // blank default. Fine.
         attributeKeys = new String[0];
         attributeValues = new String[0];
     }
 
-    List<String> getAttributeKeys() {
+    public List<String> getAttributeKeys() {
         return Arrays.asList(attributeKeys);
     }
 
-    List<String> getAttributeValues() {
+    public List<String> getAttributeValues() {
         return Arrays.asList(attributeValues);
     }
 
@@ -67,7 +67,7 @@ final class NameAttributes {
         return null;
     }
 
-    Map<String, String> getAsMap() {
+    public Map<String, String> getAsMap() {
         Map<String, String> attributesAsMap = new HashMap<>(attributeKeys.length);
         int count = 0;
         for (String key : attributeKeys) { // hmm, can still access and foreach on the internal array. Np I suppose!

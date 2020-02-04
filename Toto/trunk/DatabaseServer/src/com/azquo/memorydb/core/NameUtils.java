@@ -37,7 +37,7 @@ public class NameUtils {
 
     // note, assumes it is in there! Otherwise will be an exception
 
-    static Name[] nameArrayRemove(Name[] source, Name toRemove) {
+    public static Name[] nameArrayRemove(Name[] source, Name toRemove) {
         Name[] newArray = new Name[source.length - 1];
         int newArrayPosition = 0;// gotta have a separate index on the new array, they will go out of sync
         for (Name name : source) { // do one copy skipping the element we want removed
@@ -98,7 +98,7 @@ public class NameUtils {
     // note these two should be called in synchronized blocks if acting on things like parents, children etc
     // doesn't check contains, there is logic after the contains when adding which can't go in here (as in are we going to switch to set?)
 
-    static NewName[] nameArrayAppend(NewName[] source, NewName toAppend) {
+    public static NewName[] nameArrayAppend(NewName[] source, NewName toAppend) {
         NewName[] newArray = new NewName[source.length + 1];
         System.arraycopy(source, 0, newArray, 0, source.length); // intellij simplified it to this, should be fine. TODO - saw a warning about this on twitter, maybe double check performance implications?
         newArray[source.length] = toAppend;
@@ -118,7 +118,7 @@ public class NameUtils {
 
     // note, assumes it is in there! Otherwise will be an exception
 
-    static NewName[] nameArrayRemove(NewName[] source, NewName toRemove) {
+    public static NewName[] nameArrayRemove(NewName[] source, NewName toRemove) {
         NewName[] newArray = new NewName[source.length - 1];
         int newArrayPosition = 0;// gotta have a separate index on the new array, they will go out of sync
         for (NewName name : source) { // do one copy skipping the element we want removed

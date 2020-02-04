@@ -75,12 +75,13 @@ public interface NameData {
         return Collections.emptyList();
     }
 
-    default void addToChildren(NewName name, boolean backupRestore) throws Exception {
+    default boolean addToChildren(NewName name) throws Exception {
         throw new UnsupportedOperationException();
     }
 
-    default void removeFromChildren(NewName name) {
+    default boolean removeFromChildren(NewName name) {
         // as with values just do nothing, we have no children here
+        return false;
     }
 
     default NewName[] directArrayChildren() {
