@@ -43,7 +43,7 @@ public interface NameData {
 
     default void valueArrayCheck(){};
 
-    default void addToValues(Value value, boolean backupRestore) throws Exception {
+    default boolean addToValues(Value value, boolean backupRestore, boolean databaseIsLoading) throws Exception {
         throw new UnsupportedOperationException();
     }
 
@@ -66,8 +66,6 @@ public interface NameData {
     }
 
     NameData getImplementationThatCanAddValue();
-
-
 
     default boolean hasChildren() {
         return false;
@@ -99,7 +97,6 @@ public interface NameData {
 
     NameData getImplementationThatCanAddChild();
 
-
     String getDefaultDisplayName();
 
     String getAttribute(String attribute);
@@ -120,5 +117,5 @@ public interface NameData {
     // error or not??
     boolean setAttribute(String attributeName, String attributeValue) throws Exception;
 
-    boolean removeAttribute(String attributeName);
+    boolean removeAttribute(String attributeName) throws Exception;
 }

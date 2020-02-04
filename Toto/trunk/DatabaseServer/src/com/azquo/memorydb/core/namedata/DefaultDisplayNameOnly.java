@@ -50,14 +50,21 @@ public class DefaultDisplayNameOnly implements NameData{
 
     @Override
     public Map<String, String> getAttributes() {
-        return null;
+        if (defaultDisplayName != null){
+            Map<String, String> map = new HashMap<>();
+            map.put(StringLiterals.DEFAULT_DISPLAY_NAME, defaultDisplayName);
+            return map;
+        } else {
+            return Collections.emptyMap();
+        }
     }
 
     @Override
     public List<String> getAttributeKeys() {
-        return null;
+        return StringLiterals.DEFAULT_DISPLAY_NAME_AS_LIST;
     }
 
+    // todo
     @Override
     public NameData getImplementationThatCanSetAttributesOtherThanDefaultDisplayName() {
         return null;
