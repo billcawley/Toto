@@ -1,10 +1,11 @@
-package com.azquo.memorydb.core.namedata;
+package com.azquo.memorydb.core.namedata.component;
 
 import com.azquo.memorydb.core.Value;
+import com.azquo.memorydb.core.namedata.NameData;
 
 import java.util.*;
 
-public interface SetValuesInterface extends NameData{
+public interface ValuesSet extends NameData {
 
     default boolean hasValues() {
         return !internalGetValues().isEmpty();

@@ -1,17 +1,20 @@
-package com.azquo.memorydb.core.namedata;
+package com.azquo.memorydb.core.namedata.implementation;
 
 import com.azquo.memorydb.core.Value;
+import com.azquo.memorydb.core.namedata.NameData;
+import com.azquo.memorydb.core.namedata.component.DefaultDisplayName;
+import com.azquo.memorydb.core.namedata.component.ValuesSet;
 
 import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class DefaultDisplayNameSetValues implements DefaultDisplayNameInterface, SetValuesInterface {
+public class DefaultDisplayNameValuesSet implements DefaultDisplayName, ValuesSet {
 
     private volatile String defaultDisplayName;
     private volatile Set<Value> values;
 
-    public DefaultDisplayNameSetValues(){
+    public DefaultDisplayNameValuesSet(){
         defaultDisplayName = null;
         values = Collections.newSetFromMap(new ConcurrentHashMap<>(ARRAYTHRESHOLD + 1));// the way to get a thread safe set!
     }
@@ -27,6 +30,11 @@ public class DefaultDisplayNameSetValues implements DefaultDisplayNameInterface,
     }
 
     @Override
+    public Set<Value> internalGetValues() {
+        return values;
+    }
+
+    @Override
     public NameData getImplementationThatCanAddValue() {
         return null;
     }
@@ -37,17 +45,13 @@ public class DefaultDisplayNameSetValues implements DefaultDisplayNameInterface,
     }
 
     @Override
-    public String getAttributesForFastStore() {
-        return null;
-    }
-
-    @Override
     public NameData getImplementationThatCanSetAttributesOtherThanDefaultDisplayName() {
         return null;
     }
 
     @Override
-    public Set<Value> internalGetValues() {
-        return values;
+    public String getAttributesForFastStore() {
+        return null;
     }
+
 }

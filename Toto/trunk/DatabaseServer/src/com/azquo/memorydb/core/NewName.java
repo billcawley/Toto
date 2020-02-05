@@ -2,7 +2,7 @@ package com.azquo.memorydb.core;
 
 import com.azquo.StringLiterals;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
-import com.azquo.memorydb.core.namedata.DefaultDisplayName;
+import com.azquo.memorydb.core.namedata.implementation.DefaultDisplayName;
 import com.azquo.memorydb.core.namedata.NameData;
 import com.azquo.memorydb.service.NameService;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;

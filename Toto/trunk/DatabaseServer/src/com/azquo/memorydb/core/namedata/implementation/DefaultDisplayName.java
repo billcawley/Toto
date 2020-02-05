@@ -1,6 +1,8 @@
-package com.azquo.memorydb.core.namedata;
+package com.azquo.memorydb.core.namedata.implementation;
 
-public class DefaultDisplayName implements DefaultDisplayNameInterface {
+import com.azquo.memorydb.core.namedata.NameData;
+
+public class DefaultDisplayName implements com.azquo.memorydb.core.namedata.component.DefaultDisplayName {
 
     private volatile String defaultDisplayName;
 
@@ -29,12 +31,12 @@ public class DefaultDisplayName implements DefaultDisplayNameInterface {
     }
 
     @Override
-    public String getAttributesForFastStore() {
+    public NameData getImplementationThatCanSetAttributesOtherThanDefaultDisplayName() {
         return null;
     }
 
     @Override
-    public NameData getImplementationThatCanSetAttributesOtherThanDefaultDisplayName() {
+    public String getAttributesForFastStore() {
         return null;
     }
 

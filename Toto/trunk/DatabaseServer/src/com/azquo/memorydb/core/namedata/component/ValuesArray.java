@@ -1,10 +1,12 @@
-package com.azquo.memorydb.core.namedata;
+package com.azquo.memorydb.core.namedata.component;
 
 import com.azquo.memorydb.core.Value;
+import com.azquo.memorydb.core.namedata.NameData;
+import com.azquo.memorydb.core.namedata.UnsupportedOperationException;
 
 import java.util.*;
 
-public interface ArrayValuesInterface extends NameData {
+public interface ValuesArray extends NameData {
 
     default boolean hasValues() {
         return internalGetValues().length != 0;

@@ -1,14 +1,15 @@
-package com.azquo.memorydb.core.namedata;
+package com.azquo.memorydb.core.namedata.component;
 
 import com.azquo.StringLiterals;
 import com.azquo.memorydb.core.NameAttributes;
 import com.azquo.memorydb.core.Value;
+import com.azquo.memorydb.core.namedata.NameData;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-public interface AttributesInterface {
+public interface Attributes extends NameData {
 
     default String getDefaultDisplayName() {
         return internalGetNameAttributes().getAttribute(StringLiterals.DEFAULT_DISPLAY_NAME);

@@ -1,10 +1,12 @@
-package com.azquo.memorydb.core.namedata;
+package com.azquo.memorydb.core.namedata.component;
 
 import com.azquo.StringLiterals;
+import com.azquo.memorydb.core.namedata.NameData;
+import com.azquo.memorydb.core.namedata.UnsupportedOperationException;
 
 import java.util.*;
 
-public interface DefaultDisplayNameInterface extends NameData {
+public interface DefaultDisplayName extends NameData {
 
     default String getDefaultDisplayName() {
         return internalGetDefaultDisplayName();
