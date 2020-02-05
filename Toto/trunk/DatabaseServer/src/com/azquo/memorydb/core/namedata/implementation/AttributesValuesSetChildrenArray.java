@@ -1,5 +1,6 @@
 package com.azquo.memorydb.core.namedata.implementation;
 
+import com.azquo.StringLiterals;
 import com.azquo.memorydb.core.NameAttributes;
 import com.azquo.memorydb.core.NewName;
 import com.azquo.memorydb.core.Value;
@@ -8,6 +9,7 @@ import com.azquo.memorydb.core.namedata.component.ChildrenArray;
 import com.azquo.memorydb.core.namedata.component.Attributes;
 import com.azquo.memorydb.core.namedata.component.ValuesSet;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -22,6 +24,25 @@ public class AttributesValuesSetChildrenArray implements Attributes, ValuesSet, 
         nameAttributes = new NameAttributes();
         values = Collections.newSetFromMap(new ConcurrentHashMap<>(ARRAYTHRESHOLD + 1));// the way to get a thread safe set!
         children = new NewName[0];
+    }
+
+    public AttributesValuesSetChildrenArray(NameAttributes nameAttributes, Set<Value> values) {
+        this.nameAttributes = nameAttributes;
+        this.values = values;
+        children = new NewName[0];
+    }
+
+    public AttributesValuesSetChildrenArray(NameAttributes nameAttributes, Value[] values, NewName[] children) {
+        this.nameAttributes = nameAttributes;
+        this.values = Collections.newSetFromMap(new ConcurrentHashMap<>(ARRAYTHRESHOLD + 1));// the way to get a thread safe set!
+        this.values.addAll(Arrays.asList(values));
+        this.children = children;
+    }
+
+    public AttributesValuesSetChildrenArray(String defaultDisplayName, Set<Value> values, NewName[] children) throws Exception {
+        this.nameAttributes = new NameAttributes(StringLiterals.DEFAULT_DISPLAY_NAME_AS_LIST, Collections.singletonList(defaultDisplayName));
+        this.values = values;
+        this.children = children;
     }
 
     @Override
@@ -50,18 +71,8 @@ public class AttributesValuesSetChildrenArray implements Attributes, ValuesSet, 
     }
 
     @Override
-    public NameData getImplementationThatCanAddValue() {
-        return this;
-    }
-
-    @Override
     public NameData getImplementationThatCanAddChild() {
-        return null;
-    }
-
-    @Override
-    public NameData getImplementationThatCanSetAttributesOtherThanDefaultDisplayName() {
-        return null;
+        return canAddChild() ? this : new AttributesValuesSetChildrenSet(nameAttributes, values, children);
     }
 
     @Override

@@ -32,6 +32,10 @@ public interface ChildrenSet extends NameData {
         return true;
     }
 
+    default NameData getImplementationThatCanAddChild() {
+        return this;
+    }
+
     // must be implemented by the "roll your own" class - note since sets are mutable we just need a get
 
     Set<NewName> internalGetChildren();

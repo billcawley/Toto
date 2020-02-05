@@ -384,7 +384,7 @@ public class BatchImporter implements Callable<Void> {
                     languages.addAll(Arrays.asList(newLanguages.split(",")));
                 }
                 if (languages == null) { // same logic as used when creating the line names, not sure of this
-                    languages = Collections.singletonList(StringLiterals.DEFAULT_DISPLAY_NAME);
+                    languages = StringLiterals.DEFAULT_DISPLAY_NAME_AS_LIST;
                 }
                 // note I'm not going to check parentNames are not empty here, if someone put existing without specifying child of then I think it's fair to say the line isn't valid
                 for (Name parent : cell.getImmutableImportHeading().parentNames) { // try to find any names from anywhere
@@ -765,7 +765,7 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
                     if (!hasResult) {
                         if (!cell.getImmutableImportHeading().blankZeroes) {
                             Name parent = cell.getImmutableImportHeading().parentNames.iterator().next();
-                            List<String> languages = Collections.singletonList(StringLiterals.DEFAULT_DISPLAY_NAME);
+                            List<String> languages = StringLiterals.DEFAULT_DISPLAY_NAME_AS_LIST;
                             cell.addToLineNames(findOrCreateNameStructureWithCache(azquoMemoryDBConnection, namesFoundCache, "Uncategorised " + parent.getDefaultDisplayName(), parent, false, languages));
                         } else {
                             cell.setLineValue("");

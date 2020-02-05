@@ -112,7 +112,7 @@ public interface NameData {
 
     String getAttributesForFastStore();
 
-    NameData getImplementationThatCanSetAttributesOtherThanDefaultDisplayName();
+    NameData getImplementationThatCanSetAttributesOtherThanDefaultDisplayName() throws Exception;
 
     // need check function that the implementation supports adding attributes
     // error or not??

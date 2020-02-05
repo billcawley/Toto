@@ -22,17 +22,17 @@ public class DefaultDisplayName implements com.azquo.memorydb.core.namedata.comp
 
     @Override
     public NameData getImplementationThatCanAddValue() {
-        return null;
+        return new DefaultDisplayNameValuesArray(defaultDisplayName);
     }
 
     @Override
     public NameData getImplementationThatCanAddChild() {
-        return null;
+        return new DefaultDisplayNameChildrenArray(defaultDisplayName);
     }
 
     @Override
-    public NameData getImplementationThatCanSetAttributesOtherThanDefaultDisplayName() {
-        return null;
+    public NameData getImplementationThatCanSetAttributesOtherThanDefaultDisplayName() throws Exception{
+        return new Attributes(defaultDisplayName);
     }
 
     @Override

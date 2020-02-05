@@ -94,7 +94,7 @@ public final class NameService {
 
     public static Name findByName(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String name) throws Exception {
         findByNameCount.incrementAndGet();
-        return findByName(azquoMemoryDBConnection, name, Collections.singletonList(StringLiterals.DEFAULT_DISPLAY_NAME));
+        return findByName(azquoMemoryDBConnection, name, StringLiterals.DEFAULT_DISPLAY_NAME_AS_LIST);
     }
 
     private static AtomicInteger findByName2Count = new AtomicInteger(0);
@@ -287,7 +287,7 @@ public final class NameService {
         }
      /* this routine is designed to be able to find a name that has been put in with little structure (e.g. directly from an dataimport),and insert a structure into it*/
         if (attributeNames == null) {
-            attributeNames = Collections.singletonList(StringLiterals.DEFAULT_DISPLAY_NAME);
+            attributeNames = StringLiterals.DEFAULT_DISPLAY_NAME_AS_LIST;
         }
 
         String storeName = name.replace(StringLiterals.QUOTE, ' ').trim();

@@ -1,13 +1,14 @@
 package com.azquo.memorydb.core.namedata.implementation;
 
+import com.azquo.StringLiterals;
 import com.azquo.memorydb.core.NameAttributes;
 import com.azquo.memorydb.core.NewName;
 import com.azquo.memorydb.core.Value;
-import com.azquo.memorydb.core.namedata.NameData;
 import com.azquo.memorydb.core.namedata.component.ChildrenSet;
 import com.azquo.memorydb.core.namedata.component.Attributes;
 import com.azquo.memorydb.core.namedata.component.ValuesSet;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -22,6 +23,26 @@ public class AttributesValuesSetChildrenSet implements Attributes, ValuesSet, Ch
         nameAttributes = new NameAttributes();
         values = Collections.newSetFromMap(new ConcurrentHashMap<>(ARRAYTHRESHOLD + 1));
         children = Collections.newSetFromMap(new ConcurrentHashMap<>(ARRAYTHRESHOLD + 1));
+    }
+
+    public AttributesValuesSetChildrenSet(NameAttributes nameAttributes, Value[] values, Set<NewName> children) {
+        this.nameAttributes = nameAttributes;
+        this.values = Collections.newSetFromMap(new ConcurrentHashMap<>(ARRAYTHRESHOLD + 1));
+        this.values.addAll(Arrays.asList(values));
+        this.children = children;
+    }
+
+    public AttributesValuesSetChildrenSet(NameAttributes nameAttributes, Set<Value> values, NewName[] children) {
+        this.nameAttributes = nameAttributes;
+        this.values = values;
+        this.children = Collections.newSetFromMap(new ConcurrentHashMap<>(ARRAYTHRESHOLD + 1));
+        this.children.addAll(Arrays.asList(children));
+    }
+
+    public AttributesValuesSetChildrenSet(String defaultDisplayName, Set<Value> values, Set<NewName> children) throws Exception {
+        this.nameAttributes = new NameAttributes(StringLiterals.DEFAULT_DISPLAY_NAME_AS_LIST, Collections.singletonList(defaultDisplayName));
+        this.values = values;
+        this.children = children;
     }
 
     @Override
@@ -42,21 +63,6 @@ public class AttributesValuesSetChildrenSet implements Attributes, ValuesSet, Ch
     @Override
     public Set<Value> internalGetValues() {
         return values;
-    }
-
-    @Override
-    public NameData getImplementationThatCanAddValue() {
-        return this;
-    }
-
-    @Override
-    public NameData getImplementationThatCanAddChild() {
-        return this;
-    }
-
-    @Override
-    public NameData getImplementationThatCanSetAttributesOtherThanDefaultDisplayName() {
-        return null;
     }
 
     @Override

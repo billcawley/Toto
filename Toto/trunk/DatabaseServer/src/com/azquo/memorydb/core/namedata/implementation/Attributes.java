@@ -1,7 +1,10 @@
 package com.azquo.memorydb.core.namedata.implementation;
 
+import com.azquo.StringLiterals;
 import com.azquo.memorydb.core.NameAttributes;
 import com.azquo.memorydb.core.namedata.NameData;
+
+import java.util.Collections;
 
 public class Attributes implements com.azquo.memorydb.core.namedata.component.Attributes {
 
@@ -9,6 +12,10 @@ public class Attributes implements com.azquo.memorydb.core.namedata.component.At
 
     public Attributes(){
         nameAttributes = new NameAttributes();
+    }
+
+    public Attributes(String defaultDisplayName) throws Exception{
+        this.nameAttributes = new NameAttributes(StringLiterals.DEFAULT_DISPLAY_NAME_AS_LIST, Collections.singletonList(defaultDisplayName));
     }
 
     @Override
@@ -23,17 +30,12 @@ public class Attributes implements com.azquo.memorydb.core.namedata.component.At
 
     @Override
     public NameData getImplementationThatCanAddValue() {
-        return null;
+        return new AttributesValuesArray(nameAttributes);
     }
 
     @Override
     public NameData getImplementationThatCanAddChild() {
-        return null;
-    }
-
-    @Override
-    public NameData getImplementationThatCanSetAttributesOtherThanDefaultDisplayName() {
-        return null;
+        return new AttributesChildrenArray(nameAttributes);
     }
 
     @Override

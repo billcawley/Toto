@@ -15,6 +15,10 @@ public class DefaultDisplayNameChildrenArray implements DefaultDisplayName, Chil
         children = new NewName[0];
     }
 
+    public DefaultDisplayNameChildrenArray(String defaultDisplayName) {
+        this.defaultDisplayName = defaultDisplayName;
+    }
+
     @Override
     public String internalGetDefaultDisplayName() {
         return defaultDisplayName;
@@ -37,17 +41,17 @@ public class DefaultDisplayNameChildrenArray implements DefaultDisplayName, Chil
 
     @Override
     public NameData getImplementationThatCanAddValue() {
-        return this;
+        return new DefaultDisplayNameValuesArrayChildrenArray(defaultDisplayName, children);
     }
 
     @Override
     public NameData getImplementationThatCanAddChild() {
-        return null;
+        return canAddChild() ? this : new DefaultDisplayNameChildrenSet(defaultDisplayName, children);
     }
 
     @Override
-    public NameData getImplementationThatCanSetAttributesOtherThanDefaultDisplayName() {
-        return null;
+    public NameData getImplementationThatCanSetAttributesOtherThanDefaultDisplayName() throws Exception {
+        return new AttributesChildrenArray(defaultDisplayName, children);
     }
 
     @Override

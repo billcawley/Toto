@@ -1,3 +1,11 @@
+30-01-20
+
+Calc bug fix
+
+Don't resolve stacked headings when they're all there is in the file. Will reduce the chances of junk in the database
+
+Take ed b branding off the debug, more work on the uploadreport.xlsx
+
 28-01-20
 
 initial version of file to re read the uploads back in with uploadreport.xlsx (automatically replicate the boxes ticked on pending upload)

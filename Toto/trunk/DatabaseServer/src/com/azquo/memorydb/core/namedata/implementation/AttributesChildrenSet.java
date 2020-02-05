@@ -1,5 +1,6 @@
 package com.azquo.memorydb.core.namedata.implementation;
 
+import com.azquo.StringLiterals;
 import com.azquo.memorydb.core.NameAttributes;
 import com.azquo.memorydb.core.NewName;
 import com.azquo.memorydb.core.namedata.NameData;
@@ -7,6 +8,7 @@ import com.azquo.memorydb.core.namedata.component.Attributes;
 import com.azquo.memorydb.core.namedata.component.ChildrenSet;
 import com.azquo.memorydb.core.namedata.component.DefaultDisplayName;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -19,6 +21,17 @@ public class AttributesChildrenSet implements Attributes, ChildrenSet {
     public AttributesChildrenSet(){
         nameAttributes = new NameAttributes();
         children = Collections.newSetFromMap(new ConcurrentHashMap<>(ARRAYTHRESHOLD + 1));// the way to get a thread safe set!
+    }
+
+    AttributesChildrenSet(NameAttributes nameAttributes, NewName[] children) {
+        this.nameAttributes = nameAttributes;
+        this.children = Collections.newSetFromMap(new ConcurrentHashMap<>(ARRAYTHRESHOLD + 1));// the way to get a thread safe set!
+        this.children.addAll(Arrays.asList(children));
+    }
+
+    public AttributesChildrenSet(String defaultDisplayName, Set<NewName> children) throws Exception{
+        this.nameAttributes = new NameAttributes(StringLiterals.DEFAULT_DISPLAY_NAME_AS_LIST, Collections.singletonList(defaultDisplayName));
+        this.children = children;
     }
 
     @Override
@@ -38,17 +51,7 @@ public class AttributesChildrenSet implements Attributes, ChildrenSet {
 
     @Override
     public NameData getImplementationThatCanAddValue() {
-        return this;
-    }
-
-    @Override
-    public NameData getImplementationThatCanAddChild() {
-        return null;
-    }
-
-    @Override
-    public NameData getImplementationThatCanSetAttributesOtherThanDefaultDisplayName() {
-        return null;
+        return new AttributesValuesArrayChildrenSet(nameAttributes, children);
     }
 
     @Override

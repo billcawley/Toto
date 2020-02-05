@@ -9,6 +9,7 @@ import com.azquo.memorydb.core.namedata.component.ChildrenSet;
 import com.azquo.memorydb.core.namedata.component.DefaultDisplayName;
 import com.azquo.memorydb.core.namedata.component.ValuesArray;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -23,6 +24,19 @@ public class DefaultDisplayNameValuesArrayChildrenSet implements DefaultDisplayN
         defaultDisplayName = null;
         values = new Value[0];
         children = Collections.newSetFromMap(new ConcurrentHashMap<>(ARRAYTHRESHOLD + 1));// the way to get a thread safe set!
+    }
+
+    public DefaultDisplayNameValuesArrayChildrenSet(String defaultDisplayName, Set<NewName> children) {
+        this.defaultDisplayName = defaultDisplayName;
+        this.values = new Value[0];
+        this.children = children;
+    }
+
+    public DefaultDisplayNameValuesArrayChildrenSet(String defaultDisplayName, Value[] values, NewName[] children) {
+        this.defaultDisplayName = defaultDisplayName;
+        this.values = values;
+        this.children = Collections.newSetFromMap(new ConcurrentHashMap<>(ARRAYTHRESHOLD + 1));// the way to get a thread safe set!
+        this.children.addAll(Arrays.asList(children));
     }
 
     @Override
@@ -52,17 +66,12 @@ public class DefaultDisplayNameValuesArrayChildrenSet implements DefaultDisplayN
 
     @Override
     public NameData getImplementationThatCanAddValue() {
-        return this;
+        return canAddValue() ? this : new DefaultDisplayNameValuesSetChildrenSet(defaultDisplayName, values, children);
     }
 
     @Override
-    public NameData getImplementationThatCanAddChild() {
-        return this;
-    }
-
-    @Override
-    public NameData getImplementationThatCanSetAttributesOtherThanDefaultDisplayName() {
-        return null;
+    public NameData getImplementationThatCanSetAttributesOtherThanDefaultDisplayName() throws Exception {
+        return new AttributesValuesArrayChildrenSet(defaultDisplayName, values, children);
     }
 
     @Override

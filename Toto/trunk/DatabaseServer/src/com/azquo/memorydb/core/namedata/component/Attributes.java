@@ -83,6 +83,11 @@ public interface Attributes extends NameData {
         return internalGetNameAttributes().getAttribute(attribute);
     }
 
+    default NameData getImplementationThatCanSetAttributesOtherThanDefaultDisplayName() {
+        return this;
+    }
+
+
     // must be implemented by the "roll your own" class
 
     NameAttributes internalGetNameAttributes();

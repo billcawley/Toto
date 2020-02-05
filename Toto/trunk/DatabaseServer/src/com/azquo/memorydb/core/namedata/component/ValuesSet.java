@@ -32,6 +32,10 @@ public interface ValuesSet extends NameData {
         return true;
     }
 
+    default NameData getImplementationThatCanAddValue() {
+        return this;
+    }
+
     // must be implemented by the "roll your own" class - note since sets are mutable we just need a get
 
     Set<Value> internalGetValues();

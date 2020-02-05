@@ -146,8 +146,8 @@ public class ZKSpreadsheetCommandController {
                                 }
                             }
                         }
-                        loggedInUser.userLog("Save : " + onlineReport.getReportName() + choices.toString() + ".xlsx");
-                        Filedownload.save(new AMedia(onlineReport.getReportName() + choices.toString() + ".xlsx", null, null, file, true));
+                        loggedInUser.userLog("Save : " + onlineReport.getReportName() + ".xlsx");
+                        Filedownload.save(new AMedia(onlineReport.getReportName() + ".xlsx", null, null, file, true));
                         Clients.clearBusy();
                     }
 

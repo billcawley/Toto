@@ -7,6 +7,7 @@ import com.azquo.memorydb.core.namedata.component.ChildrenArray;
 import com.azquo.memorydb.core.namedata.component.ChildrenSet;
 import com.azquo.memorydb.core.namedata.component.DefaultDisplayName;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -19,6 +20,12 @@ public class DefaultDisplayNameChildrenSet implements DefaultDisplayName, Childr
     public DefaultDisplayNameChildrenSet(){
         defaultDisplayName = null;
         children = Collections.newSetFromMap(new ConcurrentHashMap<>(ARRAYTHRESHOLD + 1));// the way to get a thread safe set!
+    }
+
+    public DefaultDisplayNameChildrenSet(String defaultDisplayName, NewName[] children) {
+        this.defaultDisplayName = defaultDisplayName;
+        this.children = Collections.newSetFromMap(new ConcurrentHashMap<>(ARRAYTHRESHOLD + 1));// the way to get a thread safe set!
+        this.children.addAll(Arrays.asList(children));
     }
 
     @Override
@@ -38,17 +45,12 @@ public class DefaultDisplayNameChildrenSet implements DefaultDisplayName, Childr
 
     @Override
     public NameData getImplementationThatCanAddValue() {
-        return this;
+        return new DefaultDisplayNameValuesArrayChildrenSet(defaultDisplayName, children);
     }
 
     @Override
-    public NameData getImplementationThatCanAddChild() {
-        return null;
-    }
-
-    @Override
-    public NameData getImplementationThatCanSetAttributesOtherThanDefaultDisplayName() {
-        return null;
+    public NameData getImplementationThatCanSetAttributesOtherThanDefaultDisplayName() throws Exception{
+        return new AttributesChildrenSet(defaultDisplayName, children);
     }
 
     @Override

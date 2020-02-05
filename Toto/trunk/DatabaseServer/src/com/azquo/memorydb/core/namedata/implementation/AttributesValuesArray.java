@@ -1,10 +1,13 @@
 package com.azquo.memorydb.core.namedata.implementation;
 
+import com.azquo.StringLiterals;
 import com.azquo.memorydb.core.NameAttributes;
 import com.azquo.memorydb.core.Value;
 import com.azquo.memorydb.core.namedata.NameData;
 import com.azquo.memorydb.core.namedata.component.Attributes;
 import com.azquo.memorydb.core.namedata.component.ValuesArray;
+
+import java.util.Collections;
 
 public class AttributesValuesArray implements Attributes, ValuesArray {
 
@@ -14,6 +17,16 @@ public class AttributesValuesArray implements Attributes, ValuesArray {
     public AttributesValuesArray(){
         nameAttributes = new NameAttributes();
         values = new Value[0];
+    }
+
+    AttributesValuesArray(NameAttributes nameAttributes){
+        this.nameAttributes = nameAttributes;
+        values = new Value[0];
+    }
+
+    public AttributesValuesArray(String defaultDisplayName, Value[] values) throws Exception {
+        this.nameAttributes = new NameAttributes(StringLiterals.DEFAULT_DISPLAY_NAME_AS_LIST, Collections.singletonList(defaultDisplayName));
+        this.values = values;
     }
 
     @Override
@@ -38,17 +51,12 @@ public class AttributesValuesArray implements Attributes, ValuesArray {
 
     @Override
     public NameData getImplementationThatCanAddValue() {
-        return this;
+        return canAddValue() ? this : new AttributesValuesSet(nameAttributes, values);
     }
 
     @Override
     public NameData getImplementationThatCanAddChild() {
-        return null;
-    }
-
-    @Override
-    public NameData getImplementationThatCanSetAttributesOtherThanDefaultDisplayName() {
-        return null;
+        return new AttributesValuesArrayChildrenArray(nameAttributes, values);
     }
 
     @Override

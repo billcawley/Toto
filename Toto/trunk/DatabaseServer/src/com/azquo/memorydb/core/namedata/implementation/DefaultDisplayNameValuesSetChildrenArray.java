@@ -8,6 +8,7 @@ import com.azquo.memorydb.core.namedata.component.DefaultDisplayName;
 import com.azquo.memorydb.core.namedata.component.ValuesArray;
 import com.azquo.memorydb.core.namedata.component.ValuesSet;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -21,6 +22,19 @@ public class DefaultDisplayNameValuesSetChildrenArray implements DefaultDisplayN
     public DefaultDisplayNameValuesSetChildrenArray(){
         defaultDisplayName = null;
         values = Collections.newSetFromMap(new ConcurrentHashMap<>(ARRAYTHRESHOLD + 1));// the way to get a thread safe set!
+        children = new NewName[0];
+    }
+
+    public DefaultDisplayNameValuesSetChildrenArray(String defaultDisplayName, Value[] values, NewName[] children) {
+        this.defaultDisplayName = defaultDisplayName;
+        this.values = Collections.newSetFromMap(new ConcurrentHashMap<>(ARRAYTHRESHOLD + 1));// the way to get a thread safe set!
+        this.values.addAll(Arrays.asList(values));
+        this.children = children;
+    }
+
+    public DefaultDisplayNameValuesSetChildrenArray(String defaultDisplayName, Set<Value> values) {
+        this.defaultDisplayName = defaultDisplayName;
+        this.values = values;
         children = new NewName[0];
     }
 
@@ -50,18 +64,13 @@ public class DefaultDisplayNameValuesSetChildrenArray implements DefaultDisplayN
     }
 
     @Override
-    public NameData getImplementationThatCanAddValue() {
-        return this;
-    }
-
-    @Override
     public NameData getImplementationThatCanAddChild() {
-        return null;
+        return canAddChild() ? this : new DefaultDisplayNameValuesSetChildrenSet(defaultDisplayName, values, children);
     }
 
     @Override
-    public NameData getImplementationThatCanSetAttributesOtherThanDefaultDisplayName() {
-        return null;
+    public NameData getImplementationThatCanSetAttributesOtherThanDefaultDisplayName() throws Exception {
+        return new AttributesValuesSetChildrenArray(defaultDisplayName, values, children);
     }
 
     @Override
