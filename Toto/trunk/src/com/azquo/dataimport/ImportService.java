@@ -1295,7 +1295,7 @@ public final class ImportService {
         //if (colCount++ > 0) bw.write('\t');
         if (cell.getCellType() == Cell.CELL_TYPE_STRING || (cell.getCellType() == Cell.CELL_TYPE_FORMULA && cell.getCachedFormulaResultType() == Cell.CELL_TYPE_STRING)) {
             try {
-                returnString = cell.getStringCellValue();// I assume means formatted text?
+                returnString = cell.getStringCellValue().replace(Character.toString((char)160) ,"");// I assume means formatted text? The 160 is some kind of hard space that causes trouble and is unaffected by trim(), zap it
             } catch (Exception ignored) {
             }
         } else if (cell.getCellType() == Cell.CELL_TYPE_NUMERIC || (cell.getCellType() == Cell.CELL_TYPE_FORMULA && cell.getCachedFormulaResultType() == Cell.CELL_TYPE_NUMERIC)) {
