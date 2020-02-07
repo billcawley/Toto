@@ -20,7 +20,7 @@ public class AttributesChildrenArray implements Attributes, ChildrenArray {
         children = new NewName[0];
     }
 
-    AttributesChildrenArray(NameAttributes nameAttributes){
+    public AttributesChildrenArray(NameAttributes nameAttributes){
         this.nameAttributes = nameAttributes;
         children = new NewName[0];
     }

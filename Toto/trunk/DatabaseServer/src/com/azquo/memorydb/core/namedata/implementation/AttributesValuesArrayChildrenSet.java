@@ -20,8 +20,8 @@ public class AttributesValuesArrayChildrenSet implements Attributes, ValuesArray
     private volatile Value[] values;
     private volatile Set<NewName> children;
 
-    public AttributesValuesArrayChildrenSet(){
-        nameAttributes = new NameAttributes();
+    public AttributesValuesArrayChildrenSet(NameAttributes nameAttributes){
+        this.nameAttributes = nameAttributes;
         values = new Value[0];
         children = Collections.newSetFromMap(new ConcurrentHashMap<>(ARRAYTHRESHOLD + 1));// the way to get a thread safe set!
     }

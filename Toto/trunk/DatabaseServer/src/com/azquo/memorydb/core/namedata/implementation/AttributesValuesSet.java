@@ -17,8 +17,8 @@ public class AttributesValuesSet implements Attributes, ValuesSet {
     private volatile NameAttributes nameAttributes;
     private volatile Set<Value> values;
 
-    public AttributesValuesSet(){
-        nameAttributes = new NameAttributes();
+    public AttributesValuesSet(NameAttributes nameAttributes){
+        this.nameAttributes = nameAttributes;
         values = Collections.newSetFromMap(new ConcurrentHashMap<>(ARRAYTHRESHOLD + 1));// the way to get a thread safe set!
     }
 

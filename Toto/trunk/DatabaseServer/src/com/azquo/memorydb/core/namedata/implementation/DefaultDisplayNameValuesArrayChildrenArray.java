@@ -13,8 +13,8 @@ public class DefaultDisplayNameValuesArrayChildrenArray implements DefaultDispla
     private volatile Value[] values;
     private volatile NewName[] children;
 
-    public DefaultDisplayNameValuesArrayChildrenArray(){
-        defaultDisplayName = null;
+    public DefaultDisplayNameValuesArrayChildrenArray(String defaultDisplayName){
+        this.defaultDisplayName = defaultDisplayName;
         values = new Value[0];
         children = new NewName[0];
     }

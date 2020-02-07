@@ -14,12 +14,7 @@ public class AttributesValuesArray implements Attributes, ValuesArray {
     private volatile NameAttributes nameAttributes;
     private volatile Value[] values;
 
-    public AttributesValuesArray(){
-        nameAttributes = new NameAttributes();
-        values = new Value[0];
-    }
-
-    AttributesValuesArray(NameAttributes nameAttributes){
+    public AttributesValuesArray(NameAttributes nameAttributes){
         this.nameAttributes = nameAttributes;
         values = new Value[0];
     }

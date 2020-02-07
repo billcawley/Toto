@@ -202,6 +202,7 @@ class ValuesImport {
             }
         } else {
             if (lineValue.toLowerCase().endsWith("f")) return lineValue;
+            if (lineValue.toLowerCase().endsWith("d")) return lineValue; // double can trip it too
             try {
                 double d = Double.parseDouble(lineValue.replace(",", ""));
                 if (!(d + "").contains("E")) { // this is hacky but big decimal to plain string got junk on fractions

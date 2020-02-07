@@ -17,8 +17,8 @@ public class DefaultDisplayNameChildrenSet implements DefaultDisplayName, Childr
     private volatile String defaultDisplayName;
     private volatile Set<NewName> children;
 
-    public DefaultDisplayNameChildrenSet(){
-        defaultDisplayName = null;
+    public DefaultDisplayNameChildrenSet(String defaultDisplayName){
+        this.defaultDisplayName = defaultDisplayName;
         children = Collections.newSetFromMap(new ConcurrentHashMap<>(ARRAYTHRESHOLD + 1));// the way to get a thread safe set!
     }
 

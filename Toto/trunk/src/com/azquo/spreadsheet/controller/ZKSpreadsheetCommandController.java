@@ -1,19 +1,14 @@
 package com.azquo.spreadsheet.controller;
 
-import com.azquo.TypedPair;
-import com.azquo.admin.database.Database;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.dataimport.ImportService;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.zk.*;
-import org.apache.commons.lang.StringUtils;
 import org.apache.pdfbox.util.PDFMergerUtility;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
 import org.zeroturnaround.zip.ZipUtil;
 import org.zkoss.json.JSONObject;
 import org.zkoss.util.media.AMedia;
@@ -24,33 +19,20 @@ import org.zkoss.zss.api.Exporters;
 import org.zkoss.zss.api.Importers;
 import org.zkoss.zss.api.Ranges;
 import org.zkoss.zss.api.model.Book;
-import org.zkoss.zss.api.model.CellData;
 import org.zkoss.zss.api.model.Sheet;
 import org.zkoss.zss.jsp.JsonUpdateBridge;
 import org.zkoss.zss.model.CellRegion;
 import org.zkoss.zss.model.SCell;
-import org.zkoss.zss.model.SName;
 import org.zkoss.zss.model.SSheet;
 import org.zkoss.zss.ui.Spreadsheet;
 import org.zkoss.zul.Filedownload;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.transform.OutputKeys;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.dom.DOMSource;
-import javax.xml.transform.stream.StreamResult;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.text.DecimalFormat;
-import java.time.LocalDateTime;
-import java.time.Month;
-import java.time.ZoneOffset;
 import java.util.*;
 
 /**
@@ -64,7 +46,7 @@ import java.util.*;
 @RequestMapping("/ZKSpreadsheetCommand")
 public class ZKSpreadsheetCommandController {
 
-    static String base64int(int input){
+/*    static String base64int(int input){
         // I'm using tilda on the end
         String base64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+~";
         // so I have my int - 4 bytes, should be able to represent that as 6 chars max. Normal base 64 encoding won't do it this way hence the manual fix.
@@ -81,7 +63,7 @@ public class ZKSpreadsheetCommandController {
             s = s.substring(1);
         }
         return s;
-    }
+    }*/
 
 
     @RequestMapping
@@ -129,6 +111,7 @@ public class ZKSpreadsheetCommandController {
                         int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
 
                         OnlineReport onlineReport = OnlineReportDAO.findById(reportId);
+                        /* this was to add choices to the downloaded file
                         StringBuilder choices = new StringBuilder();
                         Set<String> usedChoices = new HashSet<>();
                         for (SName name : book.getInternalBook().getNames()){
@@ -145,7 +128,7 @@ public class ZKSpreadsheetCommandController {
                                     }
                                 }
                             }
-                        }
+                        }*/
                         loggedInUser.userLog("Save : " + onlineReport.getReportName() + ".xlsx");
                         Filedownload.save(new AMedia(onlineReport.getReportName() + ".xlsx", null, null, file, true));
                         Clients.clearBusy();
@@ -159,14 +142,9 @@ public class ZKSpreadsheetCommandController {
                             OnlineReport onlineReport = OnlineReportDAO.findById(reportId);
                             loggedInUser.userLog("SaveTemplate : " + onlineReport.getReportName());
                             String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + onlineReport.getFilenameForDisk(); // as in the online controller
-                            FileOutputStream fos = null;
-                            try {
-                                fos = new FileOutputStream(bookPath); // overwrite the report, should work
+                            try (FileOutputStream fos = new FileOutputStream(bookPath)) {
+                                // overwrite the report, should work
                                 exporter.export(book, fos);
-                            } finally {
-                                if (fos != null) {
-                                    fos.close();
-                                }
                             }
                             Clients.evalJavaScript("window.location.assign(\"/api/Online?reportid=" + reportId + "&database=" + onlineReport.getDatabase() + "\")");
                         }
@@ -214,9 +192,7 @@ public class ZKSpreadsheetCommandController {
                             }
                         }
                         File file = File.createTempFile(Long.toString(System.currentTimeMillis()), "temp");
-                        try (FileOutputStream fos = new FileOutputStream(file)) {
-                            exporter.export(book, file);
-                        }
+                        exporter.export(book, file);
                         loggedInUser.userLog("Download PDF : " + ss.getSelectedSheetName() + ".pdf");
                         Filedownload.save(new AMedia(ss.getSelectedSheetName() + ".pdf", "pdf", "application/pdf", file, true));
                     }
@@ -412,14 +388,8 @@ public class ZKSpreadsheetCommandController {
         Exporter exporter = Exporters.getExporter("pdf");
         //((PdfExporter) exporter).getPrintSetup().setLandscape(false);
         File file = File.createTempFile(Long.toString(System.currentTimeMillis()), "temp");
-        FileOutputStream fos = null;
-        try {
-            fos = new FileOutputStream(file);
+        try (FileOutputStream fos = new FileOutputStream(file)) {
             exporter.export(book, fos);
-        } finally {
-            if (fos != null) {
-                fos.close();
-            }
         }
         return file.getAbsolutePath();
     }

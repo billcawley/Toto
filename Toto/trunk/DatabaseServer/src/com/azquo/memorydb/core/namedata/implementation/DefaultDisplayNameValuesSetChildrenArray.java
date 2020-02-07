@@ -5,7 +5,6 @@ import com.azquo.memorydb.core.Value;
 import com.azquo.memorydb.core.namedata.NameData;
 import com.azquo.memorydb.core.namedata.component.ChildrenArray;
 import com.azquo.memorydb.core.namedata.component.DefaultDisplayName;
-import com.azquo.memorydb.core.namedata.component.ValuesArray;
 import com.azquo.memorydb.core.namedata.component.ValuesSet;
 
 import java.util.Arrays;
@@ -19,8 +18,8 @@ public class DefaultDisplayNameValuesSetChildrenArray implements DefaultDisplayN
     private volatile Set<Value> values;
     private volatile NewName[] children;
 
-    public DefaultDisplayNameValuesSetChildrenArray(){
-        defaultDisplayName = null;
+    public DefaultDisplayNameValuesSetChildrenArray(String defaultDisplayName){
+        this.defaultDisplayName = defaultDisplayName;
         values = Collections.newSetFromMap(new ConcurrentHashMap<>(ARRAYTHRESHOLD + 1));// the way to get a thread safe set!
         children = new NewName[0];
     }

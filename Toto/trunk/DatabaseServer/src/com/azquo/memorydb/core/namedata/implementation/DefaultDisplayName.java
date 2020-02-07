@@ -6,8 +6,8 @@ public class DefaultDisplayName implements com.azquo.memorydb.core.namedata.comp
 
     private volatile String defaultDisplayName;
 
-    public DefaultDisplayName(){
-        defaultDisplayName = null;
+    public DefaultDisplayName(String defaultDisplayName){
+        this.defaultDisplayName = defaultDisplayName;
     }
 
     @Override

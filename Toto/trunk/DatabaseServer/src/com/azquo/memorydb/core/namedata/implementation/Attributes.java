@@ -1,6 +1,7 @@
 package com.azquo.memorydb.core.namedata.implementation;
 
 import com.azquo.StringLiterals;
+import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.NameAttributes;
 import com.azquo.memorydb.core.namedata.NameData;
 
@@ -10,8 +11,8 @@ public class Attributes implements com.azquo.memorydb.core.namedata.component.At
 
     private volatile NameAttributes nameAttributes;
 
-    public Attributes(){
-        nameAttributes = new NameAttributes();
+    public Attributes(NameAttributes nameAttributes){
+        this.nameAttributes = nameAttributes;
     }
 
     public Attributes(String defaultDisplayName) throws Exception{

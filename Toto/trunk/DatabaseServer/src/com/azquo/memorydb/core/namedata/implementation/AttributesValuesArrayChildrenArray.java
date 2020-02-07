@@ -17,8 +17,8 @@ public class AttributesValuesArrayChildrenArray implements Attributes, ValuesArr
     private volatile Value[] values;
     private volatile NewName[] children;
 
-    public AttributesValuesArrayChildrenArray(){
-        nameAttributes = new NameAttributes();
+    public AttributesValuesArrayChildrenArray(NameAttributes nameAttributes){
+        this.nameAttributes = nameAttributes;
         values = new Value[0];
         children = new NewName[0];
     }

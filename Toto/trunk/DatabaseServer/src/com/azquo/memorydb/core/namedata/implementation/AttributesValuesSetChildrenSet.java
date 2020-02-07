@@ -19,8 +19,8 @@ public class AttributesValuesSetChildrenSet implements Attributes, ValuesSet, Ch
     private volatile Set<Value> values;
     private volatile Set<NewName> children;
 
-    public AttributesValuesSetChildrenSet(){
-        nameAttributes = new NameAttributes();
+    public AttributesValuesSetChildrenSet(NameAttributes nameAttributes){
+        this.nameAttributes = nameAttributes;
         values = Collections.newSetFromMap(new ConcurrentHashMap<>(ARRAYTHRESHOLD + 1));
         children = Collections.newSetFromMap(new ConcurrentHashMap<>(ARRAYTHRESHOLD + 1));
     }

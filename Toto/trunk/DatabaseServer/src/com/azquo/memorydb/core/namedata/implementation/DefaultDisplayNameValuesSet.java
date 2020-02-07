@@ -15,8 +15,8 @@ public class DefaultDisplayNameValuesSet implements DefaultDisplayName, ValuesSe
     private volatile String defaultDisplayName;
     private volatile Set<Value> values;
 
-    public DefaultDisplayNameValuesSet(){
-        defaultDisplayName = null;
+    public DefaultDisplayNameValuesSet(String defaultDisplayName){
+        this.defaultDisplayName = defaultDisplayName;
         values = Collections.newSetFromMap(new ConcurrentHashMap<>(ARRAYTHRESHOLD + 1));// the way to get a thread safe set!
     }
 

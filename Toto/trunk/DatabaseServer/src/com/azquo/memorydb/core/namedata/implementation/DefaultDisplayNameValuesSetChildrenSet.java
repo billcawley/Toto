@@ -5,7 +5,6 @@ import com.azquo.memorydb.core.Value;
 import com.azquo.memorydb.core.namedata.NameData;
 import com.azquo.memorydb.core.namedata.component.ChildrenSet;
 import com.azquo.memorydb.core.namedata.component.DefaultDisplayName;
-import com.azquo.memorydb.core.namedata.component.ValuesArray;
 import com.azquo.memorydb.core.namedata.component.ValuesSet;
 
 import java.util.Arrays;
@@ -19,8 +18,8 @@ public class DefaultDisplayNameValuesSetChildrenSet implements DefaultDisplayNam
     private volatile Set<Value> values;
     private volatile Set<NewName> children;
 
-    public DefaultDisplayNameValuesSetChildrenSet(){
-        defaultDisplayName = null;
+    public DefaultDisplayNameValuesSetChildrenSet(String defaultDisplayName){
+        this.defaultDisplayName = defaultDisplayName;
         values = Collections.newSetFromMap(new ConcurrentHashMap<>(ARRAYTHRESHOLD + 1));
         children = Collections.newSetFromMap(new ConcurrentHashMap<>(ARRAYTHRESHOLD + 1));
     }

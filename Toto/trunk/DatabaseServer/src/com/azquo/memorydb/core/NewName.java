@@ -2,7 +2,7 @@ package com.azquo.memorydb.core;
 
 import com.azquo.StringLiterals;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
-import com.azquo.memorydb.core.namedata.implementation.DefaultDisplayName;
+import com.azquo.memorydb.core.namedata.implementation.*;
 import com.azquo.memorydb.core.namedata.NameData;
 import com.azquo.memorydb.service.NameService;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
@@ -45,9 +45,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Given that synchronization is not inherently expensive it might be worth considering how much places where I'm using DCL might actually be contended much.
  * <p>
  * I've extracted NameAttributes and a few static functions but there's still a fair amount of code in here. Values and children switching between arrays and sets might be a concern.
- *
+ * <p>
  * I'm going to attempt to hive off everything except parents and provenance to a name data class. Prototyping in NewName first then move into name and comment properly when it's tested todo
- *
  */
 public final class NewName extends AzquoMemoryDBEntity {
 
@@ -69,7 +68,7 @@ public final class NewName extends AzquoMemoryDBEntity {
         super(azquoMemoryDB, 0);
         newNameCount.incrementAndGet();
         parents = new NewName[0];
-        nameData = new DefaultDisplayName();
+        nameData = new DefaultDisplayName(null);
         //getAzquoMemoryDB().addNameToDb(this);
         newNameCount.incrementAndGet();
         this.provenance = provenance;
@@ -81,51 +80,43 @@ public final class NewName extends AzquoMemoryDBEntity {
     // yes I am exposing "this". Seems ok so far. Interning the attributes should help memory usage.
 
     public NewName(final AzquoMemoryDB azquoMemoryDB, int id, int provenanceId, String attributes, int noParents, int noValues, int noChildren) throws Exception {
-        this(azquoMemoryDB, id, provenanceId,null, attributes, noParents, noValues, noChildren, false);
+        this(azquoMemoryDB, id, provenanceId, attributes, noParents, noValues, noChildren, false);
     }
 
     // package private - BackupTransport can force the ID
-    NewName(final AzquoMemoryDB azquoMemoryDB, int id, int provenanceId, NameAttributes nameAttributes, String attributes, int noParents, int noValues, int noChildren, boolean forceIdForbackup) throws Exception {
+    NewName(final AzquoMemoryDB azquoMemoryDB, int id, int provenanceId, String attributes, int noParents, int noValues, int noChildren, boolean forceIdForbackup) throws Exception {
         super(azquoMemoryDB, id, forceIdForbackup);
         newName3Count.incrementAndGet();
         this.provenance = getAzquoMemoryDB().getProvenanceById(provenanceId); // see no reason not to do this here now
-        if (this.provenance == null){
-            System.out.println("Provenance null on backup restore!, id is "+ provenanceId + ", making blank provenance");
-            this.provenance = new Provenance(azquoMemoryDB, "-","-","-","-");
+        if (this.provenance == null) {
+            System.out.println("Provenance null on backup restore!, id is " + provenanceId + ", making blank provenance");
+            this.provenance = new Provenance(azquoMemoryDB, "-", "-", "-", "-");
         }
         parents = new NewName[noParents]; // no parents as set! as mentioned parents will very rarely big big and certainly not in the same way children and values are.
-        //this.attributes = transport.attributes;
-        // can pass nameAttributes as an optimiseation when making a temporary copy
-        if (nameAttributes != null){
-            // todo - reinstate.
-            // A nice memory saving but not dramatic, could maybe just set all attributes
-            //this.nameAttributes = nameAttributes;
-            // perhaps breaks the optimiseationa  little but hey ho
-            for (String key : nameAttributes.getAttributeKeys()){
-                //azquoMemoryDB.getIndex().setAttributeForNameInAttributeNameMap(key, nameAttributes.getAttribute(key), this); // used to be done after, can't se a reason not to do this here
+        // old name could pass through a NameAttributes as an optimisation. I've zapped it for the moment can maybe reimplement later
+        String defaultDisplayName = null;
+        NameAttributes nameAttributes = null;
+        String[] attsArray = attributes.split(StringLiterals.ATTRIBUTEDIVIDER);
+        if (attsArray.length == 2 && attsArray[0].equalsIgnoreCase(StringLiterals.DEFAULT_DISPLAY_NAME)) {
+            defaultDisplayName = attsArray[1];
+        } else if (attsArray.length % 2 == 0) {
+            // a thought : if the attributes string was attributes then values might it be a little faster here? Am not sure
+            String[] attributeKeys = new String[attsArray.length / 2];
+            String[] attributeValues = new String[attsArray.length / 2];
+            for (int i = 0; i < attributeKeys.length; i++) {
+                attributeKeys[i] = attsArray[i * 2].intern();
+                attributeValues[i] = attsArray[(i * 2) + 1].intern();
+                // todo reinstate, right now it won't work with NewName
+                //azquoMemoryDB.getIndex().setAttributeForNameInAttributeNameMap(attributeKeys[i], attributeValues[i], this); // used to be done after, can't se a reason not to do this here
             }
-        } else {
-            String[] attsArray = attributes.split(StringLiterals.ATTRIBUTEDIVIDER);
-            if (attsArray.length == 0 || (attsArray.length == 2 && attsArray[0].equalsIgnoreCase(StringLiterals.DEFAULT_DISPLAY_NAME))){
-                nameData = new DefaultDisplayName();
-            } else if (attsArray.length%2 == 0){
-                // then name data with full attributes - todo
-                String[] attributeKeys = new String[attsArray.length / 2];
-                String[] attributeValues = new String[attsArray.length / 2];
-                for (int i = 0; i < attributeKeys.length; i++) {
-                    attributeKeys[i] = attsArray[i * 2].intern();
-                    attributeValues[i] = attsArray[(i * 2) + 1].intern();
-                    //azquoMemoryDB.getIndex().setAttributeForNameInAttributeNameMap(attributeKeys[i], attributeValues[i], this); // used to be done after, can't se a reason not to do this here
-                }
-//                this.nameAttributes = new NameAttributes(attributeKeys, attributeValues);
-            }
+            nameAttributes = new NameAttributes(attributeKeys, attributeValues);
         }
         /* OK I realise that this criteria of greater than or equal to ARRAYTHRESHOLD assigning a set and less than an array is slightly inconsistent with addToValues
         that is to say one could get to an array of 512, save and reload and then that 512 would be a set. I do this because the value loading is a bit of a hack
         and if I copy the criteria then addToValues will crash on the edge case of 512. I don't really see a problem with this under typical operation. It might, I suppose,
         be an issue in a database with many names with 512 values but the rest of the time it's a moot point. DOcumenting here in case anyone sees the incinsistency and tries to "fix" it.
         */
-        /* under new thing this decides the implementation of name data
+        /*
 
         valuesAsSet = noValues >= ARRAYTHRESHOLD ? Collections.newSetFromMap(new ConcurrentHashMap<>(noValues)) : null; // should help loading - prepare the space
         // could values be nulled if the set is being used? The saving would be minor I think.
@@ -134,13 +125,59 @@ public final class NewName extends AzquoMemoryDBEntity {
         children = new NewName[0];
 
          */
-
-        if (noValues >= NameData.ARRAYTHRESHOLD){
-
-        } else if (noValues > 0){
-
-        } else {
-
+        //under new thing this decides the implementation of name data, think I'm gonna have to branch to the 18 options available . . .
+        if (nameAttributes == null){ // so a default display name implementation will do it
+            if (noValues == 0){ // no values
+                if (noChildren == 0){ // no children
+                    nameData = new DefaultDisplayName(defaultDisplayName);
+                } else if (noChildren < NameData.ARRAYTHRESHOLD){ // array children
+                    nameData = new DefaultDisplayNameChildrenArray(defaultDisplayName);
+                } else { // set values
+                    nameData = new DefaultDisplayNameChildrenSet(defaultDisplayName);
+                }
+            } else if (noValues < NameData.ARRAYTHRESHOLD){ // array values
+                if (noChildren == 0){ // no children
+                    nameData = new DefaultDisplayNameValuesArray(defaultDisplayName);
+                } else if (noChildren < NameData.ARRAYTHRESHOLD){ // array children
+                    nameData = new DefaultDisplayNameValuesArrayChildrenArray(defaultDisplayName);
+                } else { // set values
+                    nameData = new DefaultDisplayNameValuesArrayChildrenSet(defaultDisplayName);
+                }
+            } else { // set values
+                if (noChildren == 0){ // no children
+                    nameData = new DefaultDisplayNameValuesSet(defaultDisplayName);
+                } else if (noChildren < NameData.ARRAYTHRESHOLD){ // array children
+                    nameData = new DefaultDisplayNameValuesSetChildrenArray(defaultDisplayName);
+                } else { // set values
+                    nameData = new DefaultDisplayNameValuesSetChildrenSet(defaultDisplayName);
+                }
+            }
+        } else { // name attributes
+            if (noValues == 0){ // no values
+                if (noChildren == 0){ // no children
+                    nameData = new Attributes(nameAttributes);
+                } else if (noChildren < NameData.ARRAYTHRESHOLD){ // array children
+                    nameData = new AttributesChildrenArray(nameAttributes);
+                } else { // set values
+                    nameData = new AttributesChildrenSet(nameAttributes);
+                }
+            } else if (noValues < NameData.ARRAYTHRESHOLD){ // array values
+                if (noChildren == 0){ // no children
+                    nameData = new AttributesValuesArray(nameAttributes);
+                } else if (noChildren < NameData.ARRAYTHRESHOLD){ // array children
+                    nameData = new AttributesValuesArrayChildrenArray(nameAttributes);
+                } else { // set values
+                    nameData = new AttributesValuesArrayChildrenSet(nameAttributes);
+                }
+            } else { // set values
+                if (noChildren == 0){ // no children
+                    nameData = new AttributesValuesSet(nameAttributes);
+                } else if (noChildren < NameData.ARRAYTHRESHOLD){ // array children
+                    nameData = new AttributesValuesSetChildrenArray(nameAttributes);
+                } else { // set values
+                    nameData = new AttributesValuesSetChildrenSet(nameAttributes);
+                }
+            }
         }
         //getAzquoMemoryDB().addNameToDb(this);
     }
@@ -163,7 +200,7 @@ public final class NewName extends AzquoMemoryDBEntity {
         if (this.provenance == null || !this.provenance.equals(provenance)) {
             this.provenance = provenance;
             setNeedsPersisting();
-            for (NewName n : getParents()){
+            for (NewName n : getParents()) {
                 n.setProvenanceWillBePersisted(provenance);
             }
         }
@@ -253,7 +290,7 @@ public final class NewName extends AzquoMemoryDBEntity {
         boolean databaseIsLoading = getAzquoMemoryDB().getNeedsLoading() || backupRestore;
         checkDatabaseMatches(value);
         // defensive for the mo
-        synchronized (this){
+        synchronized (this) {
             // may make this more clever as in clearing only if there's a change but not now
             valuesIncludingChildrenCache = null;
             if (!nameData.canAddValue()) {
@@ -308,7 +345,7 @@ public final class NewName extends AzquoMemoryDBEntity {
             if (databaseIsLoading || !Arrays.asList(parents).contains(name)) {
                 if (parents.length != 0 && parents[parents.length - 1] == null) {
                     if (!databaseIsLoading) {
-                        System.out.println("empty space in parents after the database has finished loading - no_parents wrong on name id " + getId() + " " +  getDefaultDisplayName());
+                        System.out.println("empty space in parents after the database has finished loading - no_parents wrong on name id " + getId() + " " + getDefaultDisplayName());
                         //getAzquoMemoryDB().forceNameNeedsPersisting(this);
                     }
                     for (int i = 0; i < parents.length; i++) {
@@ -497,7 +534,7 @@ public final class NewName extends AzquoMemoryDBEntity {
                     findAllChildren(child, allChildren);
                 }
             }
-        } else if (name.nameData.directArrayChildren() != null &&  name.nameData.directArrayChildren().length > 0) {
+        } else if (name.nameData.directArrayChildren() != null && name.nameData.directArrayChildren().length > 0) {
             NewName[] childrenRefCopy = name.nameData.directArrayChildren(); // in case it gets switched out half way through
             for (NewName child : childrenRefCopy) {
                 if (allChildren.add(child)) {
@@ -543,6 +580,21 @@ public final class NewName extends AzquoMemoryDBEntity {
 
     private static AtomicInteger findValuesIncludingChildrenCount = new AtomicInteger(0);
 
+
+    // got to about here . . .
+
+
+
+
+
+
+
+
+
+
+
+
+
     public Set<Value> findValuesIncludingChildren() {
         findValuesIncludingChildrenCount.incrementAndGet();
         Set<Value> localReference = valuesIncludingChildrenCache;
@@ -552,11 +604,11 @@ public final class NewName extends AzquoMemoryDBEntity {
                 if (localReference == null) {
                     localReference = HashObjSets.newUpdatableSet(getValues());
                     for (NewName child : findAllChildren()) {
-                        if (child.nameData.directSetValues() != null) {
-                            localReference.addAll(child.nameData.directSetValues());
-                            // todo - could name data reference get swapped out? hmmmmmmmmmmmmmmmmmmmmmmmmmmmmm
-                        } else if (child.nameData.directArrayValues() != null && child.nameData.directArrayValues().length > 0) {
-                            Value[] refCopy = child.nameData.directArrayValues(); // in case values is swapped out while adding
+                        NameData childNameData = child.nameData;
+                        if (childNameData.directSetValues() != null) {
+                            localReference.addAll(childNameData.directSetValues());
+                        } else if (childNameData.directArrayValues() != null && childNameData.directArrayValues().length > 0) {
+                            Value[] refCopy = childNameData.directArrayValues(); // in case values is swapped out while adding
                             // Intellij wants to change this I think it's a bit more efficient as it is, might look into this
                             for (Value v : refCopy) {
                                 localReference.add(v);
@@ -646,7 +698,7 @@ public final class NewName extends AzquoMemoryDBEntity {
 
     public void addChildWillBePersisted(NewName child, AzquoMemoryDBConnection azquoMemoryDBConnection) throws Exception {
         addChildWillBePersistedCount.incrementAndGet();
-        if (addChildWillBePersisted(child, true)){
+        if (addChildWillBePersisted(child, true)) {
             setProvenanceWillBePersisted(azquoMemoryDBConnection.getProvenance());
         }
     }
@@ -698,7 +750,7 @@ public final class NewName extends AzquoMemoryDBEntity {
 
     public void removeFromChildrenWillBePersisted(NewName name, AzquoMemoryDBConnection azquoMemoryDBConnection) throws Exception {
         removeFromChildrenWillBePersistedCount.incrementAndGet();
-        if (removeFromChildrenWillBePersistedNoCacheClear(name)){
+        if (removeFromChildrenWillBePersistedNoCacheClear(name)) {
             clearChildrenCaches();
             setProvenanceWillBePersisted(azquoMemoryDBConnection.getProvenance());
         }
@@ -751,11 +803,11 @@ public final class NewName extends AzquoMemoryDBEntity {
         }
         attributeName = attributeName.trim().toUpperCase(); // I think this is the only point at which attributes are created thus if it's uppercased here we should not need to check anywhere else
         /* code adapted from map based code to lists assume nameAttributes reference only set in code synchronized in these three functions and constructors*/
-        if (!attributeName.equals(StringLiterals.DEFAULT_DISPLAY_NAME) && !nameData.canSetAttributesOtherThanDefaultDisplayName()){
+        if (!attributeName.equals(StringLiterals.DEFAULT_DISPLAY_NAME) && !nameData.canSetAttributesOtherThanDefaultDisplayName()) {
             nameData = nameData.getImplementationThatCanSetAttributesOtherThanDefaultDisplayName();
         }
 
-        if (nameData.setAttribute(attributeName, attributeValue)){
+        if (nameData.setAttribute(attributeName, attributeValue)) {
             setProvenanceWillBePersisted(azquoMemoryDBConnection.getProvenance());
             setNeedsPersisting();
         }
@@ -766,7 +818,7 @@ public final class NewName extends AzquoMemoryDBEntity {
     private synchronized void removeAttributeWillBePersisted(String attributeName, AzquoMemoryDBConnection azquoMemoryDBConnection) throws Exception {
         removeAttributeWillBePersistedCount.incrementAndGet();
         attributeName = attributeName.trim().toUpperCase();
-        if (nameData.removeAttribute(attributeName)){
+        if (nameData.removeAttribute(attributeName)) {
             setProvenanceWillBePersisted(azquoMemoryDBConnection.getProvenance());
             setNeedsPersisting();
         }
@@ -852,7 +904,7 @@ public final class NewName extends AzquoMemoryDBEntity {
     public String getAttribute(String attributeName, boolean parentCheck, Set<NewName> checked, NewName origName, int level) {
         attributeName = attributeName.trim().toUpperCase(); // edd adding (back?) in, need to do this since all attributes are uppercase internally
         getAttribute2Count.incrementAndGet();
-        String attribute =  nameData.getAttribute(attributeName);
+        String attribute = nameData.getAttribute(attributeName);
         if (attribute != null) return attribute;
         //look up the chain for any parent with the attribute
         if (parentCheck) {
@@ -863,7 +915,7 @@ public final class NewName extends AzquoMemoryDBEntity {
 
     @Override
     final protected void setNeedsPersisting() {
-       // getAzquoMemoryDB().setNameNeedsPersisting(this);
+        // getAzquoMemoryDB().setNameNeedsPersisting(this);
     }
 
     // in here is a bit more efficient I think but should it be in the DAO?
@@ -892,11 +944,11 @@ public final class NewName extends AzquoMemoryDBEntity {
     private byte[] getChildrenIdsAsBytes(int tries) {
         getChildrenIdsAsBytesCount.incrementAndGet();
         try {
-                ByteBuffer buffer = ByteBuffer.allocate(nameData.getChildren().size() * 4);
-                for (NewName name : nameData.getChildren()) {
-                    buffer.putInt(name.getId());
-                }
-                return buffer.array();
+            ByteBuffer buffer = ByteBuffer.allocate(nameData.getChildren().size() * 4);
+            for (NewName name : nameData.getChildren()) {
+                buffer.putInt(name.getId());
+            }
+            return buffer.array();
         } catch (BufferOverflowException e) {
             if (tries < 50) { // a bit arbitrary - todo, change later
                 tries++;
@@ -932,7 +984,7 @@ public final class NewName extends AzquoMemoryDBEntity {
                     for (int i = 0; i < noChildren; i++) {
                         //newChildren[i] = getAzquoMemoryDB().getNameById(byteBuffer.getInt(i * 4));
                     }
-  //                  this.children = newChildren;
+                    //                  this.children = newChildren;
                 }
             }
         } else {
@@ -945,7 +997,7 @@ public final class NewName extends AzquoMemoryDBEntity {
             for (NewName newChild : nameData.directSetChildren()) {
                 newChild.addToParents(this, true);
             }
-        } else if(nameData.directArrayChildren() != null) {
+        } else if (nameData.directArrayChildren() != null) {
             // directly hitting the array could cause a problem if it were reassigned while this happened but here it should be fine,
             // loading doesn't alter the array lengths, they're set in preparation.
             for (NewName aChildren : nameData.directArrayChildren()) {
