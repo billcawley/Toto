@@ -1,5 +1,6 @@
 package com.azquo.spreadsheet;
 
+import com.azquo.StringLiterals;
 import com.azquo.admin.business.Business;
 import com.azquo.admin.business.BusinessDAO;
 import com.azquo.admin.database.*;
@@ -181,17 +182,27 @@ public class SpreadsheetService {
         }
         choiceName = choiceName.replace(" ","");
         UserChoice userChoice = UserChoiceDAO.findForUserIdAndChoice(userId, choiceName);
-        if (choiceValue != null && choiceValue.length() > 0) {
+        if (choiceValue != null && choiceValue.length() > 0 && (userChoice == null || !userChoice.getChoiceValue().equalsIgnoreCase(choiceValue))) {
             if (userChoice == null) {
                 userChoice = new UserChoice(0, userId, choiceName, choiceValue, LocalDateTime.now());
                 UserChoiceDAO.store(userChoice);
             } else {
-                if (!choiceValue.equals(userChoice.getChoiceValue())) {
-                    userChoice.setChoiceValue(choiceValue);
-                    userChoice.setTime(LocalDateTime.now());
-                    UserChoiceDAO.store(userChoice);
-                }
+                userChoice.setChoiceValue(choiceValue);
+                userChoice.setTime(LocalDateTime.now());
+                UserChoiceDAO.store(userChoice);
             }
+            //obtain a list of definitions that include the choice name in square brackets - to create new temporary sets
+            List<String> dependentNames = CommonReportUtils.getDropdownListForQuery(loggedInUser, StringLiterals.DEFINITION+ StringLiterals.languageIndicator+"[" + choiceName);
+            DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
+            for (String dependentName:dependentNames){
+                try {
+                    String definition = RMIClient.getServerInterface(databaseAccessToken.getServerIp()).getNameAttribute(databaseAccessToken, dependentName, StringLiterals.DEFINITION);
+                    //now we have both the target name, and the definition, create the set
+                    CommonReportUtils.resolveQuery(loggedInUser, definition + " as " + StringLiterals.QUOTE + dependentName + StringLiterals.QUOTE,null);
+                }catch (Exception e){
+                    //cannot arrive here
+                }
+             }
 
         } else {
             if (userChoice != null) {
