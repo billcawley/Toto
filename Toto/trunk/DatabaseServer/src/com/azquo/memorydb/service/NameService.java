@@ -58,8 +58,20 @@ public final class NameService {
 
     private static AtomicInteger findContainingNameCount = new AtomicInteger(0);
 
-    static public ArrayList<Name> getNamesWithAttributeContaining(final AzquoMemoryDBConnection azquoMemoryDBConnection, String attribute, final String searchString) {
+    static public ArrayList<Name> getNamesWithAttributeContaining(final AzquoMemoryDBConnection azquoMemoryDBConnection, String attribute, String searchString) {
         findContainingNameCount.incrementAndGet();
+        int languagePos = searchString.indexOf(StringLiterals.languageIndicator);
+        if (languagePos > 0) {
+            int namePos = searchString.indexOf(StringLiterals.QUOTE);
+            if (namePos < 0 || namePos > languagePos) {
+                //change the language
+                attribute =searchString.substring(0, languagePos);
+                searchString = searchString.substring(languagePos + 2);
+            }
+        }
+        if (searchString.contains(StringLiterals.languageIndicator)){
+
+        }
         // new condition
         ArrayList<Name> namesList = new ArrayList<>(azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNamesForAttribute(attribute, searchString));
         if (namesList.size() == 0){
@@ -135,7 +147,7 @@ public final class NameService {
         }
     }
 
-    public static Name findByName(final AzquoMemoryDBConnection azquoMemoryDBConnection, String qualifiedName, final List<String> attributeNames) throws Exception {
+    public static Name findByName(final AzquoMemoryDBConnection azquoMemoryDBConnection, String qualifiedName, List<String> attributeNames) throws Exception {
         findByName2Count.incrementAndGet();
         // This routine accepts multiple 'memberof (->) symbols.  It also checks for the 'language indicator' (<-)
         // note if qualifiedName is null this will NPE - not sure if this is a problem
@@ -143,8 +155,7 @@ public final class NameService {
         if (langPos > 0) {
             int quotePos = qualifiedName.indexOf(StringLiterals.QUOTE);
             if (quotePos < 0 || quotePos > langPos) {
-                attributeNames.clear();
-                attributeNames.add(qualifiedName.substring(0, langPos));
+                attributeNames = Collections.singletonList(qualifiedName.substring(0,langPos));
                 qualifiedName = qualifiedName.substring(langPos + 2);
             }
         }
