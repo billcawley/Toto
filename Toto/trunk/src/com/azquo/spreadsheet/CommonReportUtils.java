@@ -153,7 +153,7 @@ public class CommonReportUtils {
                     pos = pos + replacement.length();
 
                 } else {
-                    pos = endPos + 1;
+                    return "";//the choice is not yet set, so return nothing
                 }
                 pos = query.indexOf("[", pos);
 
