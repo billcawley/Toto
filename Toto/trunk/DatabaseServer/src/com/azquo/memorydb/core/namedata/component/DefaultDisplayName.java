@@ -12,23 +12,25 @@ public interface DefaultDisplayName extends NameData {
         return internalGetDefaultDisplayName();
     }
 
-    default boolean setAttribute(String attributeName, String attributeValue) throws Exception {
+    default String setAttribute(String attributeName, String attributeValue) throws Exception {
         if (!attributeName.equals(StringLiterals.DEFAULT_DISPLAY_NAME)){
             throw new UnsupportedOperationException();
         }
         if (!internalGetDefaultDisplayName().equals(attributeValue)){
+            String existing = internalGetDefaultDisplayName();
             internalSetDefaultDisplayName(attributeValue);
-            return true;
+            return existing;
         }
-        return false;
+        return null;
     }
 
-    default boolean removeAttribute(String attributeName) throws Exception {
+    default String removeAttribute(String attributeName) throws Exception {
         if (attributeName.equals(StringLiterals.DEFAULT_DISPLAY_NAME) && internalGetDefaultDisplayName() != null){
+            String existing = internalGetDefaultDisplayName();
             internalSetDefaultDisplayName(null); // will cause NPEs but this emulates NameAttributes
-            return true;
+            return existing;
         }
-        return false;
+        return null;
     }
 
     default Map<String, String> getAttributes() {

@@ -2,7 +2,6 @@ package com.azquo.memorydb.core.namedata.component;
 
 import com.azquo.StringLiterals;
 import com.azquo.memorydb.core.NameAttributes;
-import com.azquo.memorydb.core.Value;
 import com.azquo.memorydb.core.namedata.NameData;
 
 import java.util.ArrayList;
@@ -19,7 +18,8 @@ public interface Attributes extends NameData {
     // maybe check with a
     //getAzquoMemoryDB().getIndex().removeAttributeFromNameInAttributeNameMap(attributeName, existing, this);
 
-    default boolean setAttribute(String attributeName, String attributeValue) throws Exception {
+    // if there was an old value that was overidden then return it. Required externally for the azquo memory db indexes
+    default String setAttribute(String attributeName, String attributeValue) throws Exception {
         // deal with uppercasing or whatever outside, this just deals with storage
         /* code adapted from map based code to lists assume nameAttributes reference only set in code synchronized in these three functions and constructors*/
         final NameAttributes nameAttributes = internalGetNameAttributes();
@@ -38,11 +38,11 @@ public interface Attributes extends NameData {
                 attributeKeys.remove(index);
                 attributeValues.remove(index);
                 internalSetNameAttributes(new NameAttributes(attributeKeys, attributeValues));
-                return true;
+                return existing;
             }
         }
         if (existing != null && existing.equals(attributeValue)) {
-            return false;
+            return null; // don't return existing as nothing changed
         }
         if (existing != null) {
             // just update the values
@@ -54,21 +54,21 @@ public interface Attributes extends NameData {
             attributeValues.add(attributeValue);
         }
         internalSetNameAttributes(new NameAttributes(attributeKeys, attributeValues));
-        return true;
+        return existing;
     }
 
-    default boolean removeAttribute(String attributeName) throws Exception {
+    default String removeAttribute(String attributeName) throws Exception {
         final NameAttributes nameAttributes = internalGetNameAttributes();
         int index = nameAttributes.getAttributeKeys().indexOf(attributeName);
         if (index != -1) {
             List<String> attributeKeys = new ArrayList<>(nameAttributes.getAttributeKeys());
             List<String> attributeValues = new ArrayList<>(nameAttributes.getAttributeValues());
             attributeKeys.remove(index);
-            attributeValues.remove(index);
+            String existing = attributeValues.remove(index);
             internalSetNameAttributes(new NameAttributes(attributeKeys, attributeValues));
-            return true;
+            return existing;
         }
-        return false;
+        return null;
     }
 
     default Map<String, String> getAttributes() {

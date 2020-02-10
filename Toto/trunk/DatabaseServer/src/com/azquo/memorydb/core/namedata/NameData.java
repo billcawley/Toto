@@ -22,8 +22,6 @@ Low level dealing with attributes (just default display name or more), values an
 
  */
 
-import com.azquo.StringLiterals;
-import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.NewName;
 import com.azquo.memorydb.core.Value;
 
@@ -116,7 +114,7 @@ public interface NameData {
 
     // need check function that the implementation supports adding attributes
     // error or not??
-    boolean setAttribute(String attributeName, String attributeValue) throws Exception;
+    String setAttribute(String attributeName, String attributeValue) throws Exception;
 
-    boolean removeAttribute(String attributeName) throws Exception;
+    String removeAttribute(String attributeName) throws Exception;
 }
