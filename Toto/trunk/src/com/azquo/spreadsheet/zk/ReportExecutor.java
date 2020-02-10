@@ -173,7 +173,7 @@ public class ReportExecutor {
                         if (dropdownListForQuery.size() > 0 && !dropdownListForQuery.get(0).startsWith("Error :")) {
                             for (String choiceValue : dropdownListForQuery) { // run the "for" :)
                                 RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).addToLog(loggedInUser.getDataAccessToken(), choiceName + " : " + choiceValue);
-                                SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choiceName.replace("`", ""), choiceValue);
+                                SpreadsheetService.setUserChoice(loggedInUser, choiceName.replace("`", ""), choiceValue);
                                 loopsLog.append(choiceValue).append("\r\n");
                                 toReturn = executeCommands(loggedInUser, subCommands, exportPath, loopsLog, systemData2DArrays, count, provenanceId);
                             }
@@ -801,7 +801,7 @@ public class ReportExecutor {
                                     }
                                     if (!value.isEmpty()) {
                                         System.out.println("Xml setting choice : " + choiceName + " value " + value);
-                                        SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choiceName, value);
+                                        SpreadsheetService.setUserChoice(loggedInUser, choiceName, value);
                                     }
                                 }
                                 OnlineReport onlineReport;

@@ -273,7 +273,7 @@ public class ChoicesService {
 
                 for (String choiceName : choicesSet.keySet()){
                     if (!choicesSet.get(choiceName).equals(userChoices.get(choiceName))){
-                        SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(),choiceName,choicesSet.get(choiceName));
+                        SpreadsheetService.setUserChoice(loggedInUser,choiceName,choicesSet.get(choiceName));
                         resolveChoices = true;
                     }
                 }
@@ -487,7 +487,7 @@ public class ChoicesService {
     static void setChoices(LoggedInUser loggedInUser, String context) {
         Map<String, String> stringStringMap = parseChoicesFromDrillDownContextString(context);
         for (Map.Entry<String, String> choiceChosen : stringStringMap.entrySet()) {
-            SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choiceChosen.getKey(), choiceChosen.getValue());
+            SpreadsheetService.setUserChoice(loggedInUser, choiceChosen.getKey(), choiceChosen.getValue());
         }
     }
 }

@@ -119,7 +119,7 @@ public final class ImportService {
             // set user choices to file params, could be useful to the execute
             for (String choice : uploadedFile.getParameters().keySet()) {
                 System.out.println(choice + " : " + uploadedFile.getParameter(choice));
-                SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choice, uploadedFile.getParameter(choice));
+                SpreadsheetService.setUserChoice(loggedInUser, choice, uploadedFile.getParameter(choice));
             }
             /*. so there's a bit of confusing logic which is worth flagging and perhaps tidying if it's not difficult. The importer and this check will look up
             a temporary copy explicitly server side based off the original name. When in copy mode it just accesses the copy and will fail if it's not there.
@@ -1018,7 +1018,7 @@ public final class ImportService {
             // set user choices to file params, could be useful to the execute
             for (String choice : uploadedFile.getParameters().keySet()) {
                 System.out.println(choice + " : " + uploadedFile.getParameter(choice));
-                SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choice, uploadedFile.getParameter(choice));
+                SpreadsheetService.setUserChoice(loggedInUser, choice, uploadedFile.getParameter(choice));
             }
             loggedInUser.copyMode = uploadedFile.isValidationTest();
             try {
@@ -1033,7 +1033,7 @@ public final class ImportService {
             // set user choices to file params, could be useful to the execute
             for (String choice : uploadedFile.getParameters().keySet()) {
                 System.out.println(choice + " : " + uploadedFile.getParameter(choice));
-                SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choice, uploadedFile.getParameter(choice));
+                SpreadsheetService.setUserChoice(loggedInUser, choice, uploadedFile.getParameter(choice));
             }
             loggedInUser.copyMode = true;
             try {

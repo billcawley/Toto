@@ -304,7 +304,7 @@ public class ZKSpreadsheetCommandController {
         int index = 0;
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
         for (String selectedChoice : selectedChoices) {
-            SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choices.get(index), selectedChoice);
+            SpreadsheetService.setUserChoice(loggedInUser, choices.get(index), selectedChoice);
             index++;
         }
         // ok the options are set, run the book to find our choices
@@ -324,7 +324,7 @@ public class ZKSpreadsheetCommandController {
             if (selectedChoices.size() == choices.size() - 1) { // that means that with this new list we're at the last level, create pdfs for each option
                 for (String selectedChoice : choiceList) {
                     // previous choices will have been set, just do this last one
-                    SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choices.get(choices.size() - 1), selectedChoice);
+                    SpreadsheetService.setUserChoice(loggedInUser, choices.get(choices.size() - 1), selectedChoice);
                     // ok ALL the choices are set, run the book
                     newBook = Importers.getImporter().imports(new File((String) book.getInternalBook().getAttribute(OnlineController.BOOK_PATH)), "Report name");
                     for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes over

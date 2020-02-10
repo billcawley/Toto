@@ -174,7 +174,8 @@ public class SpreadsheetService {
         return getProperty(GROOVYDIR);
     }
 
-    public static void setUserChoice(int userId, String choiceName, String choiceValue) {
+    public static void setUserChoice(LoggedInUser loggedInUser, String choiceName, String choiceValue) {
+        int userId = loggedInUser.getUser().getId();
         if (choiceName.startsWith("az_")){
             choiceName = choiceName.substring(3);
         }

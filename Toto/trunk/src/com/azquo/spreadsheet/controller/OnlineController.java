@@ -417,7 +417,7 @@ public class OnlineController {
             OnlineReport or = OnlineReportDAO.findForDatabaseIdAndName(loggedInUser.getDatabase().getId(), reportName);
             Map<String, String> choices = uploadChoices(book);
             for (Map.Entry<String, String> choiceAndValue : choices.entrySet()) {
-                SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choiceAndValue.getKey(), choiceAndValue.getValue());
+                SpreadsheetService.setUserChoice(loggedInUser, choiceAndValue.getKey(), choiceAndValue.getValue());
             }
             checkEditableSets(book, loggedInUser);
             final Book reportBook = Importers.getImporter().imports(new File(tempPath), "Report name");

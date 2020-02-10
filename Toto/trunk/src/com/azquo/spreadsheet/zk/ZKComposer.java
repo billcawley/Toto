@@ -195,7 +195,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                     // therefore it's a choice change, set the choice and the reload flag and break
                     String choice = name.getName().substring(0, name.getName().length() - "Chosen".length());
                     loggedInUser.userLog("Choice select : " + choice + "," + chosen);
-                    SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choice, chosen.trim());
+                    SpreadsheetService.setUserChoice(loggedInUser, choice, chosen.trim());
                     reload = true;
                     break;
                 }
@@ -566,7 +566,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                     // new logic - set the first as the vanilla choice
                     if (!selectedItems.isEmpty()){
                         Listitem first = selectedItems.iterator().next();
-                        SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), selectionName, first.getLabel());
+                        SpreadsheetService.setUserChoice(loggedInUser, selectionName, first.getLabel());
                     }
                     RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).createFilterSet(loggedInUser.getDataAccessToken(), selectionName, loggedInUser.getUser().getEmail(), childIds);
                     filterPopup.close();
@@ -588,7 +588,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                     // new logic - set the first as the vanilla choice
                     if (!selectedItems.isEmpty()){
                         Listitem first = selectedItems.iterator().next();
-                        SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), selectionName, first.getLabel());
+                        SpreadsheetService.setUserChoice(loggedInUser, selectionName, first.getLabel());
                     }
                     RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).createFilterSet(loggedInUser.getDataAccessToken(), selectionName, loggedInUser.getUser().getEmail(), childIds);
                     filterPopup.close();

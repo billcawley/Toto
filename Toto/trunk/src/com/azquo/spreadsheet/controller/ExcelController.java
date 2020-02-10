@@ -359,7 +359,7 @@ public class ExcelController {
             }
 
             if (op.equals("setchoice")) {
-                SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choice, chosen);
+                SpreadsheetService.setUserChoice(loggedInUser, choice, chosen);
                 return jsonError("done");
             }
 
@@ -730,7 +730,7 @@ public class ExcelController {
                                             for (String name : formFields) {
                                                 if (request.getParameter(name) != null) {
                                                     System.out.println(name + " : " + request.getParameter(name));
-                                                    SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), name, request.getParameter(name));
+                                                    SpreadsheetService.setUserChoice(loggedInUser, name, request.getParameter(name));
                                                 }
                                             }
                                             // should we bother to report on the post processing result?
