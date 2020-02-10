@@ -87,10 +87,7 @@ public class NameQueryParser {
         if (languagePos > 0) {
             int namePos = setFormula.indexOf(StringLiterals.QUOTE);
             if (namePos < 0 || namePos > languagePos) {
-                //change the language
-                languages.clear();
-                languages.add(setFormula.substring(0, languagePos));
-                setFormula = setFormula.substring(languagePos + 2);
+                 return NameService.getNamesWithAttributeContaining(azquoMemoryDBConnection, setFormula.substring(0,languagePos), setFormula.substring(languagePos + 2));
             }
         }
         //todo - find a better way of using 'parseQuery` for other operations
@@ -165,7 +162,7 @@ public class NameQueryParser {
 
         setFormula = StringUtils.shuntingYardAlgorithm(setFormula);
         Pattern p = Pattern.compile("[\\+\\-\\*/" + StringLiterals.NAMEMARKER + StringLiterals.ASSYMBOL + StringLiterals.ASGLOBALSYMBOL + StringLiterals.CONTAINSSYMBOL + StringLiterals.FILTERBYSYMBOL + "]");//recognises + - * / NAMEMARKER  NOTE THAT - NEEDS BACKSLASHES (not mentioned in the regex tutorial on line
-        String resetDefs = null;
+        String defChanged = null;
         boolean global = false;
         logger.debug("Set formula after SYA " + setFormula);
         int pos = 0;
@@ -221,13 +218,13 @@ public class NameQueryParser {
             } else if (op == StringLiterals.ASSYMBOL) {
                 Name totalName = nameStack.get(stackCount).getAsCollection().iterator().next();// get(0) relies on list, this works on a collection
                 if (totalName.getAttribute(StringLiterals.DEFAULT_DISPLAY_NAME) != null) {
-                    resetDefs = totalName.getAttribute(StringLiterals.DEFAULT_DISPLAY_NAME).toLowerCase();
+                    defChanged = totalName.getAttribute(StringLiterals.DEFAULT_DISPLAY_NAME).toLowerCase();
                 }
                 NameStackOperators.assignSetAsName(azquoMemoryDBConnection, attributeNames, nameStack, stackCount, false);
             } else if (op == StringLiterals.ASGLOBALSYMBOL) {
                 Name totalName = nameStack.get(stackCount).getAsCollection().iterator().next();// get(0) relies on list, this works on a collection
                 if (totalName.getAttribute(StringLiterals.DEFAULT_DISPLAY_NAME) != null) {
-                    resetDefs = totalName.getAttribute(StringLiterals.DEFAULT_DISPLAY_NAME).toLowerCase();
+                    defChanged = totalName.getAttribute(StringLiterals.DEFAULT_DISPLAY_NAME).toLowerCase();
                 }
                 NameStackOperators.assignSetAsName(azquoMemoryDBConnection, attributeNames, nameStack, stackCount, true);
                 global = true;
@@ -280,38 +277,48 @@ public class NameQueryParser {
             System.out.println("Parse query : " + formulaCopy + " took : " + time + "ms size : " + toReturn.size());
         }
         // check if this is necessary? Refactor?
-        if (resetDefs != null) {
-            //currently recalculates ALL definitions regardless of whether they contain the changed set.  Could speed this by looking for expressions that contain the changed set name
-            Collection<Name> defNames = azquoMemoryDBConnection.getAzquoMemoryDBIndex().namesForAttribute(StringLiterals.DEFINITION);
-            if (defNames != null) {
-                for (Name defName : defNames) {
-                    String definition = defName.getAttribute(StringLiterals.DEFINITION);
-                    if (definition != null && definition.toLowerCase().contains(resetDefs)) {
-                        if (!global && attributeNames.size() > 1) {
-                            String userEmail = attributeNames.get(0);
-                            if (defName.getAttribute(userEmail) == null) { // there is no specific set for this user yet, need to do something
-                                List<String> localLanguages = new ArrayList<>();
-                                localLanguages.add(userEmail);
-                                Name userSpecificSet = NameService.findByName(azquoMemoryDBConnection, defName.getDefaultDisplayName(), localLanguages);
-                                if (userSpecificSet == null) {
-                                    azquoMemoryDBConnection.setProvenance(userEmail, "set assigned", "", "query");
-                                    userSpecificSet = new Name(azquoMemoryDBConnection.getAzquoMemoryDB(), azquoMemoryDBConnection.getProvenance()); // a basic copy of the set
-                                    //userSpecificSet.setAttributeWillBePersisted(Constants.DEFAULT_DISPLAY_NAME, userEmail + totalName.getDefaultDisplayName()); // GOing to set the default display name as bits of the suystem really don't like it not being there
-                                    userSpecificSet.setAttributeWillBePersisted(userEmail, defName.getDefaultDisplayName(), azquoMemoryDBConnection); // set the name (usually default_display_name) but for the "user email" attribute
-                                    defName.addChildWillBePersisted(userSpecificSet, azquoMemoryDBConnection);
-                                }
-                                defName = userSpecificSet; // switch the new one in, it will be used as normal
+        if (defChanged != null) {
+            calcDefinitons(azquoMemoryDBConnection, defChanged, attributeNames, global, 0);
+        }
+        return toReturn;
+    }
+
+    private static void calcDefinitons(AzquoMemoryDBConnection azquoMemoryDBConnection, String defChanged, List<String> attributeNames, boolean global, int level) throws Exception{
+        level++;
+        if (level > 5) return;
+        Collection<Name> defNames = azquoMemoryDBConnection.getAzquoMemoryDBIndex().namesForAttribute(StringLiterals.DEFINITION);
+        if (defNames != null) {
+            defChanged = StringLiterals.QUOTE + defChanged.toLowerCase() + StringLiterals.QUOTE;
+            for (Name defName : defNames) {
+                String definition = defName.getAttribute(StringLiterals.DEFINITION);
+                if (definition != null && definition.toLowerCase().contains(defChanged)) {
+                    if (!global && attributeNames.size() > 1) {
+                        String userEmail = attributeNames.get(0);
+                        if (defName.getAttribute(userEmail) == null) { // there is no specific set for this user yet, need to do something
+                            List<String> localLanguages = new ArrayList<>();
+                            localLanguages.add(userEmail);
+                            Name userSpecificSet = NameService.findByName(azquoMemoryDBConnection, defName.getDefaultDisplayName(), localLanguages);
+                            if (userSpecificSet == null) {
+                                azquoMemoryDBConnection.setProvenance(userEmail, "set assigned", "", "query");
+                                userSpecificSet = new Name(azquoMemoryDBConnection.getAzquoMemoryDB(), azquoMemoryDBConnection.getProvenance()); // a basic copy of the set
+                                //userSpecificSet.setAttributeWillBePersisted(Constants.DEFAULT_DISPLAY_NAME, userEmail + totalName.getDefaultDisplayName()); // GOing to set the default display name as bits of the suystem really don't like it not being there
+                                userSpecificSet.setAttributeWillBePersisted(userEmail, defName.getDefaultDisplayName(), azquoMemoryDBConnection); // set the name (usually default_display_name) but for the "user email" attribute
+                                defName.addChildWillBePersisted(userSpecificSet, azquoMemoryDBConnection);
                             }
+                            defName = userSpecificSet; // switch the new one in, it will be used as normal
                         }
-                        Collection<Name> defSet = parseQuery(azquoMemoryDBConnection, definition, attributeNames, true); // can be read only
-                        if (defSet != null) {
-                            defName.setChildrenWillBePersisted(defSet, azquoMemoryDBConnection);
-                        }
+                    }
+                    Collection<Name> defSet = parseQuery(azquoMemoryDBConnection, definition, attributeNames, true); // can be read only
+                    if (defSet != null) {
+                        defName.setChildrenWillBePersisted(defSet, azquoMemoryDBConnection);
+                        //note that defName is a temporary set, so, to get the name, look at the parent
+                        calcDefinitons(azquoMemoryDBConnection,defName.getParents().iterator().next().getDefaultDisplayName(),attributeNames,global, level);
                     }
                 }
             }
         }
-        return toReturn;
+
+
     }
 
     // Managed to convert to returning NameSetList, the key being using fast collection operations where possible depending on what has been passed
