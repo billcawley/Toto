@@ -10,6 +10,7 @@ import net.openhft.koloboke.collect.set.hash.HashObjSets;
 import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -196,7 +197,7 @@ public final class NewName extends AzquoMemoryDBEntity {
         return provenance;
     }
 
-    private synchronized void setProvenanceWillBePersisted(final Provenance provenance) {
+    synchronized void setProvenanceWillBePersisted(final Provenance provenance) {
         if (this.provenance == null || !this.provenance.equals(provenance)) {
             this.provenance = provenance;
             setNeedsPersisting();
@@ -580,21 +581,6 @@ public final class NewName extends AzquoMemoryDBEntity {
 
     private static AtomicInteger findValuesIncludingChildrenCount = new AtomicInteger(0);
 
-
-    // got to about here . . .
-
-
-
-
-
-
-
-
-
-
-
-
-
     public Set<Value> findValuesIncludingChildren() {
         findValuesIncludingChildrenCount.incrementAndGet();
         Set<Value> localReference = valuesIncludingChildrenCache;
@@ -662,7 +648,7 @@ public final class NewName extends AzquoMemoryDBEntity {
         return nameData.hasChildren();
     }
 
-    // todo - new implementations might mean that a false to true race condition may result in a null array reference. Since it won't go set->array then trying for the array first would be the thing to do
+    // todo - new implementations might mean that a false to true race condition may result in a null array reference. Since it won't go set->array then trying for the set first makes sense?
     public boolean hasChildrenAsSet() {
         return nameData.directSetChildren() != null;
     }
@@ -671,7 +657,7 @@ public final class NewName extends AzquoMemoryDBEntity {
     // each add/remove is thread safe but should not allow two to run concurrently
     private static AtomicInteger setChildrenCount = new AtomicInteger(0);
 
-    // pass conneciton not provenance - we want the conneciton to know if the provenance was used or not
+    // pass connection not provenance - we want the connection to know if the provenance was used or not
     public synchronized void setChildrenWillBePersisted(Collection<NewName> newChildren, AzquoMemoryDBConnection azquoMemoryDBConnection) throws Exception {
         setChildrenCount.incrementAndGet();
         Collection<NewName> existingChildren = getChildren();
@@ -802,15 +788,21 @@ public final class NewName extends AzquoMemoryDBEntity {
             attributeValue = attributeValue.replace(StringLiterals.ATTRIBUTEDIVIDER, "");
         }
         attributeName = attributeName.trim().toUpperCase(); // I think this is the only point at which attributes are created thus if it's uppercased here we should not need to check anywhere else
-        /* code adapted from map based code to lists assume nameAttributes reference only set in code synchronized in these three functions and constructors*/
+        // since this is all synchronized I think we're ok here?
         if (!attributeName.equals(StringLiterals.DEFAULT_DISPLAY_NAME) && !nameData.canSetAttributesOtherThanDefaultDisplayName()) {
             nameData = nameData.getImplementationThatCanSetAttributesOtherThanDefaultDisplayName();
         }
-
-        if (nameData.setAttribute(attributeName, attributeValue)) {
-            setProvenanceWillBePersisted(azquoMemoryDBConnection.getProvenance());
-            setNeedsPersisting();
+        String existing = nameData.setAttribute(attributeName, attributeValue);
+        if (existing != null) {
+            // todo
+            //getAzquoMemoryDB().getIndex().removeAttributeFromNameInAttributeNameMap(attributeName, existing, this);
         }
+        // note - this means provenance ans persisting will currently be set even where the attribute hasn't changed.
+        // Need to think about what else could be returned from nameData.setAttribute to inform existing or changed
+        //todo
+        //getAzquoMemoryDB().getIndex().setAttributeForNameInAttributeNameMap(attributeName, attributeValue, this);
+        setProvenanceWillBePersisted(azquoMemoryDBConnection.getProvenance());
+        setNeedsPersisting();
     }
 
     private static AtomicInteger removeAttributeWillBePersistedCount = new AtomicInteger(0);
@@ -818,7 +810,10 @@ public final class NewName extends AzquoMemoryDBEntity {
     private synchronized void removeAttributeWillBePersisted(String attributeName, AzquoMemoryDBConnection azquoMemoryDBConnection) throws Exception {
         removeAttributeWillBePersistedCount.incrementAndGet();
         attributeName = attributeName.trim().toUpperCase();
-        if (nameData.removeAttribute(attributeName)) {
+        String existing = nameData.removeAttribute(attributeName);
+        if (existing != null) {
+            //todo
+            //getAzquoMemoryDB().getIndex().removeAttributeFromNameInAttributeNameMap(attributeName, existing, this);
             setProvenanceWillBePersisted(azquoMemoryDBConnection.getProvenance());
             setNeedsPersisting();
         }
@@ -915,7 +910,8 @@ public final class NewName extends AzquoMemoryDBEntity {
 
     @Override
     final protected void setNeedsPersisting() {
-        // getAzquoMemoryDB().setNameNeedsPersisting(this);
+        //todo
+        //getAzquoMemoryDB().setNameNeedsPersisting(this);
     }
 
     // in here is a bit more efficient I think but should it be in the DAO?
@@ -926,12 +922,6 @@ public final class NewName extends AzquoMemoryDBEntity {
         getAttributesForFastStoreCount.incrementAndGet();
         return nameData.getAttributesForFastStore();
     }
-
-    /* this mechanism is going to be broken I think. Perhaps we pass the name data object or a copy  . . . todo
-    NameAttributes getRawAttributes() {
-        getAttributesForFastStoreCount.incrementAndGet();
-        return nameAttributes;
-    }*/
 
     public byte[] getChildrenIdsAsBytes() {
         return getChildrenIdsAsBytes(0);
@@ -974,17 +964,22 @@ public final class NewName extends AzquoMemoryDBEntity {
                 // it's things like this that I believe will be way faster and lighter on garbage than the old json method
                 int noChildren = childrenCache.length / 4;
                 ByteBuffer byteBuffer = ByteBuffer.wrap(childrenCache);
-                if (noChildren > NameData.ARRAYTHRESHOLD) {
-//                    this.childrenAsSet = Collections.newSetFromMap(new ConcurrentHashMap<>(noChildren));
+                /*if (noChildren > NameData.ARRAYTHRESHOLD) {
+                    this.childrenAsSet = Collections.newSetFromMap(new ConcurrentHashMap<>(noChildren));
                     for (int i = 0; i < noChildren; i++) {
-                        //this.childrenAsSet.add(getAzquoMemoryDB().getNameById(byteBuffer.getInt(i * 4)));
+                        this.childrenAsSet.add(getAzquoMemoryDB().getNameById(byteBuffer.getInt(i * 4)));
                     }
                 } else {
                     NewName[] newChildren = new NewName[noChildren];
                     for (int i = 0; i < noChildren; i++) {
-                        //newChildren[i] = getAzquoMemoryDB().getNameById(byteBuffer.getInt(i * 4));
+                        newChildren[i] = getAzquoMemoryDB().getNameById(byteBuffer.getInt(i * 4));
                     }
                     //                  this.children = newChildren;
+                }*/
+                // inefficient.
+                for (int i = 0; i < noChildren; i++) {
+                    //todo
+                    //nameData.addToChildren(getAzquoMemoryDB().getNameById(byteBuffer.getInt(i * 4)));
                 }
             }
         } else {
