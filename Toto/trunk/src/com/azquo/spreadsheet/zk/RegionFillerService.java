@@ -195,7 +195,7 @@ class RegionFillerService {
                     }
 
                     SCell sCell = sheet.getInternalSheet().getCell(row, col);
-                    if (sCell.getType() != SCell.CellType.STRING && sCell.getType() != SCell.CellType.NUMBER) {
+                    if (sCell.getType() != SCell.CellType.STRING && sCell.getType() != SCell.CellType.NUMBER && sCell.getType()!=SCell.CellType.FORMULA) {
                         BookUtils.setValue(sCell, "");
                     } else {//new behaviour - if there's a filled in heading, this can be used to detect the sort.
                         try {
