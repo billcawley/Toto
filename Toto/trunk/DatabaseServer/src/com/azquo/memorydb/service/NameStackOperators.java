@@ -2,6 +2,7 @@ package com.azquo.memorydb.service;
 
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.core.Name;
+import com.azquo.memorydb.core.StandardName;
 import com.azquo.spreadsheet.AzquoCell;
 import com.azquo.spreadsheet.AzquoCellService;
 import com.azquo.spreadsheet.DataRegionHeading;
@@ -91,7 +92,7 @@ class NameStackOperators {
             lastName = bottomNames;
         }
         for (Name child : lastName) {
-            Name.findAllParents(child, parents); // new call to static function cuts garbage generation a lot
+            child.findAllParents(parents); // new call to internal function cuts garbage generation a lot
         }
         //System.out.println("find all parents in parse query part 1 " + (now - start) + " set sizes parents " + parents.size() + " heap increase = " + (((runtime.totalMemory() - runtime.freeMemory()) / mb) - heapMarker) + "MB");
         //start = System.currentTimeMillis();
@@ -234,7 +235,7 @@ class NameStackOperators {
             String userEmail = attributeNames.get(0);
             if (totalName.getAttribute(userEmail) == null) { // there is no specific set for this user yet, need to do something
                 azquoMemoryDBConnection.setProvenance(userEmail, "set assigned", "", "query");
-                Name userSpecificSet = new Name(azquoMemoryDBConnection.getAzquoMemoryDB(), azquoMemoryDBConnection.getProvenance()); // a basic copy of the set
+                Name userSpecificSet = new StandardName(azquoMemoryDBConnection.getAzquoMemoryDB(), azquoMemoryDBConnection.getProvenance()); // a basic copy of the set
                 //userSpecificSet.setAttributeWillBePersisted(Constants.DEFAULT_DISPLAY_NAME, userEmail + totalName.getDefaultDisplayName()); // GOing to set the default display name as bits of the suystem really don't like it not being there
                 userSpecificSet.setAttributeWillBePersisted(userEmail, totalName.getDefaultDisplayName(), azquoMemoryDBConnection); // set the name (usually default_display_name) but for the "user email" attribute
                 totalName.addChildWillBePersisted(userSpecificSet, azquoMemoryDBConnection);

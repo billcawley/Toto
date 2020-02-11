@@ -1,6 +1,6 @@
 package com.azquo.memorydb.core.namedata.implementation;
 
-import com.azquo.memorydb.core.NameInterface;
+import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.Value;
 import com.azquo.memorydb.core.namedata.NameData;
 import com.azquo.memorydb.core.namedata.component.ChildrenArray;
@@ -16,15 +16,15 @@ public class DefaultDisplayNameValuesSetChildrenArray implements DefaultDisplayN
 
     private volatile String defaultDisplayName;
     private volatile Set<Value> values;
-    private volatile NameInterface[] children;
+    private volatile Name[] children;
 
     public DefaultDisplayNameValuesSetChildrenArray(String defaultDisplayName){
         this.defaultDisplayName = defaultDisplayName;
         values = Collections.newSetFromMap(new ConcurrentHashMap<>(ARRAYTHRESHOLD + 1));// the way to get a thread safe set!
-        children = new NameInterface[0];
+        children = new Name[0];
     }
 
-    public DefaultDisplayNameValuesSetChildrenArray(String defaultDisplayName, Value[] values, NameInterface[] children) {
+    public DefaultDisplayNameValuesSetChildrenArray(String defaultDisplayName, Value[] values, Name[] children) {
         this.defaultDisplayName = defaultDisplayName;
         this.values = Collections.newSetFromMap(new ConcurrentHashMap<>(ARRAYTHRESHOLD + 1));// the way to get a thread safe set!
         this.values.addAll(Arrays.asList(values));
@@ -34,7 +34,7 @@ public class DefaultDisplayNameValuesSetChildrenArray implements DefaultDisplayN
     public DefaultDisplayNameValuesSetChildrenArray(String defaultDisplayName, Set<Value> values) {
         this.defaultDisplayName = defaultDisplayName;
         this.values = values;
-        children = new NameInterface[0];
+        children = new Name[0];
     }
 
     @Override
@@ -48,12 +48,12 @@ public class DefaultDisplayNameValuesSetChildrenArray implements DefaultDisplayN
     }
 
     @Override
-    public NameInterface[] internalGetChildren() {
+    public Name[] internalGetChildren() {
         return children;
     }
 
     @Override
-    public void internalSetChildren(NameInterface[] children) {
+    public void internalSetChildren(Name[] children) {
         this.children = children;
     }
 

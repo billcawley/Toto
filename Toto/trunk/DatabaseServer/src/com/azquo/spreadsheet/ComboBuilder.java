@@ -35,7 +35,7 @@ class ComboBuilder implements Callable<Void> {
         for (int i = sourceFrom; i < sourceTo; i++) {
             List<Name> foundCombination = new ArrayList<>(comboSize);
             for (Name pName : permuteNames) {
-                foundCombination.add(Name.memberName(sharedNamesList.get(i), pName));
+                foundCombination.add(sharedNamesList.get(i).memberName(pName));
             }
             foundCombinations.add(foundCombination);
         }

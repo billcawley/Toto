@@ -4,6 +4,7 @@ import com.azquo.StringLiterals;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.StringUtils;
+import com.azquo.memorydb.core.StandardName;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 import org.apache.log4j.Logger;
 
@@ -68,9 +69,6 @@ public final class NameService {
                 attribute =searchString.substring(0, languagePos);
                 searchString = searchString.substring(languagePos + 2);
             }
-        }
-        if (searchString.contains(StringLiterals.languageIndicator)){
-
         }
         // new condition
         ArrayList<Name> namesList = new ArrayList<>(azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNamesForAttribute(attribute, searchString));
@@ -353,7 +351,7 @@ public final class NameService {
         } else {
               logger.debug("New name: " + storeName + ", " + (parent != null ? "," + parent.getDefaultDisplayName() : ""));
             // I think provenance from connection is correct, we should be looking to make a useful provenance when making the connection from the data access token
-            Name newName = new Name(azquoMemoryDBConnection.getAzquoMemoryDB(), azquoMemoryDBConnection.getProvenance());
+            Name newName = new StandardName(azquoMemoryDBConnection.getAzquoMemoryDB(), azquoMemoryDBConnection.getProvenance());
             if (!attributeNames.get(0).equals(StringLiterals.DEFAULT_DISPLAY_NAME)) { // we set the leading attribute name, I guess the secondary ones should not be set they are for searches
                 newName.setAttributeWillBePersisted(attributeNames.get(0), storeName, azquoMemoryDBConnection);
             }
@@ -443,7 +441,7 @@ public final class NameService {
             }
         }
         // has been moved to name to directly access contents of name hopefully increasing speed and saving on garbage generation
-        Name.addNames(name, ordered ? namesFoundOrderedSet : namesFoundSet, 0, level);
+        name.addChildrenToCollection(ordered ? namesFoundOrderedSet : namesFoundSet, 0, level);
         return new NameSetList(ordered ? null : namesFoundSet, ordered ? new ArrayList<>(namesFoundOrderedSet) : null, true); // it will be mutable either way
     }
 
@@ -455,7 +453,7 @@ public final class NameService {
         // parents are not ordered like children, use a Set
         Set<Name> namesFoundSet = HashObjSets.newMutableSet();
         // has been moved to name to directly access contents of name hopefully increasing speed and saving on garbage generation
-        Name.addParentNames(name, namesFoundSet, 0, level);
+        name.addParentNamesToCollection(namesFoundSet, 0, level);
         return new NameSetList(namesFoundSet, null, true); // it will be mutable either way
     }
 

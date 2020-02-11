@@ -88,7 +88,7 @@ public class BackupTransport {
     // ok, we need to create new names in a style similar to loading a database
     public synchronized void setBatchOfNamesFromBackup(List<NameForBackup> backupBatch) throws Exception {
         for (NameForBackup nameForBackup : backupBatch){
-            namesFromBackup.add(new Name(azquoMemoryDB, nameForBackup.getId(), nameForBackup.getProvenanceId(), null, nameForBackup.getAttributes(), nameForBackup.getNoParents(), nameForBackup.getNoValues(), true));
+            namesFromBackup.add(new StandardName(azquoMemoryDB, nameForBackup.getId(), nameForBackup.getProvenanceId(), null, nameForBackup.getAttributes(), nameForBackup.getNoParents(), nameForBackup.getNoValues(), true));
             azquoMemoryDB.setNextId(nameForBackup.getId());
             namesChildrenCacheFromBackup.add(nameForBackup.getChildren());
         }

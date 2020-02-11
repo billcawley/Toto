@@ -1,3 +1,25 @@
+07-02-20
+
+More work on the new NameData structure
+
+Zapping all "160 character"s when converting XLSX -> CSV. It's some kind of unusual space that isn't caught by .trim() and cases havok, I see no advantage in leaving it in. (Hanover)
+
+XLSX
+
+lower case the file name (e.g. pmdec12345.xlsx) on claims and premium feeds
+
+Storage check - adjusted formula in N9 and to the right to refer to N7 rather than o7 to get loaded file name correct
+
+Importer - Premiums now categorised by premium line
+
+Adjusted the 'Reporting Category' on Risk and Claim from 'Policy Reference' to 'Policy Line' and 'Claim Reference'. The import sheet 'AllRisks classify' needed additional headings of Zip code and Address Line 1 to work.
+
+This fix needed so as not to interfere with the Premium classification, which is now at Premium Policy Line level.
+
+Premium feed changed suff to sub for the fees deductions per Lukes request
+
+Various Hanover work in preparation for initial test
+
 30-01-20
 
 Calc bug fix

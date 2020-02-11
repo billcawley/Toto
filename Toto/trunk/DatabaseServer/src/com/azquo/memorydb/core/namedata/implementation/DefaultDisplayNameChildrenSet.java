@@ -1,9 +1,7 @@
 package com.azquo.memorydb.core.namedata.implementation;
 
 import com.azquo.memorydb.core.Name;
-import com.azquo.memorydb.core.NameInterface;
 import com.azquo.memorydb.core.namedata.NameData;
-import com.azquo.memorydb.core.namedata.component.ChildrenArray;
 import com.azquo.memorydb.core.namedata.component.ChildrenSet;
 import com.azquo.memorydb.core.namedata.component.DefaultDisplayName;
 
@@ -15,14 +13,14 @@ import java.util.concurrent.ConcurrentHashMap;
 public class DefaultDisplayNameChildrenSet implements DefaultDisplayName, ChildrenSet {
 
     private volatile String defaultDisplayName;
-    private volatile Set<NameInterface> children;
+    private volatile Set<Name> children;
 
     public DefaultDisplayNameChildrenSet(String defaultDisplayName){
         this.defaultDisplayName = defaultDisplayName;
         children = Collections.newSetFromMap(new ConcurrentHashMap<>(ARRAYTHRESHOLD + 1));// the way to get a thread safe set!
     }
 
-    public DefaultDisplayNameChildrenSet(String defaultDisplayName, NameInterface[] children) {
+    public DefaultDisplayNameChildrenSet(String defaultDisplayName, Name[] children) {
         this.defaultDisplayName = defaultDisplayName;
         this.children = Collections.newSetFromMap(new ConcurrentHashMap<>(ARRAYTHRESHOLD + 1));// the way to get a thread safe set!
         this.children.addAll(Arrays.asList(children));
@@ -39,7 +37,7 @@ public class DefaultDisplayNameChildrenSet implements DefaultDisplayName, Childr
     }
 
     @Override
-    public Set<NameInterface> internalGetChildren() {
+    public Set<Name> internalGetChildren() {
         return children;
     }
 

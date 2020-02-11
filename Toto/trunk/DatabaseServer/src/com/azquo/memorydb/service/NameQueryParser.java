@@ -4,6 +4,7 @@ import com.azquo.StringLiterals;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.core.Name;
 import com.azquo.StringUtils;
+import com.azquo.memorydb.core.StandardName;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 import org.apache.log4j.Logger;
 
@@ -300,7 +301,7 @@ public class NameQueryParser {
                             Name userSpecificSet = NameService.findByName(azquoMemoryDBConnection, defName.getDefaultDisplayName(), localLanguages);
                             if (userSpecificSet == null) {
                                 azquoMemoryDBConnection.setProvenance(userEmail, "set assigned", "", "query");
-                                userSpecificSet = new Name(azquoMemoryDBConnection.getAzquoMemoryDB(), azquoMemoryDBConnection.getProvenance()); // a basic copy of the set
+                                userSpecificSet = new StandardName(azquoMemoryDBConnection.getAzquoMemoryDB(), azquoMemoryDBConnection.getProvenance()); // a basic copy of the set
                                 //userSpecificSet.setAttributeWillBePersisted(Constants.DEFAULT_DISPLAY_NAME, userEmail + totalName.getDefaultDisplayName()); // GOing to set the default display name as bits of the suystem really don't like it not being there
                                 userSpecificSet.setAttributeWillBePersisted(userEmail, defName.getDefaultDisplayName(), azquoMemoryDBConnection); // set the name (usually default_display_name) but for the "user email" attribute
                                 defName.addChildWillBePersisted(userSpecificSet, azquoMemoryDBConnection);

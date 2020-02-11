@@ -109,28 +109,9 @@ public class ZKSpreadsheetCommandController {
                             exporter.export(book, fos);
                         }
                         int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
-
                         OnlineReport onlineReport = OnlineReportDAO.findById(reportId);
-                        /* this was to add choices to the downloaded file
-                        StringBuilder choices = new StringBuilder();
-                        Set<String> usedChoices = new HashSet<>();
-                        for (SName name : book.getInternalBook().getNames()){
-                            if (name.getName().toLowerCase().endsWith("chosen")){
-                                List<List<String>> lists = BookUtils.nameToStringLists(loggedInUser, name);
-                                if (!lists.isEmpty() && !lists.get(0).isEmpty() && !lists.get(0).get(0).isEmpty()){
-                                    String value = lists.get(0).get(0);
-                                    value = value.replace("/", "");
-                                    value = value.replace("\\", "");
-                                    String choice = name.getName().substring(0, name.getName().toLowerCase().indexOf("chosen")).trim();
-                                    if (!usedChoices.contains(choice)){
-                                        usedChoices.add(choice);
-                                        choices.append(", ").append(choice).append("=").append(value);
-                                    }
-                                }
-                            }
-                        }*/
                         loggedInUser.userLog("Save : " + onlineReport.getReportName() + ".xlsx");
-                        Filedownload.save(new AMedia(onlineReport.getReportName() + ".xlsx", null, null, file, true));
+                        Filedownload.save(new AMedia(onlineReport.getReportName().replace("/", "").replace("\\", "") + ".xlsx", null, null, file, true));
                         Clients.clearBusy();
                     }
 

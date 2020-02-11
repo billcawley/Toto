@@ -295,7 +295,7 @@ class AzquoMemoryDBTransport {
         //AzquoMemoryDB.printAllCountStats();
         // stuff Ed added to profile data
         NumberFormat nf = NumberFormat.getInstance();
-/*
+
         int namesWithOnlyDefaultDisplayName = 0;
         int namesRequiringAttributes = 0;
         int namesWithOnlyOneParent = 0;
@@ -333,7 +333,7 @@ class AzquoMemoryDBTransport {
             } else {
                 namesWithSetChildren++;
             }
-            if (!n.getParents().isEmpty()){
+/*            if (!n.getParents().isEmpty()){
                 List<Name> parents = new ArrayList<>(n.getParents());
                 parents.sort(Comparator.comparing(Name::getId));
                 if (existingParents.containsKey(parents)){
@@ -341,11 +341,11 @@ class AzquoMemoryDBTransport {
                 } else {
                     existingParents.put(parents, n);
                 }
-            }
+            }*/
         }
-        existingParents = null;*/
-    /*    if (totalNameCount > 0){
-            List<Map.Entry<List<Name>, AtomicInteger>> toSort = new ArrayList<>(parentsTrack.entrySet());
+        existingParents = null;
+        if (totalNameCount > 0){
+/*            List<Map.Entry<List<Name>, AtomicInteger>> toSort = new ArrayList<>(parentsTrack.entrySet());
             toSort.sort(Comparator.comparing(listAtomicIntegerEntry -> listAtomicIntegerEntry.getValue().get()));
             int count = 0;
             //Collections.reverse(toSort);
@@ -360,7 +360,7 @@ class AzquoMemoryDBTransport {
                     break;
                 }
                 count++;
-            }
+            }*/
             System.out.println("namesWithOnlyDefaultDisplayName : " + nf.format(namesWithOnlyDefaultDisplayName) + ", " + nf.format((100*namesWithOnlyDefaultDisplayName)/totalNameCount) + "%");
             System.out.println("namesRequiringAttributes : " + nf.format(namesRequiringAttributes) + ", " + nf.format((100*namesRequiringAttributes)/totalNameCount) + "%");
             System.out.println("namesWithOnlyOneParent : " + nf.format(namesWithOnlyOneParent) + ", " + nf.format((100*namesWithOnlyOneParent)/totalNameCount) + "%");
@@ -371,7 +371,7 @@ class AzquoMemoryDBTransport {
             System.out.println("namesWithNoChildremn : " + nf.format(namesWithNoChildremn) + ", " + nf.format((100*namesWithNoChildremn)/totalNameCount) + "%");
             System.out.println("namesWithArrayChildren : " + nf.format(namesWithArrayChildren) + ", " + nf.format((100*namesWithArrayChildren)/totalNameCount) + "%");
             System.out.println("namesWithSetChildren : " + nf.format(namesWithSetChildren) + ", " + nf.format((100*namesWithSetChildren)/totalNameCount) + "%");
-        }*/
+        }
         /*
         Risk solutions example
         namesWithOnlyDefaultDisplayName : 143,581, 46%

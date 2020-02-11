@@ -38,7 +38,7 @@ class TemporaryAzquoMemoryDBTransport extends AzquoMemoryDBTransport {
         public Void call() throws Exception {
             for (Name name : sourceNames) {
                 azquoMemoryDB.nameChildrenLoadingCache.put(name.getId(), name.getChildrenIdsAsBytes());
-                new Name(azquoMemoryDB, name.getId(), name.getProvenance().getId(), name.getRawAttributes(),null, name.getParents().size(), name.getValues().size(), false);
+                new StandardName(azquoMemoryDB, name.getId(), name.getProvenance().getId(), name.getRawAttributes(),null, name.getParents().size(), name.getValues().size(), false);
                 azquoMemoryDB.setNextId(name.getId());
             }
             loadTracker.addAndGet(sourceNames.size());

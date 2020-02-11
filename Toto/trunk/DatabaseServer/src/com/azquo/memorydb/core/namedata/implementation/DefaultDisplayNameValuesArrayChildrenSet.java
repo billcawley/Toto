@@ -1,6 +1,6 @@
 package com.azquo.memorydb.core.namedata.implementation;
 
-import com.azquo.memorydb.core.NameInterface;
+import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.Value;
 import com.azquo.memorydb.core.namedata.NameData;
 import com.azquo.memorydb.core.namedata.component.ChildrenSet;
@@ -16,7 +16,7 @@ public class DefaultDisplayNameValuesArrayChildrenSet implements DefaultDisplayN
 
     private volatile String defaultDisplayName;
     private volatile Value[] values;
-    private volatile Set<NameInterface> children;
+    private volatile Set<Name> children;
 
     public DefaultDisplayNameValuesArrayChildrenSet(String defaultDisplayName){
         this.defaultDisplayName = defaultDisplayName;
@@ -24,13 +24,13 @@ public class DefaultDisplayNameValuesArrayChildrenSet implements DefaultDisplayN
         children = Collections.newSetFromMap(new ConcurrentHashMap<>(ARRAYTHRESHOLD + 1));// the way to get a thread safe set!
     }
 
-    public DefaultDisplayNameValuesArrayChildrenSet(String defaultDisplayName, Set<NameInterface> children) {
+    public DefaultDisplayNameValuesArrayChildrenSet(String defaultDisplayName, Set<Name> children) {
         this.defaultDisplayName = defaultDisplayName;
         this.values = new Value[0];
         this.children = children;
     }
 
-    public DefaultDisplayNameValuesArrayChildrenSet(String defaultDisplayName, Value[] values, NameInterface[] children) {
+    public DefaultDisplayNameValuesArrayChildrenSet(String defaultDisplayName, Value[] values, Name[] children) {
         this.defaultDisplayName = defaultDisplayName;
         this.values = values;
         this.children = Collections.newSetFromMap(new ConcurrentHashMap<>(ARRAYTHRESHOLD + 1));// the way to get a thread safe set!
@@ -48,7 +48,7 @@ public class DefaultDisplayNameValuesArrayChildrenSet implements DefaultDisplayN
     }
 
     @Override
-    public Set<NameInterface> internalGetChildren() {
+    public Set<Name> internalGetChildren() {
         return children;
     }
 
