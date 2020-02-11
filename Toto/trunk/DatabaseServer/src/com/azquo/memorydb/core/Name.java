@@ -107,7 +107,7 @@ public final class Name extends AzquoMemoryDBEntity {
         newName3Count.incrementAndGet();
         this.provenance = getAzquoMemoryDB().getProvenanceById(provenanceId); // see no reason not to do this here now
         if (this.provenance == null){
-            System.out.println("Provenance null on backup restore!, id is "+ provenanceId + ", making blank provenance");
+            System.out.println("Provenance null on backup restore!, id is " + provenanceId + ", making blank provenance");
             this.provenance = new Provenance(azquoMemoryDB, "-","-","-","-");
         }
         //this.attributes = transport.attributes;
@@ -157,7 +157,7 @@ public final class Name extends AzquoMemoryDBEntity {
         return provenance;
     }
 
-    private synchronized void setProvenanceWillBePersisted(final Provenance provenance) {
+    synchronized void setProvenanceWillBePersisted(final Provenance provenance) {
         if (this.provenance == null || !this.provenance.equals(provenance)) {
             this.provenance = provenance;
             setNeedsPersisting();
@@ -223,6 +223,7 @@ public final class Name extends AzquoMemoryDBEntity {
         }
     }
 
+    // only called when loading - if called the database might not be usable
     synchronized void parentArrayCheck() {
         ArrayList<Name> newList = new ArrayList<>();
         for (Name n : parents) {
@@ -441,12 +442,13 @@ public final class Name extends AzquoMemoryDBEntity {
     private static AtomicInteger memberNameCount = new AtomicInteger(0);
 
     public static Name memberName(Name element, Name topSet) {
-        if (element.parents.length > 0) {
-            for (int i = 0; i < element.parents.length; i++) {
-                if (element.parents[i].equals(topSet)) {
+        Name[] refCopy = element.parents;
+        if (refCopy.length > 0) {
+            for (int i = 0; i < refCopy.length; i++) {
+                if (refCopy[i].equals(topSet)) {
                     return element;
                 }
-                Name ancestor = memberName(element.parents[i], topSet);
+                Name ancestor = memberName(refCopy[i], topSet);
                 if (ancestor != null) {
                     return ancestor;
                 }
@@ -472,8 +474,9 @@ public final class Name extends AzquoMemoryDBEntity {
                     namesFound.addAll(name.childrenAsSet);
                 } else if (name.children.length > 0) {
                     //IntelliJ recommends Collections.addAll(namesFound, name.children); instead. I think it's not quite as efficient
-                    for (int i = 0; i < name.children.length; i++) {
-                        namesFound.add(name.children[i]);
+                    Name[] refCopy = name.children; // be defensive unless I can find documentation that says the for loop can't get tripped up
+                    for (int i = 0; i < refCopy.length; i++) {
+                        namesFound.add(refCopy[i]);
                     }
                 }
             } else {
@@ -494,15 +497,16 @@ public final class Name extends AzquoMemoryDBEntity {
                 namesFound.add(name);
             }
         } else {
+            Name[] refCopy = name.parents; // be defensive unless I can find documentation that says the for loop can't get tripped up
             if (currentLevel == (level - 1)) { // then we want the next one up, just add it all . . .
-                if (name.parents.length > 0) {
+                if (refCopy.length > 0) {
                     //noinspection ManualArrayToCollectionCopy, surpressing as I believe this is a little more efficient in terms of not instantiating an Iterator
-                    for (int i = 0; i < name.parents.length; i++) {
-                        namesFound.add(name.parents[i]);
+                    for (int i = 0; i < refCopy.length; i++) {
+                        namesFound.add(refCopy[i]);
                     }
                 }
             } else {
-                for (Name parent : name.parents) {
+                for (Name parent : refCopy) {
                     addParentNames(parent, namesFound, currentLevel + 1, level);
                 }
             }
@@ -515,6 +519,7 @@ public final class Name extends AzquoMemoryDBEntity {
 
     public Name findATopParent() {
         findATopParentCount.incrementAndGet();
+        // I suppose concurrent access when knocking off a parent could cause problems . . . I'm not so bothered at the moment
         if (hasParents()) {
             Name parent = parents[0];
             // todo check with WFC - are we using local??? also zap this null check
@@ -527,24 +532,6 @@ public final class Name extends AzquoMemoryDBEntity {
             }
         }
         return this;
-    }
-
-    // we are now allowing a name to be in more than one top parent, hence the name change
-
-    private static AtomicInteger findTopParentsCount = new AtomicInteger(0);
-
-    public List<Name> findTopParents() {
-        findTopParentsCount.incrementAndGet();
-        List<Name> toReturn = new ArrayList<>();
-        if (hasParents()) {
-            for (Name parent : findAllParents()) {
-                if (!parent.hasParents()) {
-                    toReturn.add(parent);
-                }
-            }
-            return toReturn;
-        }
-        return Collections.singletonList(this); // no parents then this is a top parent
     }
 
     // same logic as find all parents but returns a set, should be correct
@@ -908,7 +895,8 @@ public final class Name extends AzquoMemoryDBEntity {
 
     private static String findParentAttributes(Name child, String attributeName, Set<Name> checked, Name origName, int level) {
         findParentAttributesCount.incrementAndGet();
-        for (Name parent : child.parents) {
+        Name[] refCopy = child.parents;
+        for (Name parent : refCopy) {
             if (!checked.contains(parent)) {
                 checked.add(parent);
                 // ok, check for the parent actually matching the display name, here we need to do a hack supporting the member of
@@ -1021,6 +1009,7 @@ public final class Name extends AzquoMemoryDBEntity {
                 }
                 return buffer.array();
             } else {
+                // don't ref copy as we have the try/catch? Hmmmmmmmmm
                 ByteBuffer buffer = ByteBuffer.allocate(children.length * 4);
                 for (Name name : children) {
                     buffer.putInt(name.getId());
@@ -1149,7 +1138,6 @@ public final class Name extends AzquoMemoryDBEntity {
         System.out.println("memberNameCount\t\t\t\t" + memberNameCount.get());
         System.out.println("addNamesCount\t\t\t\t" + addNamesCount.get());
         System.out.println("findATopParentCount\t\t\t\t" + findATopParentCount.get());
-        System.out.println("findTopParentsCount\t\t\t\t" + findTopParentsCount.get());
         System.out.println("finaAllChildrenCount\t\t\t\t" + finaAllChildrenCount.get());
         System.out.println("finaAllChildren2Count\t\t\t\t" + finaAllChildren2Count.get());
         System.out.println("findValuesIncludingChildrenCount\t\t\t\t" + findValuesIncludingChildrenCount.get());
@@ -1190,7 +1178,6 @@ public final class Name extends AzquoMemoryDBEntity {
         memberNameCount.set(0);
         addNamesCount.set(0);
         findATopParentCount.set(0);
-        findTopParentsCount.set(0);
         finaAllChildrenCount.set(0);
         finaAllChildren2Count.set(0);
         findValuesIncludingChildrenCount.set(0);

@@ -2,7 +2,7 @@ package com.azquo.memorydb.core.namedata.implementation;
 
 import com.azquo.StringLiterals;
 import com.azquo.memorydb.core.NameAttributes;
-import com.azquo.memorydb.core.NewName;
+import com.azquo.memorydb.core.NameInterface;
 import com.azquo.memorydb.core.Value;
 import com.azquo.memorydb.core.namedata.NameData;
 import com.azquo.memorydb.core.namedata.component.ChildrenArray;
@@ -18,28 +18,28 @@ public class AttributesValuesSetChildrenArray implements Attributes, ValuesSet, 
 
     private volatile NameAttributes nameAttributes;
     private volatile Set<Value> values;
-    private volatile NewName[] children;
+    private volatile NameInterface[] children;
 
     public AttributesValuesSetChildrenArray(NameAttributes nameAttributes){
         this.nameAttributes = nameAttributes;
         values = Collections.newSetFromMap(new ConcurrentHashMap<>(ARRAYTHRESHOLD + 1));// the way to get a thread safe set!
-        children = new NewName[0];
+        children = new NameInterface[0];
     }
 
     public AttributesValuesSetChildrenArray(NameAttributes nameAttributes, Set<Value> values) {
         this.nameAttributes = nameAttributes;
         this.values = values;
-        children = new NewName[0];
+        children = new NameInterface[0];
     }
 
-    public AttributesValuesSetChildrenArray(NameAttributes nameAttributes, Value[] values, NewName[] children) {
+    public AttributesValuesSetChildrenArray(NameAttributes nameAttributes, Value[] values, NameInterface[] children) {
         this.nameAttributes = nameAttributes;
         this.values = Collections.newSetFromMap(new ConcurrentHashMap<>(ARRAYTHRESHOLD + 1));// the way to get a thread safe set!
         this.values.addAll(Arrays.asList(values));
         this.children = children;
     }
 
-    public AttributesValuesSetChildrenArray(String defaultDisplayName, Set<Value> values, NewName[] children) throws Exception {
+    public AttributesValuesSetChildrenArray(String defaultDisplayName, Set<Value> values, NameInterface[] children) throws Exception {
         this.nameAttributes = new NameAttributes(StringLiterals.DEFAULT_DISPLAY_NAME_AS_LIST, Collections.singletonList(defaultDisplayName));
         this.values = values;
         this.children = children;
@@ -56,12 +56,12 @@ public class AttributesValuesSetChildrenArray implements Attributes, ValuesSet, 
     }
 
     @Override
-    public NewName[] internalGetChildren() {
+    public NameInterface[] internalGetChildren() {
         return children;
     }
 
     @Override
-    public void internalSetChildren(NewName[] children) {
+    public void internalSetChildren(NameInterface[] children) {
         this.children = children;
     }
 

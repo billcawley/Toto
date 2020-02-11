@@ -10,7 +10,6 @@ import net.openhft.koloboke.collect.set.hash.HashObjSets;
 import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -49,13 +48,13 @@ import java.util.concurrent.atomic.AtomicInteger;
  * <p>
  * I'm going to attempt to hive off everything except parents and provenance to a name data class. Prototyping in NewName first then move into name and comment properly when it's tested todo
  */
-public final class NewName extends AzquoMemoryDBEntity {
+public final class NewName extends NameInterface {
 
 //    private static final Logger logger = Logger.getLogger(Name.class);
 
     private Provenance provenance; // should be volatile? Don't care about being completely up to date but could a partially constructed object get in here?
 
-    private volatile NewName[] parents;
+    private volatile NameInterface[] parents;
 
     // in the new model there are various implementations of NameData. This will hopefully save memory/increase performance
     // and more importantly will allow new functionality e.g. children with a relationship e.g. Edward Cawley "Born In" 04-12-1980 without extra memory overhead
@@ -127,53 +126,53 @@ public final class NewName extends AzquoMemoryDBEntity {
 
          */
         //under new thing this decides the implementation of name data, think I'm gonna have to branch to the 18 options available . . .
-        if (nameAttributes == null){ // so a default display name implementation will do it
-            if (noValues == 0){ // no values
-                if (noChildren == 0){ // no children
+        if (nameAttributes == null) { // so a default display name implementation will do it
+            if (noValues == 0) { // no values
+                if (noChildren == 0) { // no children
                     nameData = new DefaultDisplayName(defaultDisplayName);
-                } else if (noChildren < NameData.ARRAYTHRESHOLD){ // array children
+                } else if (noChildren < NameData.ARRAYTHRESHOLD) { // array children
                     nameData = new DefaultDisplayNameChildrenArray(defaultDisplayName);
                 } else { // set values
                     nameData = new DefaultDisplayNameChildrenSet(defaultDisplayName);
                 }
-            } else if (noValues < NameData.ARRAYTHRESHOLD){ // array values
-                if (noChildren == 0){ // no children
+            } else if (noValues < NameData.ARRAYTHRESHOLD) { // array values
+                if (noChildren == 0) { // no children
                     nameData = new DefaultDisplayNameValuesArray(defaultDisplayName);
-                } else if (noChildren < NameData.ARRAYTHRESHOLD){ // array children
+                } else if (noChildren < NameData.ARRAYTHRESHOLD) { // array children
                     nameData = new DefaultDisplayNameValuesArrayChildrenArray(defaultDisplayName);
                 } else { // set values
                     nameData = new DefaultDisplayNameValuesArrayChildrenSet(defaultDisplayName);
                 }
             } else { // set values
-                if (noChildren == 0){ // no children
+                if (noChildren == 0) { // no children
                     nameData = new DefaultDisplayNameValuesSet(defaultDisplayName);
-                } else if (noChildren < NameData.ARRAYTHRESHOLD){ // array children
+                } else if (noChildren < NameData.ARRAYTHRESHOLD) { // array children
                     nameData = new DefaultDisplayNameValuesSetChildrenArray(defaultDisplayName);
                 } else { // set values
                     nameData = new DefaultDisplayNameValuesSetChildrenSet(defaultDisplayName);
                 }
             }
         } else { // name attributes
-            if (noValues == 0){ // no values
-                if (noChildren == 0){ // no children
+            if (noValues == 0) { // no values
+                if (noChildren == 0) { // no children
                     nameData = new Attributes(nameAttributes);
-                } else if (noChildren < NameData.ARRAYTHRESHOLD){ // array children
+                } else if (noChildren < NameData.ARRAYTHRESHOLD) { // array children
                     nameData = new AttributesChildrenArray(nameAttributes);
                 } else { // set values
                     nameData = new AttributesChildrenSet(nameAttributes);
                 }
-            } else if (noValues < NameData.ARRAYTHRESHOLD){ // array values
-                if (noChildren == 0){ // no children
+            } else if (noValues < NameData.ARRAYTHRESHOLD) { // array values
+                if (noChildren == 0) { // no children
                     nameData = new AttributesValuesArray(nameAttributes);
-                } else if (noChildren < NameData.ARRAYTHRESHOLD){ // array children
+                } else if (noChildren < NameData.ARRAYTHRESHOLD) { // array children
                     nameData = new AttributesValuesArrayChildrenArray(nameAttributes);
                 } else { // set values
                     nameData = new AttributesValuesArrayChildrenSet(nameAttributes);
                 }
             } else { // set values
-                if (noChildren == 0){ // no children
+                if (noChildren == 0) { // no children
                     nameData = new AttributesValuesSet(nameAttributes);
-                } else if (noChildren < NameData.ARRAYTHRESHOLD){ // array children
+                } else if (noChildren < NameData.ARRAYTHRESHOLD) { // array children
                     nameData = new AttributesValuesSetChildrenArray(nameAttributes);
                 } else { // set values
                     nameData = new AttributesValuesSetChildrenSet(nameAttributes);
@@ -201,7 +200,7 @@ public final class NewName extends AzquoMemoryDBEntity {
         if (this.provenance == null || !this.provenance.equals(provenance)) {
             this.provenance = provenance;
             setNeedsPersisting();
-            for (NewName n : getParents()) {
+            for (NameInterface n : getParents()) {
                 n.setProvenanceWillBePersisted(provenance);
             }
         }
@@ -265,8 +264,8 @@ public final class NewName extends AzquoMemoryDBEntity {
     }
 
     synchronized void parentArrayCheck() {
-        ArrayList<NewName> newList = new ArrayList<>();
-        for (NewName n : parents) {
+        ArrayList<NameInterface> newList = new ArrayList<>();
+        for (NameInterface n : parents) {
             if (n != null) {
                 newList.add(n);
             }
@@ -318,7 +317,7 @@ public final class NewName extends AzquoMemoryDBEntity {
     // returns list now as that's what it is!
     private static AtomicInteger getParentsCount = new AtomicInteger(0);
 
-    public List<NewName> getParents() {
+    public List<NameInterface> getParents() {
         getParentsCount.incrementAndGet();
         return parents.length > 0 ? Collections.unmodifiableList(Arrays.asList(parents)) : Collections.emptyList();
     }
@@ -327,7 +326,7 @@ public final class NewName extends AzquoMemoryDBEntity {
         return parents.length > 0;
     }
 
-    private void addToParents(final NewName name) {
+    void addToParents(final NameInterface name) {
         addToParents(name, false);
     }
     /* don't allow external classes to set the parents I mean by function or otherwise, Name can manage this based on set children
@@ -340,7 +339,7 @@ public final class NewName extends AzquoMemoryDBEntity {
     private static AtomicInteger addToParentsCount = new AtomicInteger(0);
 
     // don't trust no_parents, revert to old style but add logging
-    private void addToParents(final NewName name, boolean databaseIsLoading) {
+    void addToParents(final NameInterface name, boolean databaseIsLoading) {
         addToParentsCount.incrementAndGet();
         synchronized (this) {
             if (databaseIsLoading || !Arrays.asList(parents).contains(name)) {
@@ -370,7 +369,7 @@ public final class NewName extends AzquoMemoryDBEntity {
 
     private static AtomicInteger removeFromParentsCount = new AtomicInteger(0);
 
-    private void removeFromParents(final NewName name) {
+    void removeFromParents(final NameInterface name) {
         removeFromParentsCount.incrementAndGet();
         synchronized (this) { // just sync on this object to protect the lists
             parents = NameUtils.nameArrayRemoveIfExists(parents, name);
@@ -383,10 +382,10 @@ public final class NewName extends AzquoMemoryDBEntity {
 
     private static AtomicInteger findAllParentsCount = new AtomicInteger(0);
 
-    public Collection<NewName> findAllParents() {
+    public Collection<NameInterface> findAllParents() {
         findAllParentsCount.incrementAndGet();
-        final Set<NewName> allParents = HashObjSets.newMutableSet(); // should be ok to use these now - maybe use updateable map?
-        findAllParents(this, allParents);
+        final Set<NameInterface> allParents = HashObjSets.newMutableSet(); // should be ok to use these now - maybe use updateable map?
+        findAllParents(allParents);
         return allParents;
     }
 
@@ -394,15 +393,15 @@ public final class NewName extends AzquoMemoryDBEntity {
 
     // note : this was using getParents, since it was really being hammered this was no good due to the garbage generation of that function, hence the change
     // public and stateless, in here as it accesses things I don't want accessed outside
-    public static void findAllParents(NewName name, final Set<NewName> allParents) {
+    public void findAllParents(final Set<NameInterface> allParents) {
         findAllParents2Count.incrementAndGet();
-        NewName[] parentsRefCopy = name.parents; // ok in theory the parents could get modified in the for loop, this wouldn't be helpful so I'll keep a copy of the reference to use in case name.parents gets switched out
-        for (NewName parent : parentsRefCopy) { // should be the same as a for int i; i < parentsRefCopy.length; i++
+        NameInterface[] parentsRefCopy = parents; // ok in theory the parents could get modified in the for loop, this wouldn't be helpful so I'll keep a copy of the reference to use in case name.parents gets switched out
+        for (NameInterface parent : parentsRefCopy) { // should be the same as a for int i; i < parentsRefCopy.length; i++
             if (parent == null) { // having fixed a bug this should be rare now. Typical cause of a null parent would be no_parents in MySQL being incorrect and too big
-                System.out.println("DATABASE CORRUPTION " + name.getDefaultDisplayName() + " id " + name.getId() + " has a null parent");
+                System.out.println("DATABASE CORRUPTION " + getDefaultDisplayName() + " id " + getId() + " has a null parent");
             } else {
                 if (allParents.add(parent)) { // the function was moved in here to access this array directly. Externally it would need to be wrapped in an unmodifiable List. Means garbage!
-                    findAllParents(parent, allParents);
+                    parent.findAllParents(allParents);
                 }
             }
         }
@@ -412,13 +411,13 @@ public final class NewName extends AzquoMemoryDBEntity {
     // used when permuting - for element we want to find a parent it has (possibly up the chain) in top set. So if we had a shop and we did member name with that and "All Counties" we'd hope to find the county the shop was in
     private static AtomicInteger memberNameCount = new AtomicInteger(0);
 
-    public static NewName memberName(NewName element, NewName topSet) {
-        if (element.parents.length > 0) {
-            for (int i = 0; i < element.parents.length; i++) {
-                if (element.parents[i].equals(topSet)) {
-                    return element;
+    public NameInterface memberName(NewName topSet) {
+        if (parents.length > 0) {
+            for (int i = 0; i < parents.length; i++) {
+                if (parents[i].equals(topSet)) {
+                    return this;
                 }
-                NewName ancestor = memberName(element.parents[i], topSet);
+                NameInterface ancestor = parents[i].memberName(topSet);
                 if (ancestor != null) {
                     return ancestor;
                 }
@@ -432,25 +431,28 @@ public final class NewName extends AzquoMemoryDBEntity {
 
     // was in name service, added in here as a static function to give it direct access to the private arrays. Again an effort to reduce garbage.
     // Used by find all names, this is hammered, efficiency is important
-    public static void addNames(final NewName name, Collection<NewName> namesFound, final int currentLevel, final int level) {
+    public void addChildrenToCollection(Collection<NameInterface> namesFound, final int currentLevel, final int level) {
         addNamesCount.incrementAndGet();
-        if (!name.hasChildren()) {
+        if (!hasChildren()) {
             if (level == NameService.LOWEST_LEVEL_INT) {
-                namesFound.add(name);
+                namesFound.add(this);
             }
         } else {
             if (currentLevel == (level - 1)) { // then we want the next one down, just add it all . . .
-                if (name.nameData.directSetChildren() != null) {
-                    namesFound.addAll(name.nameData.directSetChildren());
-                } else if (name.nameData.directArrayChildren() != null && name.nameData.directArrayChildren().length > 0) {
-                    //IntelliJ recommends Collections.addAll(namesFound, name.children); instead. I think it's not quite as efficient
-                    for (int i = 0; i < name.nameData.directArrayChildren().length; i++) {
-                        namesFound.add(name.nameData.directArrayChildren()[i]);
+                if (nameData.directSetChildren() != null) {
+                    namesFound.addAll(nameData.directSetChildren());
+                } else {
+                    NameInterface[] nameRef = nameData.directArrayChildren(); // try to stop a nasty swap out. As in not set go here oh it gets changed in the mean time then you get an NPE as the null pointer check was fooled
+                    if (nameRef != null) {
+                        //IntelliJ recommends Collections.addAll(namesFound, name.children); instead. I think it's not quite as efficient
+                        for (int i = 0; i < nameRef.length; i++) {
+                            namesFound.add(nameRef[i]);
+                        }
                     }
                 }
             } else {
-                for (NewName child : name.getChildren()) {// Accessing children as above might save a bit of garbage but I think the big wins have been done
-                    addNames(child, namesFound, currentLevel + 1, level);
+                for (NameInterface child : getChildren()) {// Accessing children as above might save a bit of garbage but I think the big wins have been done
+                    child.addChildrenToCollection(namesFound, currentLevel + 1, level);
                 }
             }
         }
@@ -459,23 +461,38 @@ public final class NewName extends AzquoMemoryDBEntity {
     // to support negative levels on children clause, level is seen as parent level, same as above but moving in the opposite direction
     // more simple as parents are just an array, no parentsAsSet currently
     // Used by find parents at level, this is hammered, efficiency is important
-    public static void addParentNames(final NewName name, Collection<NewName> namesFound, final int currentLevel, final int level) {
+    public void addParentNamesToCollection(Collection<NameInterface> namesFound, final int currentLevel, final int level) {
         addNamesCount.incrementAndGet();
-        if (!name.hasParents()) {
+        if (!hasParents()) {
             if (level == NameService.LOWEST_LEVEL_INT) { // misnomer but same logic
-                namesFound.add(name);
+                namesFound.add(this);
             }
         } else {
             if (currentLevel == (level - 1)) { // then we want the next one up, just add it all . . .
-                if (name.parents.length > 0) {
+                if (parents.length > 0) {
+                    // can parents array be switched?? Never been caught but it's a concern
                     //noinspection ManualArrayToCollectionCopy, surpressing as I believe this is a little more efficient in terms of not instantiating an Iterator
-                    for (int i = 0; i < name.parents.length; i++) {
-                        namesFound.add(name.parents[i]);
+                    for (int i = 0; i < parents.length; i++) {
+                        namesFound.add(parents[i]);
                     }
                 }
             } else {
-                for (NewName parent : name.parents) {
-                    addParentNames(parent, namesFound, currentLevel + 1, level);
+                for (NameInterface parent : parents) {
+                    parent.addParentNamesToCollection(namesFound, currentLevel + 1, level);
+                }
+            }
+        }
+    }
+
+    public void addValuesToCollection(Collection<Value> values) {
+        if (nameData.directSetValues() != null) {
+            values.addAll(nameData.directSetValues());
+        } else {
+            Value[] valuesRef = nameData.directArrayValues(); // try to stop a nasty swap out. As in not set go here oh it gets changed in the mean time then you get an NPE as the null pointer check was fooled
+            if (valuesRef != null) {
+                //IntelliJ recommends Collections.addAll(namesFound, name.children); instead. I think it's not quite as efficient
+                for (int i = 0; i < valuesRef.length; i++) {
+                    values.add(valuesRef[i]);
                 }
             }
         }
@@ -485,14 +502,14 @@ public final class NewName extends AzquoMemoryDBEntity {
 
     private static AtomicInteger findATopParentCount = new AtomicInteger(0);
 
-    public NewName findATopParent() {
+    public NameInterface findATopParent() {
         findATopParentCount.incrementAndGet();
         if (hasParents()) {
-            NewName parent = parents[0];
+            NameInterface parent = parents[0];
             // todo check with WFC - are we using local??? also zap this null check
             while (parent != null) {
                 if (parent.hasParents() && parent.getAttribute(StringLiterals.LOCAL) == null) {
-                    parent = parent.parents[0];
+                    parent = parent.getParents().iterator().next();
                 } else {
                     return parent; // it has no parents, must be top
                 }
@@ -505,11 +522,11 @@ public final class NewName extends AzquoMemoryDBEntity {
 
     private static AtomicInteger findTopParentsCount = new AtomicInteger(0);
 
-    public List<NewName> findTopParents() {
+    public List<NameInterface> findTopParents() {
         findTopParentsCount.incrementAndGet();
-        List<NewName> toReturn = new ArrayList<>();
+        List<NameInterface> toReturn = new ArrayList<>();
         if (hasParents()) {
-            for (NewName parent : findAllParents()) {
+            for (NameInterface parent : findAllParents()) {
                 if (!parent.hasParents()) {
                     toReturn.add(parent);
                 }
@@ -521,23 +538,23 @@ public final class NewName extends AzquoMemoryDBEntity {
 
     // same logic as find all parents but returns a set, should be correct
     // Koloboke makes the sets as light as can be expected, volatile to comply with double-checked locking pattern https://en.wikipedia.org/wiki/Double-checked_locking
-    private volatile Set<NewName> findAllChildrenCache = null;
+    private volatile Set<NameInterface> findAllChildrenCache = null;
 
     private static AtomicInteger finaAllChildrenCount = new AtomicInteger(0);
 
-    private static void findAllChildren(NewName name, final Set<NewName> allChildren) {
+    private static void findAllChildren(NameInterface name, final Set<NameInterface> allChildren) {
         finaAllChildrenCount.incrementAndGet();
         // similar to optimisation for get all parents
         // and we'll know if we look at the log. If this happened a local reference to the array should sort it, save the pointer garbage for the mo
-        if (name.nameData.directSetChildren() != null) {
-            for (NewName child : name.nameData.directSetChildren()) { // as mentioned above I'll allow this kind of access in here
+        if (name.getChildrenAsSet() != null) {
+            for (NameInterface child : name.getChildrenAsSet()) { // as mentioned above I'll allow this kind of access in here
                 if (allChildren.add(child)) {
                     findAllChildren(child, allChildren);
                 }
             }
-        } else if (name.nameData.directArrayChildren() != null && name.nameData.directArrayChildren().length > 0) {
-            NewName[] childrenRefCopy = name.nameData.directArrayChildren(); // in case it gets switched out half way through
-            for (NewName child : childrenRefCopy) {
+            // todo - get that list ref above??// in case it gets switched out half way through
+        } else if (name.getChildrenAsList() != null && !name.getChildrenAsList().isEmpty()) {
+            for (NameInterface child : name.getChildrenAsList()) {
                 if (allChildren.add(child)) {
                     findAllChildren(child, allChildren);
                 }
@@ -547,12 +564,12 @@ public final class NewName extends AzquoMemoryDBEntity {
 
     private static AtomicInteger finaAllChildren2Count = new AtomicInteger(0);
 
-    public Collection<NewName> findAllChildren() {
+    public Collection<NameInterface> findAllChildren() {
         finaAllChildren2Count.incrementAndGet();
             /* local reference useful for my logic anyway but also fulfil double-checked locking.
             having findAllChildrenCache volatile in addition to this variable should mean things are predictable.
              */
-        Set<NewName> localReference = findAllChildrenCache;
+        Set<NameInterface> localReference = findAllChildrenCache;
         if (localReference == null) {
             // ok I don't want to be building two at a time, hence I want to synchronize this bit,
             synchronized (this) { // ideally I wouldn't synchronize on this, it would be on findAllChildrenCache but it's not final and I don't want it to be for the moment
@@ -570,6 +587,7 @@ public final class NewName extends AzquoMemoryDBEntity {
         }
         return Collections.unmodifiableSet(localReference);
     }
+
 
     /* as above but for values, proved to provide a decent speed increase
     plus I can check some alternative set intersection stuff
@@ -589,17 +607,8 @@ public final class NewName extends AzquoMemoryDBEntity {
                 localReference = valuesIncludingChildrenCache;
                 if (localReference == null) {
                     localReference = HashObjSets.newUpdatableSet(getValues());
-                    for (NewName child : findAllChildren()) {
-                        NameData childNameData = child.nameData;
-                        if (childNameData.directSetValues() != null) {
-                            localReference.addAll(childNameData.directSetValues());
-                        } else if (childNameData.directArrayValues() != null && childNameData.directArrayValues().length > 0) {
-                            Value[] refCopy = childNameData.directArrayValues(); // in case values is swapped out while adding
-                            // Intellij wants to change this I think it's a bit more efficient as it is, might look into this
-                            for (Value v : refCopy) {
-                                localReference.add(v);
-                            }
-                        }
+                    for (NameInterface child : findAllChildren()) {
+                        child.addValuesToCollection(localReference);
                     }
                     if (localReference.isEmpty()) {
                         valuesIncludingChildrenCache = Collections.emptySet();
@@ -624,22 +633,22 @@ public final class NewName extends AzquoMemoryDBEntity {
 
     private static AtomicInteger getChildrenCount = new AtomicInteger(0);
 
-    public Collection<NewName> getChildren() {
+    public Collection<NameInterface> getChildren() {
         getChildrenCount.incrementAndGet();
-        return nameData.getChildren();
+        return Collections.unmodifiableCollection(nameData.getChildren());
     }
 
     private static AtomicInteger getChildrenAsSetCount = new AtomicInteger(0);
 
     // if used incorrectly means NPE, I don't mind about this for the mo. We're allowing interpretSetTerm low level access to the list and sets to stop unnecessary collection copying in the query parser
-    public Set<NewName> getChildrenAsSet() {
+    public Set<NameInterface> getChildrenAsSet() {
         getChildrenAsSetCount.incrementAndGet();
         return Collections.unmodifiableSet(nameData.directSetChildren());
     }
 
     private static AtomicInteger getChildrenAsListCount = new AtomicInteger(0);
 
-    public List<NewName> getChildrenAsList() {
+    public List<NameInterface> getChildrenAsList() {
         getChildrenAsListCount.incrementAndGet();
         return nameData.directArrayChildren().length > 0 ? Collections.unmodifiableList(Arrays.asList(nameData.directArrayChildren())) : Collections.emptyList();
     }
@@ -658,20 +667,20 @@ public final class NewName extends AzquoMemoryDBEntity {
     private static AtomicInteger setChildrenCount = new AtomicInteger(0);
 
     // pass connection not provenance - we want the connection to know if the provenance was used or not
-    public synchronized void setChildrenWillBePersisted(Collection<NewName> newChildren, AzquoMemoryDBConnection azquoMemoryDBConnection) throws Exception {
+    public synchronized void setChildrenWillBePersisted(Collection<NameInterface> newChildren, AzquoMemoryDBConnection azquoMemoryDBConnection) throws Exception {
         setChildrenCount.incrementAndGet();
-        Collection<NewName> existingChildren = getChildren();
+        Collection<NameInterface> existingChildren = getChildren();
         /* like an equals but the standard equals might trip up on different collection types
         notable that contains all will ignore ordering! If large it will be a HashSet anyway (note - it WAS the wrong way around,
          call contains on existing, NOT children, children (the passed parameter) could be a massive List!)
         this could provide a major speed increase where this function is "recklessly" called (e.g. in the "as" bit in parseQuery in NameService),
         don't keep reassigning "as" and clearing the caches when the collection is the same */
         if (newChildren.size() != existingChildren.size() || !existingChildren.containsAll(newChildren)) {
-            for (NewName oldChild : this.getChildren()) {
+            for (NameInterface oldChild : this.getChildren()) {
                 removeFromChildrenWillBePersistedNoCacheClear(oldChild);
             }
             // there was a child null check here, not keen on that
-            for (NewName child : newChildren) {
+            for (NameInterface child : newChildren) {
                 addChildWillBePersisted(child, false); // todo, get rid of the boolean
             }
             clearChildrenCaches();
@@ -682,7 +691,7 @@ public final class NewName extends AzquoMemoryDBEntity {
 
     private static AtomicInteger addChildWillBePersistedCount = new AtomicInteger(0);
 
-    public void addChildWillBePersisted(NewName child, AzquoMemoryDBConnection azquoMemoryDBConnection) throws Exception {
+    public void addChildWillBePersisted(NameInterface child, AzquoMemoryDBConnection azquoMemoryDBConnection) throws Exception {
         addChildWillBePersistedCount.incrementAndGet();
         if (addChildWillBePersisted(child, true)) {
             setProvenanceWillBePersisted(azquoMemoryDBConnection.getProvenance());
@@ -691,7 +700,7 @@ public final class NewName extends AzquoMemoryDBEntity {
 
     private static AtomicInteger addChildWillBePersisted3Count = new AtomicInteger(0);
 
-    private boolean addChildWillBePersisted(NewName child, boolean clearCache) throws Exception {
+    private boolean addChildWillBePersisted(NameInterface child, boolean clearCache) throws Exception {
         addChildWillBePersisted3Count.incrementAndGet();
         checkDatabaseMatches(child);
         if (child.equals(this)) return false;//don't put child into itself
@@ -734,7 +743,7 @@ public final class NewName extends AzquoMemoryDBEntity {
 
     private static AtomicInteger removeFromChildrenWillBePersistedCount = new AtomicInteger(0);
 
-    public void removeFromChildrenWillBePersisted(NewName name, AzquoMemoryDBConnection azquoMemoryDBConnection) throws Exception {
+    public void removeFromChildrenWillBePersisted(NameInterface name, AzquoMemoryDBConnection azquoMemoryDBConnection) throws Exception {
         removeFromChildrenWillBePersistedCount.incrementAndGet();
         if (removeFromChildrenWillBePersistedNoCacheClear(name)) {
             clearChildrenCaches();
@@ -745,7 +754,7 @@ public final class NewName extends AzquoMemoryDBEntity {
 
     private static AtomicInteger removeFromChildrenWillBePersisted2Count = new AtomicInteger(0);
 
-    private boolean removeFromChildrenWillBePersistedNoCacheClear(NewName name) throws Exception {
+    private boolean removeFromChildrenWillBePersistedNoCacheClear(NameInterface name) throws Exception {
         removeFromChildrenWillBePersisted2Count.incrementAndGet();
         checkDatabaseMatches(name);// even if not needed throw the exception!
         // maybe could narrow this a little?
@@ -832,9 +841,9 @@ public final class NewName extends AzquoMemoryDBEntity {
     // criteria for fall back attributes added by WFC, not entirely sure I'd have done this but anyway
     private static AtomicInteger findParentAttributesCount = new AtomicInteger(0);
 
-    private static String findParentAttributes(NewName child, String attributeName, Set<NewName> checked, NewName origName, int level) {
+    private static String findParentAttributes(NewName child, String attributeName, Set<NameInterface> checked, NameInterface origName, int level) {
         findParentAttributesCount.incrementAndGet();
-        for (NewName parent : child.parents) {
+        for (NameInterface parent : child.parents) {
             if (!checked.contains(parent)) {
                 checked.add(parent);
                 // ok, check for the parent actually matching the display name, here we need to do a hack supporting the member of
@@ -843,13 +852,13 @@ public final class NewName extends AzquoMemoryDBEntity {
                     String parentName = attributeName.substring(0, attributeName.indexOf(StringLiterals.MEMBEROF));
                     if (parent.getDefaultDisplayName() != null && parent.getDefaultDisplayName().equalsIgnoreCase(checkName)) { // ok a candidate!
                         // now check the parents to see if it's correct
-                        for (NewName parentParent : parent.getParents()) { // yes parent parent a bit hacky, we're looking to qualify the parent. getParents not idea for garbage but I assume this will NOT be called that often!
+                        for (NameInterface parentParent : parent.getParents()) { // yes parent parent a bit hacky, we're looking to qualify the parent. getParents not idea for garbage but I assume this will NOT be called that often!
                             if (parentParent.getDefaultDisplayName().equalsIgnoreCase(parentName)) {
                                 if (level > 1) {
                                     //check that there is not a direct connection.
                                     // EFC comment - this is the attribute as names thing so if we ask for Azquo.TOWN and azquo is in Ludlow which is in Town then we return Ludlow.
                                     // I understand this logic but it's a classic thing that might not be documented and perhaps the code needs checking for perfoamnce issues
-                                    Set<NewName> directConnection = new HashSet<>(origName.getParents());
+                                    Set<NameInterface> directConnection = new HashSet<>(origName.getParents());
                                     directConnection.retainAll(parent.getChildren());
                                     if (directConnection.size() > 0) {
                                         return directConnection.iterator().next().getDefaultDisplayName();
@@ -863,7 +872,7 @@ public final class NewName extends AzquoMemoryDBEntity {
                     if (parent.getDefaultDisplayName() != null && parent.getDefaultDisplayName().equalsIgnoreCase(attributeName)) {
                         if (level > 1) {
                             //check that there is not a direct connection.
-                            Set<NewName> directConnection = new HashSet<>(origName.getParents());
+                            Set<NameInterface> directConnection = new HashSet<>(origName.getParents());
                             directConnection.retainAll(parent.getChildren());
                             if (directConnection.size() > 0) {
                                 return directConnection.iterator().next().getDefaultDisplayName();
@@ -892,11 +901,11 @@ public final class NewName extends AzquoMemoryDBEntity {
 
     private static AtomicInteger getAttribute2Count = new AtomicInteger(0);
 
-    public String getAttribute(String attributeName, boolean parentCheck, Set<NewName> checked) {
+    public String getAttribute(String attributeName, boolean parentCheck, Set<NameInterface> checked) {
         return getAttribute(attributeName, parentCheck, checked, this, 0);
     }
 
-    public String getAttribute(String attributeName, boolean parentCheck, Set<NewName> checked, NewName origName, int level) {
+    public String getAttribute(String attributeName, boolean parentCheck, Set<NameInterface> checked, NameInterface origName, int level) {
         attributeName = attributeName.trim().toUpperCase(); // edd adding (back?) in, need to do this since all attributes are uppercase internally
         getAttribute2Count.incrementAndGet();
         String attribute = nameData.getAttribute(attributeName);
@@ -935,7 +944,7 @@ public final class NewName extends AzquoMemoryDBEntity {
         getChildrenIdsAsBytesCount.incrementAndGet();
         try {
             ByteBuffer buffer = ByteBuffer.allocate(nameData.getChildren().size() * 4);
-            for (NewName name : nameData.getChildren()) {
+            for (NameInterface name : nameData.getChildren()) {
                 buffer.putInt(name.getId());
             }
             return buffer.array();
@@ -989,13 +998,13 @@ public final class NewName extends AzquoMemoryDBEntity {
          addToParents can be synchronized on the child. Changing from get children here as I want to avoid the array wrapping where I can (make less garbage)*/
         // todo I'm breaking the comment above and could the name data referenes get screwy?
         if (nameData.directSetChildren() != null) {
-            for (NewName newChild : nameData.directSetChildren()) {
+            for (NameInterface newChild : nameData.directSetChildren()) {
                 newChild.addToParents(this, true);
             }
         } else if (nameData.directArrayChildren() != null) {
             // directly hitting the array could cause a problem if it were reassigned while this happened but here it should be fine,
             // loading doesn't alter the array lengths, they're set in preparation.
-            for (NewName aChildren : nameData.directArrayChildren()) {
+            for (NameInterface aChildren : nameData.directArrayChildren()) {
                 aChildren.addToParents(this, true);
             }
         }
@@ -1010,7 +1019,7 @@ public final class NewName extends AzquoMemoryDBEntity {
 //        List<Value> values;
 //        List<Name> parents;
         Collection<Value> values;
-        Collection<NewName> parents;
+        Collection<NameInterface> parents;
 
         // ok we want a thread safe snapshot really of things that are synchronized on other objects
         synchronized (this) {
@@ -1034,7 +1043,7 @@ public final class NewName extends AzquoMemoryDBEntity {
             setNeedsDeleting();
             setNeedsPersisting();
             // remove children - this is using the same lock so do it in here
-            for (NewName child : getChildren()) {
+            for (NameInterface child : getChildren()) {
                 removeFromChildrenWillBePersisted(child, azquoMemoryDBConnection);
             }
             for (String attribute : nameData.getAttributeKeys()) {
@@ -1046,7 +1055,7 @@ public final class NewName extends AzquoMemoryDBEntity {
             v.deleteNoHistory();
         }
         // remove from parents
-        for (NewName parent : parents) {
+        for (NameInterface parent : parents) {
             parent.removeFromChildrenWillBePersisted(this, azquoMemoryDBConnection);
         }
     }

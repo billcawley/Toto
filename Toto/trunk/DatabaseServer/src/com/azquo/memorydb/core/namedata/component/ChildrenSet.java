@@ -1,6 +1,6 @@
 package com.azquo.memorydb.core.namedata.component;
 
-import com.azquo.memorydb.core.NewName;
+import com.azquo.memorydb.core.NameInterface;
 import com.azquo.memorydb.core.namedata.NameData;
 
 import java.util.Collection;
@@ -12,19 +12,19 @@ public interface ChildrenSet extends NameData {
         return !internalGetChildren().isEmpty(); // should it always be true? This implementation should only be called with children
     }
 
-    default Collection<NewName> getChildren() {
+    default Collection<NameInterface> getChildren() {
         return internalGetChildren();
     }
 
-    default boolean addToChildren(NewName name, boolean backupRestore) throws Exception {
+    default boolean addToChildren(NameInterface name, boolean backupRestore) throws Exception {
         return internalGetChildren().add(name);
     }
 
-    default boolean removeFromChildren(NewName name) {
+    default boolean removeFromChildren(NameInterface name) {
         return internalGetChildren().remove(name);
     }
 
-    default Set<NewName> directSetChildren() {
+    default Set<NameInterface> directSetChildren() {
         return internalGetChildren();
     }
 
@@ -38,6 +38,6 @@ public interface ChildrenSet extends NameData {
 
     // must be implemented by the "roll your own" class - note since sets are mutable we just need a get
 
-    Set<NewName> internalGetChildren();
+    Set<NameInterface> internalGetChildren();
 
 }

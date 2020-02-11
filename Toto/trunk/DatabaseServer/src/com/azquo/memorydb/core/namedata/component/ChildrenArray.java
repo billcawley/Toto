@@ -1,7 +1,7 @@
 package com.azquo.memorydb.core.namedata.component;
 
 import com.azquo.memorydb.core.NameUtils;
-import com.azquo.memorydb.core.NewName;
+import com.azquo.memorydb.core.NameInterface;
 import com.azquo.memorydb.core.namedata.NameData;
 import com.azquo.memorydb.core.namedata.UnsupportedOperationException;
 
@@ -13,13 +13,13 @@ public interface ChildrenArray extends NameData {
         return internalGetChildren().length > 0;
     }
 
-    default Collection<NewName> getChildren() {
+    default Collection<NameInterface> getChildren() {
         return Arrays.asList(internalGetChildren());
     }
 
-    default boolean addToChildren(NewName name) throws Exception {
-        final NewName[] children = internalGetChildren();
-        List<NewName> childrenList = Arrays.asList(children);
+    default boolean addToChildren(NameInterface name) throws Exception {
+        final NameInterface[] children = internalGetChildren();
+        List<NameInterface> childrenList = Arrays.asList(children);
         if (!childrenList.contains(name)) {
             if (childrenList.size() >= ARRAYTHRESHOLD) {
                 throw new UnsupportedOperationException();
@@ -33,9 +33,9 @@ public interface ChildrenArray extends NameData {
         return false;
     }
 
-    default boolean removeFromChildren(NewName name) {
-        final NewName[] children = internalGetChildren();
-        List<NewName> namesList = Arrays.asList(name);
+    default boolean removeFromChildren(NameInterface name) {
+        final NameInterface[] children = internalGetChildren();
+        List<NameInterface> namesList = Arrays.asList(name);
         if (namesList.contains(name)) {
             internalSetChildren(NameUtils.nameArrayRemove(children, name));
             return true;
@@ -43,7 +43,7 @@ public interface ChildrenArray extends NameData {
         return false;
     }
 
-    default NewName[] directArrayChildren() {
+    default NameInterface[] directArrayChildren() {
         return internalGetChildren();
     }
 
@@ -53,8 +53,8 @@ public interface ChildrenArray extends NameData {
 
     // must be implemented by the "roll your own" class
 
-    NewName[] internalGetChildren();
+    NameInterface[] internalGetChildren();
 
-    void internalSetChildren(NewName[] children);
+    void internalSetChildren(NameInterface[] children);
 
 }

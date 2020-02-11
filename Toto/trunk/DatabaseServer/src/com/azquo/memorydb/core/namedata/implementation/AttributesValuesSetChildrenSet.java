@@ -2,7 +2,7 @@ package com.azquo.memorydb.core.namedata.implementation;
 
 import com.azquo.StringLiterals;
 import com.azquo.memorydb.core.NameAttributes;
-import com.azquo.memorydb.core.NewName;
+import com.azquo.memorydb.core.NameInterface;
 import com.azquo.memorydb.core.Value;
 import com.azquo.memorydb.core.namedata.component.ChildrenSet;
 import com.azquo.memorydb.core.namedata.component.Attributes;
@@ -17,7 +17,7 @@ public class AttributesValuesSetChildrenSet implements Attributes, ValuesSet, Ch
 
     private volatile NameAttributes nameAttributes;
     private volatile Set<Value> values;
-    private volatile Set<NewName> children;
+    private volatile Set<NameInterface> children;
 
     public AttributesValuesSetChildrenSet(NameAttributes nameAttributes){
         this.nameAttributes = nameAttributes;
@@ -25,21 +25,21 @@ public class AttributesValuesSetChildrenSet implements Attributes, ValuesSet, Ch
         children = Collections.newSetFromMap(new ConcurrentHashMap<>(ARRAYTHRESHOLD + 1));
     }
 
-    public AttributesValuesSetChildrenSet(NameAttributes nameAttributes, Value[] values, Set<NewName> children) {
+    public AttributesValuesSetChildrenSet(NameAttributes nameAttributes, Value[] values, Set<NameInterface> children) {
         this.nameAttributes = nameAttributes;
         this.values = Collections.newSetFromMap(new ConcurrentHashMap<>(ARRAYTHRESHOLD + 1));
         this.values.addAll(Arrays.asList(values));
         this.children = children;
     }
 
-    public AttributesValuesSetChildrenSet(NameAttributes nameAttributes, Set<Value> values, NewName[] children) {
+    public AttributesValuesSetChildrenSet(NameAttributes nameAttributes, Set<Value> values, NameInterface[] children) {
         this.nameAttributes = nameAttributes;
         this.values = values;
         this.children = Collections.newSetFromMap(new ConcurrentHashMap<>(ARRAYTHRESHOLD + 1));
         this.children.addAll(Arrays.asList(children));
     }
 
-    public AttributesValuesSetChildrenSet(String defaultDisplayName, Set<Value> values, Set<NewName> children) throws Exception {
+    public AttributesValuesSetChildrenSet(String defaultDisplayName, Set<Value> values, Set<NameInterface> children) throws Exception {
         this.nameAttributes = new NameAttributes(StringLiterals.DEFAULT_DISPLAY_NAME_AS_LIST, Collections.singletonList(defaultDisplayName));
         this.values = values;
         this.children = children;
@@ -56,7 +56,7 @@ public class AttributesValuesSetChildrenSet implements Attributes, ValuesSet, Ch
     }
 
     @Override
-    public Set<NewName> internalGetChildren() {
+    public Set<NameInterface> internalGetChildren() {
         return children;
     }
 

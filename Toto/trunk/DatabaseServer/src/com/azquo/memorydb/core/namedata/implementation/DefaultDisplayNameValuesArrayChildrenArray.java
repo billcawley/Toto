@@ -1,6 +1,6 @@
 package com.azquo.memorydb.core.namedata.implementation;
 
-import com.azquo.memorydb.core.NewName;
+import com.azquo.memorydb.core.NameInterface;
 import com.azquo.memorydb.core.Value;
 import com.azquo.memorydb.core.namedata.NameData;
 import com.azquo.memorydb.core.namedata.component.ChildrenArray;
@@ -11,15 +11,15 @@ public class DefaultDisplayNameValuesArrayChildrenArray implements DefaultDispla
 
     private volatile String defaultDisplayName;
     private volatile Value[] values;
-    private volatile NewName[] children;
+    private volatile NameInterface[] children;
 
     public DefaultDisplayNameValuesArrayChildrenArray(String defaultDisplayName){
         this.defaultDisplayName = defaultDisplayName;
         values = new Value[0];
-        children = new NewName[0];
+        children = new NameInterface[0];
     }
 
-    public DefaultDisplayNameValuesArrayChildrenArray(String defaultDisplayName, NewName[] children) {
+    public DefaultDisplayNameValuesArrayChildrenArray(String defaultDisplayName, NameInterface[] children) {
         this.defaultDisplayName = defaultDisplayName;
         this.values = new Value[0];
         this.children = children;
@@ -28,7 +28,7 @@ public class DefaultDisplayNameValuesArrayChildrenArray implements DefaultDispla
     public DefaultDisplayNameValuesArrayChildrenArray(String defaultDisplayName, Value[] values) {
         this.defaultDisplayName = defaultDisplayName;
         this.values = values;
-        children = new NewName[0];
+        children = new NameInterface[0];
     }
 
     @Override
@@ -42,12 +42,12 @@ public class DefaultDisplayNameValuesArrayChildrenArray implements DefaultDispla
     }
 
     @Override
-    public NewName[] internalGetChildren() {
+    public NameInterface[] internalGetChildren() {
         return children;
     }
 
     @Override
-    public void internalSetChildren(NewName[] children) {
+    public void internalSetChildren(NameInterface[] children) {
         this.children = children;
     }
 

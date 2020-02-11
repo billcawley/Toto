@@ -2,7 +2,7 @@ package com.azquo.memorydb.core.namedata.implementation;
 
 import com.azquo.StringLiterals;
 import com.azquo.memorydb.core.NameAttributes;
-import com.azquo.memorydb.core.NewName;
+import com.azquo.memorydb.core.NameInterface;
 import com.azquo.memorydb.core.Value;
 import com.azquo.memorydb.core.namedata.NameData;
 import com.azquo.memorydb.core.namedata.component.ChildrenArray;
@@ -15,15 +15,15 @@ public class AttributesValuesArrayChildrenArray implements Attributes, ValuesArr
 
     private volatile NameAttributes nameAttributes;
     private volatile Value[] values;
-    private volatile NewName[] children;
+    private volatile NameInterface[] children;
 
     public AttributesValuesArrayChildrenArray(NameAttributes nameAttributes){
         this.nameAttributes = nameAttributes;
         values = new Value[0];
-        children = new NewName[0];
+        children = new NameInterface[0];
     }
 
-    public AttributesValuesArrayChildrenArray(NameAttributes nameAttributes, NewName[] children) {
+    public AttributesValuesArrayChildrenArray(NameAttributes nameAttributes, NameInterface[] children) {
         this.nameAttributes = nameAttributes;
         values = new Value[0];
         this.children = children;
@@ -32,10 +32,10 @@ public class AttributesValuesArrayChildrenArray implements Attributes, ValuesArr
     public AttributesValuesArrayChildrenArray(NameAttributes nameAttributes, Value[] values) {
         this.nameAttributes = nameAttributes;
         this.values = values;
-        children = new NewName[0];
+        children = new NameInterface[0];
     }
 
-    public AttributesValuesArrayChildrenArray(String defaultDisplayName, Value[] values, NewName[] children) throws Exception {
+    public AttributesValuesArrayChildrenArray(String defaultDisplayName, Value[] values, NameInterface[] children) throws Exception {
         this.nameAttributes = new NameAttributes(StringLiterals.DEFAULT_DISPLAY_NAME_AS_LIST, Collections.singletonList(defaultDisplayName));
         this.values = values;
         this.children = children;
@@ -52,12 +52,12 @@ public class AttributesValuesArrayChildrenArray implements Attributes, ValuesArr
     }
 
     @Override
-    public NewName[] internalGetChildren() {
+    public NameInterface[] internalGetChildren() {
         return children;
     }
 
     @Override
-    public void internalSetChildren(NewName[] children) {
+    public void internalSetChildren(NameInterface[] children) {
         this.children = children;
     }
 

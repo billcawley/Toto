@@ -1,6 +1,6 @@
 package com.azquo.memorydb.core.namedata.implementation;
 
-import com.azquo.memorydb.core.NewName;
+import com.azquo.memorydb.core.NameInterface;
 import com.azquo.memorydb.core.Value;
 import com.azquo.memorydb.core.namedata.NameData;
 import com.azquo.memorydb.core.namedata.component.ChildrenSet;
@@ -16,7 +16,7 @@ public class DefaultDisplayNameValuesSetChildrenSet implements DefaultDisplayNam
 
     private volatile String defaultDisplayName;
     private volatile Set<Value> values;
-    private volatile Set<NewName> children;
+    private volatile Set<NameInterface> children;
 
     public DefaultDisplayNameValuesSetChildrenSet(String defaultDisplayName){
         this.defaultDisplayName = defaultDisplayName;
@@ -24,14 +24,14 @@ public class DefaultDisplayNameValuesSetChildrenSet implements DefaultDisplayNam
         children = Collections.newSetFromMap(new ConcurrentHashMap<>(ARRAYTHRESHOLD + 1));
     }
 
-    public DefaultDisplayNameValuesSetChildrenSet(String defaultDisplayName, Value[] values, Set<NewName> children) {
+    public DefaultDisplayNameValuesSetChildrenSet(String defaultDisplayName, Value[] values, Set<NameInterface> children) {
         this.defaultDisplayName = defaultDisplayName;
         this.values = Collections.newSetFromMap(new ConcurrentHashMap<>(ARRAYTHRESHOLD + 1));
         this.values.addAll(Arrays.asList(values));
         this.children = children;
     }
 
-    public DefaultDisplayNameValuesSetChildrenSet(String defaultDisplayName, Set<Value> values, NewName[] children) {
+    public DefaultDisplayNameValuesSetChildrenSet(String defaultDisplayName, Set<Value> values, NameInterface[] children) {
         this.defaultDisplayName = defaultDisplayName;
         this.values = values;
         this.children = Collections.newSetFromMap(new ConcurrentHashMap<>(ARRAYTHRESHOLD + 1));
@@ -49,7 +49,7 @@ public class DefaultDisplayNameValuesSetChildrenSet implements DefaultDisplayNam
     }
 
     @Override
-    public Set<NewName> internalGetChildren() {
+    public Set<NameInterface> internalGetChildren() {
         return children;
     }
 

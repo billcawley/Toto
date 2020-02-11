@@ -2,7 +2,7 @@ package com.azquo.memorydb.core.namedata.implementation;
 
 import com.azquo.StringLiterals;
 import com.azquo.memorydb.core.NameAttributes;
-import com.azquo.memorydb.core.NewName;
+import com.azquo.memorydb.core.NameInterface;
 import com.azquo.memorydb.core.namedata.NameData;
 import com.azquo.memorydb.core.namedata.component.Attributes;
 import com.azquo.memorydb.core.namedata.component.ChildrenArray;
@@ -13,19 +13,19 @@ import java.util.Collections;
 public class AttributesChildrenArray implements Attributes, ChildrenArray {
 
     private volatile NameAttributes nameAttributes;
-    private volatile NewName[] children;
+    private volatile NameInterface[] children;
 
     public AttributesChildrenArray(){
         nameAttributes = new NameAttributes();
-        children = new NewName[0];
+        children = new NameInterface[0];
     }
 
     public AttributesChildrenArray(NameAttributes nameAttributes){
         this.nameAttributes = nameAttributes;
-        children = new NewName[0];
+        children = new NameInterface[0];
     }
 
-    public AttributesChildrenArray(String defaultDisplayName, NewName[] children) throws Exception{
+    public AttributesChildrenArray(String defaultDisplayName, NameInterface[] children) throws Exception{
         this.nameAttributes = new NameAttributes(StringLiterals.DEFAULT_DISPLAY_NAME_AS_LIST, Collections.singletonList(defaultDisplayName));
         this.children = children;
     }
@@ -41,12 +41,12 @@ public class AttributesChildrenArray implements Attributes, ChildrenArray {
     }
 
     @Override
-    public NewName[] internalGetChildren() {
+    public NameInterface[] internalGetChildren() {
         return children;
     }
 
     @Override
-    public void internalSetChildren(NewName[] children) {
+    public void internalSetChildren(NameInterface[] children) {
         this.children = children;
     }
 

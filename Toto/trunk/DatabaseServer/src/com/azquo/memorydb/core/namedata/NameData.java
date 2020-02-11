@@ -22,7 +22,7 @@ Low level dealing with attributes (just default display name or more), values an
 
  */
 
-import com.azquo.memorydb.core.NewName;
+import com.azquo.memorydb.core.NameInterface;
 import com.azquo.memorydb.core.Value;
 
 import java.util.*;
@@ -69,24 +69,24 @@ public interface NameData {
         return false;
     }
 
-    default Collection<NewName> getChildren() {
+    default Collection<NameInterface> getChildren() {
         return Collections.emptyList();
     }
 
-    default boolean addToChildren(NewName name) throws Exception {
+    default boolean addToChildren(NameInterface name) throws Exception {
         throw new UnsupportedOperationException();
     }
 
-    default boolean removeFromChildren(NewName name) {
+    default boolean removeFromChildren(NameInterface name) {
         // as with values just do nothing, we have no children here
         return false;
     }
 
-    default NewName[] directArrayChildren() {
+    default NameInterface[] directArrayChildren() {
         return null;
     }
 
-    default Set<NewName> directSetChildren() {
+    default Set<NameInterface> directSetChildren() {
         return null;
     }
 
