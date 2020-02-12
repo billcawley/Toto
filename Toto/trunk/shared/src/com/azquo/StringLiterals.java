@@ -68,4 +68,6 @@ public class StringLiterals {
     public static final String REJECTEDBYUSER = "Rejected by user"; // a bit of a misnomer in that applies to e.g. files that have no data. todo?
     public static final String PARAMETERS = "Parameters";
     public static final String MANUALLYREJECTEDLINES = "Manually Rejected Lines";
+    public static final String ROWHEADING = "ROWHEADING";
+    public static final String COLUMNHEADING = "COLUMNHEADING";
 }
