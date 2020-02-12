@@ -1,10 +1,12 @@
 package com.azquo.spreadsheet;
 
+import com.azquo.StringLiterals;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseServer;
 import com.azquo.admin.user.UserChoice;
 import com.azquo.admin.user.UserChoiceDAO;
 import com.azquo.rmi.RMIClient;
+import com.azquo.spreadsheet.transport.FilterTriple;
 
 import java.util.*;
 
@@ -153,7 +155,10 @@ public class CommonReportUtils {
                     pos = pos + replacement.length();
 
                 } else {
-                    return "";//the choice is not yet set, so return nothing
+                    if (!userChoice.contains(StringLiterals.ROWHEADING)&& !userChoice.contains(StringLiterals.COLUMNHEADING)){
+                        return "";//the choice is not yet set, so return nothing
+                    }
+                    pos++;
                 }
                 pos = query.indexOf("[", pos);
 
@@ -162,6 +167,17 @@ public class CommonReportUtils {
 
         }
         return query.trim();
+    }
+
+    public static List<FilterTriple> getFilterListForQuery(LoggedInUser loggedInUser, String selectionList, String selectionName) throws Exception{
+        try {
+            return RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
+                    .getFilterListForQuery(loggedInUser.getDataAccessToken(), replaceUserChoicesInQuery(loggedInUser, selectionList), selectionName, loggedInUser.getUser().getEmail());
+        }catch (Exception e){
+            e.printStackTrace();
+
+        }
+        return null;
     }
 
     public static String resolveQuery(LoggedInUser loggedInUser, String query, List<List<String>> contextSource) {
