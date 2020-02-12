@@ -325,8 +325,7 @@ public class ExcelController {
             if (op.equals("getchoices")) {
                 // I'm going to surpress errors for the moment until I can work out how to display them in the Excel TS
                 try {
-                    List<FilterTriple> filterOptions = RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
-                            .getFilterListForQuery(loggedInUser.getDataAccessToken(), choice, chosen, loggedInUser.getUser().getEmail());//choice is the name of the range, chosen= the name of the choice cell (not its value as previously stated. I don't think anyway!)
+                    List<FilterTriple> filterOptions = CommonReportUtils.getFilterListForQuery(loggedInUser, choice, chosen);//choice is the name of the range, chosen= the name of the choice cell (not its value as previously stated. I don't think anyway!)
                     System.out.println("filter options size " + filterOptions.size());
                     return jacksonMapper.writeValueAsString(filterOptions);
                 } catch (Exception e) {

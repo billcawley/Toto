@@ -533,8 +533,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         listbox.setWidth("350px");
         listbox.appendChild(listhead);
         try {
-            List<FilterTriple> filterOptions = RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
-                    .getFilterListForQuery(loggedInUser.getDataAccessToken(), selectionList, selectionName, loggedInUser.getUser().getEmail());
+            List<FilterTriple> filterOptions = CommonReportUtils.getFilterListForQuery(loggedInUser, selectionList, selectionName);
             Set<Listitem> selectedItems = new HashSet<>();
             int index = 0;
             for (FilterTriple filterTriple : filterOptions) {
