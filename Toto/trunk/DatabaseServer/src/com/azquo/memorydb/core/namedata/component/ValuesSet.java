@@ -15,7 +15,7 @@ public interface ValuesSet extends NameData {
         return internalGetValues();
     }
 
-    default boolean addToValues(Value value, boolean backupRestore, boolean databaseIsLoading) {
+    default boolean addToValues(Value value, boolean ignored) {
         return internalGetValues().add(value);
     }
 

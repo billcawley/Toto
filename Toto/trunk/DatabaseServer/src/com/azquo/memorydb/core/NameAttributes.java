@@ -77,7 +77,7 @@ public class NameAttributes {
         return attributesAsMap;
     }
 
-    String getAttributesForFastStore() {
+    public String getAttributesForFastStore() {
         StringBuilder stringBuilder = new StringBuilder();
         for (int i = 0; i < attributeKeys.length; i++) {
             if (i != 0) {

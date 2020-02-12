@@ -41,7 +41,7 @@ public interface NameData {
 
     default void valueArrayCheck(){};
 
-    default boolean addToValues(Value value, boolean backupRestore, boolean databaseIsLoading) throws Exception {
+    default boolean addToValues(Value value, boolean ignoreArrayCheck) throws Exception {
         throw new UnsupportedOperationException();
     }
 
@@ -74,6 +74,15 @@ public interface NameData {
     }
 
     default boolean addToChildren(Name name) throws Exception {
+        throw new UnsupportedOperationException();
+    }
+
+    // to allow an optimiseation linking names, if the children are an array have the option to build it externally and jam it in
+    default boolean canSetArrayChildren() throws Exception {
+        return false;
+    }
+
+    default void setArrayChildren(Name[] names) throws Exception {
         throw new UnsupportedOperationException();
     }
 

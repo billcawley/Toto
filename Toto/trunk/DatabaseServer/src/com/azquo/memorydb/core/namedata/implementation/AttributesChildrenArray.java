@@ -51,17 +51,12 @@ public class AttributesChildrenArray implements Attributes, ChildrenArray {
 
     @Override
     public NameData getImplementationThatCanAddValue() {
-        return new AttributesValuesArrayChildrenArray(nameAttributes, children);
+        return new AttributesValuesArrayChildrenArray(nameAttributes, 0, children);
     }
 
     @Override
     public NameData getImplementationThatCanAddChild() {
         return canAddChild() ? this : new AttributesChildrenSet(nameAttributes, children);
-    }
-
-    @Override
-    public String getAttributesForFastStore() {
-        return null;
     }
 
 }

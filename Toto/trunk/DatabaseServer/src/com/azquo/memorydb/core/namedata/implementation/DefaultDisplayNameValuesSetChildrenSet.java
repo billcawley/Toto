@@ -63,9 +63,4 @@ public class DefaultDisplayNameValuesSetChildrenSet implements DefaultDisplayNam
         return new AttributesValuesSetChildrenSet(defaultDisplayName, values, children);
     }
 
-    @Override
-    public String getAttributesForFastStore() {
-        return null;
-    }
-
 }

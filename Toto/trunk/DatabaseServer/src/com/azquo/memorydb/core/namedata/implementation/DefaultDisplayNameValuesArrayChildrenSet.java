@@ -18,15 +18,15 @@ public class DefaultDisplayNameValuesArrayChildrenSet implements DefaultDisplayN
     private volatile Value[] values;
     private volatile Set<Name> children;
 
-    public DefaultDisplayNameValuesArrayChildrenSet(String defaultDisplayName){
+    public DefaultDisplayNameValuesArrayChildrenSet(String defaultDisplayName, int noValues){
         this.defaultDisplayName = defaultDisplayName;
-        values = new Value[0];
+        values = new Value[noValues];
         children = Collections.newSetFromMap(new ConcurrentHashMap<>(ARRAYTHRESHOLD + 1));// the way to get a thread safe set!
     }
 
-    public DefaultDisplayNameValuesArrayChildrenSet(String defaultDisplayName, Set<Name> children) {
+    public DefaultDisplayNameValuesArrayChildrenSet(String defaultDisplayName, int noValues, Set<Name> children) {
         this.defaultDisplayName = defaultDisplayName;
-        this.values = new Value[0];
+        this.values = new Value[noValues];
         this.children = children;
     }
 
@@ -70,11 +70,6 @@ public class DefaultDisplayNameValuesArrayChildrenSet implements DefaultDisplayN
     @Override
     public NameData getImplementationThatCanSetAttributesOtherThanDefaultDisplayName() throws Exception {
         return new AttributesValuesArrayChildrenSet(defaultDisplayName, values, children);
-    }
-
-    @Override
-    public String getAttributesForFastStore() {
-        return null;
     }
 
 }

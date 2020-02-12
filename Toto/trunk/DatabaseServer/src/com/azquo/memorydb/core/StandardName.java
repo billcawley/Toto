@@ -513,6 +513,18 @@ public final class StandardName extends Name {
         }
     }
 
+    public void addValuesToCollection(Collection<Value> values) {
+        if (valuesAsSet != null) {
+            values.addAll(valuesAsSet);
+        } else if (this.values.length > 0) {
+            Value[] refCopy = this.values; // in case values is swapped out while adding
+            // Intellij wants to change this I think it's a bit more efficient as it is, might look into this
+            for (Value v : refCopy) {
+                values.add(v);
+            }
+        }
+    }
+
     // we are now allowing a name to be in more than one top parent, hence the name change
 
     private static AtomicInteger findATopParentCount = new AtomicInteger(0);
@@ -617,19 +629,6 @@ public final class StandardName extends Name {
         }
         return Collections.unmodifiableSet(localReference);
     }
-
-    public void addValuesToCollection(Collection<Value> values) {
-        if (valuesAsSet != null) {
-            values.addAll(valuesAsSet);
-        } else if (this.values.length > 0) {
-            Value[] refCopy = this.values; // in case values is swapped out while adding
-            // Intellij wants to change this I think it's a bit more efficient as it is, might look into this
-            for (Value v : refCopy) {
-                values.add(v);
-            }
-        }
-    }
-
 
     // synchronized? Not sure if it matters, don't need immediate visibility and the cache read should (!) be thread safe.
     // The read uses synchronized to stop creating the cache more than necessary rather than to be totally up to date

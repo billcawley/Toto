@@ -43,17 +43,12 @@ public class DefaultDisplayNameChildrenSet implements DefaultDisplayName, Childr
 
     @Override
     public NameData getImplementationThatCanAddValue() {
-        return new DefaultDisplayNameValuesArrayChildrenSet(defaultDisplayName, children);
+        return new DefaultDisplayNameValuesArrayChildrenSet(defaultDisplayName, 0, children);
     }
 
     @Override
     public NameData getImplementationThatCanSetAttributesOtherThanDefaultDisplayName() throws Exception{
         return new AttributesChildrenSet(defaultDisplayName, children);
-    }
-
-    @Override
-    public String getAttributesForFastStore() {
-        return null;
     }
 
 }

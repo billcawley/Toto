@@ -14,9 +14,9 @@ public class AttributesValuesArray implements Attributes, ValuesArray {
     private volatile NameAttributes nameAttributes;
     private volatile Value[] values;
 
-    public AttributesValuesArray(NameAttributes nameAttributes){
+    public AttributesValuesArray(NameAttributes nameAttributes, int noValues){
         this.nameAttributes = nameAttributes;
-        values = new Value[0];
+        values = new Value[noValues];
     }
 
     public AttributesValuesArray(String defaultDisplayName, Value[] values) throws Exception {
@@ -52,11 +52,6 @@ public class AttributesValuesArray implements Attributes, ValuesArray {
     @Override
     public NameData getImplementationThatCanAddChild() {
         return new AttributesValuesArrayChildrenArray(nameAttributes, values);
-    }
-
-    @Override
-    public String getAttributesForFastStore() {
-        return null;
     }
 
 }

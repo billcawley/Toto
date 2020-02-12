@@ -3,6 +3,7 @@ package com.azquo.dataimport;
 import com.azquo.RowColumn;
 import com.azquo.spreadsheet.transport.HeadingWithInterimLookup;
 import com.azquo.util.CommandLineCalls;
+import net.lingala.zip4j.core.ZipFile;
 import org.apache.commons.lang.SystemUtils;
 import org.apache.log4j.Logger;
 import org.apache.poi.poifs.crypt.Decryptor;
@@ -14,6 +15,7 @@ import org.xml.sax.helpers.DefaultHandler;
 /*import org.zkoss.poi.poifs.crypt.Decryptor;
 import org.zkoss.poi.poifs.crypt.EncryptionInfo;
 import org.zkoss.poi.poifs.filesystem.POIFSFileSystem;*/
+import org.zeroturnaround.zip.ZipException;
 import org.zkoss.poi.ss.usermodel.BuiltinFormats;
 import org.zkoss.poi.ss.usermodel.DataFormatter;
 import org.zkoss.poi.xssf.model.StylesTable;
@@ -176,7 +178,25 @@ public final class ImportService {
     private static List<UploadedFile> checkForCompressionAndImport(final LoggedInUser loggedInUser, final UploadedFile uploadedFile, HttpSession session, PendingUploadConfig pendingUploadConfig, HashMap<String, ImportTemplateData> templateCache) throws Exception {
         List<UploadedFile> processedUploadedFiles = new ArrayList<>();
         if (uploadedFile.getFileName().toLowerCase().endsWith(".zip") || uploadedFile.getFileName().toLowerCase().endsWith(".7z")) {
-            ZipUtil.explode(new File(uploadedFile.getPath()));
+            try{
+                if (uploadedFile.getParameter("password") != null){
+                    File theFile = new File(uploadedFile.getPath());
+                    ZipFile zf = new ZipFile(theFile);
+                    if (zf.isEncrypted()){
+                        // do what ziputil explode does, extract into a directory of the same name
+                        File tempFile = org.zeroturnaround.zip.commons.FileUtils.getTempFileFor(theFile);
+                        org.zeroturnaround.zip.commons.FileUtils.moveFile(theFile, tempFile);
+                        zf = new ZipFile(tempFile);
+                        zf.setPassword(uploadedFile.getParameter("password"));
+                        zf.extractAll(uploadedFile.getPath());
+                    } else {
+                        ZipUtil.explode(new File(uploadedFile.getPath()));
+                    }
+                } else {
+                    ZipUtil.explode(new File(uploadedFile.getPath()));
+                }
+            } catch (ZipException ze){ // try for decrypt
+            }
             // after exploding the original file is replaced with a directory
             File zipDir = new File(uploadedFile.getPath());
             zipDir.deleteOnExit();
@@ -338,7 +358,8 @@ public final class ImportService {
                     POIFSFileSystem fileSystem = new POIFSFileSystem(new FileInputStream(uploadedFile.getPath()));
                     EncryptionInfo info = new EncryptionInfo(fileSystem);
                     Decryptor decryptor = Decryptor.getInstance(info);
-                    if (!decryptor.verifyPassword("b0702")) { // currently hardcoded, this will change
+                    String password = uploadedFile.getParameter("password") != null ? uploadedFile.getParameter("password") : "b0702"; // defaulting to an old Hanover password. Maybe zap . . .
+                    if (!decryptor.verifyPassword(password)) { // currently hardcoded, this will change
                         throw new RuntimeException("Unable to process: document is encrypted.");
                     }
                     InputStream dataStream = decryptor.getDataStream(fileSystem);

@@ -53,9 +53,4 @@ public class AttributesValuesSet implements Attributes, ValuesSet {
         return new AttributesValuesSetChildrenArray(nameAttributes, values);
     }
 
-    @Override
-    public String getAttributesForFastStore() {
-        return null;
-    }
-
 }

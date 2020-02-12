@@ -31,17 +31,12 @@ public class Attributes implements com.azquo.memorydb.core.namedata.component.At
 
     @Override
     public NameData getImplementationThatCanAddValue() {
-        return new AttributesValuesArray(nameAttributes);
+        return new AttributesValuesArray(nameAttributes, 0);
     }
 
     @Override
     public NameData getImplementationThatCanAddChild() {
         return new AttributesChildrenArray(nameAttributes);
-    }
-
-    @Override
-    public String getAttributesForFastStore() {
-        return null;
     }
 
 }

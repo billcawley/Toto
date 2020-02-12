@@ -17,15 +17,15 @@ public class AttributesValuesArrayChildrenArray implements Attributes, ValuesArr
     private volatile Value[] values;
     private volatile Name[] children;
 
-    public AttributesValuesArrayChildrenArray(NameAttributes nameAttributes){
+    public AttributesValuesArrayChildrenArray(NameAttributes nameAttributes, int noValues){
         this.nameAttributes = nameAttributes;
-        values = new Value[0];
+        values = new Value[noValues];
         children = new Name[0];
     }
 
-    public AttributesValuesArrayChildrenArray(NameAttributes nameAttributes, Name[] children) {
+    public AttributesValuesArrayChildrenArray(NameAttributes nameAttributes, int noValues, Name[] children) {
         this.nameAttributes = nameAttributes;
-        values = new Value[0];
+        values = new Value[noValues];
         this.children = children;
     }
 
@@ -79,11 +79,6 @@ public class AttributesValuesArrayChildrenArray implements Attributes, ValuesArr
     @Override
     public NameData getImplementationThatCanAddChild() {
         return canAddChild() ? this : new AttributesValuesArrayChildrenSet(nameAttributes, values, children);
-    }
-
-    @Override
-    public String getAttributesForFastStore() {
-        return null;
     }
 
 }

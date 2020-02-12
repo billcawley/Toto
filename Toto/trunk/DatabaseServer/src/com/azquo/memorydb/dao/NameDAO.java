@@ -3,6 +3,7 @@ package com.azquo.memorydb.dao;
 import com.azquo.ThreadPools;
 import com.azquo.memorydb.core.AzquoMemoryDB;
 import com.azquo.memorydb.core.Name;
+import com.azquo.memorydb.core.NewName;
 import com.azquo.memorydb.core.StandardName;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.RowMapper;
@@ -38,8 +39,10 @@ public class NameDAO {
         @Override
         public Name mapRow(final ResultSet rs, final int row) {
             try {
-                azquoMemoryDB.nameChildrenLoadingCache.put(rs.getInt(FastDAO.ID), rs.getBytes(CHILDREN));
+                byte[] bytes = rs.getBytes(CHILDREN);
+                azquoMemoryDB.nameChildrenLoadingCache.put(rs.getInt(FastDAO.ID), bytes);
                 return new StandardName(azquoMemoryDB, rs.getInt(FastDAO.ID), rs.getInt(PROVENANCEID), rs.getString(ATTRIBUTES), rs.getInt(NOPARENTS), rs.getInt(NOVALUES));
+                //return new NewName(azquoMemoryDB, rs.getInt(FastDAO.ID), rs.getInt(PROVENANCEID), rs.getString(ATTRIBUTES), rs.getInt(NOPARENTS), rs.getInt(NOVALUES), bytes.length/4);
             } catch (Exception e) {
                 e.printStackTrace();
             }

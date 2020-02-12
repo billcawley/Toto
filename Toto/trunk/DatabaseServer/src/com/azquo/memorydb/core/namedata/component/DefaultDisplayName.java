@@ -54,6 +54,16 @@ public interface DefaultDisplayName extends NameData {
         return null;
     }
 
+    default String getAttributesForFastStore() {
+        StringBuilder stringBuilder = new StringBuilder();
+        if (internalGetDefaultDisplayName() != null){
+            stringBuilder.append(StringLiterals.DEFAULT_DISPLAY_NAME);
+            stringBuilder.append(StringLiterals.ATTRIBUTEDIVIDER);
+            stringBuilder.append(internalGetDefaultDisplayName());
+        }
+        return stringBuilder.toString();
+    }
+
     String internalGetDefaultDisplayName();
 
     void internalSetDefaultDisplayName(String defaultDisplayName);

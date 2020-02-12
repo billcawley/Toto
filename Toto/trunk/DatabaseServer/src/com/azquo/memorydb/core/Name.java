@@ -11,7 +11,9 @@ import java.util.Set;
 
 Created by EFC 10/02/2020
 
-I need a superclass while there are multiple implementations of Name. There may be a case for l
+I need a superclass while there are multiple implementations of Name. There may be a case for leaving this here even after the old name is zapped
+
+Also should provenance and parents management be in here?
 
  */
 

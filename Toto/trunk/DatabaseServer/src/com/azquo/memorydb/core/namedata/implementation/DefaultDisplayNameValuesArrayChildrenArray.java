@@ -13,15 +13,15 @@ public class DefaultDisplayNameValuesArrayChildrenArray implements DefaultDispla
     private volatile Value[] values;
     private volatile Name[] children;
 
-    public DefaultDisplayNameValuesArrayChildrenArray(String defaultDisplayName){
+    public DefaultDisplayNameValuesArrayChildrenArray(String defaultDisplayName, int noValues){
         this.defaultDisplayName = defaultDisplayName;
-        values = new Value[0];
+        values = new Value[noValues];
         children = new Name[0];
     }
 
-    public DefaultDisplayNameValuesArrayChildrenArray(String defaultDisplayName, Name[] children) {
+    public DefaultDisplayNameValuesArrayChildrenArray(String defaultDisplayName, int noValues, Name[] children) {
         this.defaultDisplayName = defaultDisplayName;
-        this.values = new Value[0];
+        this.values = new Value[noValues];
         this.children = children;
     }
 
@@ -74,11 +74,6 @@ public class DefaultDisplayNameValuesArrayChildrenArray implements DefaultDispla
     @Override
     public NameData getImplementationThatCanSetAttributesOtherThanDefaultDisplayName() throws Exception {
         return new AttributesValuesArrayChildrenArray(defaultDisplayName, values, children);
-    }
-
-    @Override
-    public String getAttributesForFastStore() {
-        return null;
     }
 
 }

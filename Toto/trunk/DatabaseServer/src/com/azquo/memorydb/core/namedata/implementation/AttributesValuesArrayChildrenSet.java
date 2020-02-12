@@ -20,15 +20,15 @@ public class AttributesValuesArrayChildrenSet implements Attributes, ValuesArray
     private volatile Value[] values;
     private volatile Set<Name> children;
 
-    public AttributesValuesArrayChildrenSet(NameAttributes nameAttributes){
+    public AttributesValuesArrayChildrenSet(NameAttributes nameAttributes, int noValues){
         this.nameAttributes = nameAttributes;
-        values = new Value[0];
+        values = new Value[noValues];
         children = Collections.newSetFromMap(new ConcurrentHashMap<>(ARRAYTHRESHOLD + 1));// the way to get a thread safe set!
     }
 
-    public AttributesValuesArrayChildrenSet(NameAttributes nameAttributes, Set<Name> children) {
+    public AttributesValuesArrayChildrenSet(NameAttributes nameAttributes, int noValues, Set<Name> children) {
         this.nameAttributes = nameAttributes;
-        values = new Value[0];
+        values = new Value[noValues];
         this.children = children;
     }
 
@@ -73,11 +73,6 @@ public class AttributesValuesArrayChildrenSet implements Attributes, ValuesArray
     @Override
     public NameData getImplementationThatCanAddValue() {
         return values.length < ARRAYTHRESHOLD ? this : new AttributesValuesSetChildrenSet(nameAttributes, values, children);
-    }
-
-    @Override
-    public String getAttributesForFastStore() {
-        return null;
     }
 
 }

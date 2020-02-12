@@ -75,9 +75,4 @@ public class AttributesValuesSetChildrenArray implements Attributes, ValuesSet, 
         return canAddChild() ? this : new AttributesValuesSetChildrenSet(nameAttributes, values, children);
     }
 
-    @Override
-    public String getAttributesForFastStore() {
-        return null;
-    }
-
 }

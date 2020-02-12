@@ -10,13 +10,9 @@ public class DefaultDisplayNameValuesArray implements DefaultDisplayName, Values
     private volatile String defaultDisplayName;
     private volatile Value[] values;
 
-    public DefaultDisplayNameValuesArray(){
-        defaultDisplayName = null;
-        values = new Value[0];
-    }
-
-    public DefaultDisplayNameValuesArray(String defaultDisplayName) {
+    public DefaultDisplayNameValuesArray(String defaultDisplayName, int noValues) {
         this.defaultDisplayName = defaultDisplayName;
+        values = new Value[noValues];
     }
 
     @Override
@@ -52,11 +48,6 @@ public class DefaultDisplayNameValuesArray implements DefaultDisplayName, Values
     @Override
     public NameData getImplementationThatCanSetAttributesOtherThanDefaultDisplayName() throws Exception{
         return new AttributesValuesArray(defaultDisplayName, values);
-    }
-
-    @Override
-    public String getAttributesForFastStore() {
-        return null;
     }
 
 }

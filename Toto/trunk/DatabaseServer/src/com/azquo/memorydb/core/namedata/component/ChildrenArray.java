@@ -51,6 +51,16 @@ public interface ChildrenArray extends NameData {
         return internalGetChildren().length < ARRAYTHRESHOLD;
     }
 
+    default void setArrayChildren(Name[] children) {
+        internalSetChildren(children);
+    }
+
+    default boolean canSetArrayChildren() {
+        return true;
+    }
+
+
+
     // must be implemented by the "roll your own" class
 
     Name[] internalGetChildren();

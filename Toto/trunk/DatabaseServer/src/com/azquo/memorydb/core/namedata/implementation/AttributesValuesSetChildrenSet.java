@@ -65,9 +65,4 @@ public class AttributesValuesSetChildrenSet implements Attributes, ValuesSet, Ch
         return values;
     }
 
-    @Override
-    public String getAttributesForFastStore() {
-        return null;
-    }
-
 }

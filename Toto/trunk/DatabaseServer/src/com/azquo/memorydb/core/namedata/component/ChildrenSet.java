@@ -16,7 +16,7 @@ public interface ChildrenSet extends NameData {
         return internalGetChildren();
     }
 
-    default boolean addToChildren(Name name, boolean backupRestore) throws Exception {
+    default boolean addToChildren(Name name) throws Exception {
         return internalGetChildren().add(name);
     }
 

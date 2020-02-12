@@ -51,9 +51,4 @@ public class DefaultDisplayNameValuesSet implements DefaultDisplayName, ValuesSe
         return new AttributesValuesSet(defaultDisplayName, values);
     }
 
-    @Override
-    public String getAttributesForFastStore() {
-        return null;
-    }
-
 }

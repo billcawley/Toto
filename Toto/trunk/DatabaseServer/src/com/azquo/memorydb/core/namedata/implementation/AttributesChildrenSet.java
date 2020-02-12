@@ -50,12 +50,7 @@ public class AttributesChildrenSet implements Attributes, ChildrenSet {
 
     @Override
     public NameData getImplementationThatCanAddValue() {
-        return new AttributesValuesArrayChildrenSet(nameAttributes, children);
-    }
-
-    @Override
-    public String getAttributesForFastStore() {
-        return null;
+        return new AttributesValuesArrayChildrenSet(nameAttributes, 0, children);
     }
 
 }

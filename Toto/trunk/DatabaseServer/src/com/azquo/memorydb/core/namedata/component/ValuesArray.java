@@ -29,11 +29,15 @@ public interface ValuesArray extends NameData {
         internalSetValues(newList.toArray(new Value[0]));
     }
 
-    default boolean addToValues(Value value, boolean backupRestore, boolean databaseIsLoading) throws Exception {
+    // a not on the optmiseations - it's pointless to be reallocating arrays when we know how big they're going to be as we do for both names and values attached to a name
+    // BUT whereas the names are loaded in one go meaning a simple call to set the array will do the values are done in bits
+    // hence code like this which allows the arrray which is created to the correct size to be
+
+    default boolean addToValues(Value value, boolean ignoreArrayCheck) throws Exception {
         // it's this contains expense that means we should stop using ArrayList over a certain size.
         // If loading skip the duplication check, we assume data integrity, asList an attempt to reduce garbage, I think it's object is lighter than an ArrayList. It won't be hit during loading but will during importing,
         final Value[] values = internalGetValues(); // final helpful, means I won't do something pointless
-        if (databaseIsLoading || !Arrays.asList(values).contains(value)) {
+        if (ignoreArrayCheck || !Arrays.asList(values).contains(value)) {
             if (values.length >= NameData.ARRAYTHRESHOLD) { // code should check first
                 throw new UnsupportedOperationException();
             } else { // ok we have to switch a new array in
@@ -41,9 +45,9 @@ public interface ValuesArray extends NameData {
                 // new code to deal with arrays assigned to the correct size on loading
                 // don't trust no_values, compensate and log
                 if (values.length != 0 && values[values.length - 1] == null) {
-                    if (!databaseIsLoading) {
+                    if (!ignoreArrayCheck) {
+                        System.out.println("empty space in values after the database has finished loading - no_values wrong on name " + getDefaultDisplayName());
                         /* todo - how to deal with this? Do we have to pass a reference to azquomemorydb?
-                        System.out.println("empty space in values after the database has finished loading - no_values wrong on name id " + getId() + " " + getDefaultDisplayName());
                         getAzquoMemoryDB().forceNameNeedsPersisting(this);*/
                     }
                     // If there's a mismatch and noValues is too small it just won't be added to the list. But if noValues isn't correct things have already gone wrong
@@ -54,9 +58,9 @@ public interface ValuesArray extends NameData {
                         }
                     }
                 } else { // normal modification
-                    if (databaseIsLoading) {
+                    if (ignoreArrayCheck) {
+                        System.out.println("while loading ran out of values space - no_values wrong on name " + getDefaultDisplayName());
                         /* todo - how to deal with this? Do we have to pass a reference to azquomemorydb?
-                        System.out.println("while loading ran out of values space - no_values wrong on name id " + getId() + " " + getDefaultDisplayName());
                         getAzquoMemoryDB().forceNameNeedsPersisting(this);
                          */
                     }

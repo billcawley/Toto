@@ -22,7 +22,7 @@ public class DefaultDisplayName implements com.azquo.memorydb.core.namedata.comp
 
     @Override
     public NameData getImplementationThatCanAddValue() {
-        return new DefaultDisplayNameValuesArray(defaultDisplayName);
+        return new DefaultDisplayNameValuesArray(defaultDisplayName, 0);
     }
 
     @Override
@@ -33,11 +33,6 @@ public class DefaultDisplayName implements com.azquo.memorydb.core.namedata.comp
     @Override
     public NameData getImplementationThatCanSetAttributesOtherThanDefaultDisplayName() throws Exception{
         return new Attributes(defaultDisplayName);
-    }
-
-    @Override
-    public String getAttributesForFastStore() {
-        return null;
     }
 
 }

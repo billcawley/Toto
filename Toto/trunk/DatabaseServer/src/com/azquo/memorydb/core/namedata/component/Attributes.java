@@ -87,6 +87,9 @@ public interface Attributes extends NameData {
         return this;
     }
 
+    default String getAttributesForFastStore() {
+        return internalGetNameAttributes().getAttributesForFastStore();
+    }
 
     // must be implemented by the "roll your own" class
 

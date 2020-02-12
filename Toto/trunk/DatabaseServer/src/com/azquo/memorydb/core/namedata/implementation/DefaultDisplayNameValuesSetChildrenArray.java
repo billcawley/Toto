@@ -72,9 +72,4 @@ public class DefaultDisplayNameValuesSetChildrenArray implements DefaultDisplayN
         return new AttributesValuesSetChildrenArray(defaultDisplayName, values, children);
     }
 
-    @Override
-    public String getAttributesForFastStore() {
-        return null;
-    }
-
 }

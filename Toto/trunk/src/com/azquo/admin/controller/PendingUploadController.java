@@ -175,6 +175,8 @@ public class PendingUploadController {
                 String month;
                 String importVersion;
                 String[] fileSplit = mainFileName.split(" ");
+                String password = null; // password for excel files
+
                 if (fileSplit.length < 3) {
                     model.put("error", "Filename in unknown format.");
                     return "pendingupload";
@@ -183,6 +185,13 @@ public class PendingUploadController {
                     month = fileSplit[2];
                     if (month.contains(".")) {
                         month = month.substring(0, month.indexOf("."));
+                    }
+                }
+                // we say password can be at the end
+                if (fileSplit.length > 3){
+                    password = fileSplit[fileSplit.length - 1];
+                    if (password.contains(".")) {
+                        password = password.substring(0, password.indexOf("."));
                     }
                 }
                 model.put("month", month);
@@ -242,6 +251,9 @@ public class PendingUploadController {
                 final HashMap<String, String> params = new HashMap<>();
                 params.put(ImportService.IMPORTVERSION, importVersion);
                 params.put("month", month);
+                if (password != null){
+                    params.put("password", password);
+                }
 
                 Map<String, Map<String, String>> lookupValuesForFiles = null;
                 List<String> files = new ArrayList<>();
