@@ -308,7 +308,7 @@ class AzquoMemoryDBTransport {
         int namesWithSetChildren = 0;
         int totalNameCount = azquoMemoryDB.getAllNames().size();
         Map<List<Name>, Name> existingParents = HashObjObjMaps.newMutableMap();;
-        for (Name n : azquoMemoryDB.getAllNames()){
+        /*for (Name n : azquoMemoryDB.getAllNames()){
             if (n.getDefaultDisplayName() != null && n.getAttributeKeys().size() == 1) {
                 namesWithOnlyDefaultDisplayName++;
             } else { // I don't think it can be 0
@@ -342,7 +342,7 @@ class AzquoMemoryDBTransport {
                     existingParents.put(parents, n);
                 }
             }*/
-        }
+        //}
         existingParents = null;
         if (totalNameCount > 0){
 /*            List<Map.Entry<List<Name>, AtomicInteger>> toSort = new ArrayList<>(parentsTrack.entrySet());
@@ -361,6 +361,7 @@ class AzquoMemoryDBTransport {
                 }
                 count++;
             }*/
+/*
             System.out.println("namesWithOnlyDefaultDisplayName : " + nf.format(namesWithOnlyDefaultDisplayName) + ", " + nf.format((100*namesWithOnlyDefaultDisplayName)/totalNameCount) + "%");
             System.out.println("namesRequiringAttributes : " + nf.format(namesRequiringAttributes) + ", " + nf.format((100*namesRequiringAttributes)/totalNameCount) + "%");
             System.out.println("namesWithOnlyOneParent : " + nf.format(namesWithOnlyOneParent) + ", " + nf.format((100*namesWithOnlyOneParent)/totalNameCount) + "%");
@@ -370,7 +371,7 @@ class AzquoMemoryDBTransport {
             System.out.println("namesWithSetValues : " + nf.format(namesWithSetValues) + ", " + nf.format((100*namesWithSetValues)/totalNameCount) + "%");
             System.out.println("namesWithNoChildremn : " + nf.format(namesWithNoChildremn) + ", " + nf.format((100*namesWithNoChildremn)/totalNameCount) + "%");
             System.out.println("namesWithArrayChildren : " + nf.format(namesWithArrayChildren) + ", " + nf.format((100*namesWithArrayChildren)/totalNameCount) + "%");
-            System.out.println("namesWithSetChildren : " + nf.format(namesWithSetChildren) + ", " + nf.format((100*namesWithSetChildren)/totalNameCount) + "%");
+            System.out.println("namesWithSetChildren : " + nf.format(namesWithSetChildren) + ", " + nf.format((100*namesWithSetChildren)/totalNameCount) + "%");*/
         }
         /*
         Risk solutions example
