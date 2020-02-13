@@ -36,13 +36,14 @@ def fileProcess(Object[] args) {
                 println("read line " + line)
                 StringTokenizer st = new StringTokenizer(line, "\t");
                 int colNum = 0;
+                boolean switched = false;
                 while (st.hasMoreTokens()){
                     String col = st.nextToken().toLowerCase();
                     if (col.equals("agmt_num")){
                        topLine = lineNo;
                        agreementCol = colNum
                     }
-                    if (col.equals("tran_date") || col.equals("trans_date")){
+                    if (col.equals("tran_date") || col.equals("trans_date") && !switched){
                         Map<String, String> newparams = new HashMap<>(uploadedFile.getParameters());
                         // this is a template switch, todo . . . .
                         println("found Tran_Date");
@@ -59,10 +60,11 @@ def fileProcess(Object[] args) {
                         expDateCol = colNum;
                     }
                     if (col.equals("contract_exp_date")){
+                        switched = true;
                         expDateCol = colNum;
                         Map<String, String> newparams = new HashMap<>(uploadedFile.getParameters());
                         // this is a template switch, todo . . . .
-                        println("contract_exp_date");
+                        println("contract_exp_date, AllRisksPremium3");
                         newparams.put("importversion", "AllRisksPremium3"); // new version all risks premiums Jan 2020 data
                         uploadedFile.setParameters(newparams);
                     }
