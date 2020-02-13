@@ -273,7 +273,9 @@ public class ChoicesService {
 
                 for (String choiceName : choicesSet.keySet()){
                     if (!choicesSet.get(choiceName).equals(userChoices.get(choiceName))){
+                        System.out.println(choiceName + " " + choicesSet.get(choiceName) + " doesn't match previous set choice " + userChoices.get(choiceName) + " resolve again");
                         SpreadsheetService.setUserChoice(loggedInUser,choiceName,choicesSet.get(choiceName));
+                        userChoices.put(choiceName,choicesSet.get(choiceName)); // update the map also or we'll keep looping
                         resolveChoices = true;
                     }
                 }
