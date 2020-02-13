@@ -55,7 +55,7 @@ def fileProcess(Object[] args) {
                     if (col.equals("written_prem")){
                         contractPremCol = colNum
                     }
-                    if (col.equals("exp_date")){
+                    if (col.equals("exp_date") || col.equals("contract_exp_date")){
                         expDateCol = colNum;
                     }
                     colNum++;
