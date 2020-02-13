@@ -55,8 +55,12 @@ def fileProcess(Object[] args) {
                     if (col.equals("written_prem")){
                         contractPremCol = colNum
                     }
-                    if (col.equals("exp_date") || col.equals("contract_exp_date")){
+                    if (col.equals("exp_date")){
                         expDateCol = colNum;
+                    }
+                    if (col.equals("contract_exp_date")){
+                        expDateCol = colNum;
+                        newparams.put("importversion", "AllRisksPremium3"); // new version all risks premiums Jan 2020 data
                     }
                     colNum++;
                 }
