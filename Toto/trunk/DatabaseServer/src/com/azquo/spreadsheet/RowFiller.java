@@ -23,6 +23,9 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Callable interface sorts the memory "happens before" using future gets which runnable did not guarantee I don't think (though it did work).
  */
 class RowFiller implements Callable<List<AzquoCell>> {
+
+    static volatile long lastErrorPrintMillis = 0;
+
     private final int row;
     private final List<List<DataRegionHeading>> headingsForEachColumn;
     private final List<List<DataRegionHeading>> headingsForEachRow;
@@ -67,8 +70,11 @@ class RowFiller implements Callable<List<AzquoCell>> {
             }
             return returnRow;
         } catch (Exception e) {
-            System.out.println("in row filler, tostring : " + toString());
-            e.printStackTrace();
+            if (lastErrorPrintMillis < (System.currentTimeMillis() - (1_000 * 10))){ // only log this kind of error once every 10 seconds, it can cause havok!
+                lastErrorPrintMillis = System.currentTimeMillis();
+                System.out.println("in row filler, tostring : " + toString());
+                e.printStackTrace();
+            }
             throw e;
         }
     }

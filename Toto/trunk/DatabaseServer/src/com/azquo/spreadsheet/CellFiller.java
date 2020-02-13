@@ -16,6 +16,9 @@ import java.util.concurrent.atomic.AtomicInteger;
  * On Damart for example we had 26*9 taking a while and it was reasonable to assume that rows were not even in terms of processing required
  */
 class CellFiller implements Callable<AzquoCell> {
+
+    static volatile long lastErrorPrintMillis = 0;
+
     private final int row;
     private final int col;
     private final List<DataRegionHeading> headingsForColumn;
@@ -58,7 +61,10 @@ class CellFiller implements Callable<AzquoCell> {
             }
             return azquoCell;
         } catch (Exception e){
-            e.printStackTrace();
+            if (lastErrorPrintMillis < (System.currentTimeMillis() - (1_000 * 10))){ // only log this kind of error once every 10 seconds, it can cause havok!
+                lastErrorPrintMillis = System.currentTimeMillis();
+                e.printStackTrace();
+            }
             throw e;
         }
     }

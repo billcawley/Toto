@@ -852,8 +852,8 @@ But can use a library?
                     if (parents.size()==1){
                         Name possibleParent = parents.iterator().next();
                         attValue = possibleParent.getDefaultDisplayName();
-                        if (attValue.equals(attribute)){
-                                attValue = n.getDefaultDisplayName();
+                        if (attValue != null && attValue.equals(attribute)){
+                            attValue = n.getDefaultDisplayName();
                          }
                     }
                 }
