@@ -60,7 +60,11 @@ def fileProcess(Object[] args) {
                     }
                     if (col.equals("contract_exp_date")){
                         expDateCol = colNum;
+                        Map<String, String> newparams = new HashMap<>(uploadedFile.getParameters());
+                        // this is a template switch, todo . . . .
+                        println("contract_exp_date");
                         newparams.put("importversion", "AllRisksPremium3"); // new version all risks premiums Jan 2020 data
+                        uploadedFile.setParameters(newparams);
                     }
                     colNum++;
                 }
