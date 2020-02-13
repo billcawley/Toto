@@ -73,7 +73,8 @@ def fileProcess(Object[] args) {
                 }
             } else if (agreementCol >= 0) { // ok we're into data
                 if (lineNo == topLine + 1) {
-                    if (!uploadedFile.getParameter("importversion").equals("AllRisksPremium2") &&  agreementCol >= 0 && line.size() > agreementCol && line[agreementCol] != 'B') {
+                    if (!uploadedFile.getParameter("importversion").equals("AllRisksPremium2") &&
+                            !uploadedFile.getParameter("importversion").equals("AllRisksPremium3") &&  agreementCol >= 0 && line.size() > agreementCol && line[agreementCol] != 'B') {
                         Map<String, String> newparams = new HashMap<>(uploadedFile.getParameters());
                         // this is a template switch, todo . . . .
                         newparams.put("importversion", "AllRisksPremium1");
