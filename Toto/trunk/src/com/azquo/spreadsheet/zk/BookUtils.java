@@ -340,7 +340,12 @@ java.lang.IllegalStateException: is ERROR, not the one of [STRING, BLANK]
     }
 
     public static List<List<String>> replaceUserChoicesInRegionDefinition(LoggedInUser loggedInUser, SName rangeName){
-        List<List<String>> region = BookUtils.nameToStringLists(rangeName);
+        return replaceUserChoicesInRegionDefinition(loggedInUser,rangeName,null,0,0);
+    }
+
+
+        public static List<List<String>> replaceUserChoicesInRegionDefinition(LoggedInUser loggedInUser, SName rangeName, SName repeatRegion, int rowOffset, int colOffset){
+        List<List<String>> region = BookUtils.nameToStringLists(rangeName, repeatRegion, rowOffset, colOffset);
         for (int row=0;row < region.size();row++){
             for(int col=0;col < region.get(row).size();col++){
                 region.get(row).set(col, CommonReportUtils.replaceUserChoicesInQuery(loggedInUser,region.get(row).get(col)));
