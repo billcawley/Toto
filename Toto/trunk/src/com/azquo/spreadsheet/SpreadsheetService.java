@@ -182,14 +182,18 @@ public class SpreadsheetService {
         }
         choiceName = choiceName.replace(" ","");
         UserChoice userChoice = UserChoiceDAO.findForUserIdAndChoice(userId, choiceName);
-        if (choiceValue != null && choiceValue.length() > 0 && (userChoice == null || !userChoice.getChoiceValue().equalsIgnoreCase(choiceValue))) {
-            if (userChoice == null) {
+        if (choiceValue != null && choiceValue.length() > 0) {
+             if (userChoice == null) {
                 userChoice = new UserChoice(0, userId, choiceName, choiceValue, LocalDateTime.now());
                 UserChoiceDAO.store(userChoice);
             } else {
+                if (userChoice.getChoiceValue().equalsIgnoreCase(choiceValue)){
+                   return;
+                }
                 userChoice.setChoiceValue(choiceValue);
                 userChoice.setTime(LocalDateTime.now());
                 UserChoiceDAO.store(userChoice);
+
             }
             //obtain a list of definitions that include the choice name in square brackets - to create new temporary sets
             List<String> dependentNames = CommonReportUtils.getDropdownListForQuery(loggedInUser, StringLiterals.DEFINITION+ StringLiterals.languageIndicator+"[" + choiceName);
