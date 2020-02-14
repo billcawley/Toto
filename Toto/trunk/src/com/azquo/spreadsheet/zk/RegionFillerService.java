@@ -485,9 +485,9 @@ class RegionFillerService {
         // hence the offset being passed to the name to string lists
         int colOffset = repeatRegionWidth * repeatColumn;
         int rowOffset = repeatRegionHeight * repeatRow;
-        List<List<String>> rowHeadingList = BookUtils.nameToStringLists(loggedInUser, rowHeadingDescription, repeatRegion, rowOffset, colOffset);
-        List<List<String>> contextList = BookUtils.nameToStringLists(loggedInUser,contextDescription, repeatRegion, rowOffset, colOffset);
-        List<List<String>> columnHeadingList = BookUtils.nameToStringLists(loggedInUser, columnHeadingsDescription, repeatRegion, rowOffset, colOffset);
+        List<List<String>> rowHeadingList = BookUtils.nameToStringLists(rowHeadingDescription, repeatRegion, rowOffset, colOffset);
+        List<List<String>> contextList = BookUtils.nameToStringLists(contextDescription, repeatRegion, rowOffset, colOffset);
+        List<List<String>> columnHeadingList = BookUtils.nameToStringLists(columnHeadingsDescription, repeatRegion, rowOffset, colOffset);
         CellRegion displayDataRegion = new CellRegion(rootRow + (repeatRegionHeight * repeatRow) + repeatDataRowOffset, rootCol + (repeatRegionWidth * repeatColumn) + repeatDataColumnOffset
                 , rootRow + (repeatRegionHeight * repeatRow) + repeatDataLastRowOffset, rootCol + (repeatRegionWidth * repeatColumn) + repeatDataLastColumnOffset);
 
@@ -558,9 +558,9 @@ class RegionFillerService {
         // hence the offset being passed to the name to string lists
         int colOffset = repeatRegionWidth * repeatColumn;
         int rowOffset = repeatRegionHeight * repeatRow;
-        List<List<String>> rowHeadingList = BookUtils.nameToStringLists(loggedInUser, rowHeadingDescription, repeatRegion, rowOffset, colOffset);
-        List<List<String>> contextList = BookUtils.nameToStringLists(loggedInUser,contextDescription, repeatRegion, rowOffset, colOffset);
-        List<List<String>> columnHeadingList = BookUtils.nameToStringLists(loggedInUser,columnHeadingsDescription, repeatRegion, rowOffset, colOffset);
+        List<List<String>> rowHeadingList = BookUtils.nameToStringLists(rowHeadingDescription, repeatRegion, rowOffset, colOffset);
+        List<List<String>> contextList = BookUtils.nameToStringLists(contextDescription, repeatRegion, rowOffset, colOffset);
+        List<List<String>> columnHeadingList = BookUtils.nameToStringLists(columnHeadingsDescription, repeatRegion, rowOffset, colOffset);
         CellRegion displayDataRegion = new CellRegion(rootRow + (repeatRegionHeight * repeatRow) + repeatDataRowOffset, rootCol + (repeatRegionWidth * repeatColumn) + repeatDataColumnOffset
                 , rootRow + (repeatRegionHeight * repeatRow) + repeatDataLastRowOffset, rootCol + (repeatRegionWidth * repeatColumn) + repeatDataLastColumnOffset);
 

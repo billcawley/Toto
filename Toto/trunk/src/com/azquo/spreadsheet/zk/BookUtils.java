@@ -30,11 +30,11 @@ import java.util.*;
  */
 public class BookUtils {
 
-    public static List<List<String>> nameToStringLists(LoggedInUser loggedInUser, SName sName) {
-        return nameToStringLists(loggedInUser, sName, null, 0, 0);
+    public static List<List<String>> nameToStringLists(SName sName) {
+        return nameToStringLists(sName, null, 0, 0);
     }
 
-    static List<List<String>> nameToStringLists(LoggedInUser loggedInUser, SName sName, SName repeatRegion, int rowOffset, int colOffset) {
+    static List<List<String>> nameToStringLists(SName sName, SName repeatRegion, int rowOffset, int colOffset) {
         List<List<String>> toReturn = new ArrayList<>();
         if (sName == null) return toReturn;
         // EFC note - this only applies in the case of repeat regions as called in teh report filler service, really this check should be out there
@@ -52,11 +52,11 @@ public class BookUtils {
         CellRegion region = sName.getRefersToCellRegion();
         if (region == null) return toReturn;
         SSheet sheet = sName.getBook().getSheetByName(sName.getRefersToSheetName());
-        regionToStringList(loggedInUser,toReturn,region,sheet,rowOffset,colOffset);
+        regionToStringList(toReturn,region,sheet,rowOffset,colOffset);
         return toReturn;
     }
 
-    static void regionToStringList(LoggedInUser loggedInUser,List<List<String>> toReturn, CellRegion region, SSheet sheet, int rowOffset, int colOffset){
+    static void regionToStringList(List<List<String>> toReturn, CellRegion region, SSheet sheet, int rowOffset, int colOffset){
         for (int rowIndex = region.getRow() + rowOffset; rowIndex <= region.getLastRow() + rowOffset; rowIndex++) {
             List<String> row = new ArrayList<>();
             toReturn.add(row);
@@ -72,8 +72,7 @@ public class BookUtils {
                     // I assume non null cell has a non null string value, this may not be true. Also will I get another type of exception?
                     try {
                         // boolean required as sometimes there could be a leftover string value
-
-                        row.add(CommonReportUtils.replaceUserChoicesInQuery(loggedInUser,cell.getStringValue()));
+                        row.add(cell.getStringValue());
                     } catch (Exception e) {
                         if (!cell.getType().equals(SCell.CellType.BLANK)) {
                             try {
@@ -341,7 +340,7 @@ java.lang.IllegalStateException: is ERROR, not the one of [STRING, BLANK]
     }
 
     public static List<List<String>> replaceUserChoicesInRegionDefinition(LoggedInUser loggedInUser, SName rangeName){
-        List<List<String>> region = BookUtils.nameToStringLists(loggedInUser, rangeName);
+        List<List<String>> region = BookUtils.nameToStringLists(rangeName);
         for (int row=0;row < region.size();row++){
             for(int col=0;col < region.get(row).size();col++){
                 region.get(row).set(col, CommonReportUtils.replaceUserChoicesInQuery(loggedInUser,region.get(row).get(col)));

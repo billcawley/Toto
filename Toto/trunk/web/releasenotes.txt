@@ -1,3 +1,21 @@
+12-02-20
+
+Work on name definitions
+
+Various code changes to allow the new version of name to be switched in and out. Currently defaulting to the old version.
+
+Support for configuring passworded zips/xlsx files. Last word on pending upload files zips is the password, on not pending add password to the file parameters e.g.
+AllRisks claim oct-19 12&Ddfg.zip
+AllRisks Risk Oct-19(importversion=allrisksrisk;month=Oct-19;password=12&Ddfg).zip
+
+XLSX
+
+Hanover - Added the validations for all of the Risk formats, not just HanoverRisk.
+
+Linneage - Changes made to allow sending via Brokasure
+
+First Linneage files.
+
 07-02-20
 
 More work on the new NameData structure

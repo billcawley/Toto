@@ -289,6 +289,7 @@ class AzquoMemoryDBTransport {
             NumberFormat nf = NumberFormat.getInstance();
             System.out.println("Guess at DB size " + nf.format(newUsed - usedMB) + "MB");
             System.out.println("--- MEMORY USED :  " + nf.format((runtime.totalMemory() - runtime.freeMemory()) / mb) + "MB of " + nf.format(runtime.totalMemory() / mb) + "MB, max allowed " + nf.format(runtime.maxMemory() / mb));
+            //azquoMemoryDB.getIndex().printIndexStats();
         }
         logInSessionLogAndSystem("Total load time for " + persistenceName + " " + (System.currentTimeMillis() - startTime) / 1000 + " second(s)");
         //azquoMemoryDB.getIndex().printIndexStats();
@@ -360,6 +361,14 @@ class AzquoMemoryDBTransport {
                     break;
                 }
                 count++;
+        if (memoryTrack) {
+            marker = System.currentTimeMillis();
+            System.gc();
+            System.out.println("gc time : " + (System.currentTimeMillis() - marker));
+            long newUsed = (runtime.totalMemory() - runtime.freeMemory()) / mb;
+            System.out.println("Guess at DB size after attempting parents normalisation " + nf.format(newUsed - usedMB) + "MB");
+            System.out.println("--- MEMORY USED :  " + nf.format((runtime.totalMemory() - runtime.freeMemory()) / mb) + "MB of " + nf.format(runtime.totalMemory() / mb) + "MB, max allowed " + nf.format(runtime.maxMemory() / mb));
+        }
             }*/
 /*
             System.out.println("namesWithOnlyDefaultDisplayName : " + nf.format(namesWithOnlyDefaultDisplayName) + ", " + nf.format((100*namesWithOnlyDefaultDisplayName)/totalNameCount) + "%");
@@ -427,15 +436,6 @@ valuesWhichAreNumbers : 4,887,985, 98%
 valuesWhichAreNotNumbers : 72,974, 1%
          */
 
-        if (memoryTrack) {
-            marker = System.currentTimeMillis();
-            // using system.gc before and after loading to get an idea of DB memory overhead
-            System.gc();
-            System.out.println("gc time : " + (System.currentTimeMillis() - marker));
-            long newUsed = (runtime.totalMemory() - runtime.freeMemory()) / mb;
-            System.out.println("Guess at DB size after attempting parents normalisation " + nf.format(newUsed - usedMB) + "MB");
-            System.out.println("--- MEMORY USED :  " + nf.format((runtime.totalMemory() - runtime.freeMemory()) / mb) + "MB of " + nf.format(runtime.totalMemory() / mb) + "MB, max allowed " + nf.format(runtime.maxMemory() / mb));
-        }
     }
 
 

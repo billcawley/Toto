@@ -264,7 +264,7 @@ public class ReportExecutor {
                         SName systemDataName = book.getInternalBook().getNameByName(SYSTEMDATA);
                         if (systemDataName != null && systemData2DArrays != null) {
                             // gather debug info
-                            systemData2DArrays.add(BookUtils.nameToStringLists(loggedInUser, systemDataName));
+                            systemData2DArrays.add(BookUtils.nameToStringLists(systemDataName));
                         }
 
                         //stuff added by edd, need an option for the user to see these files for debug purposes

@@ -2,10 +2,8 @@ package com.azquo.memorydb.core;
 
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+import java.util.function.Consumer;
 
 /*
 
@@ -17,7 +15,7 @@ Also should provenance and parents management be in here?
 
  */
 
-public abstract class Name extends AzquoMemoryDBEntity {
+public abstract class Name extends AzquoMemoryDBEntity implements Collection<Name> {
     public static int ARRAYTHRESHOLD = 512; // if arrays which need distinct members hit above this switch to sets. A bit arbitrary, might be worth testing (speed vs memory usage)
 
     Name(AzquoMemoryDB azquoMemoryDB, int id) throws Exception {
@@ -133,4 +131,102 @@ public abstract class Name extends AzquoMemoryDBEntity {
     abstract void valueArrayCheck();
 
     abstract NameAttributes getRawAttributes();
+
+    // so, I'm going to implement collections here. The point being to chuck the object itself in instead of a singleton and in doing so save the object overhead
+    // feels kinda dirty, also interesting I didn't try this before . . .
+
+    @Override
+    public int size() {
+        return 1;
+    }
+
+    @Override
+    public boolean isEmpty() {
+        return false;
+    }
+
+    @Override
+    public boolean contains(Object o) {
+        return o == this;
+    }
+
+    @Override
+    public Iterator<Name> iterator() {
+        // this is feeling a bit dirty . .  .
+        Name forIterator = this;
+        // the singleton iterator isn't public, I'll paste it here and maybe modify later
+        return new Iterator<Name>() {
+            private boolean hasNext = true;
+
+            public boolean hasNext() {
+                return this.hasNext;
+            }
+
+            public Name next() {
+                if (this.hasNext) {
+                    this.hasNext = false;
+                    return forIterator;
+                } else {
+                    throw new NoSuchElementException();
+                }
+            }
+
+            public void remove() {
+                throw new UnsupportedOperationException();
+            }
+
+            public void forEachRemaining(Consumer<? super Name> var1) {
+                Objects.requireNonNull(var1);
+                if (this.hasNext) {
+                    var1.accept(forIterator);
+                    this.hasNext = false;
+                }
+            }
+        };
+    }
+
+    @Override
+    public Object[] toArray() {
+        return new Name[]{this};
+    }
+
+    @Override
+    public <T> T[] toArray(T[] ts) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean add(Name name) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean remove(Object o) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean containsAll(Collection<?> collection) {
+        return collection.size() == 1 && collection.iterator().next() == this;
+    }
+
+    @Override
+    public boolean addAll(Collection<? extends Name> collection) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean removeAll(Collection<?> collection) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean retainAll(Collection<?> collection) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void clear() {
+        throw new UnsupportedOperationException();
+    }
 }

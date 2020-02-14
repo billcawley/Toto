@@ -334,17 +334,23 @@ public class AzquoMemoryDBIndex {
             // ok, these got bigger than expected, big bottleneck. Using compute should be able to safely switch over at 512 entries
             //Collection<Name> names = namesForThisAttribute.computeIfAbsent(lcAttributeValue, s -> new CopyOnWriteArrayList<>());
             // modification of the sets or list is in compute but I still need the collections themselves to be thread safe as I need to safely call an iterator on them
+            // EFC 13/02/20 - added in singleton
             namesForThisAttribute.compute(lcAttributeValue, (k, v) -> {
-                // Could maybe get a little speed by adding a special case for the first name (as in singleton)?
+                // singleton should bring some speed and memory saving
+                // could other pointers be saved?
                 if (v == null) {
-                    v = new CopyOnWriteArrayList<>();
+                    v = name; // name now implements collections
+                } else {
+                    if (v.size() == 1) {
+                        v = new CopyOnWriteArrayList<>(v); // switch the single name as collection to copy on write array
+                    }
+                    if (v.size() == 512) { // switch the copy on write array to a set. Not sure how much this is used, this would mean many names with the same attribute and value
+                        Collection<Name> asSet = Collections.newSetFromMap(new ConcurrentHashMap<>());
+                        asSet.addAll(v);
+                        v = asSet;
+                    }
+                    v.add(name); // this WAS outside but in theory this might mean two different collections escaping to each have something added, hence an index entry gets missed. Unlikely but no harm in it being in here
                 }
-                if (v.size() == 512) {
-                    Collection<Name> asSet = Collections.newSetFromMap(new ConcurrentHashMap<>());
-                    asSet.addAll(v);
-                    v = asSet;
-                }
-                v.add(name); // this WAS outside but in theory this might mean two different collections escaping to each have something added, hence an index entry gets missed. Unlikely but no harm in it being in here
                 return v;
             });
         }
@@ -365,7 +371,11 @@ public class AzquoMemoryDBIndex {
                 // putting this modification in compute to be sure it won't get tripped up finding a collection that was switched in the mean time by the 512 setAttribute switch above
                 namesForThisAttribute.compute(lcAttributeValue, (k, v) -> {
                     if (v != null) {
-                        v.remove(name);
+                        if (v == name) {// it is the name, null it
+                            return null; // zap the list completely, I think that works?
+                        } else {
+                            v.remove(name);
+                        }
                     }
                     return v;
                 });

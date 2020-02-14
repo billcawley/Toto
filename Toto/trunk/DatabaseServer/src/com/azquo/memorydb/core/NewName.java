@@ -51,6 +51,18 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public final class NewName extends Name {
 
+    // same logic as find all parents but returns a set, should be correct
+    // Koloboke makes the sets as light as can be expected, volatile to comply with double-checked locking pattern https://en.wikipedia.org/wiki/Double-checked_locking
+//    private volatile Set<Name> findAllChildrenCache = null;
+
+    /* as above but for values, proved to provide a decent speed increase
+    plus I can check some alternative set intersection stuff
+    Tie its invalidation to the find all children invalidation
+    See comments in findAllChildren for cache pattern notes
+    */
+    //private volatile Set<Value> valuesIncludingChildrenCache = null;
+    // ok so a pointer for a cache on every name is silly, the caches will be very sparse so jam 'em in a concurrent map. This may simplify the code also
+
 //    private static final Logger logger = Logger.getLogger(Name.class);
 
     private Provenance provenance; // should be volatile? Don't care about being completely up to date but could a partially constructed object get in here?
@@ -287,7 +299,7 @@ public final class NewName extends Name {
         // defensive for the mo
         synchronized (this) {
             // may make this more clever as in clearing only if there's a change but not now
-            valuesIncludingChildrenCache = null;
+            getAzquoMemoryDB().getValuesIncludingChildrenCacheMap().remove(this);
             if (!nameData.canAddValue()) {
                 nameData = nameData.getImplementationThatCanAddValue();
             }
@@ -304,7 +316,7 @@ public final class NewName extends Name {
         // safer to synchronize here, most of the time it will be uncontended and I'm not currently worried about that performance
         synchronized (this) {
             if (nameData.removeFromValues(value)) {
-                valuesIncludingChildrenCache = null;
+                getAzquoMemoryDB().getValuesIncludingChildrenCacheMap().remove(this);
                 setNeedsPersisting(); // will be ignored on loading. Best to put in here to be safe.
             }
         }
@@ -537,10 +549,6 @@ public final class NewName extends Name {
         return Collections.singletonList(this); // no parents then this is a top parent
     }
 
-    // same logic as find all parents but returns a set, should be correct
-    // Koloboke makes the sets as light as can be expected, volatile to comply with double-checked locking pattern https://en.wikipedia.org/wiki/Double-checked_locking
-    private volatile Set<Name> findAllChildrenCache = null;
-
     private static AtomicInteger finaAllChildrenCount = new AtomicInteger(0);
 
     public void findAllChildren(final Set<Name> allChildren) {
@@ -571,59 +579,25 @@ public final class NewName extends Name {
 
     public Collection<Name> findAllChildren() {
         finaAllChildren2Count.incrementAndGet();
-            /* local reference useful for my logic anyway but also fulfil double-checked locking.
-            having findAllChildrenCache volatile in addition to this variable should mean things are predictable.
-             */
-        Set<Name> localReference = findAllChildrenCache;
-        if (localReference == null) {
-            // ok I don't want to be building two at a time, hence I want to synchronize this bit,
-            synchronized (this) { // ideally I wouldn't synchronize on this, it would be on findAllChildrenCache but it's not final and I don't want it to be for the moment
-                localReference = findAllChildrenCache; // check again after synchronized, it may have been sorted in the mean time
-                if (localReference == null) {
-                    localReference = HashObjSets.newUpdatableSet();
-                    findAllChildren(localReference);
-                    if (localReference.isEmpty()) {
-                        findAllChildrenCache = Collections.emptySet(); // stop memory overhead, ooh I feel all clever!
-                    } else {
-                        findAllChildrenCache = localReference;
-                    }
-                }
-            }
-        }
-        return Collections.unmodifiableSet(localReference);
+        return Collections.unmodifiableSet(getAzquoMemoryDB().getFindAllChildrenCacheMap().computeIfAbsent(this, name -> {
+            Set<Name> toReturn = HashObjSets.newUpdatableSet();
+            findAllChildren(toReturn);
+            return toReturn.isEmpty() ? Collections.emptySet() : toReturn;
+        }));
     }
-
-
-    /* as above but for values, proved to provide a decent speed increase
-    plus I can check some alternative set intersection stuff
-    Tie its invalidation to the find all children invalidation
-    See comments in findAllChildren for cache pattern notes
-    */
-    private volatile Set<Value> valuesIncludingChildrenCache = null;
-
 
     private static AtomicInteger findValuesIncludingChildrenCount = new AtomicInteger(0);
 
     public Set<Value> findValuesIncludingChildren() {
         findValuesIncludingChildrenCount.incrementAndGet();
-        Set<Value> localReference = valuesIncludingChildrenCache;
-        if (localReference == null) {
-            synchronized (this) {
-                localReference = valuesIncludingChildrenCache;
-                if (localReference == null) {
-                    localReference = HashObjSets.newUpdatableSet(getValues());
-                    for (Name child : findAllChildren()) {
-                        child.addValuesToCollection(localReference);
-                    }
-                    if (localReference.isEmpty()) {
-                        valuesIncludingChildrenCache = Collections.emptySet();
-                    } else {
-                        valuesIncludingChildrenCache = localReference;
-                    }
-                }
+        return Collections.unmodifiableSet(getAzquoMemoryDB().getValuesIncludingChildrenCacheMap().computeIfAbsent(this, name -> {
+            Set<Value> toReturn = HashObjSets.newUpdatableSet();
+            for (Name child : findAllChildren()) {
+                child.addValuesToCollection(toReturn);
             }
-        }
-        return Collections.unmodifiableSet(localReference);
+            return toReturn.isEmpty() ? Collections.emptySet() : toReturn;
+
+        }));
     }
 
     // synchronized? Not sure if it matters, don't need immediate visibility and the cache read should (!) be thread safe.
@@ -632,8 +606,8 @@ public final class NewName extends Name {
 
     void clearChildrenCaches() {
         clearChildrenCachesCount.incrementAndGet();
-        findAllChildrenCache = null;
-        valuesIncludingChildrenCache = null;
+        getAzquoMemoryDB().getFindAllChildrenCacheMap().remove(this);
+        getAzquoMemoryDB().getValuesIncludingChildrenCacheMap().remove(this);
     }
 
     private static AtomicInteger getChildrenCount = new AtomicInteger(0);

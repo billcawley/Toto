@@ -151,6 +151,11 @@ public final class AzquoMemoryDB {
     // as in does the transport need to accommodate longer values - see ValueDAO.convertForLongTextValues
     private volatile boolean checkValueLengths;
 
+    // replace the caches held against each name, should save memory
+    private final Map<Name, Set<Name>> findAllChildrenCacheMap;
+    private final Map<Name, Set<Value>> valuesIncludingChildrenCacheMap;
+
+
     /*
 
     I need to consider this https://www.securecoding.cert.org/confluence/display/java/TSM03-J.+Do+not+publish+partially+initialized+objects
@@ -192,6 +197,9 @@ public final class AzquoMemoryDB {
         nameChildrenLoadingCache = new ConcurrentHashMap<>();
         valueLockTimes = new ConcurrentHashMap<>();
         valueLocks = new ConcurrentHashMap<>();
+        findAllChildrenCacheMap = new ConcurrentHashMap<>();
+        valuesIncludingChildrenCacheMap = new ConcurrentHashMap<>();
+
         boolean memoryTrack = "true".equals(azquoProperties.getProperty("memorytrack"));
         // loading in here was synchronized but only one constructor can be run, should be ok.
         // internally all the loading uses future gets to this thread SHOULD all be in sync with loaded data.
@@ -487,6 +495,15 @@ public final class AzquoMemoryDB {
     public synchronized void synchronizedDrop() throws Exception {
         DSAdminService.dropDatabaseInPersistence(azquoMemoryDBTransport.getPersistenceName());
     }
+
+    public Map<Name, Set<Name>> getFindAllChildrenCacheMap() {
+        return findAllChildrenCacheMap;
+    }
+
+    public Map<Name, Set<Value>> getValuesIncludingChildrenCacheMap() {
+        return valuesIncludingChildrenCacheMap;
+    }
+
 /*
     private static void printFunctionCountStats() {
         System.out.println("######### AZQUO MEMORY DB FUNCTION COUNTS");
