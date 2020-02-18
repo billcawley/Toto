@@ -74,7 +74,7 @@ class HeadingReader {
     static final String LINEDATA = "linedata";
     static final String SPLIT = "split";
     private static final String CHECK = "check";
-    private static final String REPLACE = "replace";
+    public static final String REPLACE = "replace";
     private static final String PROVISIONAL = "provisional";//used with 'parent of' to indicate that the parent child relationship should only be created if none exists already (originally for Ed Broking Premium imports)
     public static final int EXCLUSIVETOCHILDOF = -1;
     public static final int NOTEXCLUSIVE = -2;
