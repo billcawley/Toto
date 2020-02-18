@@ -609,6 +609,7 @@ public class DSImportService {
                 || heading.startsWith(HeadingReader.LINEDATA)
                 || heading.startsWith(HeadingReader.DICTIONARY)
                 || heading.startsWith(HeadingReader.CLASSIFICATION)
+                || heading.startsWith(HeadingReader.REPLACE)
                 || heading.startsWith(HeadingReader.SPLIT);
     }
 }
