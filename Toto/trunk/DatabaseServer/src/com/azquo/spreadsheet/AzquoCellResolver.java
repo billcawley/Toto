@@ -463,35 +463,27 @@ public class AzquoCellResolver {
                             double scaleDouble = 0;
                             List<Value> newValues = new ArrayList<>();
                             for (Value value:valuesHook.values){
+                                Set <Name>  valueParents = new HashSet<>();
                                 Set<Name> allValueParents = new HashSet<>();
                                 for (Name name:value.getNames()){
+                                    valueParents.addAll(name.getParents());
+
                                     allValueParents.addAll(name.findAllParents());
-                                    allValueParents.add(name);
+                                    valueParents.add(name);
                                 }
                                 //throw in the headings as well - these should be found regardless
                                 for (DataRegionHeading scaleHeading:scaleHeadings){
+                                    valueParents.add(scaleHeading.getName());
                                     allValueParents.add(scaleHeading.getName());
                                 }
 
-                                double scale = 0;
-                                List<Value> thisScaleValues = new ArrayList<>();
-                                for (Value scaleValue:scaleValuesHook.values){
-                                    boolean scaleFound = true;
-                                    for(Name scaleName:scaleValue.getNames()){
-                                        if (!allValueParents.contains(scaleName)){
-                                            scaleFound = false;
-                                            break;
-                                        }
-                                     }
-                                    if (scaleFound){
-                                        thisScaleValues.add(scaleValue);
-                                        scale += Double.parseDouble(scaleValue.getText());
-                                    }
+                                double scale = findScale(scaleValuesHook, valueParents, newValues);
+                                if (scale==0) {
+                                    scale = findScale(scaleValuesHook, allValueParents, newValues);
                                 }
                                 if (scale > 0){
                                     scaleDouble += Double.parseDouble(value.getText()) * scale;
                                     newValues.add(value);
-                                    newValues.addAll(thisScaleValues);
                                 }
                             }
                             doubleValue = scaleDouble;
@@ -817,6 +809,26 @@ But can use a library?
                 /* something to note : in the old model there was a map of headings used for each cell. I could add headingsForThisCell to the cell which would be a unique set for each cell
                  but instead I'll just add the headings and row and context, I think it would be less memory. 3 object references vs a set*/
         return new AzquoCell(locked.isTrue, listOfValuesOrNamesAndAttributeName, rowHeadings, columnHeadings, contextHeadings, rowNo, colNo, stringValue, doubleValue, false, selected);
+    }
+
+    private static double findScale(ValuesHook scaleValuesHook, Set<Name> parents, List<Value> newValues){
+
+        double scale = 0;
+        for (Value scaleValue:scaleValuesHook.values){
+            boolean scaleFound = true;
+            for(Name scaleName:scaleValue.getNames()){
+                if (!parents.contains(scaleName)){
+                    scaleFound = false;
+                    break;
+                }
+            }
+            if (scaleFound){
+                scale += Double.parseDouble(scaleValue.getText());
+                newValues.add(scaleValue);
+            }
+        }
+        return scale;
+
     }
 
     // Simple attribute summing (assuming attributes are numeric), doesn't use set intersection or name children or anything like that
