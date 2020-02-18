@@ -1,3 +1,13 @@
+14-02-20
+
+Logging improvements a few bug fixes
+
+New groovy for All Risks Premiums
+
+XLSX
+
+New premiums added to the import template
+
 12-02-20
 
 Work on name definitions

@@ -210,8 +210,6 @@ class HeadingReader {
         lookupString = lookupString.substring(6).trim();
         heading. lookupString = lookupString;
         return null;
-
-
     }
     //headings are clauses separated by semicolons, first is the heading name then onto the extra stuff
     //essentially parsing through all the relevant things in a heading to populate a MutableImportHeading

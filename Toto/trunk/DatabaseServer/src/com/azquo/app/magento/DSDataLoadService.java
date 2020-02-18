@@ -2,7 +2,6 @@ package com.azquo.app.magento;
 
 import com.azquo.StringLiterals;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
-import com.azquo.StringLiterals;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.service.NameService;
@@ -384,7 +383,7 @@ public class DSDataLoadService {
         for (Map<String, String> attVals : tableMap.get("catalog_product_entity_int")) {
             String attNo = attVals.get("attribute_id");
             //if (attributes.contains(attVal)) {
-            if (attributeNames.keySet().contains(attNo)) {
+            if (attributeNames.containsKey(attNo)) {
                 Name magentoName = azquoProductsFound.get(attVals.get("entity_id"));
                 if (magentoName == null) {
                     System.out.println("entity_id linked in catalog_product_entity_int that doesn't exist in catalog_product_entity : " + attVals.get("entity_id"));

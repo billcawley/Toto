@@ -102,7 +102,23 @@ public class BatchImporter implements Callable<Void> {
                     // we need to check only and existing before composition then not proceed if there's a problem, then try again after
                     // if we only check after resolveCompositeValues might do all sorts of name creation on a line that will then be rejected
                     if (rejectionReason == null) {
-                        initialNeedsResolvingCheck(lineToLoad);
+                        // first pass, sort overrides and flag what might need resolving
+                        for (ImportCellWithHeading cell : lineToLoad) {
+                            // override more simple than composition, just set it regardless
+                            if (cell.getImmutableImportHeading().override != null) {
+                                cell.setLineValue(cell.getImmutableImportHeading().override);
+                                cell.needsResolving = false;
+                                /* We try to resolve if there's a composition pattern or lookup *and* no value in the cell.
+                                So no composition and no lookup config and we flag as needs resolving as false OR If there's a value in the cell we don't override it
+                                with a composite/lookup value *unless* it's flagged as headless according to an import template. More specifically we may be making
+                                composite columns after the data we're interested in but what if the file happens to have data in those following columns? If so ignore it
+                                it's junk as far as we're concerned
+                                 */
+                            } else if (((cell.getImmutableImportHeading().lookupParentIndex < 0 && cell.getImmutableImportHeading().compositionPattern == null) ||
+                                    ((cell.getLineValue() != null && !cell.getLineValue().isEmpty()) && !cell.getImmutableImportHeading().noFileHeading))) {
+                                cell.needsResolving = false;
+                            }
+                        }
                         rejectionReason = checkOnlyAndExisting(azquoMemoryDBConnection, lineToLoad, attributeNames);
                         if (rejectionReason == null) {
                             resolveCompositeValues(azquoMemoryDBConnection, namesFoundCache, attributeNames, lineToLoad, lineNumber, compositeIndexResolver);
@@ -142,8 +158,6 @@ public class BatchImporter implements Callable<Void> {
             }
         }
         azquoMemoryDBConnection.addToUserLogNoException("..Batch finishing : " + DecimalFormat.getInstance().format(dataToLoad.size()) + " imported.", true);
-        // don't have values modified any more - need to replace this or just zap it?
-//        azquoMemoryDBConnection.addToUserLogNoException("..Values Imported/Modified : " + DecimalFormat.getInstance().format(valuesModifiedCounter), true);
         return null;
     }
 
@@ -162,7 +176,7 @@ public class BatchImporter implements Callable<Void> {
         int count = 0;
         while (m.find()) {
             constants.add(condition.substring(m.start() + 1, m.end() - 1));
-            newCondition.append(condition.substring(lastPos, m.start()) + CONSTANTMARKER + ("" + (count++ + 100)).substring(1));
+            newCondition.append(condition, lastPos, m.start()).append(CONSTANTMARKER).append(("" + (count++ + 100)).substring(1));
             lastPos = m.end();
         }
         condition = newCondition.toString() + condition.substring(lastPos);
@@ -348,71 +362,59 @@ public class BatchImporter implements Callable<Void> {
     }
 
     // Checking only and existing means "should we import the line at all" based on these criteria
-
     private static String checkOnlyAndExisting(AzquoMemoryDBConnection azquoMemoryDBConnection, List<ImportCellWithHeading> cells, List<String> languages) {
         //returns the error
         for (ImportCellWithHeading cell : cells) {
-            if (!cell.needsResolving && cell.getImmutableImportHeading().only != null) {
-                //`only' can have wildcards  '*xxx*'
-                String only = cell.getImmutableImportHeading().only.toLowerCase();
-                String lineValue = cell.getLineValue().toLowerCase();
-                if (only.startsWith("*")) {
-                    if (only.endsWith("*")) {
-                        if (!lineValue.contains(only.substring(1, only.length() - 1))) {
-                            return "not in '*only*'";
+            // this check will be run twice, in either case we only run the test on lines that have been resolved or don't need resolving
+            if (!cell.needsResolving) {
+                if (cell.getImmutableImportHeading().only != null) {
+                    //`only' can have wildcards  '*xxx*'
+                    String only = cell.getImmutableImportHeading().only.toLowerCase();
+                    String lineValue = cell.getLineValue().toLowerCase();
+                    if (only.startsWith("*")) {
+                        if (only.endsWith("*")) {
+                            if (!lineValue.contains(only.substring(1, only.length() - 1))) {
+                                return "not in only, " + only;
+                            }
+                        } else if (!lineValue.endsWith(only.substring(1))) {
+                            return "not in only, " + only;
                         }
-                    } else if (!lineValue.endsWith(only.substring(1))) {
-                        return "not in `*only'";
-                    }
-                } else if (only.endsWith("*")) {
-                    if (!lineValue.startsWith(only.substring(0, only.length() - 1))) {
-                        return "not in 'only*'";
-                    }
-                } else {
-                    if (!lineValue.equals(only)) {
-                        return "not in 'only'";
+                    } else if (only.endsWith("*")) {
+                        if (!lineValue.startsWith(only.substring(0, only.length() - 1))) {
+                            return "not in only, " + only;
+                        }
+                    } else {
+                        if (!lineValue.equals(only)) {
+                            return "not in only, " + only;
+                        }
                     }
                 }
-            }
-            // this assumes composite has been run if required
-            // note that the code assumes there can only be one "existing" per line, it will exit this function on the first one.
-            if (!cell.needsResolving && cell.getImmutableImportHeading().existing) {
-                boolean cellOk = false;
-                if (cell.getImmutableImportHeading().attribute != null && cell.getImmutableImportHeading().attribute.length() > 0) {
-                    languages = new ArrayList<>();
-                    String newLanguages = cell.getImmutableImportHeading().attribute;
-                    languages.addAll(Arrays.asList(newLanguages.split(",")));
-                }
-                if (languages == null) { // same logic as used when creating the line names, not sure of this
-                    languages = StringLiterals.DEFAULT_DISPLAY_NAME_AS_LIST;
-                }
-                // note I'm not going to check parentNames are not empty here, if someone put existing without specifying child of then I think it's fair to say the line isn't valid
-                for (Name parent : cell.getImmutableImportHeading().parentNames) { // try to find any names from anywhere
-                    if (!azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNamesForAttributeNamesAndParent(languages, cell.getLineValue(), parent).isEmpty()) { // NOT empty, we found one!
-                        cellOk = true;
-                        break; // no point continuing, we found one
+                // this assumes composite has been run if required
+                // note that the code assumes there can only be one "existing" per line, it will exit this function on the first one.
+                if (cell.getImmutableImportHeading().existing) {
+                    boolean cellOk = false;
+                    if (cell.getImmutableImportHeading().attribute != null && cell.getImmutableImportHeading().attribute.length() > 0) {
+                        languages = new ArrayList<>();
+                        String newLanguages = cell.getImmutableImportHeading().attribute;
+                        languages.addAll(Arrays.asList(newLanguages.split(",")));
                     }
-                }
-                if (!cellOk) {
-                    return cell.getImmutableImportHeading().heading + ":" + cell.getLineValue() + " not existing"; // none found break the line
+                    if (languages == null) { // same logic as used when creating the line names, not sure of this
+                        languages = StringLiterals.DEFAULT_DISPLAY_NAME_AS_LIST;
+                    }
+                    // note I'm not going to check parentNames are not empty here, if someone put existing without specifying child of then I think it's fair to say the line isn't valid
+                    for (Name parent : cell.getImmutableImportHeading().parentNames) { // try to find any names from anywhere
+                        if (!azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNamesForAttributeNamesAndParent(languages, cell.getLineValue(), parent).isEmpty()) { // NOT empty, we found one!
+                            cellOk = true;
+                            break; // no point continuing, we found one
+                        }
+                    }
+                    if (!cellOk) {
+                        return cell.getImmutableImportHeading().heading + ":" + cell.getLineValue() + " not existing"; // none found break the line
+                    }
                 }
             }
         }
         return null;
-    }
-
-    private static void initialNeedsResolvingCheck(List<ImportCellWithHeading> cells) {
-        // first pass, sort overrides and flag what might need resolving
-        for (ImportCellWithHeading cell : cells) {
-            // we try to resolve if there's a composition pattern *and* no value in the cell. If there's a value in the cell we don't override it with a composite value *unless* it's flagged as headless according to an import template - see DSImportService line 270
-            if (cell.getImmutableImportHeading().lookupParentIndex < 0 && (cell.getImmutableImportHeading().compositionPattern == null || ((cell.getLineValue() != null && !cell.getLineValue().isEmpty()) && !cell.getImmutableImportHeading().noFileHeading))) {
-                cell.needsResolving = false;
-            }
-            if (cell.getImmutableImportHeading().override != null) {
-                cell.setLineValue(cell.getImmutableImportHeading().override);
-                cell.needsResolving = false;
-            }
-        }
     }
 
     // replace things in quotes with values from the other columns. So `A column name`-`another column name` might be created as 123-235 if they were the values
@@ -422,8 +424,8 @@ public class BatchImporter implements Callable<Void> {
     private static void resolveCompositeValues(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFoundCache, List<String> attributeNames, List<ImportCellWithHeading> cells, int importLine, CompositeIndexResolver compositeIndexResolver) throws Exception {
         boolean adjusted = true;
         int timesLineIsModified = 0;
-        // no longer doing the initial check on needsResolving, this is done in the function above. Need to do it before an initial "only and existing" check
-        // should this be in there?
+        // no longer doing the initial check on needsResolving, this is done in the function above. Need to do it before an initial "only and existing" check.
+        // If lines pass that test we can call things like optionalIncludeInParents
         for (ImportCellWithHeading cell : cells) {
             //resolve some line names ASAP particularly to handle lookups (parent and element are separate cells)
             if (cell.getImmutableImportHeading().lineNameRequired && cell.getLineNames() == null && cell.getLineValue() != null && cell.getLineValue().length() > 0) {
@@ -451,7 +453,6 @@ public class BatchImporter implements Callable<Void> {
                         } else {
                             if (resolveComposition(azquoMemoryDBConnection, cell, compositionPattern, cells, compositeIndexResolver, namesFoundCache, attributeNames)) {
                                 adjusted = true;
-
                             }
                         }
                     } else {

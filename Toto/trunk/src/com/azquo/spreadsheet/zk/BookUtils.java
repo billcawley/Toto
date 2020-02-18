@@ -52,11 +52,11 @@ public class BookUtils {
         CellRegion region = sName.getRefersToCellRegion();
         if (region == null) return toReturn;
         SSheet sheet = sName.getBook().getSheetByName(sName.getRefersToSheetName());
-        regionToStringList(toReturn,region,sheet,rowOffset,colOffset);
+        regionToStringList(toReturn, region, sheet, rowOffset, colOffset);
         return toReturn;
     }
 
-    static void regionToStringList(List<List<String>> toReturn, CellRegion region, SSheet sheet, int rowOffset, int colOffset){
+    static void regionToStringList(List<List<String>> toReturn, CellRegion region, SSheet sheet, int rowOffset, int colOffset) {
         for (int rowIndex = region.getRow() + rowOffset; rowIndex <= region.getLastRow() + rowOffset; rowIndex++) {
             List<String> row = new ArrayList<>();
             toReturn.add(row);
@@ -81,10 +81,10 @@ public class BookUtils {
                                     numberGuess = numberGuess.substring(0, numberGuess.length() - 2);
                                 }
                                 if (numberGuess.equals("0")) numberGuess = "";
-                                if (cell.getCellStyle().getDataFormat().contains("mm")){
-                                    Date javaDate= DateUtil.getJavaDate((double)cell.getNumberValue());
+                                if (cell.getCellStyle().getDataFormat().contains("mm")) {
+                                    Date javaDate = DateUtil.getJavaDate((double) cell.getNumberValue());
                                     row.add(new SimpleDateFormat("yyyy-MM-dd").format(javaDate));
-                                }else{
+                                } else {
                                     row.add(numberGuess);
                                 }
                             } catch (Exception e2) {
@@ -246,7 +246,7 @@ java.lang.IllegalStateException: is ERROR, not the one of [STRING, BLANK]
                 if (sheet.getSheetName().equals(name.getSheetName())) {
                     names.add(name);
                 }
-            } catch (Exception ignored){
+            } catch (Exception ignored) {
                 // name.getSheetName() can throw an exception, ignore it
             }
         }
@@ -339,21 +339,17 @@ java.lang.IllegalStateException: is ERROR, not the one of [STRING, BLANK]
         return null;
     }
 
-    public static List<List<String>> replaceUserChoicesInRegionDefinition(LoggedInUser loggedInUser, SName rangeName){
-        return replaceUserChoicesInRegionDefinition(loggedInUser,rangeName,null,0,0);
+    public static List<List<String>> replaceUserChoicesInRegionDefinition(LoggedInUser loggedInUser, SName rangeName) {
+        return replaceUserChoicesInRegionDefinition(loggedInUser, rangeName, null, 0, 0);
     }
 
-
-        public static List<List<String>> replaceUserChoicesInRegionDefinition(LoggedInUser loggedInUser, SName rangeName, SName repeatRegion, int rowOffset, int colOffset){
+    public static List<List<String>> replaceUserChoicesInRegionDefinition(LoggedInUser loggedInUser, SName rangeName, SName repeatRegion, int rowOffset, int colOffset) {
         List<List<String>> region = BookUtils.nameToStringLists(rangeName, repeatRegion, rowOffset, colOffset);
-        for (int row=0;row < region.size();row++){
-            for(int col=0;col < region.get(row).size();col++){
-                region.get(row).set(col, CommonReportUtils.replaceUserChoicesInQuery(loggedInUser,region.get(row).get(col)));
+        for (List<String> strings : region) {
+            for (int col = 0; col < strings.size(); col++) {
+                strings.set(col, CommonReportUtils.replaceUserChoicesInQuery(loggedInUser, strings.get(col)));
             }
         }
         return region;
     }
-
-
-
 }
