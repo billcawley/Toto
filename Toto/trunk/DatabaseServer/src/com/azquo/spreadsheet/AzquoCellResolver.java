@@ -470,15 +470,16 @@ public class AzquoCellResolver {
 
                                     allValueParents.addAll(name.findAllParents());
                                     valueParents.add(name);
-                                }
+                                 }
                                 //throw in the headings as well - these should be found regardless
                                 for (DataRegionHeading scaleHeading:scaleHeadings){
                                     valueParents.add(scaleHeading.getName());
                                     allValueParents.add(scaleHeading.getName());
                                 }
+                                int newValuesSize = newValues.size();
 
                                 double scale = findScale(scaleValuesHook, valueParents, newValues);
-                                if (scale==0) {
+                                if (newValuesSize == newValues.size()) {
                                     scale = findScale(scaleValuesHook, allValueParents, newValues);
                                 }
                                 if (scale > 0){
