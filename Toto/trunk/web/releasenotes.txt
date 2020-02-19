@@ -1,3 +1,11 @@
+18-02-20
+
+Scale function adjusted for Jan Premiums
+
+XLSX
+
+More Hanover and Linneage work
+
 14-02-20
 
 Logging improvements a few bug fixes

@@ -40,6 +40,10 @@ public class PendingUploadConfig {
         counter.incrementAndGet();
     }
 
+    public int getFileCount(){
+        return counter.get();
+    }
+
     public Map<String, String> getParametersForFile(String name) {
         if (parametersPerFile == null){
             return null;

@@ -703,6 +703,9 @@ public final class ImportService {
             // reassigning uploaded file so the correct object will be passed back on exception
             uploadedFile = new UploadedFile(tempPath, names, fileNameParams, true, uploadedFile.isValidationTest()); // true, it IS converted from a worksheet
             if (emptySheet) {
+                if (pendingUploadConfig != null) {
+                    pendingUploadConfig.incrementFileCounter();
+                }
                 uploadedFile.setError("Empty sheet : " + sheetName);
                 return Collections.singletonList(uploadedFile);
             } else {
@@ -742,6 +745,7 @@ public final class ImportService {
     private static UploadedFile readPreparedFile(final LoggedInUser loggedInUser, UploadedFile uploadedFile, boolean importTemplateUsedAlready, PendingUploadConfig pendingUploadConfig, HashMap<String, ImportTemplateData> templateCache) throws
             Exception {
         if (pendingUploadConfig != null) {
+            //System.out.println("upload name  " + uploadedFile.getFileName() + " puc counter " + pendingUploadConfig.getFileCount());
             if (pendingUploadConfig.isFileToReject()) {
                 pendingUploadConfig.incrementFileCounter();
                 uploadedFile.setError(StringLiterals.REJECTEDBYUSER);
