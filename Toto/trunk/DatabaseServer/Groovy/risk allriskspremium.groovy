@@ -32,87 +32,92 @@ def fileProcess(Object[] args) {
     fileWriter = writeFile.newWriter();
     file.withReader { reader ->
         while ((line = reader.readLine()) != null) {
-            if (line.trim().contains("\t") && topLine == 0){ // for the moment we'll assume the headings are here
-                println("read line " + line)
-                StringTokenizer st = new StringTokenizer(line, "\t");
-                int colNum = 0;
-                boolean switched = false;
-                while (st.hasMoreTokens()){
-                    String col = st.nextToken().toLowerCase();
-                    if (col.equals("agmt_num")){
-                       topLine = lineNo;
-                       agreementCol = colNum
+            try {
+                if (line.trim().contains("\t") && topLine == 0) { // for the moment we'll assume the headings are here
+                    StringTokenizer st = new StringTokenizer(line, "\t");
+                    int colNum = 0;
+                    boolean switched = false;
+                    while (st.hasMoreTokens()) {
+                        String col = st.nextToken().toLowerCase();
+                        if (col.equals("agmt_num")) {
+                            topLine = lineNo;
+                            agreementCol = colNum
+                        }
+                        if (col.equals("tran_date") || col.equals("trans_date") && !switched) {
+                            Map<String, String> newparams = new HashMap<>(uploadedFile.getParameters());
+                            // this is a template switch, todo . . . .
+                            println("found Tran_Date");
+                            newparams.put("importversion", "AllRisksPremium2");
+                            uploadedFile.setParameters(newparams);
+                        }
+                        if (col.equals("contract_num")) {
+                            contractNumCol = colNum
+                        }
+                        if (col.equals("written_prem")) {
+                            contractPremCol = colNum
+                        }
+                        if (col.equals("exp_date")) {
+                            expDateCol = colNum;
+                        }
+                        if (col.equals("contract_exp_date")) {
+                            switched = true;
+                            expDateCol = colNum;
+                            Map<String, String> newparams = new HashMap<>(uploadedFile.getParameters());
+                            // this is a template switch, todo . . . .
+                            println("contract_exp_date, AllRisksPremium3");
+                            newparams.put("importversion", "AllRisksPremium3");
+                            // new version all risks premiums Jan 2020 data
+                            uploadedFile.setParameters(newparams);
+                        }
+                        colNum++;
                     }
-                    if (col.equals("tran_date") || col.equals("trans_date") && !switched){
-                        Map<String, String> newparams = new HashMap<>(uploadedFile.getParameters());
-                        // this is a template switch, todo . . . .
-                        println("found Tran_Date");
-                        newparams.put("importversion", "AllRisksPremium2");
-                        uploadedFile.setParameters(newparams);
+                    if (expDateCol > 0) {
+                        fileWriter.write(line + "\tInception_date\tLine");
+                        fileWriter.write("\r\n");
+                    } else {
+                        fileWriter.write(line);
+                        fileWriter.write("\r\n");
                     }
-                    if (col.equals("contract_num")){
-                        contractNumCol = colNum
+                } else if (agreementCol >= 0) { // ok we're into data
+                    if (lineNo == topLine + 1) {
+                        if (!uploadedFile.getParameter("importversion").equals("AllRisksPremium2") &&
+                                !uploadedFile.getParameter("importversion").equals("AllRisksPremium3") && agreementCol >= 0 && line.size() > agreementCol && line[agreementCol] != 'B') {
+                            Map<String, String> newparams = new HashMap<>(uploadedFile.getParameters());
+                            // this is a template switch, todo . . . .
+                            newparams.put("importversion", "AllRisksPremium1");
+                            uploadedFile.setParameters(newparams);
+                            List<String> languages = new ArrayList<>();
+                            languages.add("allriskspremium1");
+                            languages.add(StringLiterals.DEFAULT_DISPLAY_NAME);
+                            uploadedFile.setLanguages(languages);
+                        }
                     }
-                    if (col.equals("written_prem")){
-                        contractPremCol = colNum
+                    if (!line.trim().isEmpty()) {
+                        //work out inception date....
+                        def split1 = line.split("\t")
+                        String exp_date = split1[expDateCol];
+                        Calendar c = Calendar.getInstance();
+                        try {
+                            c.setTime(df.parse(exp_date));
+                        } catch (Exception e1) {
+                            try {
+                                //if the original cell was not formatted as a date, the date will be in US format
+                                c.setTime(usdf.parse(exp_date))
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                                throw new Exception(e);
+                            }
+                        }
+                        c.add(Calendar.YEAR, -1);
+                        c.add(Calendar.DAY_OF_MONTH, 1);
+                        line += "\t" + df.format(c.getTime());
+                        linesToSort.add(line);
                     }
-                    if (col.equals("exp_date")){
-                        expDateCol = colNum;
-                    }
-                    if (col.equals("contract_exp_date")){
-                        switched = true;
-                        expDateCol = colNum;
-                        Map<String, String> newparams = new HashMap<>(uploadedFile.getParameters());
-                        // this is a template switch, todo . . . .
-                        println("contract_exp_date, AllRisksPremium3");
-                        newparams.put("importversion", "AllRisksPremium3"); // new version all risks premiums Jan 2020 data
-                        uploadedFile.setParameters(newparams);
-                    }
-                    colNum++;
-                }
-                if (expDateCol> 0) {
-                    fileWriter.write(line + "\tInception_date\tLine");
-                    fileWriter.write("\r\n");
-                } else {
+                } else { // preserve the top for top headings checks
                     fileWriter.write(line);
                     fileWriter.write("\r\n");
                 }
-            } else if (agreementCol >= 0) { // ok we're into data
-                if (lineNo == topLine + 1) {
-                    if (!uploadedFile.getParameter("importversion").equals("AllRisksPremium2") &&
-                            !uploadedFile.getParameter("importversion").equals("AllRisksPremium3") &&  agreementCol >= 0 && line.size() > agreementCol && line[agreementCol] != 'B') {
-                        Map<String, String> newparams = new HashMap<>(uploadedFile.getParameters());
-                        // this is a template switch, todo . . . .
-                        newparams.put("importversion", "AllRisksPremium1");
-                        uploadedFile.setParameters(newparams);
-                        List<String> languages = new ArrayList<>();
-                        languages.add("allriskspremium1");
-                        languages.add(StringLiterals.DEFAULT_DISPLAY_NAME);
-                        uploadedFile.setLanguages(languages);
-                    }
-                }
-                if (!line.trim().isEmpty()){
-                    //work out inception date....
-                    def split1 = line.split("\t")
-                    String exp_date = split1[expDateCol];
-                    Calendar c = Calendar.getInstance();
-                    try{
-                        c.setTime(df.parse(exp_date));
-                    }catch(Exception e1) {
-                        try {
-                            //if the original cell was not formatted as a date, the date will be in US format
-                            c.setTime(usdf.parse(exp_date))
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                            throw new Exception(e);
-                        }
-                    }
-                    c.add(Calendar.YEAR,-1);
-                    c.add(Calendar.DAY_OF_MONTH,1);
-                    line += "\t" + df.format(c.getTime());
-                    linesToSort.add(line);
-                }
-            } else { // preserve the top for top headings checks
+            }catch(Exception e){
                 fileWriter.write(line);
                 fileWriter.write("\r\n");
             }
