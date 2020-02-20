@@ -1,3 +1,13 @@
+20-02-20
+
+Improved handling of calcs on import - oilfields
+
+Force files attached to XML feed to lower case
+
+XLSX
+
+Premiums XML file name back to uppercase - the Java will make the attached files lower case
+
 19-02-20
 
 Scale function adjusted again for Jan Premiums
