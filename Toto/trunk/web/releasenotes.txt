@@ -1,3 +1,13 @@
+19-02-20
+
+Scale function adjusted again for Jan Premiums
+
+Clarifying import logic regarding initial values check, zapping a nasty pending upload config file counter bug on empty sheets!
+
+XLSX
+
+Jan-20 premiums work
+
 18-02-20
 
 Scale function adjusted for Jan Premiums

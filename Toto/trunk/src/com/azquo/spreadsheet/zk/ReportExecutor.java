@@ -821,10 +821,12 @@ public class ReportExecutor {
                                 }
                                 if (onlineReport != null) { // need to prepare it as in the controller todo - factor?
                                     reportFileName = (filePrefix != null ? filePrefix : "") + eightCharInt(filePointer) + ".xlsx";
+                                    reportFileName = reportFileName.toLowerCase();
                                     // check that the xlsx doesn't already exist - if it does then bump the pointer, also need to check xml for existing files at this point
                                     while (azquoTempDir.resolve(reportFileName).toFile().exists() || azquoTempDir.resolve(fileName).toFile().exists()) {
                                         filePointer++;
                                         reportFileName = (filePrefix != null ? filePrefix : "") + eightCharInt(filePointer) + ".xlsx";
+                                        reportFileName = reportFileName.toLowerCase();
                                         fileName = eightCharInt(filePointer) + ".xml";
                                         if (filePrefix != null) {
                                             fileName = filePrefix + fileName;

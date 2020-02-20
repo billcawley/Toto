@@ -155,14 +155,14 @@ public class DBCron {
                                                     Files.move(path, tagged.resolve(timestamp + origName));
                                                 }
                                                 // check the xlsx isn't still in the inbox - zap it if it is
-                                                Path leftoverXLSX = Paths.get(SpreadsheetService.getXMLDestinationDir()).resolve(fileKey + ".xlsx");
+                                                Path leftoverXLSX = Paths.get(SpreadsheetService.getXMLDestinationDir()).resolve(fileKey.toLowerCase() + ".xlsx");
                                                 if (Files.exists(leftoverXLSX)) {
                                                     Files.delete(leftoverXLSX);
                                                 } else if (fileKey.toLowerCase().startsWith("cs") && !error) { // it was zapped (as in ok!) - in the case of CS claim settlements the original file which will be in temp now needs to go in the outbox - if there was no error of course!
-                                                    Path xlsxFileToMove = Paths.get(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".xlsx");
+                                                    Path xlsxFileToMove = Paths.get(SpreadsheetService.getHomeDir() + "/temp/" + fileKey.toLowerCase() + ".xlsx");
                                                     if (Files.exists(xlsxFileToMove)) {
-                                                        System.out.println("moving file back to the out box " + fileKey + ".xlsx");
-                                                        Files.move(xlsxFileToMove, Paths.get(SpreadsheetService.getXMLScanDir()).resolve(fileKey + ".xlsx"));
+                                                        System.out.println("moving file back to the out box " + fileKey.toLowerCase() + ".xlsx");
+                                                        Files.move(xlsxFileToMove, Paths.get(SpreadsheetService.getXMLScanDir()).resolve(fileKey.toLowerCase() + ".xlsx"));
                                                     }
                                                 }
                                             } else {
