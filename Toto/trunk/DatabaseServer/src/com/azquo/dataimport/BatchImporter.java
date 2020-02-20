@@ -607,15 +607,24 @@ public class BatchImporter implements Callable<Void> {
         // after all the column/string function/attribute still is done there may yet be some basic numeric stuff to do
         // single operator calculation after resolving the column names. 1*4.5, 76+345 etc. trim?
         if (compositionPattern.toLowerCase().startsWith("calc")) {
+            //this should be done using the shunting yard algorithnm, but currently only handles a succession of terms and operators
             compositionPattern = compositionPattern.substring(5);
             // IntelliJ said escaping  was redundant I shall assume it's correct.
-            Pattern p = Pattern.compile("[+\\-*/]");
+            Pattern p = Pattern.compile("[+\\-*/] ");//trailing space to avoid finding negative numbers (e.g. -1 - -2  should find only one -
             Matcher m = p.matcher(compositionPattern);
-            if (m.find()) {
-                double dresult = 0.0;
+            Double first = null;
+            Double second = null;
+            double dresult = 0.0;
+            while (m.find()) {
                 try {
-                    double first = Double.parseDouble(compositionPattern.substring(0, m.start()));
-                    double second = Double.parseDouble(compositionPattern.substring(m.end()));
+                    if (first==null){
+                        first = parseNumber(compositionPattern.substring(0, m.start()));
+                    }else{
+                        first = dresult;
+                    }
+                    int secondEnd = compositionPattern.indexOf(" ",m.end());
+                    if (secondEnd==-1) secondEnd= compositionPattern.length();
+                    second = parseNumber(compositionPattern.substring(m.end(), secondEnd));
                     char c = m.group().charAt(0);
                     switch (c) {
                         case '+':
@@ -633,8 +642,8 @@ public class BatchImporter implements Callable<Void> {
                     }
                 } catch (Exception ignored) {
                 }
-                compositionPattern = dresult + "";
             }
+            compositionPattern = roundoff(dresult);
         }
         // this is being done in here as well as later as it may affect dependencies when resolving composite, can't wait until later
         if (cell.getImmutableImportHeading().removeSpaces) {
@@ -646,6 +655,48 @@ public class BatchImporter implements Callable<Void> {
         return compositionPattern; // if composition did result in the line value being changed we should run the loop again in case dependencies mean the results will change again
     }
 
+    private static String roundoff(double d) {
+        String toReturn = d + "";
+        int dPos = toReturn.indexOf(".");
+        if (dPos < 0) return toReturn;
+        if (toReturn.length() > dPos){
+            int newLen = toReturn.length();
+            while (newLen > dPos){
+                if (toReturn.charAt(newLen-1) != '0'){
+                    break;
+                }
+                newLen--;
+            }
+            if (newLen < toReturn.length()){
+                if (newLen==dPos + 1){
+                    return toReturn.substring(0,dPos);
+                }
+                toReturn = toReturn.substring(0,newLen);
+
+            }
+         }
+        String test = toReturn.substring(0, dPos) + toReturn.substring(dPos + 1);
+        int pos9 = test.indexOf("999999999999");
+        if (pos9 > 0) {
+            char roundUp = (char) (test.charAt(pos9 - 1) + 1);
+            test = test.substring(0,pos9 - 1) + roundUp;
+        } else {
+            int pos0 = test.indexOf("000000000000");
+            if (pos0 < 0) {
+                return toReturn;
+            }
+            if (pos0 == 0){
+                test = "0";
+            }else{
+                test = test.substring(0,pos0);
+            }
+        }
+        if (test.length() > dPos) {
+            return test.substring(0, dPos) + "." + test.substring(dPos);
+        } else {
+            return (test + "0000000000").substring(0,dPos);
+        }
+    }
 
     /*
 
@@ -662,6 +713,15 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
     22/02/19 - added to the report side, will be deleted from here when the reports use the new code
     24/07/19 - still not ready to be removed
      */
+
+    private static double parseNumber(String maybeNumber) throws Exception{
+        double result = 0;
+        maybeNumber = maybeNumber.trim();
+        if (maybeNumber.endsWith("%")) {
+          return Double.parseDouble(maybeNumber.substring(0, maybeNumber.length() - 1)) / 100;
+        }
+        return Double.parseDouble(maybeNumber);
+    }
 
     private static void resolveIntoCategories(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFoundCache, List<ImportCellWithHeading> cells) throws Exception {
         for (ImportCellWithHeading cell : cells) {
