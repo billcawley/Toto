@@ -36,7 +36,7 @@ public class ProvenanceService {
         private final int id;
 
         private final String valueText;
-        private final Collection<Name> names;
+        private Collection<Name> names;
 
         private final List<String> history;
 
@@ -339,7 +339,9 @@ public class ProvenanceService {
                 }
             } catch (Exception ignored) {
             }
-            nodeList.add(new TreeNode(nameFound, val, d, value.getId(), value.getHistory()));
+            if (nameFound!=null){
+                nodeList.add(new TreeNode(nameFound, val, d, value.getId(), value.getHistory()));
+            }
         }
         if (headingNeeded) {
             Name topParent = null;
@@ -371,7 +373,15 @@ public class ProvenanceService {
                     }
                 }
                 values.removeAll(extract);
-                nodeList.add(new TreeNode("", heading.getDefaultDisplayName(), roundValue(dValue), dValue, getTreeNodesFromDummyValues(slimExtract, maxSize)));
+                String headingName = heading.getDefaultDisplayName();
+                if (slimExtract.size()==1){
+                    DummyValue child = slimExtract.iterator().next();
+                    for (Name name:child.names){
+                        headingName += "|" + name.getDefaultDisplayName();
+                    }
+                    child.names = new HashSet<>();
+                }
+                nodeList.add(new TreeNode("", headingName, roundValue(dValue), dValue, getTreeNodesFromDummyValues(slimExtract, maxSize)));
                 dValue = 0;
             }
         }
