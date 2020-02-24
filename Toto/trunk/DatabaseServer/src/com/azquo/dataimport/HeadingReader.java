@@ -405,7 +405,6 @@ class HeadingReader {
             case DICTIONARY:
                 if (heading.parentNames == null || heading.parentNames.size() == 0) {
                     throw new Exception("dictionary terms must specify the parent first, heading " + heading.heading);
-
                 }
                 Name parent = heading.parentNames.iterator().next();
                 heading.dictionaryMap = new LinkedHashMap<>();

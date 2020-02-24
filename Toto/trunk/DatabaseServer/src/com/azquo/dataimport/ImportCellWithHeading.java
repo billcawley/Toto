@@ -1,10 +1,12 @@
 package com.azquo.dataimport;
 
+import com.azquo.DateUtils;
 import com.azquo.StringLiterals;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.core.Name;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -38,7 +40,10 @@ class ImportCellWithHeading {
         return lineValue;
     }
 
-    void setLineValue(String lineValue) {
+    void setLineValue(String lineValue) throws Exception {
+        if (!needsResolving){
+            throw new Exception("setting line value after it's marked as resolved");
+        }
         this.lineValue = lineValue;
     }
 
@@ -64,9 +69,30 @@ class ImportCellWithHeading {
     static volatile long lastErrorPrintMillis = 0;
 
     // it used to be that resolved was accessed directly but we want a line being resolved to be linked to a line rejection check
-    // on being set as resolved we assume nothing more is going to happen to the line
+    // as well as various other checks such as date standardising, removing spaces etc as we assume nothing more is going to happen to the line value now
     public void setResolved(AzquoMemoryDBConnection azquoMemoryDBConnection, List<String> languages) throws LineRejectionException {
         if (needsResolving){
+    /*
+    interpret the date and change to standard form
+    todo consider other date formats on import - these may  be covered in setting up dates, but I'm not sure - WFC
+    HeadingReader defines DATELANG and USDATELANG
+    */
+            if (immutableImportHeading.attribute != null && immutableImportHeading.dateForm > 0) {
+                LocalDate date;
+                if (immutableImportHeading.dateForm == StringLiterals.UKDATE) {
+                    date = DateUtils.isADate(lineValue);
+                } else {
+                    date = DateUtils.isUSDate(lineValue);
+                }
+                if (date != null) {
+                    lineValue = DateUtils.dateTimeFormatter.format(date);
+                }
+            }
+            // spaces remove. Before date? Does it matter?
+            if (immutableImportHeading.removeSpaces) {
+                lineValue =  lineValue.replace(" ", "");
+            }
+
             if (immutableImportHeading.only != null) {
                 //`only' can have wildcards  '*xxx*'
                 String only = immutableImportHeading.only.toLowerCase();
@@ -114,7 +140,7 @@ class ImportCellWithHeading {
         } else {
             if (lastErrorPrintMillis < (System.currentTimeMillis() - (1_000 * 10))){ // only log this kind of error once every 10 seconds, potential to jam things up a lot
                 lastErrorPrintMillis = System.currentTimeMillis();
-                System.out.println("setting resolved more than once on a cell " + this);
+                System.out.println("*************setting resolved more than once on a cell " + this); // just log it or the mo
             }
         }
     }
