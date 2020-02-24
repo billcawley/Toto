@@ -5,7 +5,7 @@
     <title></title>
     <style type="text/css">
     	body { font:13px "Courier New", Courier, monospace; }
-    	div { max-width:200px; }
+    	div { max-width:400px; }
     </style>
 </head>
 <body>
