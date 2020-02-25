@@ -36,7 +36,7 @@ public class ProvenanceService {
         private final int id;
 
         private final String valueText;
-        private Collection<Name> names;
+        private final Collection<Name> names;
 
         private final List<String> history;
 
@@ -345,44 +345,77 @@ public class ProvenanceService {
         }
         if (headingNeeded) {
             Name topParent = null;
-            while (values.size() > 0) {
-                count++;
-                Name heading = getMostUsedName(values, topParent);
-                topParent = heading.findATopParent();
-                Set<DummyValue> extract = new HashSet<>();
-                Set<DummyValue> slimExtract = new HashSet<>();
-                for (DummyValue value : values) {
-                    if (value.getNames().contains(heading)) {
-                        extract.add(value);
-                        try {
-                            dValue += Double.parseDouble(value.getValueText());
-                        } catch (Exception e) {
-                            //ignore
-                        }
-                        //creating a new 'value' with one less name for recursion
-                        try {
-                            Set<Name> slimNames = new HashSet<>(value.getNames());
-                            slimNames.remove(heading);
-                            DummyValue slimValue = new DummyValue(value.getId(), value.getValueText(), slimNames, value.getHistory());
-                            slimExtract.add(slimValue);
-                        } catch (Exception e) {
-                            // exception from value constructor, should not happen
-                            e.printStackTrace();
-                        }
-                        //debugCount = slimValue.getNames().size();
-                    }
+            Collection<Name> commonNames = new ArrayList<>();
+            commonNames.addAll(values.iterator().next().names);
+            for (DummyValue value:values){
+                commonNames.retainAll(value.getNames());
+                if (commonNames.size()==0){
+                    break;
                 }
-                values.removeAll(extract);
-                String headingName = heading.getDefaultDisplayName();
-                if (slimExtract.size()==1){
-                    DummyValue child = slimExtract.iterator().next();
-                    for (Name name:child.names){
+            }
+            Set<DummyValue> slimExtract = new HashSet<>();
+            if (commonNames.size()==0) {
+                while (values.size() > 0) {
+                    count++;
+                    Name heading = getMostUsedName(values, topParent);
+                    topParent = heading.findATopParent();
+                    Set<DummyValue> extract = new HashSet<>();
+                    slimExtract = new HashSet<>();
+                     for (DummyValue value : values) {
+                        if (value.getNames().contains(heading)) {
+                            extract.add(value);
+                            try {
+                                dValue += Double.parseDouble(value.getValueText());
+                            } catch (Exception e) {
+                                //ignore
+                            }
+                            //creating a new 'value' with one less name for recursion
+                            try {
+                                Set<Name> slimNames = new HashSet<>(value.getNames());
+                                slimNames.remove(heading);
+                                DummyValue slimValue = new DummyValue(value.getId(), value.getValueText(), slimNames, value.getHistory());
+                                slimExtract.add(slimValue);
+                            } catch (Exception e) {
+                                // exception from value constructor, should not happen
+                                e.printStackTrace();
+                            }
+                            //debugCount = slimValue.getNames().size();
+                        }
+                    }
+                    values.removeAll(extract);
+                    String headingName = heading.getDefaultDisplayName();
+                    nodeList.add(new TreeNode("", headingName, roundValue(dValue), dValue, getTreeNodesFromDummyValues(slimExtract, maxSize)));
+                    dValue = 0;
+                }
+            }else{
+                String headingName = null;
+                for (Name name:commonNames) {
+                    if (headingName == null) {
+                        headingName = name.getDefaultDisplayName();
+                    } else {
                         headingName += "|" + name.getDefaultDisplayName();
                     }
-                    child.names = new HashSet<>();
+                }
+                for (DummyValue value : values) {
+                    try {
+                        dValue += Double.parseDouble(value.getValueText());
+                    } catch (Exception e) {
+                        //ignore
+                    }
+                    //creating a new 'value' without the common names for recursion
+                    try {
+                        Set<Name> slimNames = new HashSet<>(value.getNames());
+                        slimNames.removeAll(commonNames);
+                        DummyValue slimValue = new DummyValue(value.getId(), value.getValueText(), slimNames, value.getHistory());
+                        slimExtract.add(slimValue);
+                    } catch (Exception e) {
+                        // exception from value constructor, should not happen
+                        e.printStackTrace();
+                    }
+                    //debugCount = slimValue.getNames().size();
                 }
                 nodeList.add(new TreeNode("", headingName, roundValue(dValue), dValue, getTreeNodesFromDummyValues(slimExtract, maxSize)));
-                dValue = 0;
+
             }
         }
         return nodeList;
