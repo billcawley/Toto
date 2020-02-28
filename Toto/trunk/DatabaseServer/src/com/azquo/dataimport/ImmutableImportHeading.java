@@ -39,7 +39,7 @@ public class ImmutableImportHeading {
     final boolean existing;
     final boolean optional;
     final String splitChar;
-    final List<Integer> localParentIndexes;
+    final int localParentIndex;
     Map<Name, List<DictionaryTerm>> dictionaryMap;
     Map<String, List<String>> synonyms;
      // not being used, perhaps zap
@@ -72,7 +72,7 @@ public class ImmutableImportHeading {
         this.existing = mutableImportHeading.existing;
         this.optional = mutableImportHeading.optional;
         this.splitChar = mutableImportHeading.splitChar;
-        this.localParentIndexes = mutableImportHeading.localParentIndexes;
+        this.localParentIndex = mutableImportHeading.localParentIndex;
         this.dictionaryMap = mutableImportHeading.dictionaryMap;
         this.synonyms = mutableImportHeading.synonyms;
         this.replace = mutableImportHeading.replace;

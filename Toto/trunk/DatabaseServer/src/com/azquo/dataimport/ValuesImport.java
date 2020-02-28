@@ -96,7 +96,8 @@ class ValuesImport {
                             lineValue = lineValue.replace("\\\\t", "\t").replace("\\\\n", "\n");
                         }
                         lineValue = checkNumeric(lineValue);
-                        importCellsWithHeading.add(new ImportCellWithHeading(immutableImportHeading, lineValue));
+                        // we might have extra data in the file we're not interested in underneath composite columns, if so blank the cell, we want composite to be working in that case - that's what noFileHeading does. Could put above?
+                        importCellsWithHeading.add(new ImportCellWithHeading(immutableImportHeading, immutableImportHeading.noFileHeading ? "" : lineValue));
                         columnIndex++;
                     }
                     if (!corrupt && !blankLine) {

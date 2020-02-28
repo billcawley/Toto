@@ -1,6 +1,5 @@
 package com.azquo.dataimport;
 
-import com.azquo.DateUtils;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.StringLiterals;
 import com.azquo.memorydb.core.Name;
@@ -10,7 +9,6 @@ import com.azquo.memorydb.service.NameService;
 import com.azquo.memorydb.service.ValueService;
 
 import java.text.DecimalFormat;
-import java.time.LocalDate;
 import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -86,10 +84,6 @@ public class BatchImporter implements Callable<Void> {
                     try {
                         // first pass over the cells, standardise the dates and do what validation we can before composites are checked
                         for (ImportCellWithHeading cell : lineToLoad) {
-                            // we might have extra data in the file we're not interested in underneath composite columns, if so blank the cell, we want composite to be working in that case
-                            if (cell.getImmutableImportHeading().noFileHeading){
-                                cell.setLineValue("");
-                            }
                             // simple ignore list check
                             if (cell.getImmutableImportHeading().ignoreList != null) {
                                 for (String ignoreItem : cell.getImmutableImportHeading().ignoreList) {
@@ -100,26 +94,19 @@ public class BatchImporter implements Callable<Void> {
                             }
                             // override more simple than composition, just set it regardless
                             if (cell.getImmutableImportHeading().override != null) {
-                                cell.setLineValue(cell.getImmutableImportHeading().override);
-                                cell.setResolved(azquoMemoryDBConnection, attributeNames);
+                                cell.setLineValue(cell.getImmutableImportHeading().override, azquoMemoryDBConnection, attributeNames);
                                 /* We try to resolve if there's a composition pattern or lookup *and* no value in the cell.
                                 So no composition and no lookup config and we flag as needs resolving as false OR If there's a value in the cell we don't override it
                                 with a composite/lookup value
                                  */
                             } else if (!cell.getLineValue().isEmpty() || (cell.getImmutableImportHeading().lookupParentIndex < 0 && cell.getImmutableImportHeading().compositionPattern == null)) {
-                                cell.setResolved(azquoMemoryDBConnection, attributeNames);
-                            }
-                            // if it has a value it's resolved, set line names if required. I think this could be moved to somewhere more logical
-                            if (cell.getImmutableImportHeading().lineNameRequired && cell.getLineValue().length() > 0) {
-                                optionalIncludeInParents(azquoMemoryDBConnection, cell, namesFoundCache, attributeNames);
+                                cell.setLineValueResolved(azquoMemoryDBConnection, attributeNames);
                             }
                         }
 
-                        resolveCompositeValues(azquoMemoryDBConnection, namesFoundCache, attributeNames, lineToLoad, lineNumber, compositeIndexResolver);
+                        resolveCellInterdependence(lineToLoad, lineNumber);
                         try {
-                            // dictionary stuff
-                            resolveIntoCategories(azquoMemoryDBConnection, namesFoundCache, lineToLoad);
-                            interpretLine(azquoMemoryDBConnection, lineToLoad, namesFoundCache, attributeNames, lineNumber, linesRejected, clearData);
+                            interpretLine(lineToLoad, lineNumber, linesRejected, clearData);
                         } catch (Exception e) {
                             azquoMemoryDBConnection.addToUserLogNoException(e.getMessage(), true);
                             e.printStackTrace();
@@ -153,7 +140,7 @@ public class BatchImporter implements Callable<Void> {
     }
 
 
-    private static int checkCondition(AzquoMemoryDBConnection azquoMemoryDBConnection, List<ImportCellWithHeading> lineToLoad, String condition, CompositeIndexResolver compositeIndexResolver, Name nameToTest, final Map<Name, String> nearestList, Map<String, Name> namesFoundCache, List<String> attributeNames, boolean provisional) throws Exception {
+    private int checkCondition(List<ImportCellWithHeading> lineToLoad, String condition, CompositeIndexResolver compositeIndexResolver, Name nameToTest, final Map<Name, String> nearestList, boolean provisional) throws Exception {
         //returns CHECKTRUE, CHECKFALSE, CHECKMAYBE
         int found = CHECKFALSE;
         boolean maybe = false;
@@ -180,8 +167,8 @@ public class BatchImporter implements Callable<Void> {
             int fieldNo = compositeIndexResolver.getColumnIndexForHeading(condition.substring(m.start() + 1, m.end() - 1));
             if (fieldNo >= 0) {
                 ImportCellWithHeading cell = lineToLoad.get(fieldNo);
-                if (cell.needsResolving()) {
-                    conditionValue = getCompositeValue(azquoMemoryDBConnection, cell, cell.getImmutableImportHeading().compositionPattern, lineToLoad, compositeIndexResolver, namesFoundCache, attributeNames);
+                if (!cell.lineValueResolved()) {
+                    conditionValue = getCompositeValue(cell, cell.getImmutableImportHeading().compositionPattern, lineToLoad);
                 } else {
                     conditionValue = cell.getLineValue();
                 }
@@ -333,21 +320,24 @@ public class BatchImporter implements Callable<Void> {
         return term;
     }
 
+    // composite and name dependencies between cells
     // replace things in quotes with values from the other columns. So `A column name`-`another column name` might be created as 123-235 if they were the values
     // Now supports basic excel like string operations, left right and mid, also simple single operator calculation on the results.
-    // Calcs simple for the moment - if required could integrate the shunting yard algorithm
+    // We need to integrate the shunting yard algorithm
 
-    private static void resolveCompositeValues(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFoundCache, List<String> attributeNames, List<ImportCellWithHeading> cells, int importLine, CompositeIndexResolver compositeIndexResolver) throws Exception {
+    private void resolveCellInterdependence(List<ImportCellWithHeading> cells, int importLine) throws Exception {
         boolean adjusted = true;
         int timesLineIsModified = 0;
         // an initial check on needs resolving will have been done by this point
         int loopLimit = 10;
+        // first pass on name resolution
+        tryToResolveNames(cells);
         // loops in case there are multiple levels of dependencies. The compositionPattern stays the same but on each pass the result may be different.
         // note : a circular reference could cause an infinite loop - hence timesLineIsModified limit
         while (adjusted && timesLineIsModified < loopLimit) {
             adjusted = false;
             for (ImportCellWithHeading cell : cells) {
-                if (cell.needsResolving()) {
+                if (!cell.lineValueResolved()) {
                     if (cell.getImmutableImportHeading().lookupParentIndex < 0) {
                         String compositionPattern = cell.getImmutableImportHeading().compositionPattern;
                         if (compositionPattern == null) {
@@ -356,30 +346,283 @@ public class BatchImporter implements Callable<Void> {
                         }
                         compositionPattern = compositionPattern.replace("LINENO", importLine + "");
                         if (compositionPattern.toLowerCase().startsWith("if(")) {
-                            if (resolveIf(azquoMemoryDBConnection, cell, compositionPattern, cells, compositeIndexResolver, namesFoundCache, attributeNames)) {
+                            if (resolveIf(cell, compositionPattern, cells)) {
                                 adjusted = true;
                             }
                         } else {
-                            if (resolveComposition(azquoMemoryDBConnection, cell, compositionPattern, cells, compositeIndexResolver, namesFoundCache, attributeNames)) {
+                            if (resolveComposition(cell, compositionPattern, cells)) {
                                 adjusted = true;
                             }
                         }
                     } else {
+                        // should this be below? It does seem to do some name stuff. Needs a serious investigation
                         ImportCellWithHeading parentCell = cells.get(cell.getImmutableImportHeading().lookupParentIndex);
-                        if (!parentCell.needsResolving() && parentCell.getLineNames() != null) {
-                            adjusted = checkLookup(azquoMemoryDBConnection, cell, parentCell.getLineNames().iterator().next(), cells, compositeIndexResolver, namesFoundCache, attributeNames);
+                        if (parentCell.getLineNames() != null) {
+                            adjusted = checkLookup(azquoMemoryDBConnection, cell, parentCell.getLineNames().iterator().next(), cells, compositeIndexResolver);
                         }
                     }
                 }
             }
+            if (adjusted) {
+                tryToResolveNames(cells);
+            }
+
             timesLineIsModified++;
             if (timesLineIsModified == loopLimit) {
-                throw new Exception("Circular composite references in headings!");
+                throw new Exception("Circular references in headings!");
             }
         }
     }
 
-    private static int stringTerm(String string, List<ImportCellWithHeading> cells, CompositeIndexResolver compositeIndexResolver) {
+    private void tryToResolveNames(List<ImportCellWithHeading> cells) throws Exception {
+        int timesLineIsModified = 0;
+        int loopLimit = 10;
+        boolean resolveAgain = true;
+        while (resolveAgain) {
+
+            resolveAgain = false;
+            for (ImportCellWithHeading cell : cells) {
+
+                if (cell.lineValueResolved()) { // ok this is where things get interesting.
+                    // first try to sort the line names (if not done already)
+                    if (!cell.lineNamesResolved()) {
+                        // dictionary map first, should be simple. Heading parent names dealt with in the heading reader
+                        if (cell.getImmutableImportHeading().dictionaryMap != null) {
+                            if (cell.getLineValue().length() > 0) { // I suppose it could be empty
+                                boolean hasResult = false;
+                                for (Name category : cell.getImmutableImportHeading().dictionaryMap.keySet()) {
+                                    boolean found = true;
+                                    List<ImmutableImportHeading.DictionaryTerm> dictionaryTerms = cell.getImmutableImportHeading().dictionaryMap.get(category);
+                                    for (ImmutableImportHeading.DictionaryTerm dictionaryTerm : dictionaryTerms) {
+                                        found = false; //the phrase now has to pass every one of the tests.  If it does so then the category is found.
+                                        for (String item : dictionaryTerm.items) {
+                                            if (dictionaryTerm.exclude) {
+                                                if (BatchImporter.containsSynonym(cell.getImmutableImportHeading().synonyms, item.toLowerCase().trim(), cell.getLineValue().toLowerCase())) {
+                                                    break;
+                                                }
+                                            } else {
+                                                if (BatchImporter.containsSynonym(cell.getImmutableImportHeading().synonyms, item.toLowerCase().trim(), cell.getLineValue().toLowerCase())) {
+                                                    found = true;
+                                                }
+                                            }
+                                        }
+                                        if (!found) break;
+                                    }
+                                    if (found) {
+                                        cell.addToLineNames(category);
+                                        hasResult = true;
+                                        break;
+                                    }
+                                }
+                                if (!hasResult) {
+                                    if (!cell.getImmutableImportHeading().blankZeroes) {
+                                        Name parent = cell.getImmutableImportHeading().parentNames.iterator().next();
+                                        cell.addToLineNames(BatchImporter.findOrCreateNameStructureWithCache(azquoMemoryDBConnection, namesFoundCache, "Uncategorised " + parent.getDefaultDisplayName(), parent, false, StringLiterals.DEFAULT_DISPLAY_NAME_AS_LIST));
+                                    }
+                                }
+                            }
+                            cell.setLineNamesResolved(); // deal with its children later
+                            resolveAgain = true;
+                        } else
+                            // todo, read and make the comment make proper sense
+                            // It would be nice to just resolve the names straight away but there's a priority - need to deal with relations between the cells first
+                            // the real issue here is local parents as in cells that are children of other cells local. Under these circumstances the names must be resolved
+                            // by the parent cell. And further to that if, here we want to resolve a child cell we must check that that child doesn't have local parents
+
+        /*
+             Imagine 3 headings. Town, street, whether it's pedestrianized. Pedestrianized parent of street. Town parent of street local.
+             the key here is that the resolveLineNameParentsAndChildForCell has to resolve line Name for both of them - if it's called on "Pedestrianized parent of street" first
+             both pedestrianized (ok) and street (NOT ok!) will have their line names resolved
+             whereas resolving "Town parent of street local" first means that the street should be correct by the time we resolve "Pedestrianized parent of street".
+             essentially sort local names need to be sorted first.
+
+             The point is that the name is attached to a call, it is only resolved once, local gets priority, resolve it first
+
+             EFC note August 2018 after modifying WFC code : the old method was just to run through cells that have isLocal first but that could be tripped up
+             by a local in a local which, while not recommended, is supported. The key here is that locals should be resolved in order starting at the top.
+
+             localParentIndexes enables this, recurse up to the top and go down meaning this cell will be safe to resolve if there are local names involved.
+
+              */
+
+                            if (cell.getImmutableImportHeading().localParentIndex == -1) { // no local parents across the cells, means we can do some resolution here
+                                // resolution that will take into account the parents as assigned by the heading
+                                // but NOT, notably, any parents this cell may have from another cell in the same line
+                                if (!cell.getLineValue().isEmpty()) {
+
+                                    // in simple terms if a line cell value refers to a name it can now refer to a set of names
+                                    // to make a set parent of more than one thing e.g. parent of set a, set b, set c
+                                    // nothing in the heading has changed except the split char but we need to detect it here
+                                    // split before checking for quotes etc. IF THE SPLIT CHAR IS IN QUOTES WE DON'T CURRENTLY SUPPORT THAT!
+
+                                    List<String> localLanguages = setLocalLanguage(cell.getImmutableImportHeading().attribute, attributeNames);
+                                    String[] split;
+                                    if (cell.getImmutableImportHeading().splitChar == null) {
+                                        split = new String[]{cell.getLineValue()};
+                                    } else {
+                                        split = cell.getLineValue().split(cell.getImmutableImportHeading().splitChar);
+                                    }
+                                    for (String nameToAdd : split) {
+                                        if (cell.getImmutableImportHeading().optional) {
+                                            //don't create a new name
+                                            try {
+                                                // todo - what if there are multiple parents? Try to resolve what we can?
+                                                // it will simply ignore null
+                                                cell.addToLineNames(NameService.findByName(azquoMemoryDBConnection, cell.getImmutableImportHeading().parentNames.iterator().next().getDefaultDisplayName() + "->" + nameToAdd, localLanguages));
+                                            } catch (Exception ignored) {
+                                            }
+                                        } else {
+                                            Set<Name> parents = cell.getImmutableImportHeading().parentNames;
+                                            boolean local = cell.getImmutableImportHeading().isLocal;
+                                            if (parents.size() == 0) {
+                                                cell.addToLineNames(findOrCreateNameStructureWithCache(azquoMemoryDBConnection, namesFoundCache, nameToAdd.trim(), null, local, localLanguages));
+                                            } else {
+                                                for (Name parent : parents) {
+                                                    cell.addToLineNames(findOrCreateNameStructureWithCache(azquoMemoryDBConnection, namesFoundCache, nameToAdd.trim(), parent, local, localLanguages));
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                cell.setLineNamesResolved();
+                                resolveAgain = true;
+                            }
+                        // todo lookups does things as well, should it be in here? DO we just leave it to it?
+                    }
+
+                    // try and resolve any children this cell may have? If their line name is resolved (may not be if local parents)
+                    // note - lineNamesChildrenResolved is only set to false when the indexForChild is -1, when there could be a requirement to resolve the children
+                    if (cell.lineNamesResolved() && cell.getLineNames() != null && !cell.lineNamesChildrenResolved()) {// line names could be resolved and null due to optional or a blank value - check current blank tolerances todo
+                        ImportCellWithHeading childCell = cells.get(cell.getImmutableImportHeading().indexForChild);
+                        if (childCell.lineValueResolved()) { // that child cell has it's line vale resolved
+                            if (!childCell.lineNamesResolved()) { // it doesn't have the names resolved yet
+                                // keep existing errors
+                                if (childCell.getLineValue().isEmpty()) {
+                                    throw new Exception("blank value for " + childCell.getImmutableImportHeading().heading + " (child of " + cell.getLineValue() + " " + cell.getImmutableImportHeading().heading + ")");
+                                }
+                                // probably the most simple check - that the child cell has no local parents *or* that this cell is local
+                                if (childCell.getImmutableImportHeading().localParentIndex == -1 || cell.getImmutableImportHeading().isLocal) {
+                                    // some kind of factor to optional include above?
+                                    String[] childNames;
+                                    if (childCell.getImmutableImportHeading().splitChar == null) {
+                                        childNames = new String[]{childCell.getLineValue()};
+                                    } else {
+                                        childNames = childCell.getLineValue().split(childCell.getImmutableImportHeading().splitChar);
+                                    }
+                                    // todo, this pays no attention to optional, should it??
+                                    for (String childName : childNames) {
+                                        for (Name thisCellsName : cell.getLineNames()) {
+                                            childCell.addToLineNames(findOrCreateNameStructureWithCache(azquoMemoryDBConnection, namesFoundCache, childName, thisCellsName
+                                                    , cell.getImmutableImportHeading().isLocal, setLocalLanguage(childCell.getImmutableImportHeading().attribute, attributeNames)));
+                                        }
+                                    }
+                                    // sort the child cell's parent headings
+                                    for (Name parent : childCell.getImmutableImportHeading().parentNames) {
+                                        for (Name child : childCell.getLineNames()) {
+                                            parent.addChildWillBePersisted(child, azquoMemoryDBConnection);
+                                        }
+                                    }
+                                    cell.setLineNamesChildrenResolved(); // if possible. So mark as resolved.
+                                    childCell.setLineNamesResolved();
+                                    resolveAgain = true; // cell names were set as resolved, go around again
+                                }
+                            } else {// it is already resolved,  add to the parents of the line names already there
+                                if (childCell.getLineNames() != null) { // resolved may still be null, optional for example
+                                    for (Name parent : cell.getLineNames()) {
+                                        for (Name childCellName : childCell.getLineNames()) {
+                                            // todo, clarify provisional AND alreadyCategorised here. But we're replicating the existing logic
+                                            if (!cell.getImmutableImportHeading().provisional || !alreadyCategorised(parent, childCellName)) {//checking whether the child is already in the set under another
+                                                parent.addChildWillBePersisted(childCellName, azquoMemoryDBConnection);
+                                            }
+                                        }
+                                    }
+                                }
+                                // I do not think this warrants resolving again. Although the action was required nothing will have been dependant on the parents I don't think
+                                cell.setLineNamesChildrenResolved(); // if the children were null nothing changed but we tried, mark it as done
+                            }
+                        }
+                        if (cell.lineNamesChildrenResolved() && childCell.getLineNames() != null){ // as mentioned above it could be marked as resolved with null line names
+                            // but, if not null, sort exclusives
+                            sortExclusive(cell, cells);
+                        }
+                    }
+                }
+                // end cell loop
+            }
+            timesLineIsModified++;
+            if (timesLineIsModified == loopLimit) {
+                throw new Exception("Circular references in headings when resolving names!");
+            }
+            // end main wile loop
+        }
+    }
+
+    private void sortExclusive(ImportCellWithHeading cellWithHeading, List<ImportCellWithHeading> cells) throws Exception {
+        // note! Exclusive can't work if THIS column is multiple names
+            ImportCellWithHeading childCell = cells.get(cellWithHeading.getImmutableImportHeading().indexForChild);
+            if (cellWithHeading.getLineNames().size() == 1 && cellWithHeading.getImmutableImportHeading().exclusiveIndex != HeadingReader.NOTEXCLUSIVE) {
+                Name parent = cellWithHeading.getLineNames().iterator().next();
+                //the 'parent' above is the current cell name, not its parent
+                // check exclusive to remove the child from some other parents if necessary - this replaces the old "remove from" functionality
+                /*
+                Exclusive merits explanation. Let us assume cellWithHeading's heading is "Category" (a heading which may have no Name though its cells will)
+                which is "child of" "All Categories" (a Name in the database) and "parent of" "Product", another heading. Cells in the "Product" column have Names, childCell.getLineNames().
+                We might say that the cell in "Category" is "Shirts" and the cell in "Product" is "White Poplin Shirt". By putting exclusive in the "Category" column we're saying
+                : get rid of any parents "White Poplin Shirt" has that are in "All Categories" that are NOT "Shirts". I'll use this examples to comment below.
+
+                If exclusive has a value then whatever it specifies replaces the set defined by "child of" ("All Categories in this example") to remove from so :
+                get rid of any parents "White Poplin Shirt" has that are in (or are!) "Name Specified By Exclusive" that are NOT "Shirts"
+
+                Note : "Name Specified By Exclusive" used to be a straight lookup in the "else" below but now it refers to another column's name.
+                If you wanted the old functionality you'd need to make a column with a default value to do it
+                 */
+                // if blank exclusive means in the name this column is child of
+                Name exclusiveName = null;
+                if (cellWithHeading.getImmutableImportHeading().exclusiveIndex == HeadingReader.EXCLUSIVETOCHILDOF) {
+                    // blank exclusive clause, use "child of" clause - currently this only looks at the first name to be exclusive of, more than one makes little sense
+                    // (check all the way down. all children, necessary due due to composite option name1->name2->name3->etc
+                    exclusiveName = cellWithHeading.getImmutableImportHeading().parentNames.iterator().next();
+                } else { // exclusive has a value, not null or blank, is referring to a name in another cell
+                    Set<Name> exclusiveNameSet = cells.get(cellWithHeading.getImmutableImportHeading().exclusiveIndex).getLineNames();
+                    if (exclusiveNameSet != null) {
+                        exclusiveName = exclusiveNameSet.iterator().next();
+                    }
+                }
+                if (exclusiveName != null) {
+                    /* To follow the example above run through the parents of "White Poplin Shirt".
+                    Firstly check that the parent is "Shirts", if it is we of course leave it there and note to not re-add (needsAdding = false).
+                      If the parent is NOT "Shirts" we check to see if it's the exclusive set itself ("White Poplin Shirt" was directly in "All Categories")
+                      or if the parent is any of the children of the exclusive set in this case maybe "Swimwear". Since we don't know what the existing category
+                      structure was check all the way down (findAllChildren() not just getChildren()), "White Poplin Shirt" could have ended up in
+                      "All Categories-Swimwear->Mens" for example. Notable that nested name syntax (with "->") is allowed in the cells and
+                      might well have been built using the composite functionality above so it's possible another azquo upload could have jammed "White Poplin Shirt"
+                      somewhere under "All Categories" many levels below. */
+                    // todo - address mismatch between comment "findAllChildren() not just getChildren()" and SVN change 2375 which changed it to getChildren()
+                    // given that we now have multiple names on a line we run through the child ones checking as necessary
+                    //we are checking whether we can put the child name into the parent within the exclusiveName set
+                    for (Name childCellName : childCell.getLineNames()) {
+                        boolean needsAdding = true; // defaults to true
+                        for (Name childCellParent : childCellName.getParents()) {
+                            if (childCellParent == parent) {
+                                needsAdding = false;
+                            } else if (childCellParent == exclusiveName || exclusiveName.getChildren().contains(childCellParent)) {
+                                if (cellWithHeading.getImmutableImportHeading().provisional) {
+                                    needsAdding = false;
+                                    break;
+                                }
+                                childCellParent.removeFromChildrenWillBePersisted(childCellName, azquoMemoryDBConnection);
+                            }
+                        }
+                        // having hopefully sorted a new name or exclusive add the child
+                        if (needsAdding) {
+                            parent.addChildWillBePersisted(childCellName, azquoMemoryDBConnection);
+                        }
+                    }
+            }
+        }
+    }
+
+    private int stringTerm(String string, List<ImportCellWithHeading> cells) {
         int lengthPos = string.indexOf("len(");
         while (lengthPos >= 0) {
             int endBrackets = string.indexOf(")", lengthPos);
@@ -412,7 +655,7 @@ public class BatchImporter implements Callable<Void> {
     // this routine uses cell.lineValue to store interim results...
     // comma as opposed to ? : as that syntax is what is used in Excel
 
-    private static boolean resolveIf(AzquoMemoryDBConnection azquoMemoryDBConnection, ImportCellWithHeading cell, String compositionPattern, List<ImportCellWithHeading> cells, CompositeIndexResolver compositeIndexResolver, Map<String, Name> namesFoundCache, List<String> attributeNames) throws Exception {
+    private boolean resolveIf(ImportCellWithHeading cell, String compositionPattern, List<ImportCellWithHeading> cells) throws Exception {
         int commaPos = compositionPattern.indexOf(",");
         if (commaPos < 0)
             return false;
@@ -426,15 +669,15 @@ public class BatchImporter implements Callable<Void> {
         if (conditionTerm == null)
             return false;
         int conditionPos = condition.indexOf(conditionTerm);
-        String leftTerm = getCompositeValue(azquoMemoryDBConnection, cell, condition.substring(0, conditionPos).trim(), cells, compositeIndexResolver, namesFoundCache, attributeNames);
+        String leftTerm = getCompositeValue(cell, condition.substring(0, conditionPos).trim(), cells);
         if (leftTerm == null) return false;
-        String rightTerm = getCompositeValue(azquoMemoryDBConnection, cell, condition.substring(conditionPos + conditionTerm.length()).trim(), cells, compositeIndexResolver, namesFoundCache, attributeNames);
+        String rightTerm = getCompositeValue(cell, condition.substring(conditionPos + conditionTerm.length()).trim(), cells);
         if (rightTerm == null) return false;
         // string compare only currently, could probably detect numbers and adjust accordingly
         if ((conditionTerm.contains("=") && leftTerm.equals(rightTerm)) || (conditionTerm.contains("<") && leftTerm.compareTo(rightTerm) < 0) || (conditionTerm.contains(">") && leftTerm.compareTo(rightTerm) > 0)) {
-            return resolveComposition(azquoMemoryDBConnection, cell, trueTerm, cells, compositeIndexResolver, namesFoundCache, attributeNames);
+            return resolveComposition(cell, trueTerm, cells);
         }
-        return resolveComposition(azquoMemoryDBConnection, cell, falseTerm, cells, compositeIndexResolver, namesFoundCache, attributeNames);
+        return resolveComposition(cell, falseTerm, cells);
     }
 
     private static String findEquals(String term) {
@@ -446,21 +689,17 @@ public class BatchImporter implements Callable<Void> {
         return null;
     }
 
-    private static boolean resolveComposition(AzquoMemoryDBConnection azquoMemoryDBConnection, ImportCellWithHeading cell, String compositionPattern, List<ImportCellWithHeading> cells, CompositeIndexResolver compositeIndexResolver, Map<String, Name> namesFoundCache, List<String> attributeNames) throws Exception {
-        String value = getCompositeValue(azquoMemoryDBConnection, cell, compositionPattern, cells, compositeIndexResolver, namesFoundCache, attributeNames);
+    private boolean resolveComposition(ImportCellWithHeading cell, String compositionPattern, List<ImportCellWithHeading> cells) throws Exception {
+        String value = getCompositeValue(cell, compositionPattern, cells);
         if (value == null) {
             return false;
         }
-        cell.setLineValue(value);
-        cell.setResolved(azquoMemoryDBConnection, attributeNames);
-        if (cell.getImmutableImportHeading().lineNameRequired) {
-            optionalIncludeInParents(azquoMemoryDBConnection, cell, namesFoundCache, attributeNames);
-        }
+        cell.setLineValue(value, azquoMemoryDBConnection, attributeNames);
         return true;
     }
 
     // ok so resolveIf likes to use some of the composite logic but this automatically assigned the result to line value (see function resolveComposition above), hence the breakup into this function and resolveComposition
-    private static String getCompositeValue(AzquoMemoryDBConnection azquoMemoryDBConnection, ImportCellWithHeading cell, String compositionPattern, List<ImportCellWithHeading> cells, CompositeIndexResolver compositeIndexResolver, Map<String, Name> namesFoundCache, List<String> attributeNames) throws Exception {
+    private String getCompositeValue(ImportCellWithHeading cell, String compositionPattern, List<ImportCellWithHeading> cells) throws Exception {
         int headingMarker = compositionPattern.indexOf("`");
         while (headingMarker >= 0) {
             boolean doubleQuotes = false;
@@ -496,12 +735,12 @@ public class BatchImporter implements Callable<Void> {
                             try {
                                 if (secondComma < 0) {
                                     countString = expression.substring(commaPos + 1, expression.length() - 1);
-                                    funcInt = stringTerm(countString.toLowerCase().trim(), cells, compositeIndexResolver);
+                                    funcInt = stringTerm(countString.toLowerCase().trim(), cells);
                                 } else {
                                     countString = expression.substring(commaPos + 1, secondComma);
-                                    funcInt = stringTerm(countString.toLowerCase().trim(), cells, compositeIndexResolver);
+                                    funcInt = stringTerm(countString.toLowerCase().trim(), cells);
                                     countString = expression.substring(secondComma + 1, expression.length() - 1);
-                                    funcInt2 = stringTerm(countString.toLowerCase().trim(), cells, compositeIndexResolver);
+                                    funcInt2 = stringTerm(countString.toLowerCase().trim(), cells);
                                 }
                             } catch (Exception ignore) {
                             }
@@ -525,13 +764,14 @@ public class BatchImporter implements Callable<Void> {
                     throw new Exception("Unable to find column : " + expression + " in composition pattern " + cell.getImmutableImportHeading().compositionPattern + " in heading " + cell.getImmutableImportHeading().heading);
                 }
                 // skip until the referenced cell has been resolved - the loop outside checking for dependencies will send us back here
-                if (compCell != null && !compCell.needsResolving()) {
+                if (compCell != null && compCell.lineValueResolved()) {
                     String sourceVal;
                     // we have a name attribute and it is a column with a name, we resolve the name if necessary and get the attribute
                     if (nameAttribute != null && compCell.getImmutableImportHeading().lineNameRequired) {
-                        if (compCell.getLineNames() == null && compCell.getLineValue().length() > 0) {
-                            optionalIncludeInParents(azquoMemoryDBConnection, compCell, namesFoundCache, attributeNames);
-                        }
+                        // EFC commented, I'm assuming a null will mean "no adjustment, try again later"
+/*                        if (compCell.getLineNames() == null && compCell.getLineValue().length() > 0) {
+                            optionalIncludeInParents(compCell);
+                        }*/
                         if (compCell.getLineNames() == null) {
                             return null;
                         }
@@ -595,13 +835,13 @@ public class BatchImporter implements Callable<Void> {
             double dresult = 0.0;
             while (m.find()) {
                 try {
-                    if (first==null){
+                    if (first == null) {
                         first = parseNumber(compositionPattern.substring(0, m.start()));
-                    }else{
+                    } else {
                         first = dresult;
                     }
-                    int secondEnd = compositionPattern.indexOf(" ",m.end());
-                    if (secondEnd==-1) secondEnd= compositionPattern.length();
+                    int secondEnd = compositionPattern.indexOf(" ", m.end());
+                    if (secondEnd == -1) secondEnd = compositionPattern.length();
                     second = parseNumber(compositionPattern.substring(m.end(), secondEnd));
                     char c = m.group().charAt(0);
                     switch (c) {
@@ -633,42 +873,42 @@ public class BatchImporter implements Callable<Void> {
         String toReturn = d + "";
         int dPos = toReturn.indexOf(".");
         if (dPos < 0) return toReturn;
-        if (toReturn.length() > dPos){
+        if (toReturn.length() > dPos) {
             int newLen = toReturn.length();
-            while (newLen > dPos){
-                if (toReturn.charAt(newLen-1) != '0'){
+            while (newLen > dPos) {
+                if (toReturn.charAt(newLen - 1) != '0') {
                     break;
                 }
                 newLen--;
             }
-            if (newLen < toReturn.length()){
-                if (newLen==dPos + 1){
-                    return toReturn.substring(0,dPos);
+            if (newLen < toReturn.length()) {
+                if (newLen == dPos + 1) {
+                    return toReturn.substring(0, dPos);
                 }
-                toReturn = toReturn.substring(0,newLen);
+                toReturn = toReturn.substring(0, newLen);
 
             }
-         }
+        }
         String test = toReturn.substring(0, dPos) + toReturn.substring(dPos + 1);
         int pos9 = test.indexOf("999999999999");
         if (pos9 > 0) {
             char roundUp = (char) (test.charAt(pos9 - 1) + 1);
-            test = test.substring(0,pos9 - 1) + roundUp;
+            test = test.substring(0, pos9 - 1) + roundUp;
         } else {
             int pos0 = test.indexOf("000000000000");
             if (pos0 < 0) {
                 return toReturn;
             }
-            if (pos0 == 0){
+            if (pos0 == 0) {
                 test = "0";
-            }else{
-                test = test.substring(0,pos0);
+            } else {
+                test = test.substring(0, pos0);
             }
         }
         if (test.length() > dPos) {
             return test.substring(0, dPos) + "." + test.substring(dPos);
         } else {
-            return (test + "0000000000").substring(0,dPos);
+            return (test + "0000000000").substring(0, dPos);
         }
     }
 
@@ -693,61 +933,19 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
     private static double parseNumber(String maybeNumber) {
         maybeNumber = maybeNumber.trim();
         if (maybeNumber.endsWith("%")) {
-          return Double.parseDouble(maybeNumber.substring(0, maybeNumber.length() - 1)) / 100;
+            return Double.parseDouble(maybeNumber.substring(0, maybeNumber.length() - 1)) / 100;
         }
         return Double.parseDouble(maybeNumber);
     }
 
-    private static void resolveIntoCategories(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFoundCache, List<ImportCellWithHeading> cells) throws Exception {
-        for (ImportCellWithHeading cell : cells) {
-            if (cell.getImmutableImportHeading().dictionaryMap != null) {
-                String value = cell.getLineValue();
-                if (value != null && value.length() > 0) {
-                    boolean hasResult = false;
-                    for (Name category : cell.getImmutableImportHeading().dictionaryMap.keySet()) {
-                        boolean found = true;
-                        List<ImmutableImportHeading.DictionaryTerm> dictionaryTerms = cell.getImmutableImportHeading().dictionaryMap.get(category);
-                        for (ImmutableImportHeading.DictionaryTerm dictionaryTerm : dictionaryTerms) {
-                            found = false; //the phrase now has to pass every one of the tests.  If it does so then the category is found.
-                            for (String item : dictionaryTerm.items) {
-                                if (dictionaryTerm.exclude) {
-                                    if (containsSynonym(cell.getImmutableImportHeading().synonyms, item.toLowerCase().trim(), value.toLowerCase())) {
-                                        break;
-                                    }
-                                } else {
-                                    if (containsSynonym(cell.getImmutableImportHeading().synonyms, item.toLowerCase().trim(), value.toLowerCase())) {
-                                        found = true;
-                                    }
-                                }
-                            }
-                            if (!found) break;
-                        }
-                        if (found) {
-                            cell.addToLineNames(category);
-                            hasResult = true;
-                            break;
-                        }
-                    }
-                    if (!hasResult) {
-                        if (!cell.getImmutableImportHeading().blankZeroes) {
-                            Name parent = cell.getImmutableImportHeading().parentNames.iterator().next();
-                            List<String> languages = StringLiterals.DEFAULT_DISPLAY_NAME_AS_LIST;
-                            cell.addToLineNames(findOrCreateNameStructureWithCache(azquoMemoryDBConnection, namesFoundCache, "Uncategorised " + parent.getDefaultDisplayName(), parent, false, languages));
-                        }
-                    }
-                }
-            }
-        }
-    }
-
      /*categorise numeric values, see HeadingReader.java
      lookup assumes that the value in the cell is two values comma separated. The name of a set and the value to look for in its children.
-     Typically this value is made by a composition though it doesn't have to be
+     This value is made by a composition
      from/to are different attributes to check against in the set
      lookup used for finding a contract year off a date . . .
      apparently can't remove. I was up to here in checking - July 2019*/
 
-    private static boolean checkLookup(AzquoMemoryDBConnection azquoMemoryDBConnection, ImportCellWithHeading cell, Name parentSet, List<ImportCellWithHeading> lineToLoad, CompositeIndexResolver compositeIndexResolver, Map<String, Name> namesFoundCache, List<String> attributeNames) throws Exception {
+    private boolean checkLookup(AzquoMemoryDBConnection azquoMemoryDBConnection, ImportCellWithHeading cell, Name parentSet, List<ImportCellWithHeading> lineToLoad, CompositeIndexResolver compositeIndexResolver) throws Exception {
         /* example to illustrate
 
         lookup 'Policy Reference' in 'Contract Reference' using and('inception' >= `binder contract inception`, 'inception' <= `binder contract expiry`)
@@ -764,6 +962,8 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
         in this case the condition will be taken from the attribute, so will differ for each element tested.  This condition is recognised by the absence of relation operators <=>{}
 
         there is a backup of best guess when it's above lookupFrom but not below lookupTo, applicable when provisional, note below
+
+        after a name is set here line names is done (though parents and exclusive may need to be sorted)
          */
 
         Pattern p = Pattern.compile("[<=~>{]");
@@ -779,7 +979,7 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
             if (conditionAttribute != null) {
                 condition = toTest.getAttribute(conditionAttribute);
             }
-            int checkResult = checkCondition(azquoMemoryDBConnection, lineToLoad, condition, compositeIndexResolver, toTest, nearestList, namesFoundCache, attributeNames, provisional);
+            int checkResult = checkCondition(lineToLoad, condition, compositeIndexResolver, toTest, nearestList, provisional);
             if (checkResult == CHECKTRUE) {
                 int indexForChild = cell.getImmutableImportHeading().indexForChild;
                 int indexForParent = cell.getImmutableImportHeading().exclusiveIndex;
@@ -791,14 +991,14 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
                     Name childName = childNames.iterator().next();
                     String existingName = childName.getAttribute(lineToLoad.get(indexForParent).getLineValue());
                     if (existingName != null && existingName.length() > 0) {
-                        cell.setLineValue(existingName);
+                        cell.setLineValue(existingName, azquoMemoryDBConnection, attributeNames);
                         cell.addToLineNames(NameService.findByName(azquoMemoryDBConnection, existingName));
-                        cell.setResolved(azquoMemoryDBConnection, attributeNames);
+                        cell.setLineNamesResolved();
                         return true;
                     }
                 }
-                newCellNameValue(cell, toTest);
-                cell.setResolved(azquoMemoryDBConnection, attributeNames);
+                cell.addToLineNames(toTest);
+                cell.setLineValue(toTest.getDefaultDisplayName(), azquoMemoryDBConnection, attributeNames);
                 indexForChild = cell.getImmutableImportHeading().indexForChild;
                 if (indexForChild >= 0 && lineToLoad.get(indexForChild).getLineNames() != null && lineToLoad.get(indexForChild).getLineNames().size() > 0) {
                     toTest.addChildWillBePersisted(lineToLoad.get(indexForChild).getLineNames().iterator().next(), azquoMemoryDBConnection);
@@ -822,8 +1022,8 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
                 }
             }
             if (nameFound != null) {
-                newCellNameValue(cell, nameFound);
-                cell.setResolved(azquoMemoryDBConnection, attributeNames);
+                cell.addToLineNames(nameFound);
+                cell.setLineValue(nameFound.getDefaultDisplayName(), azquoMemoryDBConnection, attributeNames);
             }
         }
         //error will be spotted because the cell value will never be set - no need for an exception
@@ -850,18 +1050,8 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
         return false;
     }
 
-    private static void newCellNameValue(ImportCellWithHeading cell, Name name) throws Exception {
-        cell.addToLineNames(name);
-        cell.setLineValue(name.getDefaultDisplayName());
-    }
-
     // peers in the headings might have caused some database modification but really it is here that things start to be modified in earnest
-    private static void interpretLine(AzquoMemoryDBConnection azquoMemoryDBConnection, List<ImportCellWithHeading> cells, Map<String, Name> namesFoundCache, List<String> attributeNames, int importLine, Map<Integer, List<String>> linesRejected, boolean clearData) throws Exception {
-        for (ImportCellWithHeading cell : cells) {
-            if (cell.getImmutableImportHeading().lineNameRequired) {
-                resolveLineNameParentsAndChildForCell(azquoMemoryDBConnection, namesFoundCache, cell, cells, attributeNames, 0);
-            }
-        }
+    private void interpretLine(List<ImportCellWithHeading> cells, int importLine, Map<Integer, List<String>> linesRejected, boolean clearData) throws Exception {
         long tooLong = 2; // now ms
         long time = System.currentTimeMillis();
         for (ImportCellWithHeading cell : cells) {
@@ -946,164 +1136,6 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
     }
 
 
-    /* namesFound is a cache. Then the heading we care about then the list of all headings.
-     * */
-
-    private static void resolveLineNameParentsAndChildForCell(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFoundCache,
-                                                              ImportCellWithHeading cellWithHeading, List<ImportCellWithHeading> cells, List<String> attributeNames, int recursionLevel) throws Exception {
-        /*
-             Imagine 3 headings. Town, street, whether it's pedestrianized. Pedestrianized parent of street. Town parent of street local.
-             the key here is that the resolveLineNameParentsAndChildForCell has to resolve line Name for both of them - if it's called on "Pedestrianized parent of street" first
-             both pedestrianized (ok) and street (NOT ok!) will have their line names resolved
-             whereas resolving "Town parent of street local" first means that the street should be correct by the time we resolve "Pedestrianized parent of street".
-             essentially sort local names need to be sorted first.
-
-             The point is that the name is attached to a call, it is only resolved once, local gets priority, resolve it first
-
-             EFC note August 2018 after modifying WFC code : the old method was just to run through cells that have isLocal first but that could be tripped up
-             by a local in a local which, while not recommended, is supported. The key here is that locals should be resolved in order starting at the top.
-
-             localParentIndexes enables this, recurse up to the top and go down meaning this cell will be safe to resolve if there are local names involved.
-
-              */
-        recursionLevel++;
-        for (int localParentIndex : cellWithHeading.getImmutableImportHeading().localParentIndexes) {
-            ImportCellWithHeading parentHeading = cells.get(localParentIndex);
-            if (parentHeading.getLineNames() == null || parentHeading.getLineNames().size() == 0) { // so it has not been resolved yet!
-                if (recursionLevel == 8) { // arbitrary but not unreasonable
-                    throw new Exception("recursion loop on heading " + cellWithHeading.getImmutableImportHeading().heading);
-                }
-                resolveLineNameParentsAndChildForCell(azquoMemoryDBConnection, namesFoundCache, parentHeading, cells, attributeNames, recursionLevel);
-            }
-        }
-        // in simple terms if a line cell value refers to a name it can now refer to a set of names
-        // to make a set parent of more than one thing e.g. parent of set a, set b, set c
-        // nothing in the heading has changed except the split char but we need to detect it here
-        // split before checking for quotes etc. IF THE SPLIT CHAR IS IN QUOTES WE DON'T CURRENTLY SUPPORT THAT!
-        String[] nameNames;
-        if (cellWithHeading.getImmutableImportHeading().splitChar == null) {
-            nameNames = new String[]{cellWithHeading.getLineValue()};
-        } else {
-            nameNames = cellWithHeading.getLineValue().split(cellWithHeading.getImmutableImportHeading().splitChar);
-        }
-
-        if (cellWithHeading.getLineNames() == null) { // then create it, this will take care of the parents ("child of") while creating
-            //sometimes there is a list of parents here (e.g. company industry segments   Retail Grocery/Wholesale Grocery/Newsagent) where we want to insert the child into all sets
-            for (String nameName : nameNames) {
-                if (nameName.trim().length() > 0) {
-                    cellWithHeading.addToLineNames(optionalIncludeInParents(azquoMemoryDBConnection, cellWithHeading, namesFoundCache, attributeNames));
-                }
-            }
-        } else { // it existed (created below as child name(s))
-            for (Name child : cellWithHeading.getLineNames()) {
-                for (Name parent : cellWithHeading.getImmutableImportHeading().parentNames) { // apparently there can be multiple child ofs, put the name for the line in the appropriate sets, pretty vanilla based off the parents set up
-                    parent.addChildWillBePersisted(child, azquoMemoryDBConnection);
-                }
-            }
-        }
-        // ok that's "child of" (as in for names) done
-        // now for "parent of", the child of this line
-        if (cellWithHeading.getImmutableImportHeading().indexForChild != -1 && cellWithHeading.getLineValue().length() > 0) {
-            ImportCellWithHeading childCell = cells.get(cellWithHeading.getImmutableImportHeading().indexForChild);
-            if (childCell.getLineValue().length() == 0) {
-                throw new Exception("blank value for " + childCell.getImmutableImportHeading().heading + " (child of " + cellWithHeading.getLineValue() + " " + cellWithHeading.getImmutableImportHeading().heading + ")");
-            }
-            // ok got the child cell, need to find the child cell name to add it to this cell's children
-            if (childCell.getLineNames() == null) {
-                // child cell needs to support
-                String[] childNames;
-                if (childCell.getImmutableImportHeading().splitChar == null) {
-                    childNames = new String[]{childCell.getLineValue()};
-                } else {
-                    childNames = childCell.getLineValue().split(childCell.getImmutableImportHeading().splitChar);
-                }
-                for (String childName : childNames) {
-                    // can cellWithHeading.getLineNames() actually be null by this point? Maybe if the line was blank
-                    if (cellWithHeading.getLineNames() != null) {
-                        for (Name thisCellsName : cellWithHeading.getLineNames()) {
-                            childCell.addToLineNames(findOrCreateNameStructureWithCache(azquoMemoryDBConnection, namesFoundCache, childName, thisCellsName
-                                    , cellWithHeading.getImmutableImportHeading().isLocal, setLocalLanguage(childCell.getImmutableImportHeading().attribute, attributeNames)));
-                        }
-                    }
-                }
-            } else { // a simple include in sets if line names exists. Exclusive after is for taking stuff out if required
-                // in theory this column could be multiple parents and the column "parent of" refers to could be multiple children, permute over the combinations
-                if (cellWithHeading.getLineNames() != null) { // it can be null, not sure if it should be?? But it can be, stop NPE
-                    for (Name parent : cellWithHeading.getLineNames()) {
-                        for (Name childCellName : childCell.getLineNames()) {
-                            if (!cellWithHeading.getImmutableImportHeading().provisional || !alreadyCategorised(parent, childCellName)) {//checking whether the child is already in the set under another
-                                parent.addChildWillBePersisted(childCellName, azquoMemoryDBConnection);
-                            }
-                        }
-                    }
-                }
-            }
-            // note! Exclusive can't work if THIS column is multiple names
-            if (cellWithHeading.getLineNames() != null) {
-                if (cellWithHeading.getLineNames().size() == 1 && cellWithHeading.getImmutableImportHeading().exclusiveIndex != HeadingReader.NOTEXCLUSIVE) {
-                    Name parent = cellWithHeading.getLineNames().iterator().next();
-                    //the 'parent' above is the current cell name, not its parent
-                    // check exclusive to remove the child from some other parents if necessary - this replaces the old "remove from" functionality
-                /*
-                Exclusive merits explanation. Let us assume cellWithHeading's heading is "Category" (a heading which may have no Name though its cells will)
-                which is "child of" "All Categories" (a Name in the database) and "parent of" "Product", another heading. Cells in the "Product" column have Names, childCell.getLineNames().
-                We might say that the cell in "Category" is "Shirts" and the cell in "Product" is "White Poplin Shirt". By putting exclusive in the "Category" column we're saying
-                : get rid of any parents "White Poplin Shirt" has that are in "All Categories" that are NOT "Shirts". I'll use this examples to comment below.
-
-                If exclusive has a value then whatever it specifies replaces the set defined by "child of" ("All Categories in this example") to remove from so :
-                get rid of any parents "White Poplin Shirt" has that are in (or are!) "Name Specified By Exclusive" that are NOT "Shirts"
-
-                Note : "Name Specified By Exclusive" used to be a straight lookup in the "else" below but now it refers to another column's name.
-                If you wanted the old functionality you'd need to make a column with a default value to do it
-                 */
-                    // if blank exclusive means in the name this column is child of
-                    Name exclusiveName = null;
-                    if (cellWithHeading.getImmutableImportHeading().exclusiveIndex == HeadingReader.EXCLUSIVETOCHILDOF) {
-                        // blank exclusive clause, use "child of" clause - currently this only looks at the first name to be exclusive of, more than one makes little sense
-                        // (check all the way down. all children, necessary due due to composite option name1->name2->name3->etc
-                        exclusiveName = cellWithHeading.getImmutableImportHeading().parentNames.iterator().next();
-                    } else { // exclusive has a value, not null or blank, is referring to a name in another cell
-                        Set<Name> exclusiveNameSet = cells.get(cellWithHeading.getImmutableImportHeading().exclusiveIndex).getLineNames();
-                        if (exclusiveNameSet != null) {
-                            exclusiveName = exclusiveNameSet.iterator().next();
-                        }
-                    }
-                    if (exclusiveName != null) {
-                    /* To follow the example above run through the parents of "White Poplin Shirt".
-                    Firstly check that the parent is "Shirts", if it is we of course leave it there and note to not re-add (needsAdding = false).
-                      If the parent is NOT "Shirts" we check to see if it's the exclusive set itself ("White Poplin Shirt" was directly in "All Categories")
-                      or if the parent is any of the children of the exclusive set in this case maybe "Swimwear". Since we don't know what the existing category
-                      structure was check all the way down (findAllChildren() not just getChildren()), "White Poplin Shirt" could have ended up in
-                      "All Categories-Swimwear->Mens" for example. Notable that nested name syntax (with "->") is allowed in the cells and
-                      might well have been built using the composite functionality above so it's possible another azquo upload could have jammed "White Poplin Shirt"
-                      somewhere under "All Categories" many levels below. */
-                        // todo - address mismatch between comment "findAllChildren() not just getChildren()" and SVN change 2375 which changed it to getChildren()
-                        // given that we now have multiple names on a line we run through the child ones checking as necessary
-                        //we are checking whether we can put the child name into the parent within the exclusiveName set
-                        for (Name childCellName : childCell.getLineNames()) {
-                            boolean needsAdding = true; // defaults to true
-                            for (Name childCellParent : childCellName.getParents()) {
-                                if (childCellParent == parent) {
-                                    needsAdding = false;
-                                } else if (childCellParent == exclusiveName || exclusiveName.getChildren().contains(childCellParent)) {
-                                    if (cellWithHeading.getImmutableImportHeading().provisional) {
-                                        needsAdding = false;
-                                        break;
-                                    }
-                                    childCellParent.removeFromChildrenWillBePersisted(childCellName, azquoMemoryDBConnection);
-                                }
-                            }
-                            // having hopefully sorted a new name or exclusive add the child
-                            if (needsAdding) {
-                                parent.addChildWillBePersisted(childCellName, azquoMemoryDBConnection);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
     private static boolean alreadyCategorised(Name parent, Name child) {
         //this routine is for the specific case where a categorisation is only to be done if the child is not already categorised
         //when importing Ed Broking premium data the premiums need to be categorised, but the information available is such that the categorisation is sometimes false
@@ -1118,7 +1150,7 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
 
     // The cache is purely a performance thing though it's used for a little logging later (total number of names inserted)
 
-    private static Name findOrCreateNameStructureWithCache(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFoundCache, String name, Name parent, boolean local, List<String> attributeNames) throws Exception {
+    static Name findOrCreateNameStructureWithCache(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFoundCache, String name, Name parent, boolean local, List<String> attributeNames) throws Exception {
         //namesFound is a quick lookup to avoid going to findOrCreateNameInParent - note it will fail if the name was changed e.g. parents removed by exclusive but that's not a problem
         String np = name + ",";
         if (parent != null) {
@@ -1140,33 +1172,6 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
             namesFoundCache.put(np, found);
         }
         return found;
-    }
-
-    // to make a batch call to the above if there are a list of parents a name should have
-    private static Name optionalIncludeInParents(AzquoMemoryDBConnection azquoMemoryDBConnection, ImportCellWithHeading cell, Map<String, Name> namesFoundCache, List<String> attributeNames) throws Exception {
-        List<String> languages = setLocalLanguage(cell.getImmutableImportHeading().attribute, attributeNames);
-        Name child = null;
-        if (cell.getImmutableImportHeading().optional || cell.getImmutableImportHeading().existing) {
-            //don't create a new name
-            try {
-                child = NameService.findByName(azquoMemoryDBConnection, cell.getImmutableImportHeading().parentNames.iterator().next().getDefaultDisplayName() + "->" + cell.getLineValue(), languages);
-                // it will simply ignore null
-                cell.addToLineNames(child);
-            } catch (Exception ignored) {
-            }
-        } else {
-            Set<Name> parents = cell.getImmutableImportHeading().parentNames;
-            boolean local = cell.getImmutableImportHeading().isLocal;
-            if (parents == null || parents.size() == 0) {
-                child = findOrCreateNameStructureWithCache(azquoMemoryDBConnection, namesFoundCache, cell.getLineValue().trim(), null, local, languages);
-            } else {
-                for (Name parent : parents) {
-                    child = findOrCreateNameStructureWithCache(azquoMemoryDBConnection, namesFoundCache, cell.getLineValue().trim(), parent, local, languages);
-                }
-            }
-            cell.addToLineNames(child);
-        }
-        return child;
     }
 
     private static List<String> setLocalLanguage(String localLanguage, List<String> defaultLanguages) {

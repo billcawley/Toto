@@ -245,6 +245,10 @@ class HeadingReader {
             throw new Exception("blank exclusive and no \"child of\" clause in " + heading.heading + " in headings"); // other clauses cannot be blank!
         } else if (heading.exclusiveIndex > NOTEXCLUSIVE && heading.parentOfClause == null) { // exclusive means nothing without parent of
             throw new Exception("exclusive and no \"parent of\" clause in " + heading.heading + " in headings");
+        } else { // other problematic combos
+            if (heading.dictionaryMap != null && heading.localParentIndex != -1){
+                throw new Exception("Column " + heading.heading + " has a dictionary map and a local parent. This combination is not allowed.");
+            }
         }
         return heading;
     }
@@ -543,7 +547,10 @@ class HeadingReader {
                     // when the column this is parent of is resolved it must first resolve THIS heading if this heading is it's parent with local set
                     // locals have to be resolved in order from the top first or the structure will not be correct
                     if (mutableImportHeading.isLocal) {
-                        headings.get(mutableImportHeading.indexForChild).localParentIndexes.add(headingNo);
+                        if (headings.get(mutableImportHeading.indexForChild).localParentIndex != -1){
+                            throw new Exception("heading " + headings.get(mutableImportHeading.indexForChild).heading + " has more than one parent column marked as local");
+                        }
+                        headings.get(mutableImportHeading.indexForChild).localParentIndex = headingNo;
                     }
                 }
                 if (mutableImportHeading.exclusiveClause !=null){
@@ -570,7 +577,11 @@ class HeadingReader {
         // Finally set the line name flags. This has to be done after in a separate loop as indexesNeedingNames needs to be complete (it accommodates headings saying that OTHER headings need line names) before testing each heading
         for (int i = 0; i < headings.size(); i++) {
             MutableImportHeading mutableImportHeading = headings.get(i);
-            mutableImportHeading.lineNameRequired = mutableImportHeading.indexForChild != -1 || !mutableImportHeading.parentNames.isEmpty() || indexesNeedingNames.contains(i) || mutableImportHeading.isAttributeSubject;
+            mutableImportHeading.lineNameRequired = mutableImportHeading.indexForChild != -1
+                    || !mutableImportHeading.parentNames.isEmpty()
+                    || indexesNeedingNames.contains(i)
+                    || mutableImportHeading.isAttributeSubject
+                    || mutableImportHeading.dictionaryMap != null;
         }
     }
 

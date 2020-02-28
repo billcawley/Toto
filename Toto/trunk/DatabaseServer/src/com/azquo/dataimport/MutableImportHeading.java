@@ -91,7 +91,8 @@ class MutableImportHeading {
     String splitChar = null;
     // local names are a potential problem if not resolved in the right order. Previously this was solved by resolving local first
     // but this didn't deal with local in local. Not recommended but using this the system can support it. Code which resolves this along with comments in BatchImporter.
-    List<Integer> localParentIndexes = new ArrayList<>();
+    // EFC 26/02/20. More than one local parent on a heading would cause problems so changing this from a list to an int, if it's set more than once then exception
+    int localParentIndex = -1;
     /*dictionaryTerms used to try to bring order to unrestricted string input.   A table can be uploaded (dictionaryTerms) against items in a list.  Each term element contains a comma-separated list of strings
     the terms are connected by + or - signs to indicate that elements from both sets must be present, or to exclude any item that contains elements from the list respectively.
     */

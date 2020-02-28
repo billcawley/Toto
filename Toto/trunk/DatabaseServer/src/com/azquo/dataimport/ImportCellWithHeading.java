@@ -7,10 +7,7 @@ import com.azquo.memorydb.core.Name;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Extracted from DSImportService by edward on 09/09/16.
@@ -22,14 +19,22 @@ import java.util.Set;
 class ImportCellWithHeading {
     private final ImmutableImportHeading immutableImportHeading;
     private String lineValue;// prefix  line to try to avoid confusion
-    private Set<Name> lineNames; // it could be a comma separated list. Added for PwC, I'm not entirely happy about this but if it's necessary it's necessary - EFC
-    private boolean needsResolving;
+    private boolean lineValueResolved;
+
+    private Set<Name> lineNames; // split char could make multiple in here, I think that's the only thing that can . . .
+    // so now we have this flag, the key will be to use it properly
+    private boolean lineNamesResolved;
+    // we'll need to track this as children may not be able to be sorted when names are
+    private boolean lineNamesChildrenResolved;
+
 
     ImportCellWithHeading(ImmutableImportHeading immutableImportHeading, String value) {
         this.immutableImportHeading = immutableImportHeading;
         this.lineValue = value;
         this.lineNames = null;
-        needsResolving = true;
+        lineValueResolved = false;
+        lineNamesResolved = !immutableImportHeading.lineNameRequired ; // if line names are not requires we'll just say the names are resolved?? todo confirm
+        lineNamesChildrenResolved = immutableImportHeading.indexForChild == -1; // if it's -1 then no children, mark it as resolved
     }
 
     ImmutableImportHeading getImmutableImportHeading() {
@@ -40,18 +45,18 @@ class ImportCellWithHeading {
         return lineValue;
     }
 
-    void setLineValue(String lineValue) throws Exception {
-        if (!needsResolving){
-            throw new Exception("setting line value after it's marked as resolved");
-        }
-        this.lineValue = lineValue;
-    }
-
     Set<Name> getLineNames() {
         return lineNames;
     }
 
+    // force resolved here now. Value can be cleared otherwise there's one shot to override it
+    void setLineValue(String lineValue, AzquoMemoryDBConnection azquoMemoryDBConnection, List<String> languages) throws Exception {
+        this.lineValue = lineValue;
+        setLineValueResolved(azquoMemoryDBConnection, languages);
+    }
+
     // NOT thread safe - I assume that one thread will deal with one line
+    // this means also that if line names is not null it's not empty either
     void addToLineNames(Name name) {
         if (name != null) { // now there's the "optional" code a null name might be passed here. Could check outside but I don't really see the problem in here.
             if (lineNames == null) {
@@ -61,8 +66,16 @@ class ImportCellWithHeading {
         }
     }
 
-    public boolean needsResolving(){
-        return needsResolving;
+    public boolean lineValueResolved(){
+        return lineValueResolved;
+    }
+
+    public boolean lineNamesResolved(){
+        return lineNamesResolved;
+    }
+
+    public boolean lineNamesChildrenResolved(){
+        return lineNamesChildrenResolved;
     }
 
     // little hack to stop the log being hammered by a debug line below
@@ -70,8 +83,10 @@ class ImportCellWithHeading {
 
     // it used to be that resolved was accessed directly but we want a line being resolved to be linked to a line rejection check
     // as well as various other checks such as date standardising, removing spaces etc as we assume nothing more is going to happen to the line value now
-    public void setResolved(AzquoMemoryDBConnection azquoMemoryDBConnection, List<String> languages) throws LineRejectionException {
-        if (needsResolving){
+    // might as well do dictionary in here. When resolved we can get dictionary names.
+    public void setLineValueResolved(AzquoMemoryDBConnection azquoMemoryDBConnection, List<String> languages) throws Exception {
+        if (!lineValueResolved){
+            lineValueResolved = true;
     /*
     interpret the date and change to standard form
     todo consider other date formats on import - these may  be covered in setting up dates, but I'm not sure - WFC
@@ -136,13 +151,21 @@ class ImportCellWithHeading {
                     throw  new LineRejectionException(immutableImportHeading.heading + ":" + this.lineValue + " not existing"); // none found break the line
                 }
             }
-            needsResolving = false;
         } else {
             if (lastErrorPrintMillis < (System.currentTimeMillis() - (1_000 * 10))){ // only log this kind of error once every 10 seconds, potential to jam things up a lot
                 lastErrorPrintMillis = System.currentTimeMillis();
-                System.out.println("*************setting resolved more than once on a cell " + this); // just log it or the mo
+                System.out.println("*************setting line value more than once on a cell " + this); // just log it or the mo
             }
         }
+    }
+
+    // maybe add some other stuff later
+    public void setLineNamesResolved()  {
+        lineNamesResolved = true;
+    }
+
+    public void setLineNamesChildrenResolved()  {
+        lineNamesChildrenResolved = true;
     }
 
     @Override
