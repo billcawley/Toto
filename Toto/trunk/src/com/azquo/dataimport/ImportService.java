@@ -470,7 +470,7 @@ public final class ImportService {
                     // used to only overwrite if uploaded by this user, we;ll go back to replacing one for the same business
                     //OnlineReport or = OnlineReportDAO.findForNameAndUserId(reportName, loggedInUser.getUser().getId());
                     OnlineReport or = OnlineReportDAO.findForNameAndBusinessId(reportName, loggedInUser.getUser().getBusinessId());
-/* todo - category names here as with the backup restore
+/* todo - category names here as with the backup restore why was this commented? Just never used?
                     String category = null;
                     if (fileName.contains(CATEGORYBREAK)) {
                         category = fileName.substring(0, fileName.indexOf(CATEGORYBREAK));

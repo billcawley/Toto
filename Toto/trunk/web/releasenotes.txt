@@ -1,3 +1,27 @@
+03-03-20
+
+BatchImporter being refactored, logic needed fixing. Some local testing done, need to keep an eye on it.
+
+Improved showing of data in Inspect Database
+
+Bug fix on "ad hoc" data regions. Shown up by oilfield testing
+
+Fixed a bug when getting attributes for a cell. Oilfield.
+
+Another formula result cache clear added. Oilfield.
+
+XLSX
+
+ASDocType Document -> document
+
+Lots of Oilfield claims and premiums work including BSX integration
+
+Brokasure, changed 'DedAppNo' in the xml tags to be 'DedAppCode'
+
+Changed the `ECFDocType` to have 'document' in it with a lower case 'd'.
+
+Linneage - Changed the DedAccSub to be 14 for the first deduction per Lukes instructions
+
 20-02-20
 
 Improved handling of calcs on import - oilfields

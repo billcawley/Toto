@@ -660,6 +660,7 @@ public class BatchImporter implements Callable<Void> {
         return toReturn - minus;
     }
 
+    // maybe should go in StringUtils. No urgency at the mo
     private static String roundoff(double d) {
         String toReturn = d + "";
         int dPos = toReturn.indexOf(".");
