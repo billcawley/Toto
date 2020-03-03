@@ -245,7 +245,9 @@ public class DSSpreadsheetService {
         }
         bw.flush();
         bw.close();
-        UploadedFile uploadedFile = new UploadedFile(tempPath, Collections.singletonList("csv-" + cellsAndHeadingsForDisplay.getRegion()), false);
+        // set it as converted from worksheet = tab separated
+        UploadedFile uploadedFile = new UploadedFile(tempPath, Collections.singletonList("csv-" + cellsAndHeadingsForDisplay.getRegion()),null,true, false);
+
         Map<String,String> parameters = new HashMap<>();
         parameters.put("cleardata","true");
         uploadedFile.setParameters(parameters);
