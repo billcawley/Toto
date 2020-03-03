@@ -855,10 +855,17 @@ But can use a library?
         String stringResult = null;
         double numericResult = 0;
         int count = 0;
-        String attValue = null;
         //code for multiple attributes by EFC  - WFC doesn't understand it!
+        String attValue = null;
+        // todo - tidy this logic! Just bug fixing for the mo;
+        String lastValidValue = null;
         for (Name n : names) { // go through each name
+            if (attValue != null){
+                lastValidValue = attValue;
+            }
+            attValue = null;
             for (String attribute : attributes) {
+                // EFC note - 2306 logic was broken in terms of attribute null, todo - understand this properly and fix!
                 if (attributeSet != null) {
                     Collection<Name> parents = n.findAllParents();
                     parents.retainAll(attributeSet);
@@ -904,7 +911,7 @@ But can use a library?
                 }
             }
         }
-        if (count <= 1) return attValue;//don't allow long numbers to be converted to standard form.
+        if (count <= 1) return attValue != null ? attValue : lastValidValue;//don't allow long numbers to be converted to standard form.
         return (stringResult != null) ? stringResult : numericResult + "";
     }
 
