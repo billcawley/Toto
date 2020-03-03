@@ -177,6 +177,7 @@ public class ReportService {
                                         book.getInternalBook().setAttribute(OnlineController.CELL_SELECT, row + "," + col);
                                     }
                                     if (sCell.getType() == SCell.CellType.FORMULA) {
+                                        sCell.clearFormulaResultCache(); // this, apparently, is necessary. Tripped up on a hefty formula for oilfields, saving some headings
                                         try {
                                             if (sCell.getFormulaResultType() == SCell.CellType.NUMBER) { // then check it's value against the DB one . . .
                                                 // zerosaved means that if the heading  name has the relevant attribute
