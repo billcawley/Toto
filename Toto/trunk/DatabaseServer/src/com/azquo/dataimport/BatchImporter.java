@@ -263,12 +263,10 @@ public class BatchImporter implements Callable<Void> {
                                 // resolution that will take into account the parents as assigned by the heading
                                 // but NOT, notably, any parents this cell may have from another cell in the same line
                                 if (!cell.getLineValue().isEmpty()) {
-
                                     // in simple terms if a line cell value refers to a name it can now refer to a set of names
                                     // to make a set parent of more than one thing e.g. parent of set a, set b, set c
                                     // nothing in the heading has changed except the split char but we need to detect it here
                                     // split before checking for quotes etc. IF THE SPLIT CHAR IS IN QUOTES WE DON'T CURRENTLY SUPPORT THAT!
-
                                     List<String> localLanguages = setLocalLanguage(cell.getImmutableImportHeading().attribute, attributeNames);
                                     String[] split;
                                     if (cell.getImmutableImportHeading().splitChar == null) {
@@ -308,7 +306,6 @@ public class BatchImporter implements Callable<Void> {
             // if we don't do the two loops then the else "it is already resolved" conditions below might not get hit as much as they should be. Also the sortExclusive check will
             // reference another column which should have line names resolved by now if possible
             for (ImportCellWithHeading cell : cells) {
-
                 // try and resolve any children this cell may have? If their line name is resolved (may not be if local parents)
                 // note - lineNamesChildrenResolved is only set to false when the indexForChild is -1, when there could be a requirement to resolve the children
                 if (cell.lineNamesResolved() && cell.getLineNames() != null && !cell.lineNamesChildrenResolved()) {// line names could be resolved and null due to optional or unsuccessful dictionary lookup for example
@@ -374,30 +371,30 @@ public class BatchImporter implements Callable<Void> {
         }
     }
 
+    /*
+    Exclusive practically means, if necessary, zapping some parents of the children of this column that are not this column.
+
+    Let us assume cellWithHeading's heading is "Category" (a heading which may have no Name though its cells will)
+    which is "child of" "All Categories" (a Name in the database) and "parent of" "Product", another heading. Cells in the "Product" column have Names, childCell.getLineNames().
+    We might say that the cell in "Category" is "Shirts" and the cell in "Product" is "White Poplin Shirt". By putting exclusive in the "Category" column we're saying
+    : get rid of any parents "White Poplin Shirt" has that are in "All Categories" that are NOT "Shirts". I'll use this examples to comment below.
+
+    If exclusive has a value then whatever it specifies replaces the set defined by "child of" ("All Categories in this example") to remove from so :
+    get rid of any parents "White Poplin Shirt" has that are in (or are!) "Name Specified By Exclusive" that are NOT "Shirts"
+
+    Note : "Name Specified By Exclusive" used to be a straight lookup in the "else" below but now it refers to another column's name.
+    If you wanted the old functionality you'd need to make a column with a default value to do it
+     */
     private void sortExclusive(ImportCellWithHeading cellWithHeading, List<ImportCellWithHeading> cells) throws Exception {
-        // note! Exclusive can't work if THIS column is multiple names
         ImportCellWithHeading childCell = cells.get(cellWithHeading.getImmutableImportHeading().indexForChild);
+        // note! Exclusive can't work if THIS column is multiple names
         if (cellWithHeading.getLineNames().size() == 1 && cellWithHeading.getImmutableImportHeading().exclusiveIndex != HeadingReader.NOTEXCLUSIVE) {
+            //the 'parent' is the current cell name, not its parent, it is the parent that will stay on the child regardless
             Name parent = cellWithHeading.getLineNames().iterator().next();
-            //the 'parent' above is the current cell name, not its parent
-            // check exclusive to remove the child from some other parents if necessary - this replaces the old "remove from" functionality
-                /*
-                Exclusive merits explanation. Let us assume cellWithHeading's heading is "Category" (a heading which may have no Name though its cells will)
-                which is "child of" "All Categories" (a Name in the database) and "parent of" "Product", another heading. Cells in the "Product" column have Names, childCell.getLineNames().
-                We might say that the cell in "Category" is "Shirts" and the cell in "Product" is "White Poplin Shirt". By putting exclusive in the "Category" column we're saying
-                : get rid of any parents "White Poplin Shirt" has that are in "All Categories" that are NOT "Shirts". I'll use this examples to comment below.
-
-                If exclusive has a value then whatever it specifies replaces the set defined by "child of" ("All Categories in this example") to remove from so :
-                get rid of any parents "White Poplin Shirt" has that are in (or are!) "Name Specified By Exclusive" that are NOT "Shirts"
-
-                Note : "Name Specified By Exclusive" used to be a straight lookup in the "else" below but now it refers to another column's name.
-                If you wanted the old functionality you'd need to make a column with a default value to do it
-                 */
-            // if blank exclusive means in the name this column is child of
+            // if blank exclusive means check for parents to zap in the name this column is child of
             Name exclusiveName = null;
             if (cellWithHeading.getImmutableImportHeading().exclusiveIndex == HeadingReader.EXCLUSIVETOCHILDOF) {
-                // blank exclusive clause, use "child of" clause - currently this only looks at the first name to be exclusive of, more than one makes little sense
-                // (check all the way down. all children, necessary due due to composite option name1->name2->name3->etc
+                // blank exclusive clause, use "child of" clause - currently this only looks at the first name in that list to be exclusive of, more than one makes little sense
                 exclusiveName = cellWithHeading.getImmutableImportHeading().parentNames.iterator().next();
             } else { // exclusive has a value, not null or blank, is referring to a name in another cell
                 // what if the names have not been resolved yet? They ony could not be if local which I think would NOT be the exclusive set
@@ -407,17 +404,13 @@ public class BatchImporter implements Callable<Void> {
                 }
             }
             if (exclusiveName != null) {
-                    /* To follow the example above run through the parents of "White Poplin Shirt".
-                    Firstly check that the parent is "Shirts", if it is we of course leave it there and note to not re-add (needsAdding = false).
-                      If the parent is NOT "Shirts" we check to see if it's the exclusive set itself ("White Poplin Shirt" was directly in "All Categories")
-                      or if the parent is any of the children of the exclusive set in this case maybe "Swimwear". Since we don't know what the existing category
-                      structure was check all the way down (findAllChildren() not just getChildren()), "White Poplin Shirt" could have ended up in
-                      "All Categories-Swimwear->Mens" for example. Notable that nested name syntax (with "->") is allowed in the cells and
-                      might well have been built using the composite functionality above so it's possible another azquo upload could have jammed "White Poplin Shirt"
-                      somewhere under "All Categories" many levels below. */
-                // todo - address mismatch between comment "findAllChildren() not just getChildren()" and SVN change 2375 which changed it to getChildren()
-                // given that we now have multiple names on a line we run through the child ones checking as necessary
-                //we are checking whether we can put the child name into the parent within the exclusiveName set
+                /* To follow the example above run through the parents of "White Poplin Shirt".
+                Firstly check that the parent is "Shirts", if it is we of course leave it there and note to not re-add (needsAdding = false).
+                If the parent is NOT "Shirts" we check to see if it's the exclusive set itself ("White Poplin Shirt" was directly in "All Categories")
+                or if the parent is any of the children of the exclusive set in this case maybe "Swimwear". If so zap that parent from the child.
+
+                Given that we now have multiple names on a line we run through the child ones checking as necessary.
+                */
                 for (Name childCellName : childCell.getLineNames()) {
                     boolean needsAdding = true; // defaults to true
                     for (Name childCellParent : childCellName.getParents()) {
@@ -431,7 +424,7 @@ public class BatchImporter implements Callable<Void> {
                             childCellParent.removeFromChildrenWillBePersisted(childCellName, azquoMemoryDBConnection);
                         }
                     }
-                    // having hopefully sorted a new name or exclusive add the child
+                    // should have cleaned up parents we don't want. Add the parent we do want if it wasn't there already
                     if (needsAdding) {
                         parent.addChildWillBePersisted(childCellName, azquoMemoryDBConnection);
                     }
