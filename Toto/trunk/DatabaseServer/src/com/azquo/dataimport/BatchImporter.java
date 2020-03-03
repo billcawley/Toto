@@ -7,6 +7,8 @@ import com.azquo.memorydb.core.Value;
 import com.azquo.memorydb.service.NameQueryParser;
 import com.azquo.memorydb.service.NameService;
 import com.azquo.memorydb.service.ValueService;
+import net.objecthunter.exp4j.Expression;
+import net.objecthunter.exp4j.ExpressionBuilder;
 
 import java.text.DecimalFormat;
 import java.util.*;
@@ -442,9 +444,9 @@ public class BatchImporter implements Callable<Void> {
         }
     }
 
-    // this routine uses cell.lineValue to store interim results...
     // comma as opposed to ? : as that syntax is what is used in Excel
-
+    // IF(C2=”Yes”,1,2) says IF(C2 = Yes, then return a 1, otherwise return a 2) but the terms are Azquo Composites. References to cells.
+    // note this is a function that's resolved before anything else
     private boolean resolveIf(ImportCellWithHeading cell, String compositionPattern, List<ImportCellWithHeading> cells) throws Exception {
         int commaPos = compositionPattern.indexOf(",");
         if (commaPos < 0)
@@ -488,8 +490,8 @@ public class BatchImporter implements Callable<Void> {
         return true;
     }
 
-    // Now supports basic excel like string operations, left right and mid, also simple single operator calculation on the results.
-    // We need to integrate the shunting yard algorithm
+    // Now supports basic excel like string operations, and at the end can do numeric evaluation if necessary
+    // really we're just resolving anything in quotes ` with a special case for attribute
     private String getCompositeValue(ImportCellWithHeading cell, String compositionPattern, List<ImportCellWithHeading> cells) throws Exception {
         int headingMarker = compositionPattern.indexOf("`");
         while (headingMarker >= 0) {
@@ -559,12 +561,8 @@ public class BatchImporter implements Callable<Void> {
                     String sourceVal;
                     // we have a name attribute and it is a column with a name, we resolve the name if necessary and get the attribute
                     if (nameAttribute != null && compCell.getImmutableImportHeading().lineNameRequired) {
-                        // EFC commented, I'm assuming a null will mean "no adjustment, try again later"
-/*                        if (compCell.getLineNames() == null && compCell.getLineValue().length() > 0) {
-                            optionalIncludeInParents(compCell);
-                        }*/
                         if (compCell.getLineNames() == null) {
-                            return null;
+                            return null; // this will stop ifs and composite resolving for the moment. If other cells are changed it the function will be called on the cell again
                         }
                         sourceVal = compCell.getLineNames().iterator().next().getAttribute(nameAttribute);
                     } else { // normal
@@ -602,64 +600,36 @@ public class BatchImporter implements Callable<Void> {
                         headingMarker = headingMarker + sourceVal.length() - 1;//is increased before two lines below
                         if (doubleQuotes) headingMarker++;
                     } else {
-                        // can't get the value . . .
+                        // as mentioned above returning the nulls doesn't mean the cell is written off. The loop will try again if other cells are
+                        // line value was null. Probably due to referencing a null attribute
                         return null;
                     }
-                } else { // couldn't find the cell or the required cell is already resolved, the latter resulting in false is the "no more work to do" signal
+                } else { // couldn't find the cell or the required cell is not resolved yet
                     return null;
                 }
             }
             // try to find the start of the next column referenced
             headingMarker = compositionPattern.indexOf("`", ++headingMarker);
         }
-        // todo - investigate third party libraries to evaluate expressions
-        // after all the column/string function/attribute still is done there may yet be some basic numeric stuff to do
-        // single operator calculation after resolving the column names. 1*4.5, 76+345 etc. trim?
-        if (compositionPattern.toLowerCase().startsWith("calc")) {
-            //this should be done using the shunting yard algorithnm, but currently only handles a succession of terms and operators
-            compositionPattern = compositionPattern.substring(5);
-            // IntelliJ said escaping  was redundant I shall assume it's correct.
-            Pattern p = Pattern.compile("[+\\-*/] ");//trailing space to avoid finding negative numbers (e.g. -1 - -2  should find only one -
-            Matcher m = p.matcher(compositionPattern);
-            Double first = null;
-            Double second = null;
-            double dresult = 0.0;
-            while (m.find()) {
-                try {
-                    if (first == null) {
-                        first = parseNumber(compositionPattern.substring(0, m.start()));
-                    } else {
-                        first = dresult;
-                    }
-                    int secondEnd = compositionPattern.indexOf(" ", m.end());
-                    if (secondEnd == -1) secondEnd = compositionPattern.length();
-                    second = parseNumber(compositionPattern.substring(m.end(), secondEnd));
-                    char c = m.group().charAt(0);
-                    switch (c) {
-                        case '+':
-                            dresult = first + second;
-                            break;
-                        case '-':
-                            dresult = first - second;
-                            break;
-                        case '*':
-                            dresult = first * second;
-                            break;
-                        case '/':
-                            dresult = first / second;
-                            break;
-                    }
-                } catch (Exception ignored) {
-                }
-            }
-            compositionPattern = roundoff(dresult);
-        }
+        // not quite sure where this would have come from but we need to zap it before checking calc
         if (compositionPattern.startsWith("\"") && compositionPattern.endsWith("\"")) {
             compositionPattern = compositionPattern.substring(1, compositionPattern.length() - 1);
+        }
+        // after all the column/string function/attribute is done see if there's a numeric option
+        if (compositionPattern.toLowerCase().startsWith("calc")) {
+            // chop calc then percentage hack, x% should be (x/100) or x*0.01 which should work
+            compositionPattern = compositionPattern.substring(5).replace("%", "*0.01");
+            try {
+                Expression e = new ExpressionBuilder(compositionPattern).build();
+                // As WFC pointed out one could perhaps precompile the polish notation so it's not resolved on every cell of the column but I'm not bothered at the moment
+                compositionPattern = roundoff(e.evaluate()); // roundoff probably still required
+            } catch (Exception ignored){ // following the previous convention we'll just fail silently
+            }
         }
         return compositionPattern; // if composition did result in the line value being changed we should run the loop again in case dependencies mean the results will change again
     }
 
+    // enables referencing the length of other column, useful for left mid right functions above
     private int stringTerm(String string, List<ImportCellWithHeading> cells) {
         int lengthPos = string.indexOf("len(");
         while (lengthPos >= 0) {
@@ -733,13 +703,8 @@ public class BatchImporter implements Callable<Void> {
         }
     }
 
-    private static double parseNumber(String maybeNumber) {
-        maybeNumber = maybeNumber.trim();
-        if (maybeNumber.endsWith("%")) {
-            return Double.parseDouble(maybeNumber.substring(0, maybeNumber.length() - 1)) / 100;
-        }
-        return Double.parseDouble(maybeNumber);
-    }
+    // Edd to here 3rd March
+
 
      /*categorise numeric values, see HeadingReader.java
      lookup assumes that the value in the cell is two values comma separated. The name of a set and the value to look for in its children.
