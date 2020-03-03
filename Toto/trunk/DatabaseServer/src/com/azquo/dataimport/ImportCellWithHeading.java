@@ -57,6 +57,7 @@ class ImportCellWithHeading {
 
     // NOT thread safe - I assume that one thread will deal with one line
     // this means also that if line names is not null it's not empty either
+    // should this be setting resolved? Need to double check the Batch Importer logic
     void addToLineNames(Name name) {
         if (name != null) { // now there's the "optional" code a null name might be passed here. Could check outside but I don't really see the problem in here.
             if (lineNames == null) {
@@ -161,6 +162,12 @@ class ImportCellWithHeading {
 
     // maybe add some other stuff later
     public void setLineNamesResolved()  {
+        if (lineValueResolved){
+            if (lastErrorPrintMillis < (System.currentTimeMillis() - (1_000 * 10))){ // only log this kind of error once every 10 seconds, potential to jam things up a lot
+                lastErrorPrintMillis = System.currentTimeMillis();
+                System.out.println("*************setting line names more than once on a cell " + this); // just log it or the mo
+            }
+        }
         lineNamesResolved = true;
     }
 
