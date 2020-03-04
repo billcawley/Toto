@@ -424,10 +424,6 @@ public class BatchImporter implements Callable<Void> {
                         if (childCellParent == parent) {
                             needsAdding = false;
                         } else if (childCellParent == exclusiveName || exclusiveName.getChildren().contains(childCellParent)) {
-                            if (cellWithHeading.getImmutableImportHeading().provisional) {
-                                needsAdding = false;
-                                break;
-                            }
                             childCellParent.removeFromChildrenWillBePersisted(childCellName, azquoMemoryDBConnection);
                         }
                     }
@@ -818,6 +814,7 @@ public class BatchImporter implements Callable<Void> {
                 cell.addToLineNames(nameFound);
                 cell.setLineValue(nameFound.getDefaultDisplayName(), azquoMemoryDBConnection, attributeNames);
                 cell.setLineNamesResolved(); // deal with its children later
+                return true;
             }
         }
         return false;
@@ -1049,7 +1046,7 @@ public class BatchImporter implements Callable<Void> {
                 String value = cell.getLineValue();
                 if (!(cell.getImmutableImportHeading().blankZeroes && isZero(value)) && value.trim().length() > 0) { // don't store if blank or zero and blank zeroes
                     // finally store our value and names for it - only increment the value count if something actually changed in the DB
-                    ValueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, value, namesForValue, cell.getImmutableImportHeading().replace, cell.getImmutableImportHeading().replace);
+                    ValueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, value, namesForValue, cell.getImmutableImportHeading().replace);
                 } else if (clearData) { // only kicks in if the cell is blank
                     // EFC extracted out of value service, cleaner out here
                     final List<Value> existingValues = ValueService.findForNames(namesForValue);
