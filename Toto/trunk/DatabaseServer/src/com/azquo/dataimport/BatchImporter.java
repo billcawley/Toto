@@ -78,7 +78,7 @@ public class BatchImporter implements Callable<Void> {
                 if (first.getLineValue().length() > 0 || first.getImmutableImportHeading().heading == null
                         || first.getImmutableImportHeading().compositionPattern != null || first.getImmutableImportHeading().attribute != null) {
                     // new better representation of line rejection logic. It's an exception caught below
-                    // note setResolved() is doing the only/existing validation, the correct place for it
+                    // note setResolved() is doing the only/existing validation and will exception accordingly
                     try {
                         // first pass over the cells, check ignored and set resolved where we can
                         for (ImportCellWithHeading cell : lineToLoad) {
@@ -146,10 +146,10 @@ public class BatchImporter implements Callable<Void> {
         boolean adjusted = true;
         int timesLineIsModified = 0;
         int loopLimit = 10;
-        // an initial check on needs resolving will have been done by this point
+        // an initial check on value needs resolving will have been done by this point
         // first pass on name resolution, cells with line values resolved may be able to have names resolved also if required
         tryToResolveNames(cells);
-        // loops in case there are multiple levels of dependencies. The compositionPattern stays the same but on each pass the result may be different.
+        // loops in case there are multiple levels of dependencies.
         // note : a circular reference could cause an infinite loop - hence timesLineIsModified limit
         while (adjusted && timesLineIsModified < loopLimit) {
             adjusted = false;
@@ -158,7 +158,6 @@ public class BatchImporter implements Callable<Void> {
                     if (cell.getImmutableImportHeading().lookupParentIndex < 0) {
                         String compositionPattern = cell.getImmutableImportHeading().compositionPattern;
                         if (compositionPattern == null) {
-                            //parent of lookups now needs resolving
                             compositionPattern = cell.getLineValue();
                         }
                         compositionPattern = compositionPattern.replace("LINENO", importLine + "");
@@ -172,7 +171,7 @@ public class BatchImporter implements Callable<Void> {
                             }
                         }
                     } else {
-                        // should this be below? It does seem to do some name stuff. Needs a serious investigation
+                        // lookups are pretty involved but here the notable thing is that they can reoslve both line values and names if its dependencies are met
                         ImportCellWithHeading parentCell = cells.get(cell.getImmutableImportHeading().lookupParentIndex);
                         if (parentCell.getLineNames() != null) {
                             adjusted = checkLookup(azquoMemoryDBConnection, cell, parentCell.getLineNames().iterator().next(), cells, compositeIndexResolver);
@@ -206,10 +205,10 @@ public class BatchImporter implements Callable<Void> {
         while (resolveAgain) {
             resolveAgain = false;
             for (ImportCellWithHeading cell : cells) {
-                if (cell.lineValueResolved()) { // ok this is where things get interesting.
+                if (cell.lineValueResolved()) { // can only resolve names if line values resolved
                     // first try to sort the line names (if not done already)
                     if (!cell.lineNamesResolved()) {
-                        /* dictionary map first, should be simple. The names were reolved in the heading reader
+                        /* dictionary map first, should be simple. The names in the map were resolved in the heading reader
                         The dictionary substitutes free style text with categories from a lookup set.
 
                         Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup phrase (e.g.   car + accident - speed)
@@ -290,7 +289,7 @@ public class BatchImporter implements Callable<Void> {
                                             //don't create a new name
                                             try {
                                                 // worth noting that optional assumes one parent
-                                                // it will simply ignore null
+                                                // addToLineNames will simply ignore null
                                                 cell.addToLineNames(NameService.findByName(azquoMemoryDBConnection, cell.getImmutableImportHeading().parentNames.iterator().next().getDefaultDisplayName() + "->" + nameToAdd, localLanguages));
                                             } catch (Exception ignored) {
                                             }
@@ -309,11 +308,10 @@ public class BatchImporter implements Callable<Void> {
                                 cell.setLineNamesResolved();
                                 resolveAgain = true;
                             }
-                        // todo lookups does things as well, should it be in here? Do we just leave it to it? It's not a big issue I think the resolution logic is sound
                     }
                 }
             }
-            // note the two loops. This is to preserve existing logic where all line names are as resolved as possible first before dealing with the parent/child relations between cells
+            // Note the first for loop closed and another opened. This is to preserve existing logic where all line names are as resolved as possible first before dealing with the parent/child relations between cells
             // if we don't do the two loops then the else "it is already resolved" conditions below might not get hit as much as they should be. Also the sortExclusive check will
             // reference another column which should have line names resolved by now if possible
             for (ImportCellWithHeading cell : cells) {
@@ -329,7 +327,7 @@ public class BatchImporter implements Callable<Void> {
                             }
                             // probably the most simple check - that the child cell has no local parents *or* that this cell is local
                             if (childCell.getImmutableImportHeading().localParentIndex == -1 || cell.getImmutableImportHeading().isLocal) {
-                                // some kind of factor to optional include above?
+                                // can we factor the split code with code above? Not a biggy
                                 String[] childNames;
                                 if (childCell.getImmutableImportHeading().splitChar == null) {
                                     childNames = new String[]{childCell.getLineValue()};
@@ -357,9 +355,7 @@ public class BatchImporter implements Callable<Void> {
                             if (childCell.getLineNames() != null) { // resolved may still be null, optional for example
                                 for (Name parent : cell.getLineNames()) {
                                     for (Name childCellName : childCell.getLineNames()) {
-                                        if (!alreadyCategorised(parent, childCellName)) {//checking whether the child is already in the set under another
-                                            parent.addChildWillBePersisted(childCellName, azquoMemoryDBConnection);
-                                        }
+                                        parent.addChildWillBePersisted(childCellName, azquoMemoryDBConnection);
                                     }
                                 }
                             }
@@ -398,7 +394,7 @@ public class BatchImporter implements Callable<Void> {
      */
     private void sortExclusive(ImportCellWithHeading cellWithHeading, List<ImportCellWithHeading> cells) throws Exception {
         ImportCellWithHeading childCell = cells.get(cellWithHeading.getImmutableImportHeading().indexForChild);
-        // note! Exclusive can't work if THIS column is multiple names
+        // note! Exclusive can't work if this cellWithHeading column is multiple names
         if (cellWithHeading.getLineNames().size() == 1 && cellWithHeading.getImmutableImportHeading().exclusiveIndex != HeadingReader.NOTEXCLUSIVE) {
             //the 'parent' is the current cell name, not its parent, it is the parent that will stay on the child regardless
             Name parent = cellWithHeading.getLineNames().iterator().next();
@@ -444,9 +440,26 @@ public class BatchImporter implements Callable<Void> {
         }
     }
 
+    public static boolean containsSynonym(Map<String, List<String>> synonymList, String term, String value) {
+        if (value.contains(term)) {
+            return true;
+        }
+        if (synonymList != null) {
+            List<String> synonyms = synonymList.get(term);
+            if (synonyms != null) {
+                for (String synonym : synonyms) {
+                    if (value.contains(synonym.toLowerCase())) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
     // comma as opposed to ? : as that syntax is what is used in Excel
     // IF(C2=”Yes”,1,2) says IF(C2 = Yes, then return a 1, otherwise return a 2) but the terms are Azquo Composites. References to cells.
-    // note this is a function that's resolved before anything else
+    // note this is a function that's resolved before otehr composite stuff
     private boolean resolveIf(ImportCellWithHeading cell, String compositionPattern, List<ImportCellWithHeading> cells) throws Exception {
         int commaPos = compositionPattern.indexOf(",");
         if (commaPos < 0)
@@ -517,6 +530,7 @@ public class BatchImporter implements Callable<Void> {
                 } else { // either parse simple functions or do name attribute, can't do both
                     // fairly standard replace name of column with column value but with string manipulation left right mid
                     // checking for things like right(A Column Name, 5). Mid has two numbers.
+                    // note that len(another column name) is supported too so you can reference the length of other cells, stringTerm does this
                     if (expression.contains("(")) {
                         int bracketPos = expression.indexOf("(");
                         function = expression.substring(0, bracketPos);
@@ -623,10 +637,10 @@ public class BatchImporter implements Callable<Void> {
                 Expression e = new ExpressionBuilder(compositionPattern).build();
                 // As WFC pointed out one could perhaps precompile the polish notation so it's not resolved on every cell of the column but I'm not bothered at the moment
                 compositionPattern = roundoff(e.evaluate()); // roundoff probably still required
-            } catch (Exception ignored){ // following the previous convention we'll just fail silently
+            } catch (Exception ignored) { // following the previous convention we'll just fail silently
             }
         }
-        return compositionPattern; // if composition did result in the line value being changed we should run the loop again in case dependencies mean the results will change again
+        return compositionPattern;
     }
 
     // enables referencing the length of other column, useful for left mid right functions above
@@ -704,37 +718,49 @@ public class BatchImporter implements Callable<Void> {
         }
     }
 
-    // Edd to here 3rd March
+     /*
+
+     The key here is that there's a value in a cell and we want to use lookups such as those in the split contract definitions
+     to assign the correct name. There's a set of names that might each contain something like
+
+    and('Inception' < "2018-08-01", 'state' in {"DE","MD", "VA"}, 'comm_percent' > 25)
+    and('Inception' < "2018-08-01", 'state' in {"GA","NC", "SC"}, 'comm_percent' > 25)
+    and('Inception' < "2018-08-01", 'state' = "FL", 'comm_percent' > 25)
+    and('Inception' < "2018-08-01", 'state' in {"AL","MS", "LA"}, 'comm_percent' > 25)
+    and('Inception' < "2018-08-01", 'state' ="TX", 'comm_percent' > 25)
+    and('Inception' < "2018-11-01", 'state' in {"DE","MD", "VA"}, 'comm_percent' > 25)
+
+    Essentially the name for the cell will be derived from other cells in the line according to criteria
+
+     example to illustrate
+
+     lookup 'Policy Reference' in 'Contract Reference' using and('inception' >= `binder contract inception`, 'inception' <= `binder contract expiry`)
+
+     lookupParentIndex = pointer to the heading 'Contract Reference' which will have a name in each cell e.g. BB301212112
+     lookupString = and('inception' >= `binder contract inception`, 'inception' <= `binder contract expiry`)
+
+     this will search the children of the set (in this example BB301212112) for elements which satisfy the condition.
+     in the condition, '' means headings in the file `` means attributes of the child name so in this case 'inception'
+     is a heading in the file and `binder contract inception` and `binder contract expiry` are attributes of children of BB301212112
+
+     there is a backup of best guess when it's above lookupFrom but not below lookupTo, applicable when provisional, note below
+
+     after a name is set here line names is done (though parents and exclusive may need to be sorted)
 
 
-     /*categorise numeric values, see HeadingReader.java
-     lookup assumes that the value in the cell is two values comma separated. The name of a set and the value to look for in its children.
-     This value is made by a composition
-     from/to are different attributes to check against in the set
-     lookup used for finding a contract year off a date . . .
+     As an alternative source of the lookup string lookupString can be an attribute on the child name
+     e.g  lookupString = `specification`
+
+     in this case the condition will be taken from the attribute, so will differ for each element tested.  This condition is recognised by the absence of relation operators <=>{}
+
+     so the children of BB301212112 to follow that example would each have their specification. This is used when classifying split contracts - each contract may have a different spec
+
+    EFC note 04/03/20 - now I understand this I'm concerned that too much complexity is going on in the Java. I think this could be done in straight Excel
+    with input and output regions but it needs testing.
+
      */
 
     private boolean checkLookup(AzquoMemoryDBConnection azquoMemoryDBConnection, ImportCellWithHeading cell, Name parentSet, List<ImportCellWithHeading> lineToLoad, CompositeIndexResolver compositeIndexResolver) throws Exception {
-        /* example to illustrate
-
-        lookup 'Policy Reference' in 'Contract Reference' using and('inception' >= `binder contract inception`, 'inception' <= `binder contract expiry`)
-
-        lookupParentIndex = pointer to the heading 'Contract Reference'
-        lookupString = and('inception' >= `binder contract inception`, 'inception' <= `binder contract expiry`)
-
-        this will search the children of the set for elements which satisfy the condition.
-        in the condition, '' means headings in the file `` means attributes of the child name
-
-        OR  lookupString can be an attribute on the child name
-        e.g  lookupString = `specification`
-
-        in this case the condition will be taken from the attribute, so will differ for each element tested.  This condition is recognised by the absence of relation operators <=>{}
-
-        there is a backup of best guess when it's above lookupFrom but not below lookupTo, applicable when provisional, note below
-
-        after a name is set here line names is done (though parents and exclusive may need to be sorted)
-         */
-
         Pattern p = Pattern.compile("[<=~>{]");
         String condition = cell.getImmutableImportHeading().lookupString;
         Matcher m = p.matcher(condition);
@@ -766,13 +792,10 @@ public class BatchImporter implements Callable<Void> {
                         return true;
                     }
                 }
+                //if provisional but can't find existing then just add to line names as normal
                 cell.addToLineNames(toTest);
                 cell.setLineValue(toTest.getDefaultDisplayName(), azquoMemoryDBConnection, attributeNames);
                 cell.setLineNamesResolved(); // deal with its children later
-                indexForChild = cell.getImmutableImportHeading().indexForChild;
-                if (indexForChild >= 0 && lineToLoad.get(indexForChild).getLineNames() != null && lineToLoad.get(indexForChild).getLineNames().size() > 0) {
-                    toTest.addChildWillBePersisted(lineToLoad.get(indexForChild).getLineNames().iterator().next(), azquoMemoryDBConnection);
-                }
                 return true;
             }
             if (checkResult == CHECKMAYBE) {
@@ -797,18 +820,24 @@ public class BatchImporter implements Callable<Void> {
                 cell.setLineNamesResolved(); // deal with its children later
             }
         }
-        //error will be spotted because the cell value will never be set - no need for an exception
-        //if (!found) {
-        //    throw new Exception("lookup for " + cell.getImmutableImportHeading().heading + " not found");
-        //}
         return false;
     }
 
-    private int checkCondition(List<ImportCellWithHeading> lineToLoad, String condition, CompositeIndexResolver compositeIndexResolver, Name nameToTest, final Map<Name, String> nearestList, boolean provisional) throws Exception {
+    /* see the comment above checkLookup, this actually checks the condition of the lookup against a child of the parent name
+
+    this is an example from BB304140
+
+    inception and date reference a column. The date and states are string literals and there's the in {} syntax
+
+    */
+    // and('Inception' < "2018-08-01", 'state' in {"DE","MD", "VA"})
+
+    private int checkCondition(List<ImportCellWithHeading> lineToLoad, String condition, CompositeIndexResolver compositeIndexResolver, Name nameToTest, final Map<Name, String> nearestList, boolean provisional) {
         //returns CHECKTRUE, CHECKFALSE, CHECKMAYBE
         int found = CHECKFALSE;
         boolean maybe = false;
-        if (condition.toLowerCase().equals("all")) return CHECKTRUE;
+        if (condition.toLowerCase().equals("all"))
+            return CHECKTRUE;// presumably the condition would be from the name attribute in this case - pointless to put it in a heading
         List<String> constants = new ArrayList<>();
         List<List<String>> sets = new ArrayList<>();
         Pattern p = Pattern.compile("\"[^\"]*\"");
@@ -816,6 +845,8 @@ public class BatchImporter implements Callable<Void> {
         StringBuffer newCondition = new StringBuffer();
         int lastPos = 0;
         int count = 0;
+        // four parsing while loops, three quote types ", ', ` and the brackets for "in" which are parsed separately
+        // the first does string constants "
         while (m.find()) {
             constants.add(condition.substring(m.start() + 1, m.end() - 1));
             newCondition.append(condition, lastPos, m.start()).append(CONSTANTMARKER).append(("" + (count++ + 100)).substring(1));
@@ -826,19 +857,18 @@ public class BatchImporter implements Callable<Void> {
         lastPos = 0;
         p = Pattern.compile("'[^']*'");
         m = p.matcher(condition);
+        // the second loop does composites '
         while (m.find()) {
             String conditionValue = null;
             int fieldNo = compositeIndexResolver.getColumnIndexForHeading(condition.substring(m.start() + 1, m.end() - 1));
             if (fieldNo >= 0) {
                 ImportCellWithHeading cell = lineToLoad.get(fieldNo);
-                if (!cell.lineValueResolved()) {
-                    conditionValue = getCompositeValue(cell, cell.getImmutableImportHeading().compositionPattern, lineToLoad);
-                } else {
+                // If it's not resolved no problem, this will be called again if further adjustments are made later
+                if (cell.lineValueResolved()) {
                     conditionValue = cell.getLineValue();
                 }
                 if (conditionValue == null) {
                     return CHECKFALSE;
-
                 }
             }
             constants.add(conditionValue);//note that a null here means that the field does not exist, so the result may be 'maybe'
@@ -850,6 +880,7 @@ public class BatchImporter implements Callable<Void> {
         lastPos = 0;
         p = Pattern.compile("`[^`]*`");
         m = p.matcher(condition);
+        // the third loop does attributes `
         while (m.find()) {
             String attribute = nameToTest.getAttribute(condition.substring(m.start() + 1, m.end() - 1));
             if (attribute == null) {
@@ -865,6 +896,7 @@ public class BatchImporter implements Callable<Void> {
         p = Pattern.compile("\\{[^\\}]*\\}");
         m = p.matcher(condition);
         count = 0;
+        // fourth loop does the brackets
         while (m.find()) {
             sets.add(Arrays.asList(condition.substring(m.start() + 1, m.end() - 1).split(",")));
             newCondition.append(condition.substring(lastPos, m.start()) + CONSTANTMARKER + ("" + (count++ + 100)).substring(1));
@@ -873,16 +905,17 @@ public class BatchImporter implements Callable<Void> {
         }
         condition = newCondition.toString() + condition.substring(lastPos);
 
-        List<String> conditions = null;
+        List<String> conditions;
+        // like Excel syntax, apply multiple conditions
         if (condition.startsWith("and(") && condition.endsWith(")")) {
             conditions = Arrays.asList(condition.substring(4, condition.length() - 1).split(","));
-
         } else {
             conditions = new ArrayList<>();
             conditions.add(condition);
         }
         for (String element : conditions) {
             found = CHECKFALSE;
+            //'state' in {"DE","MD", "VA"})
             int inPos = element.indexOf(" in ");
             if (inPos > 0) {
                 String fieldSt = element.substring(0, inPos).trim();
@@ -919,7 +952,10 @@ public class BatchImporter implements Callable<Void> {
                     if (RHS.endsWith(PROVISIONAL)) {
                         //some explanation needed.
                         /*categorisation of risk searches for three counties in florida.  Areas in Florida outside the three counties are treated differently
-                         * but, if there is no county information, but the state is known to be Florida, the risk is provisionally treated as if in the three counties*/
+                         * but, if there is no county information, but the state is known to be Florida, the risk is provisionally treated as if in the three counties
+                         *
+                         * EFC 04/03/20 note - this is a hack for BB304140 which I'm not sure is required any more, I'd quite like to zap it
+                         * */
                         if (!provisional) {
                             found = CHECKFALSE;
                             break;
@@ -984,24 +1020,6 @@ public class BatchImporter implements Callable<Void> {
         return term;
     }
 
-    public static boolean containsSynonym(Map<String, List<String>> synonymList, String term, String value) {
-        if (value.contains(term)) {
-            return true;
-        }
-        if (synonymList != null) {
-            List<String> synonyms = synonymList.get(term);
-            if (synonyms != null) {
-                for (String synonym : synonyms) {
-                    if (value.contains(synonym.toLowerCase())) {
-                        return true;
-                    }
-                }
-            }
-        }
-        return false;
-    }
-
-    // peers in the headings might have caused some database modification but really it is here that things start to be modified in earnest
     private void interpretLine(List<ImportCellWithHeading> cells, int importLine, Map<Integer, List<String>> linesRejected, boolean clearData) throws Exception {
         long tooLong = 2; // now ms
         long time = System.currentTimeMillis();
@@ -1026,7 +1044,7 @@ public class BatchImporter implements Callable<Void> {
             if (!peersOk) {
                 // was CopyOnWriteArrayList but that made no sense - a single line won't be hit by multiple threads, just this one
                 linesRejected.computeIfAbsent(importLine, t -> new ArrayList<>()).add(":Missing peers for" + cell.getImmutableImportHeading().heading);
-            } else if (!namesForValue.isEmpty()) { // no point storing if peers not ok or no names for value (the latter shouldn't happen, braces and a belt I suppose)
+            } else if (!namesForValue.isEmpty()) { // no point storing if peers not ok or no names for value - the latter likely if the cell was used to create names rather than store values
                 // now we have the set of names for that name with peers get the value from that headingNo it's a heading for
                 String value = cell.getLineValue();
                 if (!(cell.getImmutableImportHeading().blankZeroes && isZero(value)) && value.trim().length() > 0) { // don't store if blank or zero and blank zeroes
@@ -1040,14 +1058,12 @@ public class BatchImporter implements Callable<Void> {
                     }
                 }
                 // now attribute, not allowing attributes and peers to mix
-            } else if (cell.getImmutableImportHeading().indexForAttribute >= 0 && cell.getImmutableImportHeading().attribute != null
-                    && cell.getLineValue().length() > 0) {
+            } else if (cell.getImmutableImportHeading().indexForAttribute >= 0 && cell.getImmutableImportHeading().attribute != null && cell.getLineValue().length() > 0) {
                 String attribute = cell.getImmutableImportHeading().attribute;
-                if (cell.getImmutableImportHeading().attributeColumn >= 0) {//attribute name refers to the value in another column - so find it
+                if (cell.getImmutableImportHeading().attributeColumn >= 0) {//attribute *name* refers to the value in another column - so find it
                     attribute = cells.get(cell.getImmutableImportHeading().attributeColumn).getLineValue();
                 }
-                // handle attribute was here, we no longer require creating the line name so it can in lined be cut down a lot
-                ImportCellWithHeading identityCell = cells.get(cell.getImmutableImportHeading().indexForAttribute); // get our source cell
+                ImportCellWithHeading identityCell = cells.get(cell.getImmutableImportHeading().indexForAttribute); // get our cell which will have names we want to set the attributes on
                 if (identityCell.getLineNames() == null) {
                     linesRejected.computeIfAbsent(importLine, t -> new ArrayList<>()).add("No name for attribute " + cell.getImmutableImportHeading().attribute + " of " + cell.getImmutableImportHeading().heading);
                     break;
@@ -1061,7 +1077,7 @@ public class BatchImporter implements Callable<Void> {
                             if (!cell.getImmutableImportHeading().provisional || name.getAttribute(attribute) == null) {
                                 name.setAttributeWillBePersisted(attribute, cell.getLineValue(), azquoMemoryDBConnection);
                             }
-                            // EFC note - need to check on definition
+                            // EFC note - need to check on definition - it means something like "the last three months"
                             if (attribute.toLowerCase().equals("definition")) {
                                 //work it out now!
                                 name.setChildrenWillBePersisted(NameQueryParser.parseQuery(azquoMemoryDBConnection, cell.getLineValue()), azquoMemoryDBConnection);
@@ -1084,19 +1100,6 @@ public class BatchImporter implements Callable<Void> {
         } catch (Exception e) {
             return true;
         }
-    }
-
-
-    private static boolean alreadyCategorised(Name parent, Name child) {
-        //this routine is for the specific case where a categorisation is only to be done if the child is not already categorised
-        //when importing Ed Broking premium data the premiums need to be categorised, but the information available is such that the categorisation is sometimes false
-        //so the categorisation must not override other categorisations
-        for (Name grandparent : parent.getParents()) {
-            if (grandparent.getDefaultDisplayName() != null && child.getAttribute(grandparent.getDefaultDisplayName()) != null) {
-                return true;
-            }
-        }
-        return false;
     }
 
     // The cache is purely a performance thing though it's used for a little logging later (total number of names inserted)
