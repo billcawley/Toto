@@ -39,7 +39,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 /**
- * Copyright (C) 2019 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ * Copyright (C) 2019 Azquo Ltd.
  * <p>
  * Created March 5th. Will allow a user to upload data to a database either directly or via pending uploads
  * <p>

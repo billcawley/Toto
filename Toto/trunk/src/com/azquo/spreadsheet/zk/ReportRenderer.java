@@ -21,7 +21,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ * Copyright (C) 2016 Azquo Ltd.
  * <p>
  * Created by cawley on 03/03/15.
  * <p>

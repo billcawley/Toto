@@ -1,4 +1,4 @@
-// Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+// Copyright (C) 2016 Azquo Ltd.
 // just a test file to prove the point that we can preprocess using groovy
 
 import com.azquo.spreadsheet.transport.UploadedFile

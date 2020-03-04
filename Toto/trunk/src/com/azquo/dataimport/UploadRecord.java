@@ -6,7 +6,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 /**
- * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ * Copyright (C) 2016 Azquo Ltd.
  * <p>
  * Created by cawley on 09/01/14
  * An entry for each uploaded file

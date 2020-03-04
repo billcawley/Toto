@@ -40,7 +40,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ * Copyright (C) 2016 Azquo Ltd.
  * <p>
  * Created by edward on 21/09/15.
  * <p>

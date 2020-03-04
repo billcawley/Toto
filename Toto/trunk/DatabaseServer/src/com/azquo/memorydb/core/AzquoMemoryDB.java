@@ -15,7 +15,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * Copyright (C) 2019 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ * Copyright (C) 2019 Azquo Ltd.
  * <p>
  * Created with IntelliJ IDEA.
  * User: cawley

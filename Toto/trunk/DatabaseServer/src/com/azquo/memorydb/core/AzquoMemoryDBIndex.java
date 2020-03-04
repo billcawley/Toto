@@ -321,6 +321,8 @@ public class AzquoMemoryDBIndex {
         // these interns have been tested as helping memory usage.
         String ucAttributeName = attributeName.toUpperCase().trim().intern();
         // todo - an if on the split to save garbage? also should this be allowed at all! Hadn't really considered it. Used on importing so really the code should be there not in there
+        // EFC 04/03/20. I really don't like this split but it is being used in lookups ExDwell||Exhome||Exwind under .LineOfBusiness for example so then it can be looked up but numerous of those
+        //
         String[] attValues = attributeValue.split(StringLiterals.NEXTATTRIBUTE);
         for (String attValue : attValues) {
             String lcAttributeValue = attValue.toLowerCase().trim().intern();

@@ -1,4 +1,4 @@
-<%-- Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT --%><%@ attribute name="node" required="true" type="com.azquo.memorydb.TreeNode" %>
+<%-- Copyright (C) 2016 Azquo Ltd. --%><%@ attribute name="node" required="true" type="com.azquo.memorydb.TreeNode" %>
 <%@ taglib tagdir="/WEB-INF/tags" prefix="azquoTags" %>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
 <c:if test="${!empty node}">

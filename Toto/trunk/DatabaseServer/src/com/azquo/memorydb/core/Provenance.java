@@ -12,7 +12,7 @@ import java.time.ZoneId;
 import java.util.Date;
 
 /**
- * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ * Copyright (C) 2016 Azquo Ltd.
  * <p>
  * Created with IntelliJ IDEA.
  * User: cawley

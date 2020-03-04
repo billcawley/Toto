@@ -28,7 +28,7 @@ import java.util.Comparator;
 import java.util.List;
 
 /**
- * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ * Copyright (C) 2016 Azquo Ltd.
  * <p>
  * Created by edward on 19/01/16.
  * <p>

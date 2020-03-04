@@ -1,4 +1,4 @@
-/* Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+/* Copyright (C) 2016 Azquo Ltd.
 first proper use of the groovy functionality. Spec emailed to me was :
 
 for Sage imports

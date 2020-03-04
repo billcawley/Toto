@@ -3,7 +3,7 @@ package com.azquo.spreadsheet.transport;
 import java.io.Serializable;
 
 /**
- * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ * Copyright (C) 2016 Azquo Ltd.
  * <p>
  * Created by cawley on 11/05/15.
  * <p>

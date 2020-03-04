@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.Properties;
 
 /**
- * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ * Copyright (C) 2016 Azquo Ltd.
  * <p>
  * Created by cawley on 16/01/14.
  * Quick google showed the apache libraries to be a pretty easy way to do things. Email so unimportant compared to Feefo.

@@ -1,5 +1,5 @@
 <%--
-Copyright (C) 2019 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+Copyright (C) 2019 Azquo Ltd.
 
 Stripped down managed databases
 --%>

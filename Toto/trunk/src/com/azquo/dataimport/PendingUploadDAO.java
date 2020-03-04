@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Copyright (C) 2018 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ * Copyright (C) 2018 Azquo Ltd.
  * <p>
  * Created by cawley on 23/10/18.
  *

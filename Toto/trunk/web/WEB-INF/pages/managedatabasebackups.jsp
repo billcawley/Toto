@@ -1,6 +1,6 @@
 <%--
 
-Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+Copyright (C) 2016 Azquo Ltd.
   Created by IntelliJ IDEA.
   User: edward
   Date: 22/07/16

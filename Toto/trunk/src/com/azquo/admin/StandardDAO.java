@@ -11,7 +11,7 @@ import java.net.InetAddress;
 import java.util.*;
 
 /**
- * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ * Copyright (C) 2016 Azquo Ltd.
  * <p>
  * Created 07/01/14 by edd
  * to factor off common bits on vanilla DAO stuff - the nature of the factoring may change a little if I go to static DAOs

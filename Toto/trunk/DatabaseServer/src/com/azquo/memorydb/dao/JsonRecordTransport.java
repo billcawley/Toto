@@ -1,7 +1,7 @@
 package com.azquo.memorydb.dao;
 
 /**
- * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ * Copyright (C) 2016 Azquo Ltd.
  *
  * now we've simplified the way records are persisted we need to be able to move them around
  */

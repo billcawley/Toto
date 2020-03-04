@@ -17,7 +17,7 @@ import java.util.*;
 import java.util.concurrent.*;
 
 /**
- * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ * Copyright (C) 2016 Azquo Ltd.
  * <p>
  * Created by edward on 01/10/15.
  * <p>

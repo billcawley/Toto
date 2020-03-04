@@ -32,7 +32,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /*
- * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ * Copyright (C) 2016 Azquo Ltd.
  *
  * it seems that trying to configure the properties in spring is a problem
  * this works but I'm a bit fed up of something that should be simple, go to a simple classpath read??

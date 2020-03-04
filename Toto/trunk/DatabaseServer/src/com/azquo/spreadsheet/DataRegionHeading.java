@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ * Copyright (C) 2016 Azquo Ltd.
  *
  * Created by cawley on 03/02/15.
  * <p/>

@@ -30,7 +30,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 /**
- * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ * Copyright (C) 2016 Azquo Ltd.
  * <p>
  * Used to programatically configure the ZK Sheet as we'd like it.
  * <p>

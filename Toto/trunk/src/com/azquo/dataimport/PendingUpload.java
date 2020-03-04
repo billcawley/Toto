@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 /**
- * Copyright (C) 2018 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ * Copyright (C) 2018 Azquo Ltd.
  * <p>
  * Created by cawley on 23/10/2018
  * Initially copied from UploadRecord, PendingUpload is made for Ed Broking's query area but might be useful for others so

@@ -1,4 +1,4 @@
-<%-- Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT --%><%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
+<%-- Copyright (C) 2016 Azquo Ltd. --%><%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/functions" prefix="fn" %>
 <%@ taglib prefix="zssjsp" uri="http://www.zkoss.org/jsp/zss" %>
 <!DOCTYPE html>
