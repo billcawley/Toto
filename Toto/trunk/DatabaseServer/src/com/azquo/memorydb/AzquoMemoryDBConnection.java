@@ -1,6 +1,7 @@
 package com.azquo.memorydb;
 
 import com.azquo.memorydb.core.*;
+import com.azquo.memorydb.dao.StatisticsDAO;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -14,6 +15,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * Changed over time especially since the server/client split. Holds permissions, the user log and provenance currently.
  */
 public class AzquoMemoryDBConnection {
+
 
     //private static final Logger logger = Logger.getLogger(AzquoMemoryDBConnection.class);
 

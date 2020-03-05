@@ -25,7 +25,7 @@ import java.nio.file.Paths;
 import java.util.*;
 
 /**
- * Copyright (C) 2018 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ * Copyright (C) 2018 Azquo Ltd.
  * <p>
  * Created by Edd on 20/05/15.
  * <p>
@@ -64,8 +64,8 @@ public class DSImportService {
 
     // Called by above but also directly from DSSpreadsheet service when it has prepared a CSV from data entered ad-hoc into a sheet
     public static UploadedFile readPreparedFile(AzquoMemoryDBConnection azquoMemoryDBConnection, UploadedFile uploadedFile) throws Exception {
-        // ok the thing he is to check if the memory db object lock is free, more specifically don't start an import if persisting is going on, since persisting never calls import there should be no chance of a deadlock from this
-        // of course this doesn't currently stop the opposite, a persist being started while an import is going on, that should be robust, new lists of modified objects will be made to be persisted after the current persist
+        // ok the thing here is to check if the memory db object lock is free, more specifically don't start an import if persisting is going on, since persisting never calls import there should be no chance of a deadlock from this
+        // of course this doesn't currently stop the opposite, a persist being started while an import is going on, that should be robust, new lists of modified objects will be made to be persisted after the current persist finishes
         azquoMemoryDBConnection.addToUserLog("Reading " + uploadedFile.getFullFileName());
         azquoMemoryDBConnection.lockTest();
         azquoMemoryDBConnection.getAzquoMemoryDB().clearCaches();
@@ -107,7 +107,7 @@ public class DSImportService {
                         br.close();
                         throw new Exception(uploadedFile.getFileName() + ": Unable to read any data (perhaps due to an empty file in a zip or an empty sheet in a workbook)");
                     }
-                    if (secondLine == null) { // it might have been assigned above in the empty file check - todo clean logic?
+                    if (secondLine == null) { // it might have been assigned above in the empty file check
                         secondLine = br.readLine();
                     }
                     long linesGuess = fileLength / ((secondLine != null && secondLine.length() > 20) ? secondLine.length() : 1_000); // a very rough approximation assuming the second line is a typical length.
@@ -147,8 +147,6 @@ public class DSImportService {
         /*
         note : for encoding is it worth trying
         https://tika.apache.org/1.2/api/org/apache/tika/detect/AutoDetectReader.html
-   //get a file stream in utf format for this file (since they are often not in utf by
-   Charset charset = new AutoDetectReader(new FileInputStream(file)).getCharset();
          */
             MappingIterator<String[]> lineIterator;
             if (uploadedFile.getParameter(FILEENCODING) != null) {
@@ -206,7 +204,6 @@ public class DSImportService {
                 }
             }
 
-
             if (uploadedFile.getTopHeadings() != null && uploadedFile.getTopHeadings().size() != topHeadingsValues.size()) {
                 throw new Exception("Top headings expected : " + uploadedFile.getTopHeadings().values() + " top headings found " + topHeadingsValues.keySet());
             }
@@ -251,6 +248,7 @@ public class DSImportService {
 
                     // ok now we get to the actual lookup
                     // copy it as we're going to remove things - need to leave the original intact as it's part of feedback to the user
+                    // we remove things as what's left over is flagged as not having file headings
                     Map<List<String>, HeadingWithInterimLookup> headingsByLookupCopy = new HashMap<>(uploadedFile.getHeadingsByFileHeadingsWithInterimLookup());
                     int currentFileCol = 0;
                     for (List<String> headingsForAColumn : headingsFromTheFile) {// generally headingsForAColumn will just just have one element
@@ -320,7 +318,7 @@ public class DSImportService {
                 } else { // both null, we want azquo import stuff directly off the file, it might be multi level clauses
                     // the straight pull off the first line
                     headings = new ArrayList<>(Arrays.asList(lineIterator.next()));
-                    // older code pasted, could be tidied? Todo
+                    // older code pasted, could be tidied?
                     boolean hasClauses = false;
                     boolean blank = true;
                     for (String heading : headings) {
@@ -390,7 +388,6 @@ public class DSImportService {
     deal with attribute short hand and pivot stuff, essentially pre processing that can be done before making any MutableImportHeadings
 
     */
-
             String lastHeading = "";
             boolean pivot = false;
             for (int i = 0; i < headings.size(); i++) {

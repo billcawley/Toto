@@ -100,7 +100,7 @@ class MutableImportHeading {
     // synonyms are used with dictionary if you want to add equivalent words, e.g. if when categorising and asking if a string has "car" in it we might say that "auto" + "vehicle" could also count as "car"
     Map<String, List<String>> synonyms = null;
     boolean replace = false; //usually numbers will add if on the same file.  'replace' will accept the last one.
-    // only put an attribute in if it's not there already. Supposedly applies to values too though the code isn't there yet.
+    // only put an attribute in if it's not there already
     boolean provisional = false;
     //lookup syntax is now:
     // lookup <Element> using <expression>

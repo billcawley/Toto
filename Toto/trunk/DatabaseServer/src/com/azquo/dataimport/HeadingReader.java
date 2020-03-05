@@ -3,11 +3,13 @@ package com.azquo.dataimport;
 import com.azquo.StringLiterals;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.core.Name;
+import com.azquo.memorydb.dao.StatisticsDAO;
 import com.azquo.memorydb.service.NameService;
 import com.azquo.spreadsheet.transport.UploadedFile;
-import org.apache.commons.lang.math.NumberUtils;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -19,6 +21,8 @@ import java.util.stream.Collectors;
  * <p>
  * Some bits are still a little hard to understand, as of 04/01/19 I think it could be improved a bit
  * <p>
+ * <p>
+ * todo - log clause usage
  */
 class HeadingReader {
     // to define context headings use this divider
@@ -46,7 +50,7 @@ class HeadingReader {
     COMPOSITION  <phrase with column heading names enclosed in ``>
     e.g   COMPOSITION  `Name`, `address` Tel No: `Telephone No`
 
-    NOTE the values of the fields will be the final values - some fields using 'language' 'dictionary' or 'lookup' will find names, and it is the default value of those names which is used in 'composition'
+Attributes of the names in other cells can be referenced also
     */
 
     static final String COMPOSITION = "composition";
@@ -73,7 +77,6 @@ class HeadingReader {
     static final String LINEHEADING = "lineheading";//lineheading and linedata are shortcuts for data destined for a pivot table, they are replaced before parsing starts properly
     static final String LINEDATA = "linedata";
     static final String SPLIT = "split";
-    private static final String CHECK = "check";
     public static final String REPLACE = "replace";
     private static final String PROVISIONAL = "provisional";//used with 'parent of' to indicate that the parent child relationship should only be created if none exists already (originally for Ed Broking Premium imports)
     public static final int EXCLUSIVETOCHILDOF = -1;
@@ -85,27 +88,19 @@ class HeadingReader {
     e.g      'car, bus, van + accident - sunday,saturday' would find any phrase containing 'car' or 'bus' or 'van' AND 'accident' but NOT containing 'saturday' or 'sunday'
     DICTIONARY can be used in conjunction with the set 'SYNONYMS`.  The elements of 'Synonyms` are names with an attribute 'synonyms'.  The attribute gives a comma-separated list of synonyms.
     e.g  if an element of 'Synonyms' is 'car'    then 'car' may have an attribute 'synonyms' consisting of 'motor, auto, vehicle'  which DICTIONARY  would consider to mean the same as 'car'
-    Note 26-07-2019, I wanted to move this all into reports but
+    EFC - initially I wanted to move this to reports but it's actually fairly manageable. Less of a concern than lookups. Check tryToResolveNames in BatchImporter
      */
     static final String DICTIONARY = "dictionary";
     /*
-    LOOKUP FROM  `<start attribute>` {TO `<end attribute>`}
-    used in conjunction with 'child of' or 'classification'
-
-    used where you are not looking for an exact match, but for a name with the given attribute which falls within the range.
-
-    e.g. there might be a value for 'Weight' which you wish to categorise into 'light'  (Min weight = 0, Max weight = 10) and 'heavy' (Min weight = 10, max weight = 1000)
-    'classification weight categories;lookup from `min weight` to `max weight`
-
-    the system will find the first element of the set which satisfies the requirements.   'TO' is optional
-
-    any name in the set wih attributes in the range
-
-    See BatchImporter also . . .
+    see checkLookup in BatchImporter, this can be quite involved
      */
     public static final String LOOKUP = "lookup";
 
     private static final int FINDATTRIBUTECOLUMN = -2;
+
+    static Map<String, AtomicInteger> clauseCounts = new ConcurrentHashMap<>();
+    // don't update the stats every time, only if not done recently
+    static volatile long lastStatSave = 0;
 
     // Manages the context being assigned automatically to subsequent headings. Aside from that calls other functions to
     // produce a finished set of ImmutableImportHeadings to be used by the BatchImporter.
@@ -115,7 +110,6 @@ class HeadingReader {
         List<MutableImportHeading> contextHeadings = new ArrayList<>();
         String lastClauses = "";
         for (String headingString : headingsAsStrings) {
-            // on some spreadsheets, pseudo headings are created because there is text in more than one line.  The divider must also be accompanied by a 'peers' clause
             int dividerPos = headingString.lastIndexOf(headingDivider); // is there context defined here?
             if (headingString.trim().length() > 0) { // miss out blanks also.
                 if (dividerPos > 0 || headingString.indexOf(";") > 0) {//any further clauses or new contexts  void existing context headings
@@ -177,47 +171,60 @@ class HeadingReader {
                     heading.isAttributeSubject = true;
                 }
             }
-            if (heading.lookupString!=null){
+            if (heading.lookupString != null) {
                 String error = handleLookup(heading, headings);
-                if (error!=null){
+                if (error != null) {
                     throw new Exception(error);
                 }
             }
         }
         resolvePeersAttributesAndParentOf(azquoMemoryDBConnection, headings);
-        //set 'isAttributeSubject for date headings if there is not already an attribute subject or a heading with no attribute
-        // convert to immutable. Not strictly necessary, as much for my sanity as anything (EFC) - we do NOT want this info changed by actual data loading
 
+        if (lastStatSave < (System.currentTimeMillis() - (1_000 * 60))){ // don't update stats more than once a minute
+            saveStats();
+        }
+
+        // convert to immutable. Not strictly necessary, as much for my sanity as anything (EFC) - we do NOT want this info changed by actual data loading
         return headings.stream().map(ImmutableImportHeading::new).collect(Collectors.toList());
     }
 
+    // I'm assuming this will be quick. Called periodically. synchronised a good idea as even if the map is ok with this running concurrently it seems like a bad idea on the database code
+    private static synchronized void saveStats(){
+        lastStatSave = System.currentTimeMillis();
+        for (String name : clauseCounts.keySet()){
+            StatisticsDAO.addToNumber(name, clauseCounts.get(name).get());
+        }
+        clauseCounts.clear();
+    }
 
-    private static String handleLookup(MutableImportHeading heading, List<MutableImportHeading>headings) throws Exception{
+
+    private static String handleLookup(MutableImportHeading heading, List<MutableImportHeading> headings) throws Exception {
         //the syntax is:  in '<parentheadingname>' using <condition/attribute>.
         // (note - using (') for heading names as  because we are mizing azquo names with field names here)
         String lookupString = heading.lookupString;
         String error = "could not understand lookup: " + lookupString;
         Pattern p = Pattern.compile("'[^']*'");
         Matcher m = p.matcher(lookupString);
-        if(!m.find()){
+        if (!m.find()) {
             return error;
         }
         if (lookupString.length() < 10 || !lookupString.toLowerCase().startsWith("in ")) return error;
-        heading.lookupParentIndex = findMutableHeadingIndex(lookupString.substring(m.start() + 1, m.end()-1), headings);
+        heading.lookupParentIndex = findMutableHeadingIndex(lookupString.substring(m.start() + 1, m.end() - 1), headings);
         if (heading.lookupParentIndex < 0) return error;
         lookupString = lookupString.substring(m.end()).trim();
         if (lookupString.length() < 6 || !lookupString.toLowerCase().startsWith("using ")) return error;
         lookupString = lookupString.substring(6).trim();
-        heading. lookupString = lookupString;
+        heading.lookupString = lookupString;
         return null;
     }
+
     //headings are clauses separated by semicolons, first is the heading name then onto the extra stuff
     //essentially parsing through all the relevant things in a heading to populate a MutableImportHeading
     private static MutableImportHeading interpretHeading(AzquoMemoryDBConnection azquoMemoryDBConnection, String headingString, List<String> attributeNames, String fileName) throws Exception {
         MutableImportHeading heading = new MutableImportHeading();
         List<String> clauses = new ArrayList<>(Arrays.asList(headingString.split(";")));
-        Iterator clauseIt = clauses.iterator();
-        heading.heading = ((String) clauseIt.next()).replace(StringLiterals.QUOTE + "", ""); // the heading name being the first
+        Iterator<String> clauseIt = clauses.iterator();
+        heading.heading = clauseIt.next().replace(StringLiterals.QUOTE + "", ""); // the heading name being the first
         try {
             //WFC - I do not understand why we're trying to set up a name for an attribute!
             heading.name = NameService.findByName(azquoMemoryDBConnection, heading.heading, attributeNames); // at this stage, look for a name, but don't create it unless necessary
@@ -227,7 +234,7 @@ class HeadingReader {
         // loop over the clauses making sense and modifying the heading object as you go
 
         while (clauseIt.hasNext()) {
-            String clause = ((String) clauseIt.next()).trim();
+            String clause = clauseIt.next().trim();
             // classification just being shorthand. According to this code it needs to be the first of the clauses
             // should classification go inside interpretClause?
             if (clause.toLowerCase().startsWith(CLASSIFICATION)) {
@@ -241,12 +248,12 @@ class HeadingReader {
             }
         }
         // exclusive error checks
-        if (heading.exclusiveIndex==EXCLUSIVETOCHILDOF && heading.parentNames.isEmpty()) { // then exclusive what is the name exclusive of?
+        if (heading.exclusiveIndex == EXCLUSIVETOCHILDOF && heading.parentNames.isEmpty()) { // then exclusive what is the name exclusive of?
             throw new Exception("blank exclusive and no \"child of\" clause in " + heading.heading + " in headings"); // other clauses cannot be blank!
         } else if (heading.exclusiveIndex > NOTEXCLUSIVE && heading.parentOfClause == null) { // exclusive means nothing without parent of
             throw new Exception("exclusive and no \"parent of\" clause in " + heading.heading + " in headings");
         } else { // other problematic combos
-            if (heading.dictionaryMap != null && heading.localParentIndex != -1){
+            if (heading.dictionaryMap != null && heading.localParentIndex != -1) {
                 throw new Exception("Column " + heading.heading + " has a dictionary map and a local parent. This combination is not allowed.");
             }
         }
@@ -268,6 +275,7 @@ class HeadingReader {
                 firstWord = firstWord.substring(0, firstWord.indexOf(" "));
             }
         }
+        clauseCounts.computeIfAbsent("heading - " + firstWord, t-> new AtomicInteger()).incrementAndGet();
         if (clause.length() == firstWord.length()
                 && !firstWord.equals(COMPOSITION)
                 && !firstWord.equals(LOCAL)
@@ -285,7 +293,7 @@ class HeadingReader {
         }
         String result = clause.substring(firstWord.length()).trim();
         switch (firstWord) {
-            case PARENTOF: // not NOT parent of an existing name in the DB, parent of other data in the line
+            case PARENTOF: // NOT parent of an existing name in the DB, parent of other data in the line
                 heading.parentOfClause = result.replace(StringLiterals.QUOTE + "", "");// parent of names in the specified column
                 break;
             case CHILDOF: // e.g. child of all orders, unlike above this references data in the DB
@@ -331,7 +339,7 @@ class HeadingReader {
                 break;
             case DEFAULT: // default = composition in now but we'll leave the syntax support in
             case COMPOSITION:// combine more than one column
-                // as with override this seems a little hacky . . .
+                // EFC 03/04/20 relevant for straight defaults (e.g. saying 25% for the whole column) though it does look a little hacky
                 if (result.endsWith("%")) {
                     try {
                         double d = Double.parseDouble(result.substring(0, result.length() - 1)) / 100;
@@ -339,7 +347,6 @@ class HeadingReader {
                     } catch (Exception ignored) {
                     }
                 }
-
                 heading.compositionPattern = result.replace("FILENAME", fileName);
                 break;
             case IGNORE:
@@ -360,7 +367,7 @@ class HeadingReader {
                 break;
             case COMMENT: // ignore
                 break;
-            case OVERRIDE: //
+            case OVERRIDE: // forces this value on the column regardless of what's there, doesn't resolve like composite
                 heading.override = result;
                 break;
             case PEERS: // in new logic this is the only place that peers are defined in Azquo - previously they were against the Name object
@@ -378,7 +385,7 @@ class HeadingReader {
             case NOFILEHEADING:  // if there's no file heading then make composite and default ignore any data found on that line - we assume it's irrelevant or junk
                 heading.noFileHeading = true;
                 break;
-            case LOCAL:  // local names in child of, can work with parent of but then it's the subject that it affects
+            case LOCAL:  // local names in child of, can work with parent of but then it's the subject that it affects. Note - one flag for both may need to be changed, we've hit limits in some LSB work where we want one direction but not the other
                 heading.isLocal = true;
                 break;
             case NONZERO: // Ignore zero values. This and local will just ignore values after e.g. "nonzero something" I see no harm in this
@@ -390,7 +397,7 @@ class HeadingReader {
             case REQUIRED:
                 heading.required = true;
                 break;
-            case EXCLUSIVE:
+            case EXCLUSIVE:// documented properly in the batch importer
                 heading.exclusiveClause = result.trim();
                 break;
             case EXISTING: // currently simply a boolean that can work with childof
@@ -450,7 +457,6 @@ class HeadingReader {
                     }
                 }
                 Name synonymList = NameService.findByName(azquoMemoryDBConnection, "synonyms");
-
                 if (synonymList != null) {
                     heading.synonyms = new HashMap<>();
                     for (Name synonym : synonymList.getChildren()) {
@@ -460,13 +466,12 @@ class HeadingReader {
                         }
                     }
                 }
-
                 heading.exclusiveIndex = NOTEXCLUSIVE;
                 break;
             case LOOKUP:
                 heading.lookupString = result;
-                //leave analysis until all headings have been read.
-                 break;
+                //leave handleLookup until all headings have been read.
+                break;
             case REPLACE:
                 heading.replace = true;
                 break;
@@ -481,7 +486,7 @@ class HeadingReader {
     /* Fill heading information that is interdependent, so called after resolving individual headings as much as possible */
 
     private static void resolvePeersAttributesAndParentOf(AzquoMemoryDBConnection azquoMemoryDBConnection, List<MutableImportHeading> headings) throws Exception {
-        // while looping collect column indexes that indicate that the cell value in that column needs to be resolved to a name
+        // while looping collect column indexes that indicate that the cell value in that column needs to be resolved to a name, crucial to flagging things correctly
         Set<Integer> indexesNeedingNames = new HashSet<>();
         for (int headingNo = 0; headingNo < headings.size(); headingNo++) {
             MutableImportHeading mutableImportHeading = headings.get(headingNo);
@@ -535,7 +540,6 @@ class HeadingReader {
                     if (mutableImportHeading.attributeColumn < 0) {
                         throw new Exception("cannot find column " + mutableImportHeading.attribute + " for attribute name of " + mutableImportHeading.heading + "." + mutableImportHeading.attribute);
                     }
-
                 }
                 // Resolve parent of. Parent of in the context of columns in this upload not the Azquo Name sense.
                 if (mutableImportHeading.parentOfClause != null) {
@@ -547,22 +551,21 @@ class HeadingReader {
                     // when the column this is parent of is resolved it must first resolve THIS heading if this heading is it's parent with local set
                     // locals have to be resolved in order from the top first or the structure will not be correct
                     if (mutableImportHeading.isLocal) {
-                        if (headings.get(mutableImportHeading.indexForChild).localParentIndex != -1){
+                        if (headings.get(mutableImportHeading.indexForChild).localParentIndex != -1) {
                             throw new Exception("heading " + headings.get(mutableImportHeading.indexForChild).heading + " has more than one parent column marked as local");
                         }
                         headings.get(mutableImportHeading.indexForChild).localParentIndex = headingNo;
                     }
                 }
-                if (mutableImportHeading.exclusiveClause !=null){
-                    if (mutableImportHeading.exclusiveClause.length()==0){
+                if (mutableImportHeading.exclusiveClause != null) {
+                    if (mutableImportHeading.exclusiveClause.length() == 0) {
                         mutableImportHeading.exclusiveIndex = EXCLUSIVETOCHILDOF;
-                    }else{
+                    } else {
                         mutableImportHeading.exclusiveIndex = findMutableHeadingIndex(mutableImportHeading.exclusiveClause, headings);
                         if (mutableImportHeading.exclusiveIndex < 0) {
                             throw new Exception("cannot find column " + mutableImportHeading.exclusiveClause + " for exclusive column of " + mutableImportHeading.heading + "." + mutableImportHeading.attribute);
                         }
                     }
-
                 }
                 // Mark column indexes where the line cells will be resolved to names
                 indexesNeedingNames.addAll(mutableImportHeading.peerIndexes);

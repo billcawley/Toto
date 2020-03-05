@@ -61,11 +61,11 @@ public final class ValueService {
     private static AtomicInteger storeValueWithProvenanceAndNamesCount = new AtomicInteger(0);
 
     public static void storeValueWithProvenanceAndNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, String valueString, final Set<Name> names) throws Exception {
-        storeValueWithProvenanceAndNames(azquoMemoryDBConnection, valueString, names, false, false);
+        storeValueWithProvenanceAndNames(azquoMemoryDBConnection, valueString, names, false);
     }
 
 
-    public static void storeValueWithProvenanceAndNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, String valueString, final Set<Name> names, boolean override, boolean provisional) throws Exception {
+    public static void storeValueWithProvenanceAndNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, String valueString, final Set<Name> names, boolean override) throws Exception {
         storeValueWithProvenanceAndNamesCount.incrementAndGet();
         // ok there's an issue of numbers with "," in them, in that case I should remove on the way in
         String replaced = valueString.replace(",", "").replace("$", "").replace("£", "");
