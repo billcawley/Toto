@@ -198,7 +198,7 @@ Attributes of the names in other cells can be referenced also
     }
 
 
-    private static String handleLookup(MutableImportHeading heading, List<MutableImportHeading> headings) throws Exception {
+    private static String handleLookup(MutableImportHeading heading, List<MutableImportHeading> headings) {
         //the syntax is:  in '<parentheadingname>' using <condition/attribute>.
         // (note - using (') for heading names as  because we are mizing azquo names with field names here)
         String lookupString = heading.lookupString;

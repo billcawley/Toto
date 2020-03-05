@@ -23,8 +23,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 This class batches up data to be loaded doing simple checks on cell values
 The actual loading and complex heading resolution should be done in other classes,
 
-The cell on a line can be a value or an attribute or a name - or a part of another cell via composite. Or, now, an attribute name.
-
  */
 class ValuesImport {
 
@@ -37,12 +35,12 @@ class ValuesImport {
             long track = System.currentTimeMillis();
             // now, since this will be multi threaded need to make line objects to batch up. Cannot be completely immutable due to the current logic e.g. composite values
             ArrayList<LineDataWithLineNumber> linesBatched = new ArrayList<>(batchSize);
-            List<Future> futureBatches = new ArrayList<>();
+            List<Future<?>> futureBatches = new ArrayList<>();
             // Local cache of names just to speed things up, a name could be referenced millions of times in one file
             final Map<String, Name> namesFoundCache = new ConcurrentHashMap<>();
             // new format. Line number, the line itself and then a list of errors
             final Map<Integer, List<String>> linesRejected = new ConcurrentHashMap<>(); // track line numbers rejected
-            final AtomicInteger noLinesRejected = new AtomicInteger(); // track line numbers rejected
+            final AtomicInteger noLinesRejected = new AtomicInteger(); // track no lines rejected
             int linesImported = 0; // just for some feedback at the end
             while (lineIterator.hasNext()) linesLoop:{ // the main line reading loop. Unfortunately it can error here
                 lineNo++; // we are now on line number 1, line 0 wouldn't mean anything for user feedback
@@ -52,6 +50,7 @@ class ValuesImport {
                     lineValues = lineIterator.next();
                     // I'm currently working on the principle that the line no is the current location -1
                     // while rather than if as rejected lines could well be sequential!
+                    // when validating lines can be skipped according to the user
                     while (uploadedFile.getIgnoreLines() != null && uploadedFile.getIgnoreLines().containsKey(lineIterator.getCurrentLocation().getLineNr() - 1)) {
                         StringBuilder sb = new StringBuilder();
                         sb.append(StringLiterals.DELIBERATELYSKIPPINGLINE).append(lineIterator.getCurrentLocation().getLineNr() - 1).append(", ");
@@ -133,7 +132,7 @@ class ValuesImport {
             uploadedFile.setNoLinesImported(linesImported - noLinesRejected.get());
             connection.addToUserLogNoException("Imported " + (linesImported - noLinesRejected.get()) + " lines", true); // does the user log require more details??
             if (!linesRejected.isEmpty()) {
-                // I'm going to have to go through the file and fine the rejected lines if they're there, can't really use the iterator before I don't think.
+                // I'm going to have to go through the file and fine the rejected lines if they're there, can't really use the iterator before I don't think, we want the line raw from the BufferedReader as opposed to the CSV reader
                 // I guess watch for possible performance issues . . .
                 // this try should gracefully release the resources
                 long time = System.currentTimeMillis();
