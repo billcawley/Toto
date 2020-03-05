@@ -41,7 +41,6 @@ public class StatisticsDAO {
     private static final String NUMBER = "number";
     private static final String VALUE = "value";
 
-
     static {
         createDatabaseIfItDoesntExist();
         createTableIfItDoesntExist();
