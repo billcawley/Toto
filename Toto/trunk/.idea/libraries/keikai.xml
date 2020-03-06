@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="keikai">
+    <CLASSES>
+      <root url="file://$PROJECT_DIR$/lib/keikai" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="file://$PROJECT_DIR$/lib/keikai" />
+    </SOURCES>
+    <jarDirectory url="file://$PROJECT_DIR$/lib/keikai" recursive="false" />
+    <jarDirectory url="file://$PROJECT_DIR$/lib/keikai" recursive="false" type="SOURCES" />
+  </library>
+</component>

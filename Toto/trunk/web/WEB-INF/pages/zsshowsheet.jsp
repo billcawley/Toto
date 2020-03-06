@@ -126,7 +126,7 @@ function updateStatus(){
         window.skipMarker--;
     }
 }
-
+ma
 setInterval(function(){ updateStatus(); }, 1000);*/
 
 </script>
@@ -136,7 +136,7 @@ setInterval(function(){ updateStatus(); }, 1000);*/
                         bookProvider="com.azquo.spreadsheet.zk.BookProviderForJSP"
                         apply="com.azquo.spreadsheet.zk.ZKComposer"
                         width="100%" height="100%"
-                        maxrows="500" maxcolumns="200"
+                        maxVisibleRows="500" maxVisibleColumns="200"
                         showSheetbar="true" showToolbar="false" showFormulabar="true" showContextMenu="true"/>
     
 <!--    <div id="serverStatus"></div> -->

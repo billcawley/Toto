@@ -54,6 +54,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         } else { // it took some considerable time to work out this hack
             Ghost g = new Ghost();
             g.setAttribute("zsschildren", "");
+            g.setAttribute("kkchildren", "");
             myzss.appendChild(g);
             g.appendChild(filterPopup);
         }
