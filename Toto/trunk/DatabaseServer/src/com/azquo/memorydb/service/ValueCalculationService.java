@@ -33,7 +33,7 @@ public class ValueCalculationService {
     // Factored off to implement "lowest" calculation criteria (resolve for each permutation and sum) without duplicated code
     // fair few params, wonder if there's a way to avoid that?
     static double resolveCalc(AzquoMemoryDBConnection azquoMemoryDBConnection, String calcString, List<Name> formulaNames, List<Name> calcnames, List<String> calcs,
-                              MutableBoolean locked, AzquoCellResolver.ValuesHook valuesHook, List<String> attributeNames
+                              MutableBoolean locked, AzquoCellResolver.ValuesHook valuesHook,  AzquoCellResolver.ValuesHook scaleValuesHook, Set<Name>scaleHeadingNames, List<String> attributeNames
             , DataRegionHeading.FUNCTION function, Name exactName, Map<List<Name>, Set<Value>> nameComboValueCache, StringBuilder debugInfo) throws Exception {
         if (debugInfo != null) {
             debugInfo.append("\t");
@@ -225,7 +225,7 @@ public class ValueCalculationService {
                         }
                     }
                     //note - would there be recursion? Resolve order of formulae might be unreliable
-                    double value = ValueService.findValueForNames(azquoMemoryDBConnection, seekList, calcs, locked, valuesHook, attributeNames, function, exactName, nameComboValueCache, null);
+                    double value = ValueService.findValueForNames(azquoMemoryDBConnection, seekList, calcs, locked, valuesHook, scaleValuesHook, scaleHeadingNames, attributeNames, function, exactName, nameComboValueCache, null);
                     if (debugInfo != null) {
                         debugInfo.append("\t").append(value).append("\t");
                     }
@@ -247,7 +247,7 @@ public class ValueCalculationService {
     private static AtomicInteger resolveValuesForNamesIncludeChildrenCount = new AtomicInteger(0);
 
     static double resolveValues(final List<Value> values
-            , AzquoCellResolver.ValuesHook valuesHook, DataRegionHeading.FUNCTION function, MutableBoolean locked) {
+            , AzquoCellResolver.ValuesHook valuesHook, AzquoCellResolver.ValuesHook scaleValuesHook, Set<Name>scaleHeadingNames, DataRegionHeading.FUNCTION function, MutableBoolean locked) {
         resolveValuesForNamesIncludeChildrenCount.incrementAndGet();
         //System.out.println("resolveValuesForNamesIncludeChildren");
         long start = System.nanoTime();
@@ -271,7 +271,13 @@ public class ValueCalculationService {
         for (Value value : values) {
             if (value.getText() != null && !value.getText().equals("NULL") && value.getText().length() > 0) {
                 if (!stringMode) {
-                    double doubleValue = Double.parseDouble(value.getText());
+                    double doubleValue;
+                    if (scaleValuesHook!=null ){
+                        double scale = scaleValue(value, valuesHook, scaleValuesHook, scaleHeadingNames);
+                        doubleValue = scale * Double.parseDouble(value.getText());
+                    }else{
+                        doubleValue = Double.parseDouble(value.getText());
+                    }
                     if (first) {
                         max = doubleValue;
                         min = doubleValue;
@@ -347,4 +353,52 @@ public class ValueCalculationService {
             logger.info("total average nano : " + (resolveValuesNanoCallTime.get() / resolveValuesNumberOfTimesCalled.get()));
         }
     }
+
+    private static double scaleValue(Value value, AzquoCellResolver.ValuesHook valuesHook, AzquoCellResolver.ValuesHook scaleValuesHook, Set<Name>scaleHeadingNames) {
+        double scaleDouble = 0;
+        Set<Name> valueParents = new HashSet<>();
+        Set<Name> allValueParents = new HashSet<>();
+        for (Name name : value.getNames()) {
+            valueParents.addAll(name.getParents());
+            valueParents.add(name);
+        }
+        //throw in the headings as well - these should be found regardless
+
+        valueParents.addAll(scaleHeadingNames);
+         int newValuesSize = valuesHook.values.size();
+
+        double scale = findScale(scaleValuesHook, valueParents, valuesHook);
+        if (newValuesSize == valuesHook.values.size()) {
+            for (Name name : value.getNames()) {
+                valueParents.addAll(name.getParents());
+
+                allValueParents.addAll(name.findAllParents());
+                valueParents.add(name);
+            }
+            allValueParents.addAll(scaleHeadingNames);
+            scale = findScale(scaleValuesHook, allValueParents, valuesHook);
+        }
+        return scale;
+
+    }
+    private static double findScale(AzquoCellResolver.ValuesHook scaleValuesHook, Set<Name> parents, AzquoCellResolver.ValuesHook valuesHook){
+
+        double scale = 0;
+        for (Value scaleValue:scaleValuesHook.values){
+            boolean scaleFound = true;
+            for(Name scaleName:scaleValue.getNames()){
+                if (!parents.contains(scaleName)){
+                    scaleFound = false;
+                    break;
+                }
+            }
+            if (scaleFound){
+                scale += Double.parseDouble(scaleValue.getText());
+                valuesHook.values.add(scaleValue);
+            }
+        }
+        return scale;
+
+    }
+
 }

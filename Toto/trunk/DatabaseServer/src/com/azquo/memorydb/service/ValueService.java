@@ -315,7 +315,7 @@ public final class ValueService {
     private static AtomicInteger findValueForNamesCount = new AtomicInteger(0);
 
     public static double findValueForNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, final List<Name> names, final List<String> calcs, final MutableBoolean locked
-            , AzquoCellResolver.ValuesHook valuesHook, List<String> attributeNames, DataRegionHeading.FUNCTION function, Name exactName, Map<List<Name>, Set<Value>> nameComboValueCache, StringBuilder debugInfo) throws Exception {
+            , AzquoCellResolver.ValuesHook valuesHook,  AzquoCellResolver.ValuesHook scaleValuesHook, Set<Name>scaleHeadingNames, List<String> attributeNames, DataRegionHeading.FUNCTION function, Name exactName, Map<List<Name>, Set<Value>> nameComboValueCache, StringBuilder debugInfo) throws Exception {
         findValueForNamesCount.incrementAndGet();
         //there are faster methods of discovering whether a calculation applies - maybe have a set of calced names for reference.
         List<Name> calcnames = new ArrayList<>();
@@ -418,7 +418,7 @@ public final class ValueService {
                     valuesHook.calcValues = new ArrayList<>();
                 }
                 calcnames.add(calcName);
-                double result = ValueCalculationService.resolveCalc(azquoMemoryDBConnection, calcString, formulaNames, calcnames, remainingCalcs, locked, valuesHook, attributeNames, function, exactName, nameComboValueCache, debugInfo);
+                double result = ValueCalculationService.resolveCalc(azquoMemoryDBConnection, calcString, formulaNames, calcnames, remainingCalcs, locked, valuesHook, scaleValuesHook, scaleHeadingNames, attributeNames, function, exactName, nameComboValueCache, debugInfo);
                 calcnames.remove(calcName);
                 valuesHook.calcValues.add(result);
                 toReturn += result;
@@ -458,9 +458,9 @@ public final class ValueService {
                     final List<Value> forNames = findForNames(names);
                     // need to check we don't have values with extra names
                     //forNames.removeIf(value -> value.getNames().size() > names.size()); // new syntax! Dunno about efficiency but this will be very rarely used
-                    return ValueCalculationService.resolveValues(forNames, valuesHook, function, locked);
+                    return ValueCalculationService.resolveValues(forNames, valuesHook, scaleValuesHook, scaleHeadingNames, function, locked);
                 } else {
-                    return ValueCalculationService.resolveValues(findForNamesIncludeChildren(names, nameComboValueCache, exactName), valuesHook, function, locked);
+                    return ValueCalculationService.resolveValues(findForNamesIncludeChildren(names, nameComboValueCache, exactName), valuesHook,  scaleValuesHook, scaleHeadingNames, function, locked);
                 }
             } else {
                 if (outerLoopNames.isEmpty()) { // will be most of the time, put the first in the outer loop
@@ -472,7 +472,7 @@ public final class ValueService {
                     if (valuesHook.calcValues == null) {
                         valuesHook.calcValues = new ArrayList<>();
                     }
-                    double result = ValueCalculationService.resolveCalc(azquoMemoryDBConnection, calcString, formulaNames, calcnames, remainingCalcs, locked, valuesHook, attributeNames, function, exactName, nameComboValueCache, debugInfo);
+                    double result = ValueCalculationService.resolveCalc(azquoMemoryDBConnection, calcString, formulaNames, calcnames, remainingCalcs, locked, valuesHook, scaleValuesHook, scaleHeadingNames, attributeNames, function, exactName, nameComboValueCache, debugInfo);
                     valuesHook.calcValues.add(result);
                     toReturn += result;
                     calcnames.remove(appliesToName);

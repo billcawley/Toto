@@ -258,7 +258,7 @@ public class AzquoCellService {
         cellNames.addAll(DataRegionHeadingService.namesFromDataRegionHeadings(context));
         AzquoCellResolver.ValuesHook valuesHook = new AzquoCellResolver.ValuesHook();
         MutableBoolean locked = new MutableBoolean();
-        double d = ValueService.findValueForNames(azquoMemoryDBConnection,cellNames,null,locked,valuesHook,null,null,null,null,null);
+        double d = ValueService.findValueForNames(azquoMemoryDBConnection,cellNames,null,locked,valuesHook,null,null, null,null,null,null,null);
         if (d !=0){
             return d + "";
         }

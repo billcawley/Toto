@@ -34,7 +34,7 @@ public class AzquoCellResolver {
 
     // hacky, I just need a way to pass the values without doing a redundant addAll
     public static class ValuesHook {
-        public List<Value> values = null;
+        public List<Value> values = new ArrayList<>();
         public List<Double> calcValues = null; // memory overhead?
     }
 
@@ -226,8 +226,8 @@ public class AzquoCellResolver {
                      List<List<Name>> permutedNames = new ArrayList<>();
                      permuteNames(permutedNames, sharedNames, namesToResolve);
                      for (List<Name> onePermute : permutedNames) {
-                         //ASSUMING NO CALCS???
-                         doubleValue += ValueService.findValueForNames(connection, onePermute, null,locked, valuesHook, languages, null, null, nameComboValueCache, debugInfo);
+                         //ASSUMING NO CALCS??? and NO SCALE???
+                         doubleValue += ValueService.findValueForNames(connection, onePermute, null,locked, valuesHook, null, null, languages, null, null, nameComboValueCache, debugInfo);
                      }
                      stringValue = doubleValue + "";
                  }else{
@@ -433,14 +433,20 @@ public class AzquoCellResolver {
                             }
                         }
                         List<Value> scaleValues = new ArrayList<>();
-                        ValuesHook scaleValuesHook = new ValuesHook();
+                        ValuesHook scaleValuesHook = null;
                         for (DataRegionHeading heading : headingsForThisCell) {
                             if (heading.getFunction() == DataRegionHeading.FUNCTION.SCALE) {
                                 scaleHeadings.add(heading);
                             }
                         }
+                        Set<Name> scaleHeadingNames = new HashSet<>();
                         if (scaleHeadings.size() > 0){
                             headingsForThisCell.removeAll(scaleHeadings);
+                            for (DataRegionHeading scaleHeading:scaleHeadings){
+                                scaleHeadingNames.add(scaleHeading.getName());
+                            }
+                            scaleValuesHook = new ValuesHook();
+
 
                             /*
                             An explanation of 'Scale' function.
@@ -452,13 +458,14 @@ public class AzquoCellResolver {
 
                             */
                             doubleValue = ValueService.findValueForNames(connection, DataRegionHeadingService.namesFromDataRegionHeadings(scaleHeadings),
-                                    DataRegionHeadingService.calcsFromDataRegionHeadings(scaleHeadings),  locked, scaleValuesHook, languages, null, null, null, debugInfo);
+                                    DataRegionHeadingService.calcsFromDataRegionHeadings(scaleHeadings),  locked, scaleValuesHook, null,null,languages, null, null, null, debugInfo);
                             //using only the scaleValuesHook
                         }
                         if (headingsForThisCell.size()>1){
                             doubleValue = ValueService.findValueForNames(connection, DataRegionHeadingService.namesFromDataRegionHeadings(headingsForThisCell),
-                                    DataRegionHeadingService.calcsFromDataRegionHeadings(headingsForThisCell),  locked, valuesHook, languages, function, exactName, nameComboValueCache, debugInfo);
+                                    DataRegionHeadingService.calcsFromDataRegionHeadings(headingsForThisCell),  locked, valuesHook, scaleValuesHook, scaleHeadingNames, languages, function, exactName, nameComboValueCache, debugInfo);
                         }
+                        /*
                         if (doubleValue!=0 && scaleHeadings.size() > 0){
                             double scaleDouble = 0;
                             List<Value> newValues = new ArrayList<>();
@@ -490,6 +497,8 @@ public class AzquoCellResolver {
                             doubleValue = scaleDouble;
                             valuesHook.values = newValues;
                          }
+
+                         */
 
                         if ((function == DataRegionHeading.FUNCTION.BESTMATCH
                                 || function == DataRegionHeading.FUNCTION.BESTVALUEMATCH
@@ -812,6 +821,7 @@ But can use a library?
         return new AzquoCell(locked.isTrue, listOfValuesOrNamesAndAttributeName, rowHeadings, columnHeadings, contextHeadings, rowNo, colNo, stringValue, doubleValue, false, selected);
     }
 
+    /*
     private static double findScale(ValuesHook scaleValuesHook, Set<Name> parents, List<Value> newValues){
 
         double scale = 0;
@@ -831,6 +841,8 @@ But can use a library?
         return scale;
 
     }
+
+     */
 
     // Simple attribute summing (assuming attributes are numeric), doesn't use set intersection or name children or anything like that
     // For the moment on the initial version don't use set intersection, just look at the headings as handed to the function - will it ever need to do this?
