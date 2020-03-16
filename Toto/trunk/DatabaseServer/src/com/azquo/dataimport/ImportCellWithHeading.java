@@ -162,7 +162,7 @@ class ImportCellWithHeading {
 
     // maybe add some other stuff later
     public void setLineNamesResolved()  {
-        if (lineValueResolved){
+        if (lineNamesResolved){
             if (lastErrorPrintMillis < (System.currentTimeMillis() - (1_000 * 10))){ // only log this kind of error once every 10 seconds, potential to jam things up a lot
                 lastErrorPrintMillis = System.currentTimeMillis();
                 System.out.println("*************setting line names more than once on a cell " + this); // just log it or the mo
