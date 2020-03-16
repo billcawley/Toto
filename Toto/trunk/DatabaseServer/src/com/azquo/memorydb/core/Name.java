@@ -53,12 +53,6 @@ public abstract class Name extends AzquoMemoryDBEntity implements Collection<Nam
 
     abstract void findAllChildren(final Set<Name> allChildren);
 
-
-
-
-
-
-
     public abstract Collection<Value> getValues();
 
     public abstract int getValueCount();

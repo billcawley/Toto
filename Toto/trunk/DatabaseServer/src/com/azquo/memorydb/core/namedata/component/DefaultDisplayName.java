@@ -24,7 +24,7 @@ public interface DefaultDisplayName extends NameData {
         return null;
     }
 
-    default String removeAttribute(String attributeName) throws Exception {
+    default String removeAttribute(String attributeName) {
         if (attributeName.equals(StringLiterals.DEFAULT_DISPLAY_NAME) && internalGetDefaultDisplayName() != null){
             String existing = internalGetDefaultDisplayName();
             internalSetDefaultDisplayName(null); // will cause NPEs but this emulates NameAttributes

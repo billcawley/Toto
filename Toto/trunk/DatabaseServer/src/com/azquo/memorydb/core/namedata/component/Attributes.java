@@ -14,11 +14,7 @@ public interface Attributes extends NameData {
         return internalGetNameAttributes().getAttribute(StringLiterals.DEFAULT_DISPLAY_NAME);
     }
 
-    // todo - on true will have to remove outside. Will cause some redundancy I guess.
-    // maybe check with a
-    //getAzquoMemoryDB().getIndex().removeAttributeFromNameInAttributeNameMap(attributeName, existing, this);
-
-    // if there was an old value that was overidden then return it. Required externally for the azquo memory db indexes
+    // if there was an old value that was overridden then return it. Required externally for the azquo memory db indexes
     default String setAttribute(String attributeName, String attributeValue) throws Exception {
         // deal with uppercasing or whatever outside, this just deals with storage
         /* code adapted from map based code to lists assume nameAttributes reference only set in code synchronized in these three functions and constructors*/

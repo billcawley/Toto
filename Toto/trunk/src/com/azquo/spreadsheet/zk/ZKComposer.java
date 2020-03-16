@@ -225,19 +225,19 @@ public class ZKComposer extends SelectorComposer<Component> {
                             //← → ↑ ↓ ↔ ↕
                             //new behaviour, store the column number rather than the name. - WFC
                             // EFC - this is a bit of hack, the sort cols are incremented and decremented later to make them human readable and left as a string to allow 1&2&3 multiple column sorting.
-                            if (chosen.endsWith("↑")) {
+                            if (chosen.startsWith("↑")) {
                                 userRegionOptions.setSortColumn((localCol + 1) + "");
                                 userRegionOptions.setSortColumnAsc(true);
                                 UserRegionOptionsDAO.store(userRegionOptions);
                                 reload = true;
                             }
-                            if (chosen.endsWith("↓")) {
+                            if (chosen.startsWith("↓")) {
                                 userRegionOptions.setSortColumn((localCol + 1) + "");
                                 userRegionOptions.setSortColumnAsc(false);
                                 UserRegionOptionsDAO.store(userRegionOptions);
                                 reload = true;
                             }
-                            if (chosen.endsWith("↕")) {
+                            if (chosen.startsWith("↕")) {
                                 userRegionOptions.setSortColumn("");
                                 userRegionOptions.setSortColumnAsc(false);
                                 UserRegionOptionsDAO.store(userRegionOptions);

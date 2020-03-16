@@ -52,7 +52,7 @@ public class DataRegionHeadingService {
                 if (sourceCell.length() == 0) {
                     row.add(null);
                 } else {
-                    if (sourceCell.endsWith("↕") || sourceCell.endsWith("↑") || sourceCell.endsWith("↓")) {
+                    if (sourceCell.startsWith("↕") || sourceCell.startsWith("↑") || sourceCell.startsWith("↓")) {
                         sourceCell = sourceCell.substring(0, sourceCell.length() - 2);
                     }
                     // ok dictionary is slightly awkward as a function as it can work with a single name *or* an attribute

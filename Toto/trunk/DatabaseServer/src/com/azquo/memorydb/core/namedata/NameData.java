@@ -39,7 +39,7 @@ public interface NameData {
         return Collections.emptyList();
     }
 
-    default void valueArrayCheck(){};
+    default void valueArrayCheck(){}
 
     default boolean addToValues(Value value, boolean ignoreArrayCheck) throws Exception {
         throw new UnsupportedOperationException();

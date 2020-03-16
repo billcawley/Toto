@@ -60,11 +60,9 @@ public interface ChildrenArray extends NameData {
     }
 
 
-
     // must be implemented by the "roll your own" class
 
     Name[] internalGetChildren();
 
     void internalSetChildren(Name[] children);
-
 }

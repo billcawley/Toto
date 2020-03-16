@@ -39,5 +39,4 @@ public interface ChildrenSet extends NameData {
     // must be implemented by the "roll your own" class - note since sets are mutable we just need a get
 
     Set<Name> internalGetChildren();
-
 }

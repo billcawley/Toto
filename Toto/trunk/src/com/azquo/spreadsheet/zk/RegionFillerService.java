@@ -179,6 +179,7 @@ class RegionFillerService {
         // ignore row is for when the number of rows making up the column headings form the server is greater than the number of rows it's going to fit in
         // in which case use the bottom rows of the column headings
         int ignoreRow = cellsAndHeadingsForDisplay.getColumnHeadings().size() - displayColumnHeadings.getRowCount();
+        // todo stop showing sorting where it's not relevant
         for (List<String> colHeading : cellsAndHeadingsForDisplay.getColumnHeadings()) {
             String lastHeading = "";
             if (--ignoreRow < 0) {
@@ -211,26 +212,26 @@ class RegionFillerService {
                             }
                         }
                     }
-                    if (columnSort && !heading.equals(".")) { // don't sort "." headings they are probably derived in the spreadsheet
-                        String sortArrow = " ↕";
+                    if (columnSort && !heading.equals(".") && !heading.isEmpty()) { // don't sort "." headings they are probably derived in the spreadsheet
+                        String sortArrow = "↕ ";
                         if ((((col - displayColumnHeadings.getColumn()) + 1) + "").equals(userRegionOptions.getSortColumn())) {
-                            sortArrow = userRegionOptions.getSortColumnAsc() ? " ↑" : " ↓";
+                            sortArrow = userRegionOptions.getSortColumnAsc() ? "↑ " : "↓ ";
                         }
                         if (!sCell.getStringValue().contains(sortArrow)) {
                             if (sCell.getType() == SCell.CellType.STRING && sCell.getStringValue().isEmpty()) {
-                                sCell.setValue(heading + sortArrow);
+                                sCell.setValue(sortArrow + heading);
                             } else {
-                                sCell.setValue(sCell.getValue() + sortArrow);
+                                sCell.setValue(sortArrow + sCell.getValue());
                             }
                         }
                         String value = sCell.getStringValue();
-                        value = value.substring(0, value.length() - 2);
+                        value = value.substring(2);
                         Range chosenRange = Ranges.range(sheet, row, col, row, col);
                         // todo, investigate how commas would fit in in a heading name
                         // think I'll just zap em for the mo.
                         value = value.replace(",", "");
                         chosenRange.setValidation(Validation.ValidationType.LIST, false, Validation.OperatorType.EQUAL, true,
-                                value + " ↕," + value + " ↑," + value + " ↓", null,
+                                "↕ " + value + ",↑ " + value + ",↓ " + value, null,
                                 true, "Select Sorting", "",
                                 true, Validation.AlertStyle.WARNING, "Sort Column", "This is a sortable column, its value should not be manually altered.");
                     } else {
