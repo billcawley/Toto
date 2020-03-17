@@ -21,10 +21,13 @@ def fileProcess(Object[] args) {
     writeFile.delete() // to avoid confusion
     String line
     List states = new ArrayList()
+    int skipLines = 0;
     file.withReader { reader ->
+        int lineNo = 0;
         while ((line = reader.readLine()) != null) {
-            if (line.startsWith("Totals For:")) { // so a line we want to get the state off
+            if (line.toLowerCase().startsWith("totals for") && !line.contains("UMR")) { // so a line we want to get the state off
                 StringTokenizer st = new StringTokenizer(line, "\t");
+                //println(line)
                 while (st.hasMoreElements()){
                     st.nextToken()
                     state = st.nextToken()
@@ -35,17 +38,20 @@ def fileProcess(Object[] args) {
                     }
                 }
             }
+            if (line.startsWith("Coverholder")){
+                skipLines = lineNo;
+            }
+            lineNo++;
         }
     }
     // now do it again
     def lineNo = 1
-    int skipLines = 4;
     fileWriter = writeFile.newWriter();
     Iterator<String> statesIt = states.iterator();
     String state = statesIt.next();
     file.withReader { reader ->
         while ((line = reader.readLine()) != null) {
-            if (line.startsWith("Totals For:") && statesIt.hasNext()) { // go next state!
+            if (line.toLowerCase().startsWith("totals for")  && !line.contains("UMR") && statesIt.hasNext()) { // go next state!
                 state = statesIt.next();
             }
             if (lineNo > skipLines){
