@@ -577,6 +577,6 @@ class RMIImplementation implements RMIInterface {
 
     @Override
     public void zapTemporaryCopy(DatabaseAccessToken databaseAccessToken) {
-        AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken).zapTemporaryCopy();
+        AzquoMemoryDB.zapTemporarayCopyOfAzquoMemoryDB(databaseAccessToken);
     }
 }

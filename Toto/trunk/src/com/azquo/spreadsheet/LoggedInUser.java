@@ -206,7 +206,7 @@ public class LoggedInUser implements Serializable {
     public boolean copyMode = false;
 
     public DatabaseAccessToken getDataAccessToken() {
-        return new DatabaseAccessToken(sessionId, user.getEmail(), databaseServer.getIp(), (copyMode ? StringLiterals.copyPrefix : "") + database.getPersistenceName());
+        return new DatabaseAccessToken(sessionId, user.getEmail(), databaseServer.getIp(), (copyMode ? StringLiterals.copyPrefix + user.getEmail(): "") + database.getPersistenceName());
     }
 
 

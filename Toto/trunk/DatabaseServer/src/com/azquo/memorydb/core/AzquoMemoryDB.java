@@ -1,6 +1,7 @@
 package com.azquo.memorydb.core;
 
 import com.azquo.StringLiterals;
+import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.service.DSAdminService;
 import net.openhft.koloboke.collect.map.hash.HashObjObjMaps;
 
@@ -81,19 +82,18 @@ public final class AzquoMemoryDB {
         // open database logging could maybe be added back in client side
     }
 
-    public static boolean copyExists(String persistenceName) {
-        return memoryDatabaseMap.containsKey(StringLiterals.copyPrefix + persistenceName);
+    public static boolean copyExists(DatabaseAccessToken databaseAccessToken) {
+        return memoryDatabaseMap.containsKey(StringLiterals.copyPrefix + databaseAccessToken.getUserId() + databaseAccessToken.getPersistenceName());
     }
 
     // vanilla use of ConcurrentHashMap, should be fine
-    // todo - copy just for that user!!
-    public static AzquoMemoryDB getCopyOfAzquoMemoryDB(String persistenceName) {
-        return memoryDatabaseMap.computeIfAbsent(StringLiterals.copyPrefix + persistenceName, t -> {
-                    AzquoMemoryDB sourceDB = getAzquoMemoryDB(persistenceName, null);
+    public static AzquoMemoryDB getCopyOfAzquoMemoryDB(DatabaseAccessToken databaseAccessToken) {
+        return memoryDatabaseMap.computeIfAbsent(StringLiterals.copyPrefix + databaseAccessToken.getUserId() + databaseAccessToken.getPersistenceName(), t -> {
+                    AzquoMemoryDB sourceDB = getAzquoMemoryDB(databaseAccessToken.getPersistenceName(), null);
                     Provenance mostRecentProvenance = sourceDB.getMostRecentProvenance();
                     AzquoMemoryDB toReturn = new AzquoMemoryDB(null, sourceDB, null);
                     while (mostRecentProvenance != sourceDB.getMostRecentProvenance()) {
-                        System.out.println("Copying again as source DB changed " + persistenceName);
+                        System.out.println("Copying again as source DB changed " + databaseAccessToken.getPersistenceName());
                         // this means the source db changed in the mean time, try again
                         mostRecentProvenance = sourceDB.getMostRecentProvenance();
                         toReturn = new AzquoMemoryDB(null, sourceDB, null);
@@ -104,8 +104,8 @@ public final class AzquoMemoryDB {
     }
 
     // *should* make it available for garbage collection
-    public static void zapTemporarayCopyOfAzquoMemoryDB(String persistenceName) {
-        memoryDatabaseMap.remove(StringLiterals.copyPrefix + persistenceName);
+    public static void zapTemporarayCopyOfAzquoMemoryDB(DatabaseAccessToken databaseAccessToken) {
+        memoryDatabaseMap.remove(StringLiterals.copyPrefix + databaseAccessToken.getUserId() + databaseAccessToken.getPersistenceName());
     }
 
     // worth being aware that if the db is still referenced somewhere then the garbage collector won't chuck it (which is what we want)
@@ -488,11 +488,11 @@ public final class AzquoMemoryDB {
     }
 
     // I may change these later, for the mo I just want to stop drops and clears at the same time as persistToDataStore
-    public synchronized void synchronizedClear() throws Exception {
+    public synchronized void synchronizedClear() {
         DSAdminService.emptyDatabaseInPersistence(azquoMemoryDBTransport.getPersistenceName());
     }
 
-    public synchronized void synchronizedDrop() throws Exception {
+    public synchronized void synchronizedDrop() {
         DSAdminService.dropDatabaseInPersistence(azquoMemoryDBTransport.getPersistenceName());
     }
 

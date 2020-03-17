@@ -65,12 +65,12 @@ public class AzquoMemoryDBConnection {
         AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
         long time = System.currentTimeMillis();
         // I'm just doing this to be a bit helpful in the logs . . .
-        if (AzquoMemoryDB.copyExists(azquoMemoryDBConnection.getAzquoMemoryDB().getPersistenceName())){
+        if (AzquoMemoryDB.copyExists(databaseAccessToken)){
             azquoMemoryDBConnection.addToUserLog("******* USING A COPY OF THE " + azquoMemoryDBConnection.getAzquoMemoryDB().getPersistenceName() + " DATABASE TO RUN VALIDATION AGAINST");
-            return new AzquoMemoryDBConnection(AzquoMemoryDB.getCopyOfAzquoMemoryDB(azquoMemoryDBConnection.getAzquoMemoryDB().getPersistenceName()), azquoMemoryDBConnection.userLog);
+            return new AzquoMemoryDBConnection(AzquoMemoryDB.getCopyOfAzquoMemoryDB(databaseAccessToken), azquoMemoryDBConnection.userLog);
         } else {
             azquoMemoryDBConnection.addToUserLog("******* MAKING A COPY OF THE " + azquoMemoryDBConnection.getAzquoMemoryDB().getPersistenceName() + " DATABASE TO RUN VALIDATION AGAINST");
-            AzquoMemoryDB copyOfAzquoMemoryDB = AzquoMemoryDB.getCopyOfAzquoMemoryDB(azquoMemoryDBConnection.getAzquoMemoryDB().getPersistenceName());
+            AzquoMemoryDB copyOfAzquoMemoryDB = AzquoMemoryDB.getCopyOfAzquoMemoryDB(databaseAccessToken);
             azquoMemoryDBConnection.addToUserLog("******* COPY COMPLETE IN " + ((System.currentTimeMillis() - time) / 1000) + " SECOND(S)");
             return new AzquoMemoryDBConnection(copyOfAzquoMemoryDB, azquoMemoryDBConnection.userLog);
         }
@@ -82,10 +82,6 @@ public class AzquoMemoryDBConnection {
             return log.toString();
         }
         return "";
-    }
-
-    public void zapTemporaryCopy() {
-        AzquoMemoryDB.zapTemporarayCopyOfAzquoMemoryDB(getAzquoMemoryDB().getPersistenceName());
     }
 
     public AzquoMemoryDB getAzquoMemoryDB() {
