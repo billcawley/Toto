@@ -58,18 +58,6 @@ public class AzquoMemoryDBIndex {
         return Collections.emptySet(); // moving away from nulls - this will complain outside if it is modified though!
     }
 
-    // only used by the namesFromAttributeFunction. Todo - confirm the usage of this. I'd like to zap it, WFC says it's not currently being used but wants to keep it
-    private static AtomicInteger getValuesForAttributeCount = new AtomicInteger(0);
-
-    public Set<String> getValuesForAttribute(final String attributeName) {
-        getValuesForAttributeCount.incrementAndGet();
-        Map<String, Collection<Name>> map = nameByAttributeMap.get(attributeName.toUpperCase().trim());
-        if (map != null) { // that attribute is there
-            return HashObjSets.newMutableSet(map.keySet());
-        }
-        return Collections.emptySet(); // moving away from nulls - this will complain outside if it is modified though!
-    }
-
     // same as above but then zap any not in the parent - if one cant find a direct parent then allow indirect parents which might mean multiple names
 
     private static AtomicInteger getNamesForAttributeAndParentCount = new AtomicInteger(0);
@@ -89,11 +77,23 @@ public class AzquoMemoryDBIndex {
         return possibles; // so this could be more than one if there were multiple in a big parent set (presumably at different levels)
     }
 
+    // only used by the namesFromAttributeFunction. Todo - confirm the usage of this. I'd like to zap it, WFC says it's not currently being used but wants to keep it
+    private static AtomicInteger getValuesForAttributeCount = new AtomicInteger(0);
+
+    public Set<String> getValuesForAttribute(final String attributeName) {
+        getValuesForAttributeCount.incrementAndGet();
+        Map<String, Collection<Name>> map = nameByAttributeMap.get(attributeName.toUpperCase().trim());
+        if (map != null) { // that attribute is there
+            return HashObjSets.newMutableSet(map.keySet());
+        }
+        return Collections.emptySet(); // moving away from nulls - this will complain outside if it is modified though!
+    }
+
     private static AtomicInteger attributeExistsInDBCount = new AtomicInteger(0);
 
     public boolean attributeExistsInDB(final String attributeName) {
         attributeExistsInDBCount.incrementAndGet();
-        return nameByAttributeMap.get(attributeName.toUpperCase().trim()) != null;
+        return nameByAttributeMap.containsKey(attributeName.toUpperCase().trim());
     }
 
     // work through a list of possible names for a given attribute in order that the attribute names are listed. Parent optional
@@ -230,11 +230,12 @@ public class AzquoMemoryDBIndex {
     private Set<Name> getNamesByAttributeValueWildcards(final String attributeName, final String attributeValueSearch, final boolean startsWith, final boolean endsWith) {
         getNamesByAttributeValueWildcardsCount.incrementAndGet();
         final Set<Name> names = HashObjSets.newMutableSet();
-        if (attributeName.length() == 0) { // odd that it might be
+        if (attributeName.length() == 0) { // so just search for *any* attribute containing the thing
             for (String attName : nameByAttributeMap.keySet()) {
                 if (attName.length() > 0) {//not sure how a blank attribute name was created!
-                    names.addAll(getNamesByAttributeValueWildcards(attName, attributeValueSearch, startsWith, endsWith)); // and when attribute name is blank we don't return for all attribute names, just the first that contains this
+                    names.addAll(getNamesByAttributeValueWildcards(attName, attributeValueSearch, startsWith, endsWith));
                 }
+                // and when attribute name is blank we don't return for all attribute names, just the first that contains this
                 if (names.size() > 0) {
                     return names;
                 }
@@ -243,11 +244,11 @@ public class AzquoMemoryDBIndex {
         }
         final String uctAttributeName = attributeName.toUpperCase().trim();
         final String lctAttributeValueSearch = attributeValueSearch.toLowerCase().trim();
-        if (nameByAttributeMap.get(uctAttributeName) == null) {
+        if (nameByAttributeMap.get(uctAttributeName) == null) {// we don't have that attribute at all
             return names;
         }
         for (String attributeValue : nameByAttributeMap.get(uctAttributeName).keySet()) {
-            if (startsWith && endsWith) {
+            if (startsWith && endsWith) { // the way the flags have been setup the logic is correct though it may look wrong * at the end sets up starts with, * at the beginning sets up ends with. Hence both contains.
                 if (attributeValue.contains(lctAttributeValueSearch)) {
                     names.addAll(nameByAttributeMap.get(uctAttributeName).get(attributeValue));
                 }

@@ -1218,7 +1218,7 @@ public final class ImportService {
                             while (customHeadings.size() <= (cellIndex + 1)) { // make sure there are enough lists to represent the heading columns were adding to
                                 customHeadings.add(new ArrayList<>());
                             }
-                            customHeadings.get(cellIndex).add(cellValue.toLowerCase()); // NOTE! We want the looking up fo file headings to be case insensetive, hence the lower case here
+                            customHeadings.get(cellIndex).add(cellValue.toLowerCase().replace("\\\\n","")); // NOTE! We want the looking up fo file headings to be case insensetive, hence the lower case here, also zap carriage returns, they can sneak in and out
                         }
                     } else if (mode == ImportSheetScanMode.STANDARDHEADINGS) { // build headings
                         // make sure there are enough lists to represent the heading columns we're adding to. Uses "while" as blank columns could make the cellIndex increase more than one

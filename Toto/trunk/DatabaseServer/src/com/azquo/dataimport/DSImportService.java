@@ -234,7 +234,8 @@ public class DSImportService {
                                     headingsFromTheFile.add(new ArrayList<>());
                                 }
                                 // NOTE, we want case insensitive on heading names in the file look up, hence this which corresponds to to .toLowerCases in ImportService.readPreparedFile
-                                String lineHeading = lineCells[j].replace("\\\\n", "\n").replace("\\\\t", "\t").trim().toLowerCase();
+                                // also the blanket zapping of carriage returns when matching "version" headings, ImportService 1121. Perhaps should ignore tabs too.
+                                String lineHeading = lineCells[j].replace("\\\\n", "").replace("\\\\t", "\t").trim().toLowerCase();
                                 if (!lineHeading.isEmpty()) { // not having blanks
                                     headingsFromTheFile.get(j).add(lineHeading);
                                 }

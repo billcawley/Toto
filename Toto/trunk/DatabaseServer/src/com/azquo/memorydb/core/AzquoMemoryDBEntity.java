@@ -124,7 +124,7 @@ public abstract class AzquoMemoryDBEntity {
         }
     }
 
-    // now NOT overidden, just the inserting flag
+    // now NOT overridden, just the inserting flag
     final void setNeedsInsertingFalse() {
         needsInserting = false;
     }
