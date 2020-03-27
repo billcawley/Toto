@@ -5,8 +5,6 @@ import com.azquo.memorydb.dao.JsonRecordDAO;
 import com.azquo.memorydb.dao.JsonRecordTransport;
 import com.azquo.memorydb.dao.NameDAO;
 import com.azquo.memorydb.dao.ValueDAO;
-import net.openhft.koloboke.collect.map.hash.HashObjObjMaps;
-import org.apache.commons.lang.math.NumberUtils;
 
 import java.text.NumberFormat;
 import java.util.*;
@@ -101,26 +99,22 @@ class AzquoMemoryDBTransport {
         }
     }
 
-    // todo - inconsistent use of memdb azquoMemoryDB
-
     private class NameBatchLoader implements Callable<Void> {
         private final int minId;
         private final int maxId;
-        private final AzquoMemoryDB memDB;
         private final AtomicInteger loadTracker;
 
-        NameBatchLoader(int minId, int maxId, AzquoMemoryDB memDB, AtomicInteger loadTracker) {
+        NameBatchLoader(int minId, int maxId, AtomicInteger loadTracker) {
             this.minId = minId;
             this.maxId = maxId;
-            this.memDB = memDB;
             this.loadTracker = loadTracker;
         }
 
         @Override
         public Void call() {
-            List<Name> names = NameDAO.findForMinMaxId(memDB, minId, maxId); // internally this will be populating the names into the database
+            List<Name> names = NameDAO.findForMinMaxId(azquoMemoryDB, minId, maxId); // internally this will be populating the names into the database
             for (Name name : names) {// bit of an overhead just to get the max id?I guess no concern -
-                // zapping the lists would save garbage but noth bothered for the mo and I'd need to change findForMinMaxId
+                // zapping the lists would save garbage but not bothered for the mo and I'd need to change findForMinMaxId
                 // could save this if persistence saved a max id. A thought.
                 azquoMemoryDB.setNextId(name.getId());
             }
@@ -135,19 +129,17 @@ class AzquoMemoryDBTransport {
     private class ValueBatchLoader implements Callable<Void> {
         private final int minId;
         private final int maxId;
-        private final AzquoMemoryDB memDB;
         private final AtomicInteger loadTracker;
 
-        ValueBatchLoader(int minId, int maxId, AzquoMemoryDB memDB, AtomicInteger loadTracker) {
+        ValueBatchLoader(int minId, int maxId, AtomicInteger loadTracker) {
             this.minId = minId;
             this.maxId = maxId;
-            this.memDB = memDB;
             this.loadTracker = loadTracker;
         }
 
         @Override
         public Void call() {
-            List<Value> values = ValueDAO.findForMinMaxId(memDB, minId, maxId);
+            List<Value> values = ValueDAO.findForMinMaxId(azquoMemoryDB, minId, maxId);
             for (Value value : values) {// bit of an overhead just to get the max id? I guess no concern.
                 azquoMemoryDB.setNextId(value.getId());
             }
@@ -171,7 +163,8 @@ class AzquoMemoryDBTransport {
         @Override
         public Void call() throws Exception { // well this is what's going to truly test concurrent modification of a database
             for (Name name : batchToLink) {
-                name.link(azquoMemoryDB.nameChildrenLoadingCache.get(name.getId()), false);
+                // it was get against the cache but remove will ease up the memory as it goes and a given cache entry shouldn't be hit more than once
+                name.link(azquoMemoryDB.nameChildrenLoadingCache.remove(name.getId()), false);
             }
             logInSessionLogAndSystem("Linked : " + loadTracker.addAndGet(batchToLink.size()));
             return null;
@@ -233,7 +226,7 @@ class AzquoMemoryDBTransport {
                     futureBatches.add(ThreadPools.getSqlThreadPool().submit(new SQLBatchLoader(tableNameEntities.getKey(), tableNameEntities.getValue(), from, from + step, tableNameEntities.getKey().equals(Provenance.PERSIST_TABLE) ? provenanceLoaded : jsonRecordsLoaded)));
                     from += step;
                 }
-                for (Future future : futureBatches) {
+                for (Future<?> future : futureBatches) {
                     future.get(1, TimeUnit.HOURS);
                 }
                 logInSessionLogAndSystem(tableNameEntities.getKey() + ", " + jsonRecordsLoaded + " records loaded in " + (System.currentTimeMillis() - marker) / 1000f + " second(s)");
@@ -243,10 +236,10 @@ class AzquoMemoryDBTransport {
             maxIdForTable = NameDAO.findMaxId(persistenceName);
             futureBatches = new ArrayList<>();
             while (from < maxIdForTable) {
-                futureBatches.add(ThreadPools.getSqlThreadPool().submit(new NameBatchLoader(from, from + step, azquoMemoryDB, namesLoaded)));
+                futureBatches.add(ThreadPools.getSqlThreadPool().submit(new NameBatchLoader(from, from + step, namesLoaded)));
                 from += step;
             }
-            for (Future future : futureBatches) {
+            for (Future<?> future : futureBatches) {
                 future.get(1, TimeUnit.HOURS);
             }
             logInSessionLogAndSystem("Names loaded in " + (System.currentTimeMillis() - marker) / 1000f + " second(s)");
@@ -255,10 +248,10 @@ class AzquoMemoryDBTransport {
             maxIdForTable = ValueDAO.findMaxId(persistenceName);
             futureBatches = new ArrayList<>();
             while (from < maxIdForTable) {
-                futureBatches.add(ThreadPools.getSqlThreadPool().submit(new ValueBatchLoader(from, from + step, azquoMemoryDB, valuesLoaded)));
+                futureBatches.add(ThreadPools.getSqlThreadPool().submit(new ValueBatchLoader(from, from + step, valuesLoaded)));
                 from += step;
             }
-            for (Future future : futureBatches) {
+            for (Future<?> future : futureBatches) {
                 future.get(1, TimeUnit.HOURS);
             }
             logInSessionLogAndSystem("Values loaded in " + (System.currentTimeMillis() - marker) / 1000f + " second(s)");
@@ -266,19 +259,17 @@ class AzquoMemoryDBTransport {
             // wait until all are loaded before linking
             System.out.println(provenanceLoaded.get() + valuesLoaded.get() + namesLoaded.get() + " unlinked entities loaded in " + (System.currentTimeMillis() - startTime) / 1000 + " second(s)");
             if (memoryTrack) {
-                System.out.println("Used Memory after list load:"
-                        + (runtime.totalMemory() - runtime.freeMemory()) / mb);
+                System.out.println("Used Memory after list load:" + (runtime.totalMemory() - runtime.freeMemory()) / mb);
             }
             linkEntities(false);
             if (memoryTrack) {
-                System.out.println("Used Memory after init names :"
-                        + (runtime.totalMemory() - runtime.freeMemory()) / mb);
+                System.out.println("Used Memory after init names :" + (runtime.totalMemory() - runtime.freeMemory()) / mb);
             }
             logInSessionLogAndSystem("Names init/linked in " + (System.currentTimeMillis() - marker) / 1000f + " second(s)");
         } catch (Exception e) {
             logInSessionLogAndSystem("could not load data for " + persistenceName + "!");
             e.printStackTrace();
-            // todo, stop the threads
+            // is there a way to cancel the threads after they've been submitted? Do we care that much?
         }
         if (memoryTrack) {
             marker = System.currentTimeMillis();
@@ -289,155 +280,9 @@ class AzquoMemoryDBTransport {
             NumberFormat nf = NumberFormat.getInstance();
             System.out.println("Guess at DB size " + nf.format(newUsed - usedMB) + "MB");
             System.out.println("--- MEMORY USED :  " + nf.format((runtime.totalMemory() - runtime.freeMemory()) / mb) + "MB of " + nf.format(runtime.totalMemory() / mb) + "MB, max allowed " + nf.format(runtime.maxMemory() / mb));
-            //azquoMemoryDB.getIndex().printIndexStats();
         }
         logInSessionLogAndSystem("Total load time for " + persistenceName + " " + (System.currentTimeMillis() - startTime) / 1000 + " second(s)");
-        //azquoMemoryDB.getIndex().printIndexStats();
-        //AzquoMemoryDB.printAllCountStats();
-        // stuff Ed added to profile data
-        NumberFormat nf = NumberFormat.getInstance();
-
-        int namesWithOnlyDefaultDisplayName = 0;
-        int namesRequiringAttributes = 0;
-        int namesWithOnlyOneParent = 0;
-        int namesWithMoreThanOneParent = 0;
-        int namesWithNoValues = 0;
-        int namesWithArrayValues = 0;
-        int namesWithSetValues = 0;
-        int namesWithNoChildremn = 0;
-        int namesWithArrayChildren = 0;
-        int namesWithSetChildren = 0;
-        int totalNameCount = azquoMemoryDB.getAllNames().size();
-        Map<List<Name>, Name> existingParents = HashObjObjMaps.newMutableMap();;
-        /*for (Name n : azquoMemoryDB.getAllNames()){
-            if (n.getDefaultDisplayName() != null && n.getAttributeKeys().size() == 1) {
-                namesWithOnlyDefaultDisplayName++;
-            } else { // I don't think it can be 0
-                namesRequiringAttributes++;
-            }
-            if (n.getParents().size() == 1){
-                namesWithOnlyOneParent++;
-            } else if (n.getParents().size() > 1){
-                namesWithMoreThanOneParent++;
-            }
-            if (n.getValues().isEmpty()){
-                namesWithNoValues++;
-            } else if (n.getValueCount() < Name.ARRAYTHRESHOLD){
-                namesWithArrayValues++;
-            } else {
-                namesWithSetValues++;
-            }
-            if (n.getChildren().isEmpty()){
-                namesWithNoChildremn++;
-            } else if (n.getChildren().size() < Name.ARRAYTHRESHOLD){
-                namesWithArrayChildren++;
-            } else {
-                namesWithSetChildren++;
-            }
-/*            if (!n.getParents().isEmpty()){
-                List<Name> parents = new ArrayList<>(n.getParents());
-                parents.sort(Comparator.comparing(Name::getId));
-                if (existingParents.containsKey(parents)){
-                    n.normaliseParents(existingParents.get(parents));
-                } else {
-                    existingParents.put(parents, n);
-                }
-            }*/
-        //}
-        existingParents = null;
-        if (totalNameCount > 0){
-/*            List<Map.Entry<List<Name>, AtomicInteger>> toSort = new ArrayList<>(parentsTrack.entrySet());
-            toSort.sort(Comparator.comparing(listAtomicIntegerEntry -> listAtomicIntegerEntry.getValue().get()));
-            int count = 0;
-            //Collections.reverse(toSort);
-            for (Map.Entry<List<Name>, AtomicInteger> entry : toSort){
-                int noNames = entry.getValue().get();
-                String namesDesc = new String();
-                for (Name parent : entry.getKey()){
-                    namesDesc += ", " + parent.getDefaultDisplayName();// I suppose may get some nulls, not so botered right now
-                }
-                System.out.println("Names with the following parents : " + namesDesc + " : " + nf.format(noNames) + ", " + nf.format((100*noNames)/totalNameCount) + "%");
-                if (count > 100){
-                    break;
-                }
-                count++;
-        if (memoryTrack) {
-            marker = System.currentTimeMillis();
-            System.gc();
-            System.out.println("gc time : " + (System.currentTimeMillis() - marker));
-            long newUsed = (runtime.totalMemory() - runtime.freeMemory()) / mb;
-            System.out.println("Guess at DB size after attempting parents normalisation " + nf.format(newUsed - usedMB) + "MB");
-            System.out.println("--- MEMORY USED :  " + nf.format((runtime.totalMemory() - runtime.freeMemory()) / mb) + "MB of " + nf.format(runtime.totalMemory() / mb) + "MB, max allowed " + nf.format(runtime.maxMemory() / mb));
-        }
-            }*/
-/*
-            System.out.println("namesWithOnlyDefaultDisplayName : " + nf.format(namesWithOnlyDefaultDisplayName) + ", " + nf.format((100*namesWithOnlyDefaultDisplayName)/totalNameCount) + "%");
-            System.out.println("namesRequiringAttributes : " + nf.format(namesRequiringAttributes) + ", " + nf.format((100*namesRequiringAttributes)/totalNameCount) + "%");
-            System.out.println("namesWithOnlyOneParent : " + nf.format(namesWithOnlyOneParent) + ", " + nf.format((100*namesWithOnlyOneParent)/totalNameCount) + "%");
-            System.out.println("namesWithMoreThanOneParent : " + nf.format(namesWithMoreThanOneParent) + ", " + nf.format((100*namesWithMoreThanOneParent)/totalNameCount) + "%");
-            System.out.println("namesWithNoValues : " + nf.format(namesWithNoValues) + ", " + nf.format((100*namesWithNoValues)/totalNameCount) + "%");
-            System.out.println("namesWithArrayValues : " + nf.format(namesWithArrayValues) + ", " + nf.format((100*namesWithArrayValues)/totalNameCount) + "%");
-            System.out.println("namesWithSetValues : " + nf.format(namesWithSetValues) + ", " + nf.format((100*namesWithSetValues)/totalNameCount) + "%");
-            System.out.println("namesWithNoChildremn : " + nf.format(namesWithNoChildremn) + ", " + nf.format((100*namesWithNoChildremn)/totalNameCount) + "%");
-            System.out.println("namesWithArrayChildren : " + nf.format(namesWithArrayChildren) + ", " + nf.format((100*namesWithArrayChildren)/totalNameCount) + "%");
-            System.out.println("namesWithSetChildren : " + nf.format(namesWithSetChildren) + ", " + nf.format((100*namesWithSetChildren)/totalNameCount) + "%");*/
-        }
-        /*
-        Risk solutions example
-        namesWithOnlyDefaultDisplayName : 143,581, 46%
-namesRequiringAttributes : 166,892, 53%
-namesWithOnlyOneParent : 77,081, 24%
-namesWithMoreThanOneParent : 233,360, 75%
-namesWithNoValues : 130,342, 41%
-namesWithArrayValues : 180,074, 57%
-namesWithSetValues : 57, 0%
-namesWithNoChildremn : 124,457, 40%
-namesWithArrayChildren : 185,818, 59%
-namesWithSetChildren : 198, 0%
-easylife example
-namesWithOnlyDefaultDisplayName : 1,940,309, 54%
-namesRequiringAttributes : 1,616,234, 45%
-namesWithOnlyOneParent : 671,409, 18%
-namesWithMoreThanOneParent : 2,885,100, 81%
-namesWithNoValues : 709,597, 19%
-namesWithArrayValues : 2,846,913, 80%
-namesWithSetValues : 33, 0%
-namesWithNoChildremn : 1,939,665, 54%
-namesWithArrayChildren : 1,615,642, 45%
-namesWithSetChildren : 1,236, 0%
-
-        // now for some Value analysis . . .
-        int valuesWhichAreNumbers = 0;
-        int valuesWhichAreNotNumbers = 0;
-        int sopCount = 0;
-        Set<String> printed = new HashSet<>();
-        for (Value v : azquoMemoryDB.getAllValues()){
-            if (NumberUtils.isNumber(v.getText())){
-                valuesWhichAreNumbers++;
-            } else {
-                valuesWhichAreNotNumbers++;
-                if (sopCount < 100 && printed.add(v.getText())){
-                    System.out.println("non numeric value : " + v.getText());
-                    sopCount++;
-                }
-            }
-        }
-        System.out.println("valuesWhichAreNumbers : " + nf.format(valuesWhichAreNumbers) + ", " + nf.format((100*valuesWhichAreNumbers)/azquoMemoryDB.getAllValues().size()) + "%");
-        System.out.println("valuesWhichAreNotNumbers : " + nf.format(valuesWhichAreNotNumbers) + ", " + nf.format((100*valuesWhichAreNotNumbers)/azquoMemoryDB.getAllValues().size()) + "%");
-        /*
-        Risk solutions
-        non numeric value : B0702BB302040LAB
-        valuesWhichAreNumbers : 1,535,568, 95%
-valuesWhichAreNotNumbers : 68,278, 4%
-easylife
-non numeric value : xxx
-non numeric value : RN0472881
-valuesWhichAreNumbers : 4,887,985, 98%
-valuesWhichAreNotNumbers : 72,974, 1%
-         */
-
     }
-
 
     /* to be called after loading moves the json and extracts attributes to useful maps here called after loading as the names reference themselves
     going to try a basic multi-thread - it was 100,000 but I wonder if this is as efficient as it could be given that at the end leftover threads
@@ -460,11 +305,9 @@ valuesWhichAreNotNumbers : 72,974, 1%
         linkFutures.add(ThreadPools.getMainThreadPool().submit(new BatchLinker(loadTracker, batchLink)));
         // instead of the old shutdown do the gets on the futures to ensure all work is done before returning from the function
         // tracking and exception handling easier with this method
-        // note tracking on the linking seems bad on some databases is heavy stuff happens first. Hmmm . . . tracking back into the linker?
-        for (Future linkFuture : linkFutures) {
+        for (Future<?> linkFuture : linkFutures) {
             linkFuture.get(1, TimeUnit.HOURS);
         }
-        azquoMemoryDB.nameChildrenLoadingCache.clear(); // free the memory. If it was really tight we could clear as we went along I suppose.
         if (!skipCheck){
             int counter = 0;
             long marker = System.currentTimeMillis();
@@ -477,7 +320,6 @@ valuesWhichAreNotNumbers : 72,974, 1%
                         }
                         number++;
                     }
-//                System.out.print("update fast_name set no_parents = " + number + " where id = " + name.getId() + ";     ");
                     System.out.println("parent problem on : " + name.getDefaultDisplayName() + " space = " + name.getParents().size() + ", number : " + number);
                     counter++;
                     name.parentArrayCheck();
@@ -645,3 +487,147 @@ valuesWhichAreNotNumbers : 72,974, 1%
         }
     }
 }
+
+// at the end of load data these fragments can be useful for profiling, perhaps put them in another class
+        /*azquoMemoryDB.getIndex().printIndexStats();
+        AzquoMemoryDB.printAllCountStats();
+        // stuff Ed added to profile data
+        NumberFormat nf = NumberFormat.getInstance();
+
+        int namesWithOnlyDefaultDisplayName = 0;
+        int namesRequiringAttributes = 0;
+        int namesWithOnlyOneParent = 0;
+        int namesWithMoreThanOneParent = 0;
+        int namesWithNoValues = 0;
+        int namesWithArrayValues = 0;
+        int namesWithSetValues = 0;
+        int namesWithNoChildremn = 0;
+        int namesWithArrayChildren = 0;
+        int namesWithSetChildren = 0;
+        int totalNameCount = azquoMemoryDB.getAllNames().size();
+        Map<List<Name>, Name> existingParents = HashObjObjMaps.newMutableMap();;
+        for (Name n : azquoMemoryDB.getAllNames()){
+            if (n.getDefaultDisplayName() != null && n.getAttributeKeys().size() == 1) {
+                namesWithOnlyDefaultDisplayName++;
+            } else { // I don't think it can be 0
+                namesRequiringAttributes++;
+            }
+            if (n.getParents().size() == 1){
+                namesWithOnlyOneParent++;
+            } else if (n.getParents().size() > 1){
+                namesWithMoreThanOneParent++;
+            }
+            if (n.getValues().isEmpty()){
+                namesWithNoValues++;
+            } else if (n.getValueCount() < Name.ARRAYTHRESHOLD){
+                namesWithArrayValues++;
+            } else {
+                namesWithSetValues++;
+            }
+            if (n.getChildren().isEmpty()){
+                namesWithNoChildremn++;
+            } else if (n.getChildren().size() < Name.ARRAYTHRESHOLD){
+                namesWithArrayChildren++;
+            } else {
+                namesWithSetChildren++;
+            }
+            if (!n.getParents().isEmpty()){
+                List<Name> parents = new ArrayList<>(n.getParents());
+                parents.sort(Comparator.comparing(Name::getId));
+                if (existingParents.containsKey(parents)){
+                    n.normaliseParents(existingParents.get(parents));
+                } else {
+                    existingParents.put(parents, n);
+                }
+            }
+        }
+        existingParents = null;
+        if (totalNameCount > 0){
+            List<Map.Entry<List<Name>, AtomicInteger>> toSort = new ArrayList<>(parentsTrack.entrySet());
+            toSort.sort(Comparator.comparing(listAtomicIntegerEntry -> listAtomicIntegerEntry.getValue().get()));
+            int count = 0;
+            //Collections.reverse(toSort);
+            for (Map.Entry<List<Name>, AtomicInteger> entry : toSort){
+                int noNames = entry.getValue().get();
+                String namesDesc = new String();
+                for (Name parent : entry.getKey()){
+                    namesDesc += ", " + parent.getDefaultDisplayName();// I suppose may get some nulls, not so botered right now
+                }
+                System.out.println("Names with the following parents : " + namesDesc + " : " + nf.format(noNames) + ", " + nf.format((100*noNames)/totalNameCount) + "%");
+                if (count > 100){
+                    break;
+                }
+                count++;
+        if (memoryTrack) {
+            marker = System.currentTimeMillis();
+            System.gc();
+            System.out.println("gc time : " + (System.currentTimeMillis() - marker));
+            long newUsed = (runtime.totalMemory() - runtime.freeMemory()) / mb;
+            System.out.println("Guess at DB size after attempting parents normalisation " + nf.format(newUsed - usedMB) + "MB");
+            System.out.println("--- MEMORY USED :  " + nf.format((runtime.totalMemory() - runtime.freeMemory()) / mb) + "MB of " + nf.format(runtime.totalMemory() / mb) + "MB, max allowed " + nf.format(runtime.maxMemory() / mb));
+        }
+            }
+
+            System.out.println("namesWithOnlyDefaultDisplayName : " + nf.format(namesWithOnlyDefaultDisplayName) + ", " + nf.format((100*namesWithOnlyDefaultDisplayName)/totalNameCount) + "%");
+            System.out.println("namesRequiringAttributes : " + nf.format(namesRequiringAttributes) + ", " + nf.format((100*namesRequiringAttributes)/totalNameCount) + "%");
+            System.out.println("namesWithOnlyOneParent : " + nf.format(namesWithOnlyOneParent) + ", " + nf.format((100*namesWithOnlyOneParent)/totalNameCount) + "%");
+            System.out.println("namesWithMoreThanOneParent : " + nf.format(namesWithMoreThanOneParent) + ", " + nf.format((100*namesWithMoreThanOneParent)/totalNameCount) + "%");
+            System.out.println("namesWithNoValues : " + nf.format(namesWithNoValues) + ", " + nf.format((100*namesWithNoValues)/totalNameCount) + "%");
+            System.out.println("namesWithArrayValues : " + nf.format(namesWithArrayValues) + ", " + nf.format((100*namesWithArrayValues)/totalNameCount) + "%");
+            System.out.println("namesWithSetValues : " + nf.format(namesWithSetValues) + ", " + nf.format((100*namesWithSetValues)/totalNameCount) + "%");
+            System.out.println("namesWithNoChildremn : " + nf.format(namesWithNoChildremn) + ", " + nf.format((100*namesWithNoChildremn)/totalNameCount) + "%");
+            System.out.println("namesWithArrayChildren : " + nf.format(namesWithArrayChildren) + ", " + nf.format((100*namesWithArrayChildren)/totalNameCount) + "%");
+            System.out.println("namesWithSetChildren : " + nf.format(namesWithSetChildren) + ", " + nf.format((100*namesWithSetChildren)/totalNameCount) + "%");
+        }
+        //Risk solutions example
+        namesWithOnlyDefaultDisplayName : 143,581, 46%
+namesRequiringAttributes : 166,892, 53%
+namesWithOnlyOneParent : 77,081, 24%
+namesWithMoreThanOneParent : 233,360, 75%
+namesWithNoValues : 130,342, 41%
+namesWithArrayValues : 180,074, 57%
+namesWithSetValues : 57, 0%
+namesWithNoChildremn : 124,457, 40%
+namesWithArrayChildren : 185,818, 59%
+namesWithSetChildren : 198, 0%
+easylife example
+namesWithOnlyDefaultDisplayName : 1,940,309, 54%
+namesRequiringAttributes : 1,616,234, 45%
+namesWithOnlyOneParent : 671,409, 18%
+namesWithMoreThanOneParent : 2,885,100, 81%
+namesWithNoValues : 709,597, 19%
+namesWithArrayValues : 2,846,913, 80%
+namesWithSetValues : 33, 0%
+namesWithNoChildremn : 1,939,665, 54%
+namesWithArrayChildren : 1,615,642, 45%
+namesWithSetChildren : 1,236, 0%
+
+        // now for some Value analysis . . .
+        int valuesWhichAreNumbers = 0;
+        int valuesWhichAreNotNumbers = 0;
+        int sopCount = 0;
+        Set<String> printed = new HashSet<>();
+        for (Value v : azquoMemoryDB.getAllValues()){
+            if (NumberUtils.isNumber(v.getText())){
+                valuesWhichAreNumbers++;
+            } else {
+                valuesWhichAreNotNumbers++;
+                if (sopCount < 100 && printed.add(v.getText())){
+                    System.out.println("non numeric value : " + v.getText());
+                    sopCount++;
+                }
+            }
+        }
+        System.out.println("valuesWhichAreNumbers : " + nf.format(valuesWhichAreNumbers) + ", " + nf.format((100*valuesWhichAreNumbers)/azquoMemoryDB.getAllValues().size()) + "%");
+        System.out.println("valuesWhichAreNotNumbers : " + nf.format(valuesWhichAreNotNumbers) + ", " + nf.format((100*valuesWhichAreNotNumbers)/azquoMemoryDB.getAllValues().size()) + "%");
+        /*
+        Risk solutions
+        non numeric value : B0702BB302040LAB
+        valuesWhichAreNumbers : 1,535,568, 95%
+valuesWhichAreNotNumbers : 68,278, 4%
+easylife
+non numeric value : xxx
+non numeric value : RN0472881
+valuesWhichAreNumbers : 4,887,985, 98%
+valuesWhichAreNotNumbers : 72,974, 1%
+         */

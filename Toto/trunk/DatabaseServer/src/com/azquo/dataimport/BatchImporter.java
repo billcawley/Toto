@@ -104,7 +104,7 @@ public class BatchImporter implements Callable<Void> {
                         // composite is interdependent but so are name relations so one function needs to deal with both
                         resolveCellInterdependence(lineToLoad, lineNumber);
                         try {
-                            interpretLine(lineToLoad, lineNumber, linesRejected, clearData);
+                            interpretLine(lineToLoad, lineNumber, clearData);
                         } catch (Exception e) {
                             azquoMemoryDBConnection.addToUserLogNoException(e.getMessage(), true);
                             e.printStackTrace();
@@ -1017,7 +1017,7 @@ public class BatchImporter implements Callable<Void> {
         return term;
     }
 
-    private void interpretLine(List<ImportCellWithHeading> cells, int importLine, Map<Integer, List<String>> linesRejected, boolean clearData) throws Exception {
+    private void interpretLine(List<ImportCellWithHeading> cells, int importLine, boolean clearData) throws Exception {
         long tooLong = 2; // now ms
         long time = System.currentTimeMillis();
         for (ImportCellWithHeading cell : cells) {
@@ -1040,7 +1040,10 @@ public class BatchImporter implements Callable<Void> {
             }
             if (!peersOk) {
                 // was CopyOnWriteArrayList but that made no sense - a single line won't be hit by multiple threads, just this one
-                linesRejected.computeIfAbsent(importLine, t -> new ArrayList<>()).add(":Missing peers for" + cell.getImmutableImportHeading().heading);
+                noLinesRejected.incrementAndGet();
+                if (linesRejected.size() < 1000) {
+                    linesRejected.computeIfAbsent(importLine, t -> new ArrayList<>()).add(":Missing peers for" + cell.getImmutableImportHeading().heading);
+                }
             } else if (!namesForValue.isEmpty()) { // no point storing if peers not ok or no names for value - the latter likely if the cell was used to create names rather than store values
                 // now we have the set of names for that name with peers get the value from that headingNo it's a heading for
                 String value = cell.getLineValue();
@@ -1062,7 +1065,10 @@ public class BatchImporter implements Callable<Void> {
                 }
                 ImportCellWithHeading identityCell = cells.get(cell.getImmutableImportHeading().indexForAttribute); // get our cell which will have names we want to set the attributes on
                 if (identityCell.getLineNames() == null) {
-                    linesRejected.computeIfAbsent(importLine, t -> new ArrayList<>()).add("No name for attribute " + cell.getImmutableImportHeading().attribute + " of " + cell.getImmutableImportHeading().heading);
+                    noLinesRejected.incrementAndGet();
+                    if (linesRejected.size() < 1000) {
+                        linesRejected.computeIfAbsent(importLine, t -> new ArrayList<>()).add("No name for attribute " + cell.getImmutableImportHeading().attribute + " of " + cell.getImmutableImportHeading().heading);
+                    }
                     break;
                 } else {
                     // EFC 24/07/19 before the worst that could happen is an attribute overwrote itself but a hack has been put in AzquoMemoryDBIndex.setAttributeForNameInAttributeNameMap
