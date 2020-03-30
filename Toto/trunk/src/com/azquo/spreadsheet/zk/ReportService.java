@@ -148,7 +148,8 @@ public class ReportService {
     private static final DateTimeFormatter df = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
     // make ZK resolve formulae and the, assuming not fast save check for formulae changing data. Finally snap the charts.
-    static boolean checkDataChangeAndSnapCharts(LoggedInUser loggedInUser, int reportId, Book book, Sheet sheet, boolean skipSaveCheck, boolean useSavedValuesOnFormulae) {
+    // todo - this was only supposed to be called once but now due to the pre save check it can be called more than once. Not sure if it's the biggest thing but
+    static boolean checkDataChangeAndSnapCharts(LoggedInUser loggedInUser, int reportId, Book book, Sheet sheet, boolean skipSaveCheck, boolean skipChartSnap, boolean useSavedValuesOnFormulae) {
         boolean showSave = false;
             /* heck if anything might need to be saved
             I'd avoided doing this but now I am it's useful for restoring values and checking for overlapping data regions.
@@ -235,13 +236,15 @@ public class ReportService {
                 }
             }
         }
-        for (SChart chart : sheet.getInternalSheet().getCharts()) {
-            ViewAnchor oldAnchor = chart.getAnchor();
-            int row = oldAnchor.getRowIndex();
-            int col = oldAnchor.getColumnIndex();
-            int width = oldAnchor.getWidth();
-            int height = oldAnchor.getHeight();
-            chart.setAnchor(new ViewAnchor(row, col, 0, 0, width, height));
+        if (!skipChartSnap){
+            for (SChart chart : sheet.getInternalSheet().getCharts()) {
+                ViewAnchor oldAnchor = chart.getAnchor();
+                int row = oldAnchor.getRowIndex();
+                int col = oldAnchor.getColumnIndex();
+                int width = oldAnchor.getWidth();
+                int height = oldAnchor.getHeight();
+                chart.setAnchor(new ViewAnchor(row, col, 0, 0, width, height));
+            }
         }
         return showSave;
     }

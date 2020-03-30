@@ -1,5 +1,61 @@
-03-03-20
+19-03-20
 
+Further importer tidying
+
+Basic statistics recording - importer features initially
+
+Bug fix on scale function
+
+Move the sort arrows to the beginning of the column name
+
+Temporary db copies are now just for that user
+
+A little tidying and making the import version file heading matching ignores carriage returns
+
+Claims Groovy : claims format change again, "totals for" doens't have the colon and the headings are at row 2 not 5. Hence the detect for "coverholder"
+
+XLSX
+
+AllRisks
+
+Claims XML file case fixed (XML mixed case XLSX lower case)
+
+Premium DedAccSub Change to DedSubNo
+
+Claims changed paid to date expense to be change this month - fees.
+
+Hanover
+
+Linneage
+
+removed ASDETAILS and ASDocType from the xml
+
+DedAccSub Change to DedSubNo
+
+Premium feed - Changed the rowgeadings to now correctly intersect with coverholder chosen
+
+changed Deduction-2/DedPA to be 'A' and the DedPerc to be '0'
+
+added feature to have multiple DedAccNo's
+
+Swapped the DedAccSub's. So no 00 is against 70149 and 14 is against 99902
+
+importing - Removed 'coverholder name' from the import. They will only come from the lookups now.
+
+Added functionality for having contracts refered to in different ways B1191C190002 is BB308120n for example
+
+Oilfields
+
+deductions work
+
+classification formatting
+
+Changed premium template to add 'Commission Amount'
+
+Swapped Policy commission % with net amount. Also added commision amount
+
+03-03-20
+li
 BatchImporter being refactored, logic needed fixing. Some local testing done, need to keep an eye on it.
 
 Improved showing of data in Inspect Database

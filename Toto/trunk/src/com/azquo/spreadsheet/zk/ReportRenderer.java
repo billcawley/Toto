@@ -65,6 +65,7 @@ public class ReportRenderer {
     public static final String AZPDF = "az_pdf";
     static final String AZTOTALFORMAT = "az_totalformat";
     static final String AZFASTLOAD = "az_fastload";
+    static final String AZSKIPCHARTSNAP = "az_skipchartsnap";
     static final String AZEMAILADDRESS = "az_emailaddress";
     static final String AZEMAILSUBJECT = "az_emailsubject";
     static final String AZEMAILTEXT = "az_emailtext";
@@ -236,10 +237,14 @@ public class ReportRenderer {
             // and now we want to run through all regions for this sheet
             // todo - should fastload be poassed down to stop range notify changes? What is being used to replace the formula result cache clear - I guess depends on performance
             boolean fastLoad = false; // skip some checks, initially related to saving
+            boolean skipChartSnap = false; // skip some checks, initially related to saving
             for (SName name : namesForSheet) {
                 // Old one was case insensitive - not so happy about this. Will allow it on prefixes. (fast load being set outside the loop so is there a problem with it not being found before data regions??)
                 if (name.getName().equalsIgnoreCase(ReportRenderer.AZFASTLOAD)) {
                     fastLoad = true;
+                }
+                if (name.getName().equalsIgnoreCase(ReportRenderer.AZSKIPCHARTSNAP)) {
+                    skipChartSnap = true;
                 }
                 if (name.getName().equals("az_ImageStoreName")) {
                     imageStoreName = BookUtils.getRegionValue(sheet, name.getRefersToCellRegion());
@@ -360,7 +365,7 @@ public class ReportRenderer {
             // all data for that sheet should be populated
             // returns true if data changed by formulae
             Ranges.range(sheet).notifyChange();
-            if (ReportService.checkDataChangeAndSnapCharts(loggedInUser, reportId, book, sheet, fastLoad, useSavedValuesOnFormulae)) {
+            if (ReportService.checkDataChangeAndSnapCharts(loggedInUser, reportId, book, sheet, fastLoad, skipChartSnap, useSavedValuesOnFormulae)) {
                 showSave = true;
             }
             // now remerge
@@ -492,7 +497,7 @@ public class ReportRenderer {
             CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = new CellsAndHeadingsForDisplay(region, colHeadings, rowHeadings, null, null, dataRegionCells, null, null, null, 0, userRegionOptions.getRegionOptionsForTransport(), null);// todo - work out what to do with the timestamp here! Might be a moot point given now row headings
             loggedInUser.setSentCells(reportId, sheetName, region, cellsAndHeadingsForDisplay);
             if (userRegionOptions.getPreSave()){
-                ReportService.checkDataChangeAndSnapCharts(loggedInUser, reportId, sheet.getBook(), sheet, false, false);
+                ReportService.checkDataChangeAndSnapCharts(loggedInUser, reportId, sheet.getBook(), sheet, false, true,false);
                 // see comment on other pre save b-t - should we just pass through online report?
                 SpreadsheetService.saveData(loggedInUser, reportId, loggedInUser.getOnlineReport().getReportName(), sheet.getSheetName(), region, false);
             }
@@ -663,7 +668,7 @@ public class ReportRenderer {
             }
         }
         if (userRegionOptions.getPreSave()){
-            ReportService.checkDataChangeAndSnapCharts(loggedInUser, reportId, sheet.getBook(), sheet, false, false);
+            ReportService.checkDataChangeAndSnapCharts(loggedInUser, reportId, sheet.getBook(), sheet, false, true, false);
             // I'm using the logged in user to get the report and the report name - should this be used for report id? Or pass through the report?
             SpreadsheetService.saveData(loggedInUser, reportId, loggedInUser.getOnlineReport().getReportName(), sheet.getSheetName(), region, false);
         }
