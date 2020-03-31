@@ -174,7 +174,9 @@ public class BatchImporter implements Callable<Void> {
                         // lookups are pretty involved but here the notable thing is that they can reoslve both line values and names if its dependencies are met
                         ImportCellWithHeading parentCell = cells.get(cell.getImmutableImportHeading().lookupParentIndex);
                         if (parentCell.getLineNames() != null) {
-                            adjusted = checkLookup(azquoMemoryDBConnection, cell, parentCell.getLineNames().iterator().next(), cells, compositeIndexResolver);
+                            if (checkLookup(azquoMemoryDBConnection, cell, parentCell.getLineNames().iterator().next(), cells, compositeIndexResolver)){
+                                adjusted = true;
+                            }
                         }
                     }
                 }
