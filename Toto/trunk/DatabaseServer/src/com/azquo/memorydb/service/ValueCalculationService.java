@@ -309,7 +309,8 @@ public class ValueCalculationService {
         // ok the hack here is that it was just values. add all but this often involved copying into an empty list which is silly if the list is here and won't be used after,
         // hence most of the time use the ready made list unless there's already one there in which case we're part of calc and will need to add
         // I'm trying to minimise garbage
-        if (valuesHook.values != null) {
+        // note : WFC changed values by default to be an empty list, I'm going to say that adding to an empty list is pointless also. todo :find out why valueshook.values can no longer be null
+        if (valuesHook.values != null && !valuesHook.values.isEmpty()) {
             valuesHook.values.addAll(values);
         } else {
             valuesHook.values = values;

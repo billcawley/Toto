@@ -236,16 +236,18 @@ public class ReportService {
                 }
             }
         }
-        if (!skipChartSnap){
             for (SChart chart : sheet.getInternalSheet().getCharts()) {
                 ViewAnchor oldAnchor = chart.getAnchor();
                 int row = oldAnchor.getRowIndex();
                 int col = oldAnchor.getColumnIndex();
                 int width = oldAnchor.getWidth();
                 int height = oldAnchor.getHeight();
-                chart.setAnchor(new ViewAnchor(row, col, 0, 0, width, height));
+                if (!skipChartSnap) {
+                    chart.setAnchor(new ViewAnchor(row, col, 0, 0, width, height));
+                } else {
+                    chart.setAnchor(new ViewAnchor(row, col, oldAnchor.getXOffset(), oldAnchor.getYOffset(), width, height));
+                }
             }
-        }
         return showSave;
     }
 
