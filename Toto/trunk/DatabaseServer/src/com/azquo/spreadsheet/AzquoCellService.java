@@ -589,7 +589,7 @@ public class AzquoCellService {
                 for (int j = 0; j < regionOptions.hideRows; j++) {
                     List<AzquoCell> rowToCheck = toReturn.get(rowNo + j); // size - 1 for the last index
                     for (AzquoCell cellToCheck : rowToCheck) {
-                        if ((regionOptions.hideRowValues == 0 || !hasAttribute(cellToCheck)) && cellToCheck.getStringValue() != null && cellToCheck.getStringValue().length() > 0 && !cellToCheck.getStringValue().equals("0.0")) {
+                        if ((regionOptions.hideRowValues == 0 || !hasAttribute(cellToCheck)) && cellToCheck.getStringValue() != null && cellToCheck.getStringValue().length() > 0 && !cellToCheck.getStringValue().equals("0.0") && !cellToCheck.getStringValue().equals("0")) { // EFC note : not quite sure how plain 0 gets in there but it should be hidden also
                             rowsBlank = false;
                             break;
                         }
