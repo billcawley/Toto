@@ -186,14 +186,13 @@ public class ChoicesService {
                 if (sName.getName().endsWith("Chosen")) {
                     CellRegion chosen = sName.getRefersToCellRegion();
                     if (BookUtils.getNamedDataRegionForRowAndColumnSelectedSheet(chosen.getRow(), chosen.getColumn(), sheet).isEmpty()) {
-
                         String choiceName = sName.getName().substring(0, sName.getName().length() - "Chosen".length()).toLowerCase();
                         if (chosen.getRowCount() == 1 && chosen.getColumnCount() == 1) { // I think I may keep this constraint even after
                             // need to check that this choice is actually valid, so we need the choice query - should this be using the query as a cache?
                             List<String> validOptions = choiceOptionsMap.get(choiceName + "choice") != null ? new ArrayList<>(choiceOptionsMap.get(choiceName + "choice")) : null;
                             String userChoice = userChoices.get(choiceName.startsWith("az_") ? choiceName.substring(3) : choiceName);
                             LocalDate date = ReportUtils.isADate(userChoice);
-                            // todo - tidy after the valid motpions ower case thing
+                            // todo - tidy after the valid options ower case thing
                             if (validOptions != null && validOptions.size() > 0 && validOptions.get(0) != null) {//a single null element returned when list consists of an attribute that does not exis
                                 if (SpreadsheetService.FIRST_PLACEHOLDER.equals(userChoice)) {
                                     userChoice = validOptions.get(0);
@@ -431,10 +430,15 @@ public class ChoicesService {
             List<String> chosenOptions;
             // justUser = true meaning server side JUST use the user email in languages. Not 100% sure how important this but as I refactored I wanted to keep the logic
             chosenOptions = CommonReportUtils.getDropdownListForQuery(loggedInUser, "`" + filterName + "` children", loggedInUser.getUser().getEmail(), true, -1);
-            if (chosenOptions.size() == 1 && chosenOptions.get(0).startsWith("Error") && !allOptions.isEmpty() && !allOptions.get(0).startsWith("Error")) { // this stops the error on making the drop down list but *don't* set all options as the choice if it itself is an error!
+            // try to make multis behave as dropdowns change
+            if (!allOptions.isEmpty() && !allOptions.get(0).startsWith("Error") && // if the options are good and
+                    ((chosenOptions.size() == 1 && chosenOptions.get(0).startsWith("Error"))// the existing set doens't exist
+                            || !allOptions.containsAll(chosenOptions))){// OR it has values that are not allowed
+                // then set it to all
                 chosenOptions = allOptions;
                 // and create the set server side, it will no doubt be referenced
                 RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).createFilterSetWithQuery(loggedInUser.getDataAccessToken(), filterName, loggedInUser.getUser().getEmail(), sourceSet);
+
             }
             if (allOptions.size() < 2)
                 return "[all]"; // EFC - this did return null which I think is inconsistent. If there's only one option should it maybe be all?
