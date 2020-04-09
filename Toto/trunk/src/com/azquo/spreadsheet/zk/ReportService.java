@@ -36,7 +36,7 @@ public class ReportService {
     static final String ALLOWABLE_FORMS = "az_AllowableForms";
     private static final String REDUNDANT = "redundant";
 
-    static void checkForPermissionsInSheet(LoggedInUser loggedInUser, Sheet sheet) {
+    static void checkForPermissionsInSheet(LoggedInUser loggedInUser, Sheet sheet, int reportId) {
         //have a look for "az_AllowableReports", it's read only, getting it here seems as reasonable as anything
         // a repeat call to this function - could be moved outside but I'm not too bothered about it at the moment
         List<SName> namesForSheet = BookUtils.getNamesForSheet(sheet);
@@ -44,7 +44,7 @@ public class ReportService {
         SName sReportName  = BookUtils.getNameByName(ReportRenderer.AZREPORTNAME, sheet);
         String thisReportName = BookUtils.getSnameCell(sReportName).getStringValue();
         // todo - null pointer when no database for user? Force db to be set? Or allow it not to?
-        OnlineReport or = OnlineReportDAO.findForDatabaseIdAndName(loggedInUser.getDatabase().getId(), thisReportName);
+        OnlineReport or = OnlineReportDAO.findById(reportId);
         //System.out.println("adding a report to permissions : " + or);
         loggedInUser.setReportDatabasePermission(null, or, loggedInUser.getDatabase());
         for (SName sName : namesForSheet) {
