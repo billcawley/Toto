@@ -143,19 +143,8 @@ public class NameQueryParser {
         try {
             referencedNames = getNameListFromStringList(nameStrings, azquoMemoryDBConnection, languages);
         } catch (Exception e) {
-            // EFC commenting 13/01/2020, this really should never have been in here, need to test to make sure this doesn't break stuff
-            // EFC uncommenting 14/01/2020. A few reports were broken on Joe Browns so put this back in but I really want to comment this again ASAP todo
-            if (setFormula.toLowerCase().equals(StringLiterals.NAMEMARKER + "00 children")) return new ArrayList<>();
-               /* sometimes excel formulae generate dependent sets that do not exist (e.g. `2012 Transactions`
-            in that case it is better to return a null rather than an exception as temporary names may still be set incorrectly
-            if (setFormula.contains(StringLiterals.AS)) {
-                //clear the 'as' set and exit gracefully
-                Name targetName = NameService.findNameAndAttribute(azquoMemoryDBConnection, nameStrings.get(nameStrings.size() - 1), attributeNames);
-                if (targetName != null) {
-                    targetName.setChildrenWillBePersisted(new ArrayList<>());
-                    return new ArrayList<>();
-                }
-            }*/
+            // EFC - there was behavior here that just put up with the error in the case of xyz children but would fail when "sorted" or anything else was added.
+            // I'm just not putting up with it any more, it's out and staying out
             throw new Exception("could not parse " + formulaCopy + "(error: " + e.getMessage() + ")");
         }
         setFormula = setFormula.replace(StringLiterals.ASGLOBAL, StringLiterals.ASGLOBALSYMBOL + "").replace(StringLiterals.FILTERBY, StringLiterals.FILTERBYSYMBOL + "");
