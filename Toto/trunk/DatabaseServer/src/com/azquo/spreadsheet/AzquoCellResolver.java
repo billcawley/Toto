@@ -17,7 +17,6 @@ import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
 import org.apache.commons.math3.stat.descriptive.rank.Percentile;
 
 
-import javax.xml.crypto.Data;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -140,7 +139,7 @@ public class AzquoCellResolver {
                                         desc = "";
                                      }
                                 }else{
-                                    desc = getUniqueName(connection,rowHeadings.get(colNo1).getName());
+                                    desc = getUniqueName(connection,rowHeadings.get(colNo1).getName(), languages);
                                 }
                                 if (desc.length() > 0) {
                                     usedInExpression.add(rowHeadings.get(colNo1).getName());
@@ -161,7 +160,7 @@ public class AzquoCellResolver {
                         if (inQuotes) {
                             cellQuery = cellQuery.replace(COLUMNHEADING, columnHeadings.get(0).getName().getDefaultDisplayName());
                         } else {
-                            cellQuery = cellQuery.replace(COLUMNHEADING, getUniqueName(connection,columnHeadings.get(0).getName()));
+                            cellQuery = cellQuery.replace(COLUMNHEADING, getUniqueName(connection,columnHeadings.get(0).getName(), languages));
                         }
                     }
                     if (cellQuery.contains(COLUMNHEADINGLOWERCASE)) {
@@ -170,7 +169,7 @@ public class AzquoCellResolver {
                         if (inQuotes) {
                             cellQuery = cellQuery.replace(COLUMNHEADINGLOWERCASE, columnHeadings.get(0).getName().getDefaultDisplayName());
                         } else {
-                            cellQuery = cellQuery.replace(COLUMNHEADINGLOWERCASE, getUniqueName(connection,columnHeadings.get(0).getName()));
+                            cellQuery = cellQuery.replace(COLUMNHEADINGLOWERCASE, getUniqueName(connection,columnHeadings.get(0).getName(), languages));
                         }
                     }
                 }
@@ -964,7 +963,15 @@ But can use a library?
         return count;
     }
 
-    private static String getUniqueName(AzquoMemoryDBConnection azquoMemoryDBConnection, Name name){
+    private static String getUniqueName(AzquoMemoryDBConnection azquoMemoryDBConnection, Name name, List<String> languages){
+        if (name.getDefaultDisplayName() == null){ // then let's run pass languages and see if we can get anything
+            for (String language : languages){
+                if (name.getAttribute(language) != null){
+                    return name.getAttribute(language); // it is possible this could return something unhelpful but with no default display name the code below will always return nothing
+                }
+            }
+            return "";
+        }
         try{
             if (NameService.findByName(azquoMemoryDBConnection,name.getDefaultDisplayName())!=null) {
                 return name.getDefaultDisplayName();
