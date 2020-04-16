@@ -35,7 +35,11 @@ class ComboBuilder implements Callable<Void> {
         for (int i = sourceFrom; i < sourceTo; i++) {
             List<Name> foundCombination = new ArrayList<>(comboSize);
             for (Name pName : permuteNames) {
-                foundCombination.add(sharedNamesList.get(i).memberName(pName));
+                try {
+                    foundCombination.add(sharedNamesList.get(i).memberName(pName));
+                } catch (StackOverflowError soe){
+                    System.out.println("circular reference on " + pName.getDefaultDisplayName());
+                }
             }
             foundCombinations.add(foundCombination);
         }

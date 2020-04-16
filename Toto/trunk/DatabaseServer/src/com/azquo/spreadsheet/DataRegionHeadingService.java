@@ -417,7 +417,11 @@ public class DataRegionHeadingService {
             for (Name name : sharedNamesList) {
                 List<Name> foundCombination = new ArrayList<>(comboSize);
                 for (Name pName : permuteNames) {
-                    foundCombination.add(name.memberName(pName));
+                    try {
+                        foundCombination.add(name.memberName(pName));
+                    } catch (StackOverflowError soe){
+                        throw new Exception("circular reference on " + pName.getDefaultDisplayName());
+                    }
                 }
                 foundCombinations.add(foundCombination);
             }
