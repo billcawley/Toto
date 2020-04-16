@@ -218,10 +218,12 @@ public class DSImportService {
             int lastColumnToActuallyRead = 0;
             if (uploadedFile.getSimpleHeadings() == null) { // if there were simple headings then we read NO headings off the file
                 if (uploadedFile.getHeadingsByFileHeadingsWithInterimLookup() != null) { // then we need to find the headings specified
-                    int headingDepth = 1;
-                    for (List<String> headingsToFind : uploadedFile.getHeadingsByFileHeadingsWithInterimLookup().keySet()) {
-                        if (headingsToFind.size() > headingDepth) {
-                            headingDepth = headingsToFind.size();
+                    int headingDepth = uploadedFile.getHeadingDepth();
+                    if (headingDepth == 0){ // then try to derive
+                        for (List<String> headingsToFind : uploadedFile.getHeadingsByFileHeadingsWithInterimLookup().keySet()) {
+                            if (headingsToFind.size() > headingDepth) {
+                                headingDepth = headingsToFind.size();
+                            }
                         }
                     }
                     // so try and find the headings
@@ -230,7 +232,7 @@ public class DSImportService {
                         if (lineIterator.hasNext()) {
                             String[] lineCells = lineIterator.next();
                             for (int j = 0; j < lineCells.length; j++) {
-                                if (i == 0) {
+                                while (headingsFromTheFile.size() <= j) {
                                     headingsFromTheFile.add(new ArrayList<>());
                                 }
                                 // NOTE, we want case insensitive on heading names in the file look up, hence this which corresponds to to .toLowerCases in ImportService.readPreparedFile

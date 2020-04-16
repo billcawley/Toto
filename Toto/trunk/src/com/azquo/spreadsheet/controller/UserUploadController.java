@@ -180,7 +180,7 @@ public class UserUploadController {
                             boolean isImportTemplate = false;
                             for (int sheetNo = 0; sheetNo < book.getNumberOfSheets(); sheetNo++) {
                                 Sheet sheet = book.getSheetAt(sheetNo);
-                                if (sheet.getSheetName().equalsIgnoreCase("Import Model")) {
+                                if (sheet.getSheetName().equalsIgnoreCase(ImportService.IMPORTMODEL)) {
                                     isImportTemplate = true;
                                     break;
                                 }

@@ -1,3 +1,21 @@
+01-04-20
+
+Bug fixing to error reporting and ignoring of carriage returns in headings
+
+Option to switch off snap charts and a further bug fix to carriage returns in headings
+
+Bug fix to importer cell interdependence resolution, for Claims Feb-20
+
+XLSX
+
+Linneage third deductions added
+
+Risk Solutions setup - added entry for previously paid
+
+"document" lower case on splits ASDocType also
+
+Removed carriage return from Los Loc county on allriskclaim - relates to Java now ignoring the carriage returns on headings - added due to Claims Feb
+
 19-03-20
 
 Further importer tidying
@@ -55,7 +73,7 @@ Changed premium template to add 'Commission Amount'
 Swapped Policy commission % with net amount. Also added commision amount
 
 03-03-20
-li
+
 BatchImporter being refactored, logic needed fixing. Some local testing done, need to keep an eye on it.
 
 Improved showing of data in Inspect Database

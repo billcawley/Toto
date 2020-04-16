@@ -66,7 +66,12 @@ public class UploadedFile implements Serializable {
 
     private int skipLines;
 
-     // heading definitions. At its most simple it would be a list of strings but it can be a lookup based on file headings and there could be multiple headingss so
+    // since customer headings from an "import version" sheet can now have gaps in the headings
+    // (e.g. a wide merged heading, a blank line then sub headings as in oilfields)
+    // we need to have the option to set heading depth here, how high the custom headings region is, rather then trying to derive it
+    private int headingDepth;
+
+    // heading definitions. At its most simple it would be a list of strings but it can be a lookup based on file headings and there could be multiple headingss so
     private List<String> simpleHeadings;
 
     // not required for importing to work but a copy of the headings we found on the file can dramatically improve feedback to the user
@@ -102,6 +107,14 @@ public class UploadedFile implements Serializable {
     private Map<Integer, String> ignoreLinesValues;
 
     private String fileType; // has the user given the file a type? should the file move with backups and be available to non admin users?
+
+    public int getHeadingDepth() {
+        return headingDepth;
+    }
+
+    public void setHeadingDepth(int headingDepth) {
+        this.headingDepth = headingDepth;
+    }
 
     // should an uploaded file have an index which would indicate its place in a package (a zip or book or both)?
 
@@ -195,6 +208,7 @@ public class UploadedFile implements Serializable {
         importTemplate = false;
 
         skipLines = 0;
+        headingDepth = 0;
 
         simpleHeadings = null;
         fileHeadings = null;

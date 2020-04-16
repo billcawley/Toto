@@ -92,6 +92,7 @@ public final class ImportService {
     public static String LOCALIP = "127.0.0.1";
     private static final String IMPORTTEMPLATE = "importtemplate";
     public static final String IMPORTVERSION = "importversion";
+    public static final String IMPORTMODEL = "Import Model";
 
 
     /* external entry point, moves the file to a temp directory in case pre processing is required
@@ -409,7 +410,7 @@ public final class ImportService {
         if (!uploadedFile.isValidationTest()) {
             for (int sheetNo = 0; sheetNo < book.getNumberOfSheets(); sheetNo++) {
                 Sheet sheet = book.getSheetAt(sheetNo);
-                if (sheet.getSheetName().equalsIgnoreCase("Import Model")) {
+                if (sheet.getSheetName().equalsIgnoreCase(ImportService.IMPORTMODEL)) {
                     if ((loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
                         if (opcPackage != null) opcPackage.revert();
                         return Collections.singletonList(uploadImportTemplate(uploadedFile, loggedInUser, true));
@@ -778,7 +779,17 @@ public final class ImportService {
                 List<List<String>> template;
                 boolean hasImportModel = false;
                 if (importVersion != null) {
-                    template = importTemplateData.getSheets().get("Import Model");
+                    String importModel = ImportService.IMPORTMODEL;
+                    // new logic - an import version's parameters can override the import model
+                    List<List<String>> versionSheet = sheetInfo(importTemplateData, importVersion);//case insensitive
+                    if (versionSheet != null){
+                        Map<String, String> versionParameters = scanJustParameters(versionSheet);
+                        if (versionParameters.get("importmodel") != null){
+                            importModel = versionParameters.get("importmodel"); // it may set it to "none" to bock an import model
+                        }
+                    }
+
+                    template = importTemplateData.getSheets().get(importModel);
                     if (template == null) {
                         template = sheetInfo(importTemplateData, importVersion);//case insensitive
                     } else {
@@ -790,14 +801,7 @@ public final class ImportService {
                 if (template != null) {
                     importSheetScan(template, null, standardHeadings, null, templateParameters, null);
                 }
-                /* old version - did not allow IMPORTVERSION to override file name when there was no Import Model.
-                for (String sheetName : importTemplateData.getSheets().keySet()) {
-                    if ((sheetName.equalsIgnoreCase("Import Model") && uploadedFile.getParameter(IMPORTVERSION) != null) || (uploadedFile.getParameter(IMPORTVERSION) == null && sheetName.equalsIgnoreCase(templateName))) {
-                        importSheetScan(importTemplateData.getSheets().get(sheetName), null, standardHeadings, null, templateParameters, null);
-                        break;
-                    }
-                }
-                */
+
 
                 // without standard headings then there's nothing to work with
                 if (!standardHeadings.isEmpty()) {
@@ -814,6 +818,7 @@ public final class ImportService {
                             AreaReference headingsName = importTemplateData.getName(AZHEADINGS + importVersion);
                             if (headingsName != null) { // we have to have it or don't bother!
                                 uploadedFile.setSkipLines(headingsName.getFirstCell().getRow());
+                                uploadedFile.setHeadingDepth((headingsName.getLastCell().getRow() - headingsName.getFirstCell().getRow()) + 1);
                                 // parameters and lookups are cumulative, pass through the same maps
                                 importSheetScan(template, topHeadings, headingReference, versionHeadings, templateParameters, headingsName);
                             } else {
@@ -1257,11 +1262,45 @@ public final class ImportService {
                 }
             }
 
-            if (blankLine && mode != ImportSheetScanMode.TOPHEADINGS) { // top headings will tolerate blank lines, other modes won't so switch off
+            if (blankLine && mode != ImportSheetScanMode.TOPHEADINGS && mode != ImportSheetScanMode.CUSTOMHEADINGS) { // top headings will tolerate blank lines, customheadings also require them based off oilfields, other modes won't so switch off
                 mode = ImportSheetScanMode.OFF;
             }
         }
     }
+
+    // we're going to allow multiple import models selected by a parameter, hence need the ability to get just parameters early before parsing starts in earnest
+    // maybe factor with above, have a think
+    public static Map<String, String> scanJustParameters(List<List<String>> sheet) {
+        Map<String, String> templateParameters = new HashMap<>();
+        ImportSheetScanMode mode = ImportSheetScanMode.OFF;
+        for (List<String> row : sheet) {
+            // unfortunately while it seems POI might skip blank lines it seems it might also have blank cell values (this may not be a fault of POI, perhaps an Excel quirk)
+            // regardless I need to check for a line only having blank cells and adjusting modes accordingly
+            boolean blankLine = true;
+            String firstCellValue = null;
+            for (String cellValue : row) {
+                if (!cellValue.isEmpty()) {
+                    blankLine = false;
+                    if (firstCellValue == null) {
+                        firstCellValue = cellValue;
+                        if ("PARAMETERS".equalsIgnoreCase(firstCellValue)) { // string literal move?
+                            mode = ImportSheetScanMode.PARAMETERS;
+                        }
+                    } else { // after the first cell when not headings
+                        // yes extra cells will override subsequent key pair values. Since this would be an incorrect sheet I'm not currently bothered by this
+                        if (mode == ImportSheetScanMode.PARAMETERS) { // gathering parameters
+                            templateParameters.put(firstCellValue.toLowerCase(), cellValue);
+                        }
+                    }
+                }
+            }
+            if (blankLine && mode == ImportSheetScanMode.PARAMETERS) {
+                return templateParameters;
+            }
+        }
+        return templateParameters;
+    }
+
 
     /* for parsing parameters out of a file name. Cumulative if files in zips or sheets in workbooks
      have parameters as well as their "parent" file */
@@ -1546,36 +1585,6 @@ public final class ImportService {
         }
         return null;
     }
-/*
-    // is returning a string the best idea?
-    public static String testImportTemplateForTemplateAndVersion(LoggedInUser loggedInUser, String template, String version) throws Exception {
-        // similar logic to above/below but we're looking for a very quick read of the file's contents
-        if (template == null) {
-            template = loggedInUser.getDatabase().getName() + " import templates";
-        }
-        if (template.endsWith(".xlsx")) template = template.replace(".xlsx", "");
-        ImportTemplate importTemplate = ImportTemplateDAO.findForNameAndBusinessId(template, loggedInUser.getUser().getBusinessId());
-        if (importTemplate != null) {
-            Set<String> sheetNames = new HashSet<>();
-            Set<String> nameNames = new HashSet<>();
-            getSheetAndNamedRangesNamesQuicklyFromXLSX(SpreadsheetService.getHomeDir() + dbPath + loggedInUser.getBusinessDirectory() + importTemplatesDir + importTemplate.getFilenameForDisk(), sheetNames, nameNames);
-            if (sheetNames.contains("import model")) { // then we need to check for the version!
-                if (version == null || version.isEmpty()) {
-                    return "Import version required";
-                }
-                if (sheetNames.contains(version.toLowerCase())) {
-                    if (!nameNames.contains(AZHEADINGS.toLowerCase() + version.toLowerCase())) {
-                        return AZHEADINGS + version + "not found for sheet";
-                    }
-                } else {
-                    return "Import version not found in template";
-                }
-            }
-        } else {
-            return "Import Template not found";
-        }
-        return "ok";
-    }*/
 
 
     public static ImportTemplateData getImportTemplateData(ImportTemplate importTemplate, LoggedInUser loggedInUser) throws Exception {
