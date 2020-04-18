@@ -869,14 +869,9 @@ public class BatchImporter implements Callable<Void> {
             if (fieldNo >= 0) {
                 ImportCellWithHeading cell = lineToLoad.get(fieldNo);
                 // If it's not resolved no problem, this will be called again if further adjustments are made later
-                if (cell.lineValueResolved()) {
-                    conditionValue = cell.getLineValue();
-                }
-                if (conditionValue == null) {
-                    return CHECKFALSE;
-                }
+                conditionValue = cell.getLineValue();
             }
-            constants.add(conditionValue);//note that a null here means that the field does not exist, so the result may be 'maybe'
+             constants.add(conditionValue);//note that a null here means that the field does not exist, so the result may be 'maybe'
             newCondition.append(condition.substring(lastPos, m.start()) + CONSTANTMARKER + ("" + (count++ + 100)).substring(1));
             lastPos = m.end();
         }
