@@ -105,6 +105,7 @@ public final class UploadRecord extends StandardEntity {
         final String databaseName;
         final String userName;
         final String fileName;
+        int count;
         final String fileType;
         final String comments;
         final boolean downloadable;
@@ -117,6 +118,7 @@ public final class UploadRecord extends StandardEntity {
             this.databaseName = databaseName;
             this.userName = userName;
             fileName = ur.fileName;
+            this.count = 1;
             fileType = ur.fileType;
             comments = ur.comments != null ? ur.getComments() : ""; // might NPE
             this.downloadable = downloadable;
@@ -129,8 +131,14 @@ public final class UploadRecord extends StandardEntity {
 
         static DateTimeFormatter df = DateTimeFormatter.ofPattern("dd/MM/yy-HH:mm");
 
+        static DateTimeFormatter df2 = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+
         public String getFormattedDate() {
             return df.format(date);
+        }
+
+        public String getTextOrderedDate() {
+            return df2.format(date);
         }
 
         public String getBusinessName() {
@@ -148,6 +156,10 @@ public final class UploadRecord extends StandardEntity {
         public String getFileName() {
             return fileName;
         }
+
+        public int getCount() {return count; }
+
+        public void setCount(int count) {this.count = count; }
 
         public String getFileType() {
             return fileType;

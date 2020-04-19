@@ -106,6 +106,7 @@ Created by IntelliJ IDEA.
                     <td>
                         <form method="post"> File Name <input size="20" name="fileSearch"></form>
                     </td>
+                    <td>Count</td>
                     <td>File Type</td>
                     <td></td>
                     <td></td>
@@ -121,6 +122,7 @@ Created by IntelliJ IDEA.
                         <td>${upload.databaseName}</td>
                         <td>${upload.userName}</td>
                         <td>${upload.fileName}</td>
+                        <td><a href="/api/ManageDatabases?fileSearch=${upload.fileName}">${upload.count}</a></td>
                         <td>${upload.fileType}</td>
                         <td><a href="/api/UploadRecordComment?urid=${upload.id}" target="new"
                                class="button inspect small" data-title="Comment" title="Comment" id="comment${upload.id}">

@@ -331,12 +331,49 @@ this may now not work at all, perhaps delete?
                             }
                         }
                         uploadRecordsForDisplay.add(new UploadRecord.UploadRecordForDisplay(uploadRecord, BusinessDAO.findById(uploadRecord.getBusinessId()).getBusinessName(), dbName, userName, downloadable));
-                        if (count > 500) {
+                        if (count > 5000) {
                             break;
                         }
                     }
                 }
             }
+            String fileName = null;
+            for (UploadRecord.UploadRecordForDisplay uploadRecordForDisplay:uploadRecordsForDisplay){
+                if (fileName==null){
+                    fileName = uploadRecordForDisplay.getFileName();
+                }else{
+                    if (!uploadRecordForDisplay.getFileName().equals(fileName)) {
+                        //if there is more than one report name reduce the list to the latest uploads only
+                        uploadRecordsForDisplay.sort((o1, o2) -> ((o2.getFileName() + o2.getTextOrderedDate()).compareTo((o1.getFileName() + o1.getTextOrderedDate()))));
+                        List<UploadRecord.UploadRecordForDisplay> newList = new ArrayList<>();
+                        fileName = null;
+                        int fileCount = 0;
+                        UploadRecord.UploadRecordForDisplay lastURFD = null;
+                        for (UploadRecord.UploadRecordForDisplay uRFD : uploadRecordsForDisplay) {
+                            if (!uRFD.getFileName().equals(fileName)) {
+                                fileName = uRFD.getFileName();
+                                if (fileCount > 0){
+                                    lastURFD.setCount(fileCount);
+                                }
+                                fileCount = 1;
+                                newList.add(uRFD);
+                                lastURFD = uRFD;
+                            }else{
+                                fileCount++;
+                            }
+                        }
+                        if (fileCount > 0){
+                            lastURFD.setCount(fileCount);
+                        }
+                        uploadRecordsForDisplay = newList;
+                        uploadRecordsForDisplay.sort((o1, o2) -> (o2.getDate().compareTo(o1.getDate())));
+                        break;
+                    }
+                }
+            }
+
+
+
             return uploadRecordsForDisplay;
         }
         return null;
