@@ -60,7 +60,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         }
 
         setChartClickProxies();
-        // does the book say a particul;ar cell should be selected?
+        // does the book say a particular cell should be selected?
         // maybe improve moving this number?
         if (myzss.getBook().getInternalBook().getAttribute(OnlineController.CELL_SELECT) != null) {
             String cellSelect = (String) myzss.getBook().getInternalBook().getAttribute(OnlineController.CELL_SELECT);

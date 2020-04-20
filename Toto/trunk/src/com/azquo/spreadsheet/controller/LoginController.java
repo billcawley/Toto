@@ -103,11 +103,13 @@ public class LoginController {
                 if (SpreadsheetService.inProduction() && !request.getRemoteAddr().equals("82.68.244.254") && !request.getRemoteAddr().equals("127.0.0.1") && !request.getRemoteAddr().startsWith("0")) { // if it's from us don't email us :)
                     LoggedInUser loggedInUser = (LoggedInUser) session.getAttribute(LoginController.LOGGED_IN_USER_SESSION);
                     Business business = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
-                    String title = SpreadsheetService.getAlias() + " Logout from " + loggedInUser.getUser().getEmail() + " - " + loggedInUser.getUser().getStatus() + " - " + (business != null ? business.getBusinessName() : "") + " from " + request.getRemoteAddr();
-                    String userAgent = request.getHeader("User-Agent");
-                    AzquoMailer.sendEMail("nic@azquo.com", "Nic", title, userAgent);
-                    AzquoMailer.sendEMail("bruce.cooper@azquo.com", "Bruce", title, userAgent);
-                    AzquoMailer.sendEMail("ed.lennox@azquo.com", "Ed", title, userAgent);
+                    new Thread(() ->{
+                        String title = SpreadsheetService.getAlias() + " Logout from " + loggedInUser.getUser().getEmail() + " - " + loggedInUser.getUser().getStatus() + " - " + (business != null ? business.getBusinessName() : "") + " from " + request.getRemoteAddr();
+                        String userAgent = request.getHeader("User-Agent");
+                        AzquoMailer.sendEMail("nic@azquo.com", "Nic", title, userAgent);
+                        AzquoMailer.sendEMail("bruce.cooper@azquo.com", "Bruce", title, userAgent);
+                        AzquoMailer.sendEMail("ed.lennox@azquo.com", "Ed", title, userAgent);
+                    }).start();
                 }
                 session.removeAttribute(LOGGED_IN_USER_SESSION);
                 session.removeAttribute(LOGGED_IN_USERS_SESSION);
@@ -146,10 +148,12 @@ public class LoginController {
                     if (!"nic@azquo.com".equalsIgnoreCase(userEmail) && SpreadsheetService.inProduction() && !request.getRemoteAddr().equals("82.68.244.254") && !request.getRemoteAddr().equals("127.0.0.1") && !request.getRemoteAddr().startsWith("0")) { // if it's from us don't email us :)
                         Business business = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
                         String title = SpreadsheetService.getAlias() + " Login to the server " + userEmail + " - " + loggedInUser.getUser().getStatus() + " - " + (business != null ? business.getBusinessName() : "") + " from " + request.getRemoteAddr();
-                        String userAgent = request.getHeader("User-Agent");
-                        AzquoMailer.sendEMail("nic@azquo.com", "Nic", title, userAgent);
-                        AzquoMailer.sendEMail("bruce.cooper@azquo.com", "Bruce", title, userAgent);
-                        AzquoMailer.sendEMail("ed.lennox@azquo.com", "Ed", title, userAgent);
+                        new Thread(() ->{
+                            String userAgent = request.getHeader("User-Agent");
+                            AzquoMailer.sendEMail("nic@azquo.com", "Nic", title, userAgent);
+                            AzquoMailer.sendEMail("bruce.cooper@azquo.com", "Bruce", title, userAgent);
+                            AzquoMailer.sendEMail("ed.lennox@azquo.com", "Ed", title, userAgent);
+                        }).start();
                     }
                     session.setAttribute(LOGGED_IN_USER_SESSION, loggedInUser);
                     if (connectionid != null && connectionid.equals("javascript")) {

@@ -1,3 +1,15 @@
+16-04-20
+
+Various bug fixes and work on the importer for Oilfields and BB304140.
+
+XLSX
+
+AllRisks Limnet back inm
+
+Previously paid added to AllRisks Claims
+
+Lots of Oilfields work to get an initial set of correct figures
+
 01-04-20
 
 Bug fixing to error reporting and ignoring of carriage returns in headings

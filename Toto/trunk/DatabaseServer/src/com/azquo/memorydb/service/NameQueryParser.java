@@ -302,7 +302,11 @@ public class NameQueryParser {
                     if (defSet != null) {
                         defName.setChildrenWillBePersisted(defSet, azquoMemoryDBConnection);
                         //note that defName is a temporary set, so, to get the name, look at the parent
-                        calcDefinitons(azquoMemoryDBConnection,defName.getParents().iterator().next().getDefaultDisplayName(),attributeNames,global, level);
+                        String defChangedRecursive = defName.getParents().iterator().next().getDefaultDisplayName();
+                        if (defChangedRecursive == null){
+                            throw new Exception("Parent of " + defName + " does not have a default display name, this will crash calc definitions.");
+                        }
+                        calcDefinitons(azquoMemoryDBConnection,defChangedRecursive,attributeNames,global, level);
                     }
                 }
             }
