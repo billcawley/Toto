@@ -577,6 +577,11 @@ public class BatchImporter implements Callable<Void> {
                             return null; // this will stop ifs and composite resolving for the moment. If other cells are changed it the function will be called on the cell again
                         }
                         sourceVal = compCell.getLineNames().iterator().next().getAttribute(nameAttribute);
+                        if (sourceVal==null){
+                            sourceVal="";
+                        }
+
+
                     } else { // normal
                         sourceVal = compCell.getLineValue();
                     }
