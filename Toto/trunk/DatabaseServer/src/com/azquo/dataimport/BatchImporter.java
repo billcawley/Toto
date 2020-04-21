@@ -802,7 +802,7 @@ public class BatchImporter implements Callable<Void> {
             if (checkResult == CHECKMAYBE) {
                 //new behaviour.  If the lookup is provisional, then it will never fill in on insufficient information
 
-                if (cell.getImmutableImportHeading().provisional) return false;
+                //if (cell.getImmutableImportHeading().provisional) return false;
                 provisional = true;//applies to the next condition only
             } else {
                 provisional = false;
@@ -868,7 +868,9 @@ public class BatchImporter implements Callable<Void> {
             int fieldNo = compositeIndexResolver.getColumnIndexForHeading(condition.substring(m.start() + 1, m.end() - 1));
             if (fieldNo >= 0) {
                 ImportCellWithHeading cell = lineToLoad.get(fieldNo);
+
                 // If it's not resolved no problem, this will be called again if further adjustments are made later
+                //NO - stop looking this time, as the field may be wrongly categorised.
                 conditionValue = cell.getLineValue();
             }
              constants.add(conditionValue);//note that a null here means that the field does not exist, so the result may be 'maybe'
