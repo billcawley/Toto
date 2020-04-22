@@ -174,7 +174,7 @@ public class PendingUploadController {
                 }
                 String month;
                 String importVersion;
-                String[] fileSplit = mainFileName.split(" ");
+                String[] fileSplit = mainFileName.replace("  ", " ").split(" "); // make double spaces be like single spaces for the purposes of parsing basic info
                 String password = null; // password for excel files
 
                 if (fileSplit.length < 3) {
