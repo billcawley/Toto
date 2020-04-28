@@ -188,13 +188,15 @@ public class ReportService {
                                                     if (useSavedValuesOnFormulae && !cellForDisplay.getIgnored()) { // override formula from DB, only if not ignored
                                                         sCell.setNumberValue(cellForDisplay.getDoubleValue());
                                                     } else { // the formula overrode the DB, get the value ready of saving if the user wants that
-                                                        cellForDisplay.setNewDoubleValue(sCell.getNumberValue()); // should flag as changed
+                                                        // this code for string date setting was below but makes no sense if the number is set also so put it in here. Either or.
+                                                        if (sCell.getCellStyle().getDataFormat().toLowerCase().contains("m") && cellForDisplay.getStringValue().length() == 0) {
+                                                            if (sCell.getNumberValue() > 0) {
+                                                                cellForDisplay.setNewStringValue(df.format(DateUtils.getLocalDateTimeFromDate(sCell.getDateValue())));//set a string value as our date for saving purposes
+                                                            }
+                                                        } else {
+                                                            cellForDisplay.setNewDoubleValue(sCell.getNumberValue()); // should flag as changed
+                                                        }
                                                         showSave = true;
-                                                    }
-                                                }
-                                                if (sCell.getCellStyle().getDataFormat().toLowerCase().contains("m") && cellForDisplay.getStringValue().length() == 0) {
-                                                    if (sCell.getNumberValue() > 0) {
-                                                        cellForDisplay.setNewStringValue(df.format(DateUtils.getLocalDateTimeFromDate(sCell.getDateValue())));//set a string value as our date for saving purposes
                                                     }
                                                 }
                                             } else if (sCell.getFormulaResultType() == SCell.CellType.STRING) {
