@@ -26,6 +26,15 @@ class NameEditFunctions {
         if (setFormula.startsWith("findduplicates")) {
             return findDuplicateNames(azquoMemoryDBConnection, setFormula);
         }
+// todo, finish and make it work
+/*        if (setFormula.startsWith("remove")) {
+            setFormula = setFormula.substring("remove".length()).trim();
+            if (setFormula.indexOf(" from ") > 0){
+                String parent = setFormula.substring(0, setFormula.indexOf(" from "));
+                String childToRemove = setFormula.substring(setFormula.indexOf(" from ") + " from ".length()).trim();
+            }
+//            return findDuplicateNames(azquoMemoryDBConnection, setFormula);
+        }*/
         if (setFormula.startsWith("zap ")) {
             Collection<Name> names;
             try {

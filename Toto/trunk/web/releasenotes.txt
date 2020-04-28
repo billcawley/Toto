@@ -1,3 +1,13 @@
+21-04-20
+
+Further importer work. Uploaded files list neatened.
+
+XLSX
+
+ASSliptype to be Binding Authority
+
+BB304140 importer work
+
 16-04-20
 
 Various bug fixes and work on the importer for Oilfields and BB304140.
