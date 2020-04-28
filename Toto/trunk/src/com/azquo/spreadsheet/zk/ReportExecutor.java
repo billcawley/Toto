@@ -941,6 +941,7 @@ public class ReportExecutor {
                             }
                             // do we want the ability to have duplicates, in this case for Deduction. SO call them deduction-1,them deduction-2 etc then zap the -1,-2 etc after the document is built
                             NodeList nodeList = doc.getElementsByTagName("*");
+                            List<Node> toZap = new ArrayList<>();
                             for (int i = 0; i < nodeList.getLength(); i++) {
                                 Node node = nodeList.item(i);
                                 if (node.getNodeType() == Node.ELEMENT_NODE) {
@@ -960,13 +961,17 @@ public class ReportExecutor {
                                                 }
                                             }
                                         }
+                                        // can't do this here with the index for loop . . .
                                         if (empty) {
-                                            node.getParentNode().removeChild(node); // reasonable syntax??
+                                            toZap.add(node);
                                         } else {
                                             doc.renameNode(node, null, node.getNodeName().substring(0, node.getNodeName().indexOf("-")));
                                         }
                                     }
                                 }
+                            }
+                            for (Node node : toZap){
+                                node.getParentNode().removeChild(node); // reasonable syntax??
                             }
                             DOMSource source = new DOMSource(doc);
                             BufferedWriter bufferedWriter = Files.newBufferedWriter(azquoTempDir.resolve(fileName));

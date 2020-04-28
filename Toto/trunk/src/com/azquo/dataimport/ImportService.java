@@ -771,35 +771,36 @@ public final class ImportService {
         String importVersion = uploadedFile.getParameter(IMPORTVERSION);
         if (!templateName.toLowerCase().startsWith("sets") && !importTemplateUsedAlready) {
             ImportTemplateData importTemplateData = getImportTemplateForUploadedFile(loggedInUser, uploadedFile, templateCache);
-            if (importTemplateData != null && importVersion == null) {
-                // so, if there is no import version set can we derive it from the name?
-                List<List<String>> fivl = sheetInfo(importTemplateData, "Filename Import Version Lookup");
-                if (fivl != null){
-                    boolean scanning = false;
-                    rows : for (List<String> row : fivl) {
-                        String firstCellValue = null;
-                        for (String cellValue : row) {
-                            if (!cellValue.isEmpty()) {
-                                if (firstCellValue == null) {
-                                    firstCellValue = cellValue;
-                                } else {
-                                    if (scanning){
-                                        for (int i = uploadedFile.getFileNames().size() - 1; i >= 0; i--){
-                                            if (uploadedFile.getFileNames().get(i).toLowerCase().startsWith(firstCellValue.toLowerCase())){
-                                                importVersion = cellValue;
-                                                break rows;
+            if (importTemplateData != null) {
+                if (importVersion == null){
+                    // so, if there is no import version set can we derive it from the name?
+                    List<List<String>> fivl = sheetInfo(importTemplateData, "Filename Import Version Lookup");
+                    if (fivl != null){
+                        boolean scanning = false;
+                        rows : for (List<String> row : fivl) {
+                            String firstCellValue = null;
+                            for (String cellValue : row) {
+                                if (!cellValue.isEmpty()) {
+                                    if (firstCellValue == null) {
+                                        firstCellValue = cellValue;
+                                    } else {
+                                        if (scanning){
+                                            for (int i = uploadedFile.getFileNames().size() - 1; i >= 0; i--){
+                                                if (uploadedFile.getFileNames().get(i).toLowerCase().startsWith(firstCellValue.toLowerCase())){
+                                                    importVersion = cellValue;
+                                                    break rows;
+                                                }
                                             }
                                         }
                                     }
                                 }
                             }
-                        }
-                        if ("startswith".equalsIgnoreCase(firstCellValue)) {
-                            scanning = true;
+                            if ("startswith".equalsIgnoreCase(firstCellValue)) {
+                                scanning = true;
+                            }
                         }
                     }
                 }
-
                 // ok let's check here for the old style of import template as used by Ben Jones
                 Map<String, String> templateParameters = new HashMap<>(); // things like pre processor, file encoding etc
                 List<List<String>> standardHeadings = new ArrayList<>();
