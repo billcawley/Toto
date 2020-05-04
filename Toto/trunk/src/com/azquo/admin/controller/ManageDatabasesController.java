@@ -146,6 +146,7 @@ public class ManageDatabasesController {
             , @RequestParam(value = "pendingUploadSearch", required = false) String pendingUploadSearch
             , @RequestParam(value = "deleteTemplateId", required = false) String deleteTemplateId
             , @RequestParam(value = "templateassign", required = false) String templateassign
+            , @RequestParam(value = "withautos", required = false) String withautos
     ) {
         // I assume secure until we move to proper spring security
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
@@ -239,7 +240,7 @@ public class ManageDatabasesController {
             if (allServers.size() == 1) {
                 model.put("serverList", false);
             }
-            List<UploadRecord.UploadRecordForDisplay> uploadRecordsForDisplayForBusiness = AdminService.getUploadRecordsForDisplayForBusinessWithBasicSecurity(loggedInUser, fileSearch);
+            List<UploadRecord.UploadRecordForDisplay> uploadRecordsForDisplayForBusiness = AdminService.getUploadRecordsForDisplayForBusinessWithBasicSecurity(loggedInUser, fileSearch, "true".equalsIgnoreCase(withautos));
             if (uploadRecordsForDisplayForBusiness != null) {
                 if ("database".equals(sort)) {
                     uploadRecordsForDisplayForBusiness.sort(Comparator.comparing(UploadRecord.UploadRecordForDisplay::getDatabaseName));
@@ -453,7 +454,7 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
             }
             // todo factor
             model.put("lastSelected", request.getSession().getAttribute("lastSelected"));
-            model.put("uploads", AdminService.getUploadRecordsForDisplayForBusinessWithBasicSecurity(loggedInUser, null));
+            model.put("uploads", AdminService.getUploadRecordsForDisplayForBusinessWithBasicSecurity(loggedInUser, null, false));
             model.put("pendinguploads", AdminService.getPendingUploadsForDisplayForBusinessWithBasicSecurity(loggedInUser, null, request.getParameter("allteams") != null, request.getParameter("uploadedreports") != null));
             model.put("developer", loggedInUser.getUser().isDeveloper());
             model.put("importTemplates", ImportTemplateDAO.findForBusinessId(loggedInUser.getUser().getBusinessId()));

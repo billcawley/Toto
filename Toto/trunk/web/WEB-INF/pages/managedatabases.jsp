@@ -108,10 +108,7 @@ Created by IntelliJ IDEA.
                     </td>
                     <td>Count</td>
                     <td>File Type</td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
+                    <td colspan="4"><a href="/api/ManageDatabases?withautos=true" class="button small" title="Show Automated Uploads">Show Automated Uploads</a></td>
                 </tr>
                 </thead>
                 <tbody>

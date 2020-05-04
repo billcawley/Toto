@@ -300,9 +300,9 @@ this may now not work at all, perhaps delete?
         return toReturn;
     }
 
-    public static List<UploadRecord.UploadRecordForDisplay> getUploadRecordsForDisplayForBusinessWithBasicSecurity(final LoggedInUser loggedInUser, String fileSearch) {
+    public static List<UploadRecord.UploadRecordForDisplay> getUploadRecordsForDisplayForBusinessWithBasicSecurity(final LoggedInUser loggedInUser, String fileSearch, boolean withAutos) {
         if (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()) {
-            List<UploadRecord> uploadRecords = UploadRecordDAO.findForBusinessId(loggedInUser.getUser().getBusinessId()); // limited to 10k for the mo
+            List<UploadRecord> uploadRecords = UploadRecordDAO.findForBusinessId(loggedInUser.getUser().getBusinessId(), withAutos); // limited to 10k for the mo
             List<UploadRecord.UploadRecordForDisplay> uploadRecordsForDisplay = new ArrayList<>();
             int count = 0;
             for (UploadRecord uploadRecord : uploadRecords) {

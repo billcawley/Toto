@@ -1,3 +1,15 @@
+28-04-20
+
+allow double spaces in the pending upload name ( still parse month etc under those circumstances)
+
+Importer can try to lookup the version from the file name
+
+XMl feed bug fix for over two deductions
+
+XLSX
+
+Various Master Coastal and OilFields work
+
 21-04-20
 
 Further importer work. Uploaded files list neatened.

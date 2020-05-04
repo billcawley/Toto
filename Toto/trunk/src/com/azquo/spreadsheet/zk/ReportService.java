@@ -189,14 +189,18 @@ public class ReportService {
                                                         sCell.setNumberValue(cellForDisplay.getDoubleValue());
                                                     } else { // the formula overrode the DB, get the value ready of saving if the user wants that
                                                         // this code for string date setting was below but makes no sense if the number is set also so put it in here. Either or.
-                                                        if (sCell.getCellStyle().getDataFormat().toLowerCase().contains("m") && cellForDisplay.getStringValue().length() == 0) {
+                                                        if (sCell.getCellStyle().getDataFormat().toLowerCase().contains("m")) {
                                                             if (sCell.getNumberValue() > 0) {
-                                                                cellForDisplay.setNewStringValue(df.format(DateUtils.getLocalDateTimeFromDate(sCell.getDateValue())));//set a string value as our date for saving purposes
+                                                                String dateValue = df.format(DateUtils.getLocalDateTimeFromDate(sCell.getDateValue()));
+                                                                if (!cellForDisplay.getStringValue().equals(dateValue)){
+                                                                    cellForDisplay.setNewStringValue(dateValue);//set a string value as our date for saving purposes
+                                                                    showSave = true;
+                                                                }
                                                             }
                                                         } else {
                                                             cellForDisplay.setNewDoubleValue(sCell.getNumberValue()); // should flag as changed
+                                                            showSave = true;
                                                         }
-                                                        showSave = true;
                                                     }
                                                 }
                                             } else if (sCell.getFormulaResultType() == SCell.CellType.STRING) {
