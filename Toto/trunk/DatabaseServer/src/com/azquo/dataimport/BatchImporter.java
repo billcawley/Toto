@@ -9,7 +9,11 @@ import com.azquo.memorydb.service.NameService;
 import com.azquo.memorydb.service.ValueService;
 import net.objecthunter.exp4j.Expression;
 import net.objecthunter.exp4j.ExpressionBuilder;
+import org.apache.commons.lang.math.NumberUtils;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
+import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.*;
 import java.util.concurrent.Callable;
@@ -27,6 +31,12 @@ import java.util.regex.Pattern;
  */
 public class BatchImporter implements Callable<Void> {
 
+
+    private static final int CHECKTRUE = 1;
+    private static final int CHECKFALSE = 0;
+    private static final int CHECKMAYBE = 2;
+    private static final String PROVISIONAL = "***";
+
     private final AzquoMemoryDBConnection azquoMemoryDBConnection;
     private final List<LineDataWithLineNumber> dataToLoad;
     private final Map<String, Name> namesFoundCache;
@@ -35,10 +45,12 @@ public class BatchImporter implements Callable<Void> {
     private final AtomicInteger noLinesRejected;
     private final boolean clearData;
     private final CompositeIndexResolver compositeIndexResolver;
-    private static final int CHECKTRUE = 1;
-    private static final int CHECKFALSE = 0;
-    private static final int CHECKMAYBE = 2;
-    private static final String PROVISIONAL = "***";
+
+    // excel evaluation bits
+    private final Workbook wb;
+    private final Cell excelCell;
+    private final FormulaEvaluator formulaEvaluator;
+
 
     BatchImporter(AzquoMemoryDBConnection azquoMemoryDBConnection
             , List<LineDataWithLineNumber> dataToLoad
@@ -56,6 +68,11 @@ public class BatchImporter implements Callable<Void> {
         this.noLinesRejected = noLinesRejected;
         this.clearData = clearData;
         this.compositeIndexResolver = compositeIndexResolver;
+
+
+        wb = new XSSFWorkbook();
+        excelCell = wb.createSheet("new sheet").createRow(0).createCell(0);
+        formulaEvaluator = wb.getCreationHelper().createFormulaEvaluator();
     }
 
     private static final char CONSTANTMARKER = '!';
@@ -134,6 +151,11 @@ public class BatchImporter implements Callable<Void> {
             }
         }
         azquoMemoryDBConnection.addToUserLogNoException("..Batch finishing : " + DecimalFormat.getInstance().format(dataToLoad.size()) + " imported.", true);
+        try {
+            wb.close(); // do I need to do this if it's just in memory?
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         return null;
     }
 
@@ -161,7 +183,7 @@ public class BatchImporter implements Callable<Void> {
                             compositionPattern = cell.getLineValue();
                         }
                         compositionPattern = compositionPattern.replace("LINENO", importLine + "");
-                        if (compositionPattern.toLowerCase().startsWith("if(")) {
+                        if (!cell.getImmutableImportHeading().compositionXL && compositionPattern.toLowerCase().startsWith("if(")) {
                             if (resolveIf(cell, compositionPattern, cells)) {
                                 adjusted = true;
                             }
@@ -525,7 +547,7 @@ public class BatchImporter implements Callable<Void> {
                     int start = headingEnd + 3;
                     headingEnd = compositionPattern.indexOf("`", start);
                     nameAttribute = compositionPattern.substring(start, headingEnd);
-                } else { // either parse simple functions or do name attribute, can't do both
+                } else if (!cell.getImmutableImportHeading().compositionXL) { // either parse simple functions or do name attribute, can't do both. Don't do function resolution here if we're using Excel later
                     // fairly standard replace name of column with column value but with string manipulation left right mid
                     // checking for things like right(A Column Name, 5). Mid has two numbers.
                     // note that len(another column name) is supported too so you can reference the length of other cells, stringTerm does this
@@ -613,6 +635,9 @@ public class BatchImporter implements Callable<Void> {
                             }
                         }
                         // now replace and move the marker to the next possible place
+                        if (cell.getImmutableImportHeading().compositionXL && !NumberUtils.isNumber(sourceVal)){
+                            sourceVal = "\"" + sourceVal + "\"";// Excel likes its string literlas with quotes
+                        }
                         compositionPattern = compositionPattern.replace(compositionPattern.substring(headingMarker, headingEnd + 1), sourceVal);
                         headingMarker = headingMarker + sourceVal.length() - 1;//is increased before two lines below
                         if (doubleQuotes) headingMarker++;
@@ -641,6 +666,14 @@ public class BatchImporter implements Callable<Void> {
                 // As WFC pointed out one could perhaps precompile the polish notation so it's not resolved on every cell of the column but I'm not bothered at the moment
                 compositionPattern = roundoff(e.evaluate()); // roundoff probably still required
             } catch (Exception ignored) { // following the previous convention we'll just fail silently
+            }
+        }
+        if (cell.getImmutableImportHeading().compositionXL){ // it's an excel formula that needs resolving
+            excelCell.setCellFormula(compositionPattern);
+            formulaEvaluator.clearAllCachedResultValues();
+            compositionPattern = formulaEvaluator.evaluate(excelCell).formatAsString();
+            if (compositionPattern.startsWith("\"") && compositionPattern.endsWith("\"")){
+                compositionPattern = compositionPattern.substring(1, compositionPattern.length() - 1);
             }
         }
         return compositionPattern;
@@ -1150,4 +1183,5 @@ public class BatchImporter implements Callable<Void> {
         }
         return languages;
     }
+
 }

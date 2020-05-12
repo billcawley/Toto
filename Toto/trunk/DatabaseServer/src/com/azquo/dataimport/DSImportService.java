@@ -304,6 +304,7 @@ public class DSImportService {
                             so a problem in here is a heading config problem I think rather than a data problem */
                                 if (!headingToAdd.toLowerCase().contains(HeadingReader.DEFAULT)
                                         && !leftOver.getHeading().toLowerCase().contains(HeadingReader.COMPOSITION)
+                                        && !leftOver.getHeading().toLowerCase().contains(HeadingReader.COMPOSITIONXL)
                                         && !leftOver.getHeading().toLowerCase().contains(HeadingReader.LOOKUP)
                                         && uploadedFile.getParameter(clauses[0].trim().toLowerCase()) == null
                                 ) {
@@ -594,6 +595,7 @@ public class DSImportService {
                 || heading.startsWith(HeadingReader.PEERS)
                 || heading.startsWith(HeadingReader.LOCAL)
                 || heading.startsWith(HeadingReader.COMPOSITION)
+                || heading.startsWith(HeadingReader.COMPOSITIONXL)
                 || heading.startsWith(HeadingReader.IGNORE)
                 || heading.startsWith(HeadingReader.DEFAULT)
                 || heading.startsWith(HeadingReader.NONZERO)

@@ -54,6 +54,7 @@ Attributes of the names in other cells can be referenced also
     */
 
     static final String COMPOSITION = "composition";
+    static final String COMPOSITIONXL = "compositionxl";
     // shorthand for parent of/child of/exclusive, see comments below where it's used
     static final String CLASSIFICATION = "classification";
     static final String DEFAULT = "default";
@@ -278,6 +279,7 @@ Attributes of the names in other cells can be referenced also
         clauseCounts.computeIfAbsent("heading - " + firstWord, t-> new AtomicInteger()).incrementAndGet();
         if (clause.length() == firstWord.length()
                 && !firstWord.equals(COMPOSITION)
+                && !firstWord.equals(COMPOSITIONXL)
                 && !firstWord.equals(LOCAL)
                 && !firstWord.equals(REQUIRED)
                 && !firstWord.equals(NONZERO)
@@ -337,10 +339,12 @@ Attributes of the names in other cells can be referenced also
             case ONLY:
                 heading.only = result;
                 break;
+            case COMPOSITIONXL:// use excel formulae
+                heading.compositionXL = true;
             case DEFAULT: // default = composition in now but we'll leave the syntax support in
             case COMPOSITION:// combine more than one column
                 // EFC 03/04/20 relevant for straight defaults (e.g. saying 25% for the whole column) though it does look a little hacky
-                if (result.endsWith("%")) {
+                if (result.endsWith("%") && !heading.compositionXL) { // don't do the hack on XL mode
                     try {
                         double d = Double.parseDouble(result.substring(0, result.length() - 1)) / 100;
                         result = d + "";
