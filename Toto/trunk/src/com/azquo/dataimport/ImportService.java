@@ -373,7 +373,9 @@ public final class ImportService {
                 try {
                     book = new HSSFWorkbook(new FileInputStream(new File(uploadedFile.getPath())));
                 } catch (Exception problem) {
-                    try {
+                    throw new Exception("unable to open irregular xls file, please resave as an xlsx file");
+                    // unfortunately this libreoffice conversion is not reliable
+                    /*try {
                         String libreofficecommand = SystemUtils.IS_OS_WINDOWS ? "C:\\Program Files\\LibreOffice\\program\\soffice.exe" : "libreoffice";
                         logger.warn("POI can't read that " + uploadedFile.getPath() + ", attempting conversion with libre office . . .");
                         logger.warn(libreofficecommand + " --headless --convert-to xlsx:\"Calc MS Excel 2007 XML\" --outdir \"" + Paths.get(uploadedFile.getPath()).getParent().toString() + "\" \"" + uploadedFile.getPath() + "\"");
@@ -395,7 +397,7 @@ public final class ImportService {
                         book = new XSSFWorkbook(opcPackage);
                     } catch (Exception e) {
                         throw new Exception("unable to fix irregular xls file");
-                    }
+                    }*/
                 }
             }
         } catch (Exception e) {
