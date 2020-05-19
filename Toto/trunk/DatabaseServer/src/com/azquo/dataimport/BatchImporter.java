@@ -635,8 +635,8 @@ public class BatchImporter implements Callable<Void> {
                             }
                         }
                         // now replace and move the marker to the next possible place
-                        if (cell.getImmutableImportHeading().compositionXL && !NumberUtils.isNumber(sourceVal)){
-                            sourceVal = "\"" + sourceVal + "\"";// Excel likes its string literlas with quotes
+                        if (cell.getImmutableImportHeading().compositionXL && !NumberUtils.isNumber(sourceVal) && sourceVal.length() > 0){
+                            sourceVal = "\"" + sourceVal + "\"";// Excel likes its string literals with quotes
                         }
                         compositionPattern = compositionPattern.replace(compositionPattern.substring(headingMarker, headingEnd + 1), sourceVal);
                         headingMarker = headingMarker + sourceVal.length() - 1;//is increased before two lines below
