@@ -347,8 +347,9 @@ public class ReportService {
             if (redundant.length() > 0) {
                 error += " - " + redundant;
             }
-
-            loggedInUser.userLog("Save : " + (onlineReport != null ? onlineReport.getReportName() : ""));
+            Map<String, String> params = new HashMap<>();
+            params.put("Report", (onlineReport != null ? onlineReport.getReportName() : ""));
+            loggedInUser.userLog("Save",  params);
             ReportExecutor.runExecuteCommandForBook(book, ReportRenderer.FOLLOWON); // that SHOULD do it. It will fail gracefully in the vast majority of times there is no followon
             // unlock here makes sense think, if duff save probably leave locked
             SpreadsheetService.unlockData(loggedInUser);

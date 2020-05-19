@@ -195,7 +195,9 @@ public class ZKComposer extends SelectorComposer<Component> {
                         && BookUtils.getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn(), event.getSheet(), ReportRenderer.AZDATAREGION).size() == 0) {
                     // therefore it's a choice change, set the choice and the reload flag and break
                     String choice = name.getName().substring(0, name.getName().length() - "Chosen".length());
-                    loggedInUser.userLog("Choice select : " + choice + "," + chosen);
+                    Map<String, String> params = new HashMap<>();
+                    params.put(choice, chosen);
+                    loggedInUser.userLog("Choice select", params);
                     SpreadsheetService.setUserChoice(loggedInUser, choice, chosen.trim());
                     reload = true;
                     break;
@@ -562,7 +564,9 @@ public class ZKComposer extends SelectorComposer<Component> {
                         childIds.add(Integer.parseInt(listItem.getValue())); // should never fail on the parse
                         selectedForLog.append(listItem.getLabel() + " ");
                     }
-                    loggedInUser.userLog("Multi select : " + selectionName + "," + selectedForLog.toString());
+                    Map<String, String> params = new HashMap<>();
+                    params.put(selectionName, selectedForLog.toString());
+                    loggedInUser.userLog("Multi select", params);
                     // new logic - set the first as the vanilla choice
                     if (!selectedItems.isEmpty()){
                         Listitem first = selectedItems.iterator().next();
@@ -584,7 +588,9 @@ public class ZKComposer extends SelectorComposer<Component> {
                         childIds.add(Integer.parseInt(listItem.getValue())); // should never fail on the parse
                         selectedForLog.append(listItem.getLabel() + " ");
                     }
-                    loggedInUser.userLog("Multi select : " + selectionName + "," + selectedForLog.toString());
+                    Map<String, String> params = new HashMap<>();
+                    params.put(selectionName, selectedForLog.toString());
+                    loggedInUser.userLog("Multi select", params);
                     // new logic - set the first as the vanilla choice
                     if (!selectedItems.isEmpty()){
                         Listitem first = selectedItems.iterator().next();

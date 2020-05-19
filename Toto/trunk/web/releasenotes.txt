@@ -1,3 +1,23 @@
+12-05-20
+
+Hide automated uploads unless the user clicks to see them
+
+Excel notation supported on composition. Use compositionxl
+
+XLSX
+
+Master Coastal Adjustments including commission
+
+Lots of Oilfield work approaching initial Prod deployment
+
+Make AllRisks Claims validation more tolerant of blank dates
+
+Update AllRisks Claims Previously Paid
+
+Lineage XML adjustments
+
+Allrisks Claims Latest Fees and Latest Res adjustments
+
 28-04-20
 
 allow double spaces in the pending upload name ( still parse month etc under those circumstances)

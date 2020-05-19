@@ -135,6 +135,14 @@ public class StandardDAO {
                 ",`parameters` text COLLATE utf8_unicode_ci DEFAULT NULL,PRIMARY KEY (`id`)) ENGINE=InnoDB AUTO_INCREMENT=120 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;", new HashMap<>());
 
 
+        if (jdbcTemplate.queryForObject("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS\n" +
+                "    WHERE\n" +
+                "      (table_name = \"user_activity\")\n" +
+                "      AND (table_schema = \"master_db\")\n" +
+                "      AND (column_name = \"ts\")", new HashMap<>(), Integer.class) == 0){
+            jdbcTemplate.update("ALTER TABLE `master_db`.`user_activity` ADD `ts` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ;", new HashMap<>());
+        }
+
         StandardDAO.jdbcTemplate = jdbcTemplate; // I realise that this is "naughty", see comments at the top.
     }
 

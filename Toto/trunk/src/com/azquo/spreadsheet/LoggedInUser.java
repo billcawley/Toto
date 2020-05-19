@@ -7,6 +7,8 @@ import com.azquo.admin.database.DatabaseDAO;
 import com.azquo.admin.database.DatabaseServer;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
+import com.azquo.admin.onlinereport.UserActivity;
+import com.azquo.admin.onlinereport.UserActivityDAO;
 import com.azquo.admin.user.User;
 import com.azquo.dataimport.ImportService;
 import com.azquo.memorydb.DatabaseAccessToken;
@@ -246,13 +248,18 @@ public class LoggedInUser implements Serializable {
     }
 
     // just pop it open and closed, should be a little cleaner
-    public void userLog(String message) {
+/*    public void userLog(String message) {
         try {
             Files.write(Paths.get(SpreadsheetService.getHomeDir() + ImportService.dbPath + userLogsPath + user.getEmail() + "-" + df.format(LocalDateTime.now()) + ".log"),
                     (df2.format(LocalDateTime.now()) + "\t" + message + "\n").getBytes(Charset.forName("UTF-8")), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }*/
+
+    public void userLog(String activity, Map<String, String> parameters) {
+        UserActivity ua = new UserActivity(0, user.getBusinessId(), user.getEmail(), activity, parameters);
+        UserActivityDAO.store(ua);
     }
 
     @Override

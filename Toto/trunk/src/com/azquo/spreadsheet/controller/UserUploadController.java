@@ -244,7 +244,9 @@ public class UserUploadController {
                             } else {
                                 HttpSession session = request.getSession();
                                 String fileName = uploadFile.getOriginalFilename();
-                                loggedInUser.userLog("Upload file : " + fileName);
+                                Map<String, String> params = new HashMap<>();
+                                params.put("File", fileName);
+                                loggedInUser.userLog("Upload file", params);
                                 // always move uplaoded files now, they'll need to be transferred to the DB server after code split
                                 File moved = new File(SpreadsheetService.getHomeDir() + "/temp/" + System.currentTimeMillis() + fileName); // timestamp to stop file overwriting
                                 uploadFile.transferTo(moved);

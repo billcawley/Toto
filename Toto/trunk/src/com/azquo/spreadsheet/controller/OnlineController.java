@@ -331,7 +331,9 @@ public class OnlineController {
                                     }
                                     // todo, lock check here like execute
                                     session.setAttribute(finalReportId + EXECUTE_FLAG, executeName); // pretty crude but should do it
-                                    loggedInUser.userLog(loggedInUser.getUser().getEmail() + " Load report : " + finalOnlineReport.getReportName());
+                                    Map<String, String> params = new HashMap<>();
+                                    params.put("Report", finalOnlineReport.getReportName());
+                                    loggedInUser.userLog(" Load report", params);
                                     session.setAttribute(finalReportId + SAVE_FLAG, ReportRenderer.populateBook(book, valueId));
                                 } else {
                                     loggedInUser.setImageStoreName(""); // legacy thing to stop null pointer, should be zapped after getting rid of aspose

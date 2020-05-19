@@ -1,5 +1,6 @@
 package com.azquo.admin.onlinereport;
 
+import com.azquo.DateUtils;
 import com.azquo.StringLiterals;
 import com.azquo.admin.StandardDAO;
 import org.springframework.jdbc.core.RowMapper;
@@ -19,6 +20,7 @@ import java.util.Map;
  ",`user` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL" +
  ",`activity` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL" +
  ",`parameters` text COLLATE utf8_unicode_ci  *
+ ts timestamp added
  *
  */
 public final class UserActivityDAO {
@@ -31,6 +33,7 @@ public final class UserActivityDAO {
     private static final String USER = "user";
     private static final String ACTIVITY = "activity";
     private static final String PARAMETERS = "parameters";
+    private static final String TS = "ts";
 
     public static Map<String, Object> getColumnNameValueMap(final UserActivity userActivity) {
         final Map<String, Object> toReturn = new HashMap<>();
@@ -50,6 +53,7 @@ public final class UserActivityDAO {
             stringBuilder.append(entry.getValue());
         }
         toReturn.put(PARAMETERS, stringBuilder.toString());
+        // note - I'm not going to save the timestamp for the mo, let Mysql deal with it . . .
         return toReturn;
     }
 
@@ -69,6 +73,7 @@ public final class UserActivityDAO {
                         , rs.getString(USER)
                         , rs.getString(ACTIVITY)
                         , parameters
+                        , DateUtils.getLocalDateTimeFromDate(rs.getTimestamp(TS))
                 );
             } catch (Exception e) {
                 e.printStackTrace();

@@ -110,7 +110,9 @@ public class ZKSpreadsheetCommandController {
                         }
                         int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
                         OnlineReport onlineReport = OnlineReportDAO.findById(reportId);
-                        loggedInUser.userLog("Save : " + onlineReport.getReportName() + ".xlsx");
+                        Map<String, String> params = new HashMap<>();
+                        params.put("File", onlineReport.getReportName() + ".xlsx");
+                        loggedInUser.userLog("Save", params);
                         Filedownload.save(new AMedia(onlineReport.getReportName().replace("/", "").replace("\\", "") + ".xlsx", null, null, file, true));
                         Clients.clearBusy();
                     }
@@ -121,7 +123,9 @@ public class ZKSpreadsheetCommandController {
                             Book book = ss.getBook();
                             int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
                             OnlineReport onlineReport = OnlineReportDAO.findById(reportId);
-                            loggedInUser.userLog("SaveTemplate : " + onlineReport.getReportName());
+                            Map<String, String> params = new HashMap<>();
+                            params.put("Report", onlineReport.getReportName() + ".xlsx");
+                            loggedInUser.userLog("SaveTemplate", params);
                             String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + onlineReport.getFilenameForDisk(); // as in the online controller
                             try (FileOutputStream fos = new FileOutputStream(bookPath)) {
                                 // overwrite the report, should work
@@ -174,7 +178,9 @@ public class ZKSpreadsheetCommandController {
                         }
                         File file = File.createTempFile(Long.toString(System.currentTimeMillis()), "temp");
                         exporter.export(book, file);
-                        loggedInUser.userLog("Download PDF : " + ss.getSelectedSheetName() + ".pdf");
+                        Map<String, String> params = new HashMap<>();
+                        params.put("PDF", ss.getSelectedSheetName() + ".pdf");
+                        loggedInUser.userLog("Download", params);
                         Filedownload.save(new AMedia(ss.getSelectedSheetName() + ".pdf", "pdf", "application/pdf", file, true));
                     }
                     // actually pattern . . .

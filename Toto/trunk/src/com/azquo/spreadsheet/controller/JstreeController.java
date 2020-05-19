@@ -20,7 +20,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Copyright (C) 2016 Azquo Ltd.
@@ -100,7 +102,9 @@ public class JstreeController {
                         }
                     }
                     if (op.equals("new")) { // on the first call to the tree it will be new
-                        loggedInUser.userLog("Inspect DB : " + database);
+                        Map<String, String> params = new HashMap<>();
+                        params.put("Database", database);
+                        loggedInUser.userLog("Inspect", params);
                         int rootId = 0;
                         if (currentNode != null && currentNode.nameId != -1) { // but on new current will be null
                             rootId = currentNode.nameId;
