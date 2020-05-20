@@ -38,6 +38,7 @@ public final class User extends StandardEntity implements Serializable {
     private int reportId;
     private String selections;
     private String team;
+    private String recentActivity = ""; // for display purposes on manage users. Don't think it's a big problem being here . . .
 
     public User(int id, LocalDateTime endDate, int businessId, String email, String name, String status, String password, String salt, String createdBy, int databaseId, int reportId, String selections, String team) {
         this.id = id;
@@ -175,6 +176,14 @@ public final class User extends StandardEntity implements Serializable {
 
     public void setTeam(String team) {
         this.team = team;
+    }
+
+    public String getRecentActivity() {
+        return recentActivity;
+    }
+
+    public void setRecentActivity(String recentActivity) {
+        this.recentActivity = recentActivity;
     }
 
     @Override

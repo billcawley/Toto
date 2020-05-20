@@ -8,6 +8,7 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 
 import java.sql.ResultSet;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -88,6 +89,20 @@ public final class UserActivityDAO {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(BUSINESSID, businessId);
         return StandardDAO.findOneWithWhereSQLAndParameters(" WHERE " + BUSINESSID + " = :" + BUSINESSID, TABLENAME, userActivityRowMapper, namedParams);
+    }
+
+    public static UserActivity findMostRecentForUserAndBusinessId(final int businessId, String user) {
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(BUSINESSID, businessId);
+        namedParams.addValue(USER, user);
+        return StandardDAO.findOneWithWhereSQLAndParameters(" WHERE " + BUSINESSID + " = :" + BUSINESSID + " and " + USER + " = :" + USER + " order by ts desc", TABLENAME, userActivityRowMapper, namedParams);
+    }
+
+    public static List<UserActivity> findForUserAndBusinessId(final int businessId, String user, int from, int limit) {
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(BUSINESSID, businessId);
+        namedParams.addValue(USER, user);
+        return StandardDAO.findListWithWhereSQLAndParameters(" WHERE " + BUSINESSID + " = :" + BUSINESSID + " and " + USER + " = :" + USER + " order by ts desc", TABLENAME, userActivityRowMapper, namedParams, from, limit);
     }
 
     public static void removeById(UserActivity comment) {

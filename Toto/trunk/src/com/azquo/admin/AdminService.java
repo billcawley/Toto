@@ -212,13 +212,22 @@ this may now not work at all, perhaps delete?
     }
 
     public static List<User> getUserListForBusinessWithBasicSecurity(final LoggedInUser loggedInUser) {
+        List<User> toReturn = null;
         if (loggedInUser.getUser().isAdministrator()) {
-            return UserDAO.findForBusinessId(loggedInUser.getUser().getBusinessId());
+            toReturn = UserDAO.findForBusinessId(loggedInUser.getUser().getBusinessId());
         }
         if (loggedInUser.getUser().isMaster()) {
-            return UserDAO.findForBusinessIdAndCreatedBy(loggedInUser.getUser().getBusinessId(), loggedInUser.getUser().getEmail());
+            toReturn = UserDAO.findForBusinessIdAndCreatedBy(loggedInUser.getUser().getBusinessId(), loggedInUser.getUser().getEmail());
         }
-        return null;
+        if (toReturn != null){
+            for (User u : toReturn){
+                UserActivity ua = UserActivityDAO.findMostRecentForUserAndBusinessId(loggedInUser.getUser().getBusinessId(), u.getEmail());
+                if (ua != null){
+                    u.setRecentActivity(ua.getTimeStamp().toString());
+                }
+            }
+        }
+        return toReturn;
     }
 
     public static List<OnlineReport> getReportList(final LoggedInUser loggedInUser, boolean webFormat) {

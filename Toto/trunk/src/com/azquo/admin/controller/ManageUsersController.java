@@ -9,6 +9,8 @@ import com.azquo.admin.database.DatabaseServer;
 import com.azquo.admin.database.DatabaseServerDAO;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
+import com.azquo.admin.onlinereport.UserActivity;
+import com.azquo.admin.onlinereport.UserActivityDAO;
 import com.azquo.admin.user.User;
 import com.azquo.admin.user.UserDAO;
 import com.azquo.dataimport.ImportService;
@@ -61,6 +63,7 @@ public class ManageUsersController {
     public String handleRequest(ModelMap model, HttpServletRequest request
             , @RequestParam(value = "editId", required = false) String editId
             , @RequestParam(value = "deleteId", required = false) String deleteId
+            , @RequestParam(value = "recentId", required = false) String recentId
             , @RequestParam(value = "endDate", required = false) String endDate
             , @RequestParam(value = "email", required = false) String email
             , @RequestParam(value = "name", required = false) String name
@@ -81,6 +84,13 @@ public class ManageUsersController {
             if (NumberUtils.isDigits(deleteId)) {
                 AdminService.deleteUserById(Integer.parseInt(deleteId));
             }
+            if (NumberUtils.isDigits(recentId)) {
+                User u = AdminService.getUserById(Integer.parseInt(recentId), loggedInUser);
+                List<UserActivity> userActivities = UserActivityDAO.findForUserAndBusinessId(loggedInUser.getUser().getBusinessId(), u.getEmail(), 0, 500);
+                model.put("useractivities", userActivities);
+                return "recentuseractivity";
+            }
+
             if (NumberUtils.isDigits(editId)) {
                 User toEdit = AdminService.getUserById(Integer.parseInt(editId), loggedInUser);
                 // ok check to see if data was submitted

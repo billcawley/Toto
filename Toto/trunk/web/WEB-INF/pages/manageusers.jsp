@@ -18,6 +18,7 @@
 				<td>Start Menu</td>
 				<td>Database</td>
 				<td>Selections</td>
+				<td>Recent Activity</td>
 				<td width="30"></td>
 				<td width="30"></td>
 				<!-- password and salt pointless here -->
@@ -36,6 +37,7 @@
 				<td>${user.reportName}</td>
 				<td>${user.databaseName}</td>
 				<td>${user.selections}</td>
+				<td><a href="/api/ManageUsers?recentId=${user.id}">${user.recentActivity}</a></td>
 				<td><a href="/api/ManageUsers?deleteId=${user.id}" title="Delete ${user.name}" onclick="return confirm('Are you sure?')" class="button small alt fa fa-trash"></a></td>
 				<td><a href="/api/ManageUsers?editId=${user.id}" title="Edit ${user.name}" class="button small fa fa-edit"></a></td>
 			</tr>

@@ -1,5 +1,6 @@
 package com.azquo.admin.onlinereport;
 
+import com.azquo.StringLiterals;
 import com.azquo.admin.StandardEntity;
 
 import java.time.LocalDateTime;
@@ -47,6 +48,19 @@ public final class UserActivity extends StandardEntity {
 
     public Map<String, String> getParameters() {
         return parameters;
+    }
+
+    public String getParametersForDisplay() {
+        StringBuilder stringBuilder = new StringBuilder();
+        for (Map.Entry<String, String> entry : parameters.entrySet()) {
+            if (stringBuilder.length() > 0) {
+                stringBuilder.append("<br/>");
+            }
+            stringBuilder.append(entry.getKey());
+            stringBuilder.append(", ");
+            stringBuilder.append(entry.getValue());
+        }
+        return stringBuilder.toString();
     }
 
     public void setParameter(String key, String value){
