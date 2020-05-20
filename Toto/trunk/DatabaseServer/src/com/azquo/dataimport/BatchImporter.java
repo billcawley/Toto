@@ -634,9 +634,19 @@ public class BatchImporter implements Callable<Void> {
                                 }
                             }
                         }
+                        // todo more work on this, blank string?
                         // now replace and move the marker to the next possible place
                         if (cell.getImmutableImportHeading().compositionXL && !NumberUtils.isNumber(sourceVal) && sourceVal.length() > 0){
                             sourceVal = "\"" + sourceVal + "\"";// Excel likes its string literals with quotes
+                        }
+                        // trying to helpfully deal with empty string literals. This may need tweaking over time
+                        if (sourceVal.isEmpty() &&
+                                (compositionPattern.contains("+")
+                                        ||compositionPattern.contains("-")
+                                        ||compositionPattern.contains("/")
+                                        ||compositionPattern.contains("*")
+                                        )){
+                            sourceVal = "0";
                         }
                         compositionPattern = compositionPattern.replace(compositionPattern.substring(headingMarker, headingEnd + 1), sourceVal);
                         headingMarker = headingMarker + sourceVal.length() - 1;//is increased before two lines below
