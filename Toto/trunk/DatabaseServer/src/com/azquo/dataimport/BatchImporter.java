@@ -10,6 +10,10 @@ import com.azquo.memorydb.service.ValueService;
 import net.objecthunter.exp4j.Expression;
 import net.objecthunter.exp4j.ExpressionBuilder;
 import org.apache.commons.lang.math.NumberUtils;
+import org.apache.poi.ss.formula.functions.FreeRefFunction;
+import org.apache.poi.ss.formula.udf.AggregatingUDFFinder;
+import org.apache.poi.ss.formula.udf.DefaultUDFFinder;
+import org.apache.poi.ss.formula.udf.UDFFinder;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
@@ -71,6 +75,13 @@ public class BatchImporter implements Callable<Void> {
 
 
         wb = new XSSFWorkbook();
+        // fragment to add our function(s)
+        String[] functionNames = { "standardise" } ;
+        FreeRefFunction[] functionImpls = { new POIStandardise() } ;
+        UDFFinder udfs = new DefaultUDFFinder( functionNames, functionImpls ) ;
+        UDFFinder udfToolpack = new AggregatingUDFFinder( udfs ) ;
+
+        wb.addToolPack(udfToolpack);
         excelCell = wb.createSheet("new sheet").createRow(0).createCell(0);
         formulaEvaluator = wb.getCreationHelper().createFormulaEvaluator();
     }

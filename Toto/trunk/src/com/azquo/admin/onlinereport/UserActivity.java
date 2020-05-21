@@ -52,13 +52,21 @@ public final class UserActivity extends StandardEntity {
 
     public String getParametersForDisplay() {
         StringBuilder stringBuilder = new StringBuilder();
+        String link = null;
         for (Map.Entry<String, String> entry : parameters.entrySet()) {
-            if (stringBuilder.length() > 0) {
-                stringBuilder.append("<br/>");
+            if (entry.getKey().equalsIgnoreCase("link")){
+                link = entry.getValue();
+            } else {
+                if (stringBuilder.length() > 0) {
+                    stringBuilder.append("<br/>");
+                }
+                stringBuilder.append(entry.getKey());
+                stringBuilder.append(", ");
+                stringBuilder.append(entry.getValue());
             }
-            stringBuilder.append(entry.getKey());
-            stringBuilder.append(", ");
-            stringBuilder.append(entry.getValue());
+        }
+        if (link != null){
+            return "<a href=\"" + link + "\">" + stringBuilder.toString() + "</a>";
         }
         return stringBuilder.toString();
     }

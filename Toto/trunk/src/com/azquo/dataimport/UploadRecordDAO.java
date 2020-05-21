@@ -83,6 +83,12 @@ public final class UploadRecordDAO {
         }
     }
 
+    public static UploadRecord findMostRecentForUser(final int userId) {
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(USERID, userId);
+        return StandardDAO.findOneWithWhereSQLAndParameters("WHERE " + USERID + " = :" + USERID + " order by `id` desc", TABLENAME, uploadRowMapper, namedParams);
+    }
+
     public static List<UploadRecord> findForDatabaseIdWithFileType(final int databaseId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(DATABASEID, databaseId);
