@@ -88,6 +88,7 @@ public class ManageUsersController {
                 User u = AdminService.getUserById(Integer.parseInt(recentId), loggedInUser);
                 List<UserActivity> userActivities = UserActivityDAO.findForUserAndBusinessId(loggedInUser.getUser().getBusinessId(), u.getEmail(), 0, 500);
                 model.put("useractivities", userActivities);
+                AdminService.setBanner(model, loggedInUser);
                 return "recentuseractivity";
             }
 
