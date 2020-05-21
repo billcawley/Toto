@@ -268,10 +268,11 @@ public class DSImportService {
                         // ok the last of the headings that has a value is the one we want for the fileHeadingCompositeLookup
                         // going to allow composite lookup on all headings whether they're used as a proper heading or not
                         Collections.reverse(headingsForAColumn);
-                        for (String heading : headingsForAColumn) { if (!heading.isEmpty()) {
-                                fileHeadingCompositeLookup.put(heading.toUpperCase(), headings.size() - 1);
-                                break;
-                            }
+                        for (String heading : headingsForAColumn) {
+                            if (!heading.isEmpty()) {
+                            fileHeadingCompositeLookup.put(heading.toUpperCase(), headings.size() - 1);
+                            break;
+                        }
                         }
                         currentFileCol++;
                     }
@@ -290,7 +291,7 @@ public class DSImportService {
                             if (toCheckAgainstTopHeadings.contains(";")) {
                                 toCheckAgainstTopHeadings = toCheckAgainstTopHeadings.substring(0, toCheckAgainstTopHeadings.indexOf(";"));
                                 if (topHeadingsValues.containsKey(toCheckAgainstTopHeadings) && !"FOUND".equals(topHeadingsValues.get(toCheckAgainstTopHeadings))) {
-                                    headingToAdd = leftOver.getHeading() + ";default " + topHeadingsValues.remove(toCheckAgainstTopHeadings);
+                                    headingToAdd = leftOver.getHeading() + ";"+ HeadingReader.COMPOSITION + " " + topHeadingsValues.remove(toCheckAgainstTopHeadings);
                                 }
                             }
                         }
@@ -369,7 +370,8 @@ public class DSImportService {
             // now add top headings that have a value
             for (String headingName : topHeadingsValues.keySet()) {
                 if (!topHeadingsValues.get(headingName).equals("FOUND")) {
-                    headings.add(headingName + ";default " + topHeadingsValues.get(headingName));
+                    //THE ROUTINE THAT CONVERTS '.;' TO ';attribute' DOES NOT RECOGNISE 'default' but does recognise 'composition'
+                    headings.add(headingName + ";" + HeadingReader.COMPOSITION + " " + topHeadingsValues.get(headingName));
                 }
             }
 
