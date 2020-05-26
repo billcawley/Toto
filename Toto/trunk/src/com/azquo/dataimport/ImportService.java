@@ -787,10 +787,22 @@ public final class ImportService {
                                         firstCellValue = cellValue;
                                     } else {
                                         if (scanning){
-                                            for (int i = uploadedFile.getFileNames().size() - 1; i >= 0; i--){
-                                                if (uploadedFile.getFileNames().get(i).toLowerCase().startsWith(firstCellValue.toLowerCase())){
+                                            //amended by WFC to look for particular sheets in a book (book!sheet) and 'contains' - using '*' as wildcard
+                                            if (firstCellValue.contains("!")){
+                                                int bookEnd = firstCellValue.indexOf("!");
+                                                String bookName = firstCellValue.substring(0,bookEnd).replace("'","");
+                                                String sheetName = firstCellValue.substring(bookEnd + 1).replace("'","");
+                                                if (uploadedFile.getFileNames().size()==2 && nameCompare(uploadedFile.getFileNames().get(1), sheetName) && nameCompare(uploadedFile.getFileNames().get(0), bookName)){
                                                     importVersion = cellValue;
                                                     break rows;
+
+                                                }
+                                            }else {
+                                                for (int i = uploadedFile.getFileNames().size() - 1; i >= 0; i--) {
+                                                    if (nameCompare(uploadedFile.getFileNames().get(i),firstCellValue)) {
+                                                        importVersion = cellValue;
+                                                        break rows;
+                                                    }
                                                 }
                                             }
                                         }
@@ -1206,6 +1218,21 @@ public final class ImportService {
             }
         }
         return null;
+    }
+
+
+    private static boolean nameCompare(String target, String source){
+        if (source.startsWith("*")){
+            if (target.toLowerCase().contains(source.toLowerCase().substring(1))) {
+                return true;
+             }
+        }else {
+            if (target.toLowerCase().startsWith(source.toLowerCase())) {
+                return true;
+            }
+        }
+        return false;
+
     }
 
     enum ImportSheetScanMode {OFF, TOPHEADINGS, CUSTOMHEADINGS, STANDARDHEADINGS, PARAMETERS}
