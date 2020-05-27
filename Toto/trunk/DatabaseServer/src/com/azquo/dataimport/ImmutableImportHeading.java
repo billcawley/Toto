@@ -41,13 +41,14 @@ public class ImmutableImportHeading {
     final boolean optional;
     final String splitChar;
     final int localParentIndex;
-    Map<Name, List<DictionaryTerm>> dictionaryMap;
-    Map<String, List<String>> synonyms;
+    final Map<Name, List<DictionaryTerm>> dictionaryMap;
+    final Map<String, List<String>> synonyms;
      // not being used, perhaps zap
-    boolean replace;
-    boolean provisional;
-    int lookupParentIndex;
-    String lookupString;
+     final boolean replace;
+    final boolean provisional;
+    final int lookupParentIndex;
+    final String lookupString;
+    final boolean clearData;
 
 
     ImmutableImportHeading(MutableImportHeading mutableImportHeading) {
@@ -81,6 +82,7 @@ public class ImmutableImportHeading {
         this.provisional = mutableImportHeading.provisional;
         this.lookupParentIndex = mutableImportHeading.lookupParentIndex;
         this.lookupString = mutableImportHeading.lookupString;
+        this.clearData = mutableImportHeading.cleardata;
     }
 
     public static class DictionaryTerm {

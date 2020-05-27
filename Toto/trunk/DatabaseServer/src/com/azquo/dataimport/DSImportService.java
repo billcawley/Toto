@@ -606,6 +606,7 @@ public class DSImportService {
                 || heading.startsWith(HeadingReader.ONLY)
                 || heading.startsWith(HeadingReader.EXCLUSIVE)
                 || heading.startsWith(HeadingReader.CLEAR)
+                || heading.startsWith(HeadingReader.CLEARDATA)
                 || heading.startsWith(HeadingReader.COMMENT)
                 || heading.startsWith(HeadingReader.EXISTING)
                 || heading.startsWith(HeadingReader.OPTIONAL)

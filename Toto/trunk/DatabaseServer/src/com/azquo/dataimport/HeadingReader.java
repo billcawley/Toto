@@ -70,6 +70,7 @@ Attributes of the names in other cells can be referenced also
     static final String IGNORE = "ignore";
     static final String EXCLUSIVE = "exclusive";
     static final String CLEAR = "clear";
+    static final String CLEARDATA = "cleardata"; // like the file parameter but for a column
     static final String COMMENT = "comment";
     static final String EXISTING = "existing"; // only works in in context of child of - reject the line if not existing
     static final String OPTIONAL = "optional"; // only works in in context of child of - carry on with blank if not existing
@@ -286,6 +287,7 @@ Attributes of the names in other cells can be referenced also
                 && !firstWord.equals(REMOVESPACES)
                 && !firstWord.equals(EXCLUSIVE)
                 && !firstWord.equals(CLEAR)
+                && !firstWord.equals(CLEARDATA)
                 && !firstWord.equals(REPLACE)
                 && !firstWord.equals(EXISTING)
                 && !firstWord.equals(OPTIONAL)
@@ -416,6 +418,9 @@ Attributes of the names in other cells can be referenced also
                         name.setChildrenWillBePersisted(Collections.emptyList(), azquoMemoryDBConnection);
                     }
                 }
+                break;
+            case CLEARDATA:
+                heading.cleardata = true;
                 break;
             case DICTIONARY:
                 if (heading.parentNames == null || heading.parentNames.size() == 0) {

@@ -111,4 +111,7 @@ class MutableImportHeading {
     //See BatchImporter checkLookup, this can get complex
     int lookupParentIndex = -1;
     String lookupString = null;
+    // same as the option that can be put in for a whole file but now for a column
+    boolean cleardata = false;
+
 }

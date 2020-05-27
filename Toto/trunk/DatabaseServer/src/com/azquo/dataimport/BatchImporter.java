@@ -1111,7 +1111,7 @@ public class BatchImporter implements Callable<Void> {
                 if (!(cell.getImmutableImportHeading().blankZeroes && isZero(value)) && value.trim().length() > 0) { // don't store if blank or zero and blank zeroes
                     // finally store our value and names for it - only increment the value count if something actually changed in the DB
                     ValueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, value, namesForValue, cell.getImmutableImportHeading().replace);
-                } else if (clearData) { // only kicks in if the cell is blank
+                } else if (clearData || cell.getImmutableImportHeading().clearData) { // only kicks in if the cell is blank
                     // EFC extracted out of value service, cleaner out here
                     final List<Value> existingValues = ValueService.findForNames(namesForValue);
                     if (existingValues.size() == 1) {

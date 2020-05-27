@@ -33,6 +33,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -467,35 +468,47 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
     // factored due to pending uploads, need to check the factoring after the prototype is done
     private static String handleImport(LoggedInUser loggedInUser, HttpSession session, ModelMap model, final MultipartFile[] uploadFiles) {
         // need to add in code similar to report loading to give feedback on imports
-        new Thread(() -> {
-            List<UploadedFile> toSetInSession = new ArrayList<>();
-            for (MultipartFile uploadFile : uploadFiles){
+        final List<UploadedFile> uploadedFiles = new ArrayList<>();
+        UploadedFile uf = null;
+        try {
+            // have to move the files first or it seems they get lost
+            for (MultipartFile uploadFile : uploadFiles) {
                 String fileName = uploadFile.getOriginalFilename();
                 // always move uploaded files now, they'll need to be transferred to the DB server after code split
                 File moved = new File(SpreadsheetService.getHomeDir() + "/temp/" + System.currentTimeMillis() + fileName); // timestamp to stop file overwriting
                 final Map<String, String> fileNameParams = new HashMap<>();
                 ImportService.addFileNameParametersToMap(fileName, fileNameParams);
                 String filePath = moved.getAbsolutePath();
-                UploadedFile uploadedFile = new UploadedFile(filePath, Collections.singletonList(fileName), fileNameParams, false, false);
-                // so in here the new thread we set up the loading as it was originally before and then redirect the user straight to the logging page
-                try {
-                    uploadFile.transferTo(moved);
-                    toSetInSession.addAll(ImportService.importTheFile(loggedInUser, uploadedFile, session, null));
-                    Map<String, String> params = new HashMap<>();
-                    params.put("File", fileName);
-                    UploadRecord mostRecentForUser = UploadRecordDAO.findMostRecentForUser(loggedInUser.getUser().getId());
-                    if (mostRecentForUser != null){
-                        params.put("Link", "/api/DownloadFile?uploadRecordId=" + mostRecentForUser.getId());
-                    }
-                    loggedInUser.userLog("Upload file", params);
-                } catch (Exception e) {// this would stop the files in their tracks, I think that's right given that the type of error that would hit here is serious?
-                    e.printStackTrace();
-                    uploadedFile.setError(CommonReportUtils.getErrorFromServerSideException(e));
-                    toSetInSession.add(uploadedFile);
-                }
+                uf = new UploadedFile(filePath, Collections.singletonList(fileName), fileNameParams, false, false);
+                uploadFile.transferTo(moved);
+                uploadedFiles.add(uf);
             }
-            session.setAttribute(ManageDatabasesController.IMPORTRESULT, toSetInSession);
-        }).start();
+            new Thread(() -> {
+                List<UploadedFile> toSetInSession = new ArrayList<>();
+                for (UploadedFile uploadedFile : uploadedFiles){
+                    // so in here the new thread we set up the loading as it was originally before and then redirect the user straight to the logging page
+                    try {
+                        toSetInSession.addAll(ImportService.importTheFile(loggedInUser, uploadedFile, session, null));
+                        Map<String, String> params = new HashMap<>();
+                        params.put("File", uploadedFile.getFileName());
+                        UploadRecord mostRecentForUser = UploadRecordDAO.findMostRecentForUser(loggedInUser.getUser().getId());
+                        if (mostRecentForUser != null){
+                            params.put("Link", "/api/DownloadFile?uploadRecordId=" + mostRecentForUser.getId());
+                        }
+                        loggedInUser.userLog("Upload file", params);
+                    } catch (Exception e) {// this would stop the files in their tracks, I think that's right given that the type of error that would hit here is serious?
+                        e.printStackTrace();
+                        uploadedFile.setError(CommonReportUtils.getErrorFromServerSideException(e));
+                        toSetInSession.add(uploadedFile);
+                    }
+                }
+                session.setAttribute(ManageDatabasesController.IMPORTRESULT, toSetInSession);
+            }).start();
+        } catch (IOException e) {
+            uf.setError(CommonReportUtils.getErrorFromServerSideException(e));
+            session.setAttribute(ManageDatabasesController.IMPORTRESULT, Collections.singleton(uf));
+        }
+
         // edd pasting in here to get the banner colour working
         Business business = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
         String bannerColor = business.getBannerColor();
