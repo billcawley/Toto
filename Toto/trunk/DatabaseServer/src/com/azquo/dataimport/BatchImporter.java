@@ -675,7 +675,7 @@ public class BatchImporter implements Callable<Void> {
             headingMarker = compositionPattern.indexOf("`", ++headingMarker);
         }
         // not quite sure where this would have come from but we need to zap it before checking calc
-        if (compositionPattern.startsWith("\"") && compositionPattern.endsWith("\"")) {
+        if (!cell.getImmutableImportHeading().compositionXL && compositionPattern.startsWith("\"") && compositionPattern.endsWith("\"")) {
             compositionPattern = compositionPattern.substring(1, compositionPattern.length() - 1);
         }
         // after all the column/string function/attribute is done see if there's a numeric option
