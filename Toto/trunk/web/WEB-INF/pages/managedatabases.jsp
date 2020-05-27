@@ -73,8 +73,7 @@ Created by IntelliJ IDEA.
                     <table>
                         <tbody>
                         <tr>
-                            <td><label for="uploadFile">Upload File:</label> <input id="uploadFile" type="file"
-                                                                                    name="uploadFile"></td>
+                            <td><label for="uploadFile">Upload Files:</label> <input id="uploadFile" type="file" name="uploadFile" multiple></td>
                             <td>
                                 <label for="uploadDatabase">Database:</label>
                                 <select name="database" id="uploadDatabase">

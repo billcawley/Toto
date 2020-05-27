@@ -839,7 +839,35 @@ public class ReportExecutor {
                                     book.getInternalBook().setAttribute(OnlineController.LOGGED_IN_USER, loggedInUser);
                                     book.getInternalBook().setAttribute(OnlineController.REPORT_ID, onlineReport.getId());
                                     StringBuilder errorLog = new StringBuilder();
+                                    // so there's an issue here - if the choices are duff and the report is empty we don't want to send the file, we want to warn the user
+                                    // the easiest way is probably to check the sent cells in logged in user
                                     ReportRenderer.populateBook(book, 0, false, true, errorLog); // note true at the end here - keep on logging so users can see changes as they happen
+                                    List<CellsAndHeadingsForDisplay> sentForReport = loggedInUser.getSentForReport(onlineReport.getId());
+                                    boolean hasData = false;
+                                    outer : for (CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay : sentForReport){
+                                        if (cellsAndHeadingsForDisplay.getData().size() > 1){
+                                            hasData = true;
+                                            break;
+                                        } else if (cellsAndHeadingsForDisplay.getData().size() == 1){// it seems permute may put in a blank row
+                                            for (CellForDisplay cellForDisplay : cellsAndHeadingsForDisplay.getData().get(0)){
+                                                if (!cellForDisplay.getStringValue().isEmpty() || cellForDisplay.getDoubleValue() > 0){
+                                                    hasData = true;
+                                                    break outer;
+                                                }
+                                            }
+                                        }
+                                    }
+                                    if (!hasData){ // then we stop, no data means the sheet is probably incorrectly configured
+                                        // todo - how to flag this up properly?
+                                        System.out.println("*******");
+                                        System.out.println("*******");
+                                        System.out.println("*******");
+                                        System.out.println("*******Empty sheet being generated. Skipping XML.");
+                                        System.out.println("*******");
+                                        System.out.println("*******");
+                                        System.out.println("*******");
+                                        continue;
+                                    }
                                     try {
                                         for (SName sName : book.getInternalBook().getNames()) {
                                             if (sName.getRefersToSheetName() != null) {

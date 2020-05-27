@@ -287,7 +287,7 @@ public class ManageDatabasesController {
     @RequestMapping(headers = "content-type=multipart/*")
     public String handleRequest(ModelMap model, HttpServletRequest request
             , @RequestParam(value = "database", required = false) String database
-            , @RequestParam(value = "uploadFile", required = false) MultipartFile uploadFile
+            , @RequestParam(value = "uploadFile", required = false) MultipartFile[] uploadFiles
             , @RequestParam(value = "backup", required = false) String backup
             , @RequestParam(value = "template", required = false) String template
             , @RequestParam(value = "team", required = false) String team
@@ -297,17 +297,21 @@ public class ManageDatabasesController {
         }
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
         // I assume secure until we move to proper spring security
+        MultipartFile uploadFile = null;
+        if (uploadFiles.length > 0){
+            uploadFile = uploadFiles[0];
+        }
         if (loggedInUser != null && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
             if (uploadFile != null && !uploadFile.isEmpty()) {
                 try {
-                    if ("true".equals(backup)) {
+                    if ("true".equals(backup) && uploadFiles.length == 1) {
                         // duplicated fragment, could maybe be factored
                         String fileName = uploadFile.getOriginalFilename();
                         File moved = new File(SpreadsheetService.getHomeDir() + "/temp/" + System.currentTimeMillis() + fileName); // timestamp to stop file overwriting
                         uploadFile.transferTo(moved);
                         model.put("error", BackupService.loadBackup(loggedInUser, moved, database));
                         // todo - "import templates" being detected internally also - do we need to do it here? I guess it's to do with user feedback
-                    } else if ("true".equals(template) || uploadFile.getOriginalFilename().toLowerCase().contains("import templates")) {
+                    } else if ("true".equals(template) || uploadFile.getOriginalFilename().toLowerCase().contains("import templates") && uploadFiles.length == 1) {
                         try {
                             String fileName = uploadFile.getOriginalFilename();
                             File moved = new File(SpreadsheetService.getHomeDir() + "/temp/" + System.currentTimeMillis() + fileName); // timestamp to stop file overwriting
@@ -393,7 +397,7 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
                             // data file or zip. New thing - it can be added to the Pending Uploads manually
                             // todo - security hole here, a developer could hack a file onto a different db by manually editing the database parameter. . .
                             LoginService.switchDatabase(loggedInUser, database); // could be blank now
-                            if (team != null) { // Pending uploads
+                            if (team != null && uploadFiles.length == 1) { // Pending uploads
                                 String targetPath = SpreadsheetService.getFilesToImportDir() + "/tagged/" + System.currentTimeMillis() + uploadFile.getOriginalFilename();
                                 uploadFile.transferTo(new File(targetPath));
                                 // ok it's moved now make the pending upload record
@@ -409,13 +413,9 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
                                         , null, team);
                                 PendingUploadDAO.store(pendingUpload);
 
-                            } else {
+                            } else { // a straight upload, this is the only place that can deal with multiple files being selected for upload
                                 HttpSession session = request.getSession();
-                                String fileName = uploadFile.getOriginalFilename();
-                                // always move uploaded files now, they'll need to be transferred to the DB server after code split
-                                File moved = new File(SpreadsheetService.getHomeDir() + "/temp/" + System.currentTimeMillis() + fileName); // timestamp to stop file overwriting
-                                uploadFile.transferTo(moved);
-                                return handleImport(loggedInUser, session, model, fileName, moved.getAbsolutePath());
+                                return handleImport(loggedInUser, session, model, uploadFiles);
                             }
                         }
                     }
@@ -465,28 +465,36 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
     }
 
     // factored due to pending uploads, need to check the factoring after the prototype is done
-    private static String handleImport(LoggedInUser loggedInUser, HttpSession session, ModelMap model, String fileName, String filePath) {
+    private static String handleImport(LoggedInUser loggedInUser, HttpSession session, ModelMap model, final MultipartFile[] uploadFiles) {
         // need to add in code similar to report loading to give feedback on imports
-        final Map<String, String> fileNameParams = new HashMap<>();
-        ImportService.addFileNameParametersToMap(fileName, fileNameParams);
-        UploadedFile uploadedFile = new UploadedFile(filePath, Collections.singletonList(fileName), fileNameParams, false, false);
         new Thread(() -> {
-            // so in here the new thread we set up the loading as it was originally before and then redirect the user straight to the logging page
-            try {
-                session.setAttribute(ManageDatabasesController.IMPORTRESULT, ImportService.importTheFile(loggedInUser, uploadedFile, session, null));
-                Map<String, String> params = new HashMap<>();
-                params.put("File", fileName);
-                UploadRecord mostRecentForUser = UploadRecordDAO.findMostRecentForUser(loggedInUser.getUser().getId());
-                if (mostRecentForUser != null){
-                    params.put("Link", "/api/DownloadFile?uploadRecordId=" + mostRecentForUser.getId());
+            List<UploadedFile> toSetInSession = new ArrayList<>();
+            for (MultipartFile uploadFile : uploadFiles){
+                String fileName = uploadFile.getOriginalFilename();
+                // always move uploaded files now, they'll need to be transferred to the DB server after code split
+                File moved = new File(SpreadsheetService.getHomeDir() + "/temp/" + System.currentTimeMillis() + fileName); // timestamp to stop file overwriting
+                final Map<String, String> fileNameParams = new HashMap<>();
+                ImportService.addFileNameParametersToMap(fileName, fileNameParams);
+                String filePath = moved.getAbsolutePath();
+                UploadedFile uploadedFile = new UploadedFile(filePath, Collections.singletonList(fileName), fileNameParams, false, false);
+                // so in here the new thread we set up the loading as it was originally before and then redirect the user straight to the logging page
+                try {
+                    uploadFile.transferTo(moved);
+                    toSetInSession.addAll(ImportService.importTheFile(loggedInUser, uploadedFile, session, null));
+                    Map<String, String> params = new HashMap<>();
+                    params.put("File", fileName);
+                    UploadRecord mostRecentForUser = UploadRecordDAO.findMostRecentForUser(loggedInUser.getUser().getId());
+                    if (mostRecentForUser != null){
+                        params.put("Link", "/api/DownloadFile?uploadRecordId=" + mostRecentForUser.getId());
+                    }
+                    loggedInUser.userLog("Upload file", params);
+                } catch (Exception e) {// this would stop the files in their tracks, I think that's right given that the type of error that would hit here is serious?
+                    e.printStackTrace();
+                    uploadedFile.setError(CommonReportUtils.getErrorFromServerSideException(e));
+                    toSetInSession.add(uploadedFile);
                 }
-                loggedInUser.userLog("Upload file", params);
-
-            } catch (Exception e) {
-                e.printStackTrace();
-                uploadedFile.setError(CommonReportUtils.getErrorFromServerSideException(e));
-                session.setAttribute(ManageDatabasesController.IMPORTRESULT, Collections.singletonList(uploadedFile));
             }
+            session.setAttribute(ManageDatabasesController.IMPORTRESULT, toSetInSession);
         }).start();
         // edd pasting in here to get the banner colour working
         Business business = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());

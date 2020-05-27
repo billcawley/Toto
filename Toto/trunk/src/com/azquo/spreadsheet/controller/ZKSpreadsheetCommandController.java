@@ -212,6 +212,9 @@ public class ZKSpreadsheetCommandController {
                                 Clients.clearBusy();
                                 Clients.alert(fileCount + " files created in " + SpreadsheetService.getXMLDestinationDir());
                             }
+                        } else {
+                            Clients.clearBusy();
+                            Clients.alert("No files created. Either no lines were selected or lines with empty supporting reports were skipped.");
                         }
                     }
 
