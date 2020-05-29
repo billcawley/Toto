@@ -854,12 +854,13 @@ public final class ImportService {
                     // this *should* be single line, used to lookup information from the Import Model
                     List<List<String>> headingReference = new ArrayList<>();
                     // a "version" - similar to the import model parsing but the headings can be multi level (double decker) and not at the top thus allowing for top headings
-                    if (hasImportModel) {
+                    AreaReference headingsName = importTemplateData.getName(AZHEADINGS + importVersion);
+                    if (hasImportModel || headingsName != null) {
                         template = sheetInfo(importTemplateData, importVersion);
                         if (template != null) {
                             // unlike the "default" mode there can be a named range for the headings here so
-                            AreaReference headingsName = importTemplateData.getName(AZHEADINGS + importVersion);
-                            if (headingsName != null) { // we have to have it or don't bother!
+                              if (headingsName != null) { // we have to have it or don't bother!
+                                uploadedFile.setSkipLines(headingsName.getFirstCell().getRow());
                                 uploadedFile.setSkipLines(headingsName.getFirstCell().getRow());
                                 uploadedFile.setHeadingDepth((headingsName.getLastCell().getRow() - headingsName.getFirstCell().getRow()) + 1);
                                 // parameters and lookups are cumulative, pass through the same maps
@@ -942,18 +943,22 @@ public final class ImportService {
                                 List<String> extraVersionClauses = new ArrayList<>();
                                 // ok now we're going to look for this in the standard headings by the "top" heading
                                 Iterator<List<String>> standardHeadingsIterator = standardHeadings.iterator();
-                                while (standardHeadingsIterator.hasNext()) {
-                                    List<String> standardHeadingsColumn = standardHeadingsIterator.next();
-                                    if (!standardHeadingsColumn.isEmpty() && standardHeadingsColumn.get(0).equalsIgnoreCase(reference)) {
-                                        standardHeadingsIterator.remove(); // later when checking for required we don't want to add any again
-                                        azquoClauses.addAll(standardHeadingsColumn.subList(1, standardHeadingsColumn.size()));
+                                if (hasImportModel) {
+                                    while (standardHeadingsIterator.hasNext()) {
+                                        List<String> standardHeadingsColumn = standardHeadingsIterator.next();
+                                        if (!standardHeadingsColumn.isEmpty() && standardHeadingsColumn.get(0).equalsIgnoreCase(reference)) {
+                                            standardHeadingsIterator.remove(); // later when checking for required we don't want to add any again
+                                            azquoClauses.addAll(standardHeadingsColumn.subList(1, standardHeadingsColumn.size()));
+                                        }
                                     }
-                                }
 
-                                if (azquoClauses.isEmpty()) {
-                                    throw new Exception("On import version sheet " + importVersion + " no headings on Import Model found for " + reference + " - was this referenced twice?");
-                                } else if (headingReference.get(index).size() > 1) { // add the extra ones
-                                    extraVersionClauses.addAll(headingReference.get(index).subList(1, headingReference.get(index).size()));
+                                    if (azquoClauses.isEmpty()) {
+                                        throw new Exception("On import version sheet " + importVersion + " no headings on Import Model found for " + reference + " - was this referenced twice?");
+                                    } else if (headingReference.get(index).size() > 1) { // add the extra ones
+                                        extraVersionClauses.addAll(headingReference.get(index).subList(1, headingReference.get(index).size()));
+                                    }
+                                }else{
+                                    azquoClauses.addAll(headingReference.get(index));
                                 }
                                 StringBuilder azquoHeadingsAsString = new StringBuilder();
                                 for (String clause : azquoClauses) {
@@ -985,7 +990,12 @@ public final class ImportService {
                                 }
                                 // finally get the file headings if applicable
                                 if (versionHeadings.size() > index && !versionHeadings.get(index).isEmpty()) {
-                                    headingsByFileHeadingsWithInterimLookup.put(versionHeadings.get(index), new HeadingWithInterimLookup(azquoHeadingsAsString.toString(), reference));
+                                    HeadingWithInterimLookup existingHeading = headingsByFileHeadingsWithInterimLookup.get(versionHeadings.get(index));
+                                    if (existingHeading!=null){
+                                        existingHeading.setHeading(existingHeading.getHeading()+"-THEN-"+azquoHeadingsAsString.toString());
+                                    }else{
+                                        headingsByFileHeadingsWithInterimLookup.put(versionHeadings.get(index), new HeadingWithInterimLookup(azquoHeadingsAsString.toString(), reference));
+                                    }
                                 } else {
                                     headingsNoFileHeadingsWithInterimLookup.add(new HeadingWithInterimLookup(azquoHeadingsAsString.toString(), reference));
                                 }
