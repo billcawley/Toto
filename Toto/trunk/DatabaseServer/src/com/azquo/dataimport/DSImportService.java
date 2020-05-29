@@ -246,6 +246,20 @@ public class DSImportService {
                             throw new Exception("Unable to find expected headings on the file");
                         }
                     }
+                    if (uploadedFile.getTemplateParameter("inheritheadings")!=null){
+
+                        List<String>lastHeading =  new ArrayList<>();
+                        for (int i =0;i<headingsFromTheFile.size();i++){
+                            List<String>heading = headingsFromTheFile.get(i);
+                            if (heading.size()>0&&heading.size() < lastHeading.size()){
+                                List<String> newHeading = new ArrayList<>();
+                                newHeading.addAll(lastHeading.subList(0,lastHeading.size() - heading.size()));
+                                newHeading.addAll(heading);
+                               headingsFromTheFile.set(i, newHeading);
+                            }
+                            lastHeading = headingsFromTheFile.get(i);
+                        }
+                    }
                     // for feedback to the user
                     uploadedFile.setFileHeadings(headingsFromTheFile);
 
@@ -257,10 +271,22 @@ public class DSImportService {
                     for (List<String> headingsForAColumn : headingsFromTheFile) {// generally headingsForAColumn will just just have one element
                         if (headingsByLookupCopy.get(headingsForAColumn) != null) {
                             lastColumnToActuallyRead = currentFileCol;
-                            HeadingWithInterimLookup removed = headingsByLookupCopy.remove(headingsForAColumn);// take the used one out - after running through the file we need to add the remainder on to the end
-                            headings.add(removed.getHeading());
-                            if (removed.getInterimLookup() != null) {
-                                interimCompositeLookup.put(removed.getInterimLookup().toUpperCase(), headings.size() - 1);
+                            HeadingWithInterimLookup headingFound = headingsByLookupCopy.get(headingsForAColumn);
+                            int multiplePos = 0;
+                            //where a set of headings occurs more than once, the interim lookup (which is also the final lookup) is a string separated by '-THEN-'
+                            if (headingFound.getInterimLookup()!=null){
+                                multiplePos = headingFound.getHeading().indexOf("-THEN-");
+                            }
+                            if (multiplePos > 0){
+                                headings.add(headingFound.getHeading().substring(0,multiplePos));
+                                interimCompositeLookup.put(headingFound.getInterimLookup().toUpperCase(), headings.size()-1);
+                                headingFound.setHeading(headingFound.getHeading().substring(multiplePos + 6));
+                            }else {
+                                HeadingWithInterimLookup removed = headingsByLookupCopy.remove(headingsForAColumn);// take the used one out - after running through the file we need to add the remainder on to the end
+                                headings.add(removed.getHeading());
+                                if (removed.getInterimLookup() != null) {
+                                    interimCompositeLookup.put(removed.getInterimLookup().toUpperCase(), headings.size() - 1);
+                                }
                             }
                         } else {
                             headings.add("");
@@ -270,10 +296,11 @@ public class DSImportService {
                         Collections.reverse(headingsForAColumn);
                         for (String heading : headingsForAColumn) {
                             if (!heading.isEmpty()) {
-                            fileHeadingCompositeLookup.put(heading.toUpperCase(), headings.size() - 1);
-                            break;
+                                fileHeadingCompositeLookup.put(heading.toUpperCase(), headings.size() - 1);
+                                break;
+                            }
                         }
-                        }
+                        Collections.reverse(headingsForAColumn);
                         currentFileCol++;
                     }
                     List<HeadingWithInterimLookup> headingsNoFileHeadingsWithInterimLookup = uploadedFile.getHeadingsNoFileHeadingsWithInterimLookup() != null ? uploadedFile.getHeadingsNoFileHeadingsWithInterimLookup() : new ArrayList<>();
