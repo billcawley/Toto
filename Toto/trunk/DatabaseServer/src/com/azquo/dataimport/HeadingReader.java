@@ -360,7 +360,7 @@ Attributes of the names in other cells can be referenced also
                 String[] ignores = result.split(",");
                 for (String ignore : ignores) {
                     String ignoreItem = ignore.toLowerCase().trim();
-                    if (ignoreItem.equals("{blank")) {
+                    if (ignoreItem.equals("{blank}")) {
                         heading.ignoreList.add("");
                         heading.ignoreList.add("0");
                     } else {
