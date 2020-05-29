@@ -113,8 +113,14 @@ public class BatchImporter implements Callable<Void> {
                             // simple ignore list check
                             if (cell.getImmutableImportHeading().ignoreList != null) {
                                 for (String ignoreItem : cell.getImmutableImportHeading().ignoreList) {
-                                    if (cell.getLineValue().toLowerCase().contains(ignoreItem)) {
-                                        throw new LineRejectionException("ignored");
+                                    if (ignoreItem.length()>6) {//this is a bit dodgy. should start with wildcard
+                                        if (cell.getLineValue().toLowerCase().contains(ignoreItem)) {
+                                              throw new LineRejectionException("ignored");
+                                        }
+                                    }else {
+                                        if (cell.getLineValue().toLowerCase().equals(ignoreItem)) {
+                                            throw new LineRejectionException("ignored");
+                                        }
                                     }
                                 }
                             }
@@ -647,7 +653,7 @@ public class BatchImporter implements Callable<Void> {
                         }
                         // todo more work on this, blank string?
                         // now replace and move the marker to the next possible place
-                        if (cell.getImmutableImportHeading().compositionXL && !NumberUtils.isNumber(sourceVal) && sourceVal.length() > 0){
+                        if (cell.getImmutableImportHeading().compositionXL && !NumberUtils.isNumber(sourceVal)){
                             sourceVal = "\"" + sourceVal + "\"";// Excel likes its string literals with quotes
                         }
                         // trying to helpfully deal with empty string literals. This may need tweaking over time
