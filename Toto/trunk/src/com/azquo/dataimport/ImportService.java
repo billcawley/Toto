@@ -854,13 +854,13 @@ public final class ImportService {
                     // this *should* be single line, used to lookup information from the Import Model
                     List<List<String>> headingReference = new ArrayList<>();
                     // a "version" - similar to the import model parsing but the headings can be multi level (double decker) and not at the top thus allowing for top headings
+                    // unlike the "default" mode there can be a named range for the headings here so
+                    // todo EFC double check logic here for import version without import model
                     AreaReference headingsName = importTemplateData.getName(AZHEADINGS + importVersion);
                     if (hasImportModel || headingsName != null) {
                         template = sheetInfo(importTemplateData, importVersion);
                         if (template != null) {
-                            // unlike the "default" mode there can be a named range for the headings here so
-                              if (headingsName != null) { // we have to have it or don't bother!
-                                uploadedFile.setSkipLines(headingsName.getFirstCell().getRow());
+                            if (headingsName != null) { // we have to have it or don't bother!
                                 uploadedFile.setSkipLines(headingsName.getFirstCell().getRow());
                                 uploadedFile.setHeadingDepth((headingsName.getLastCell().getRow() - headingsName.getFirstCell().getRow()) + 1);
                                 // parameters and lookups are cumulative, pass through the same maps
@@ -943,6 +943,7 @@ public final class ImportService {
                                 List<String> extraVersionClauses = new ArrayList<>();
                                 // ok now we're going to look for this in the standard headings by the "top" heading
                                 Iterator<List<String>> standardHeadingsIterator = standardHeadings.iterator();
+                                // switch now we're allowing an import version to exist without a model. EFC to double check logic - todo
                                 if (hasImportModel) {
                                     while (standardHeadingsIterator.hasNext()) {
                                         List<String> standardHeadingsColumn = standardHeadingsIterator.next();
@@ -990,12 +991,7 @@ public final class ImportService {
                                 }
                                 // finally get the file headings if applicable
                                 if (versionHeadings.size() > index && !versionHeadings.get(index).isEmpty()) {
-                                    HeadingWithInterimLookup existingHeading = headingsByFileHeadingsWithInterimLookup.get(versionHeadings.get(index));
-                                    if (existingHeading!=null){
-                                        existingHeading.setHeading(existingHeading.getHeading()+"-THEN-"+azquoHeadingsAsString.toString());
-                                    }else{
-                                        headingsByFileHeadingsWithInterimLookup.put(versionHeadings.get(index), new HeadingWithInterimLookup(azquoHeadingsAsString.toString(), reference));
-                                    }
+                                    headingsByFileHeadingsWithInterimLookup.put(versionHeadings.get(index), new HeadingWithInterimLookup(azquoHeadingsAsString.toString(), reference));
                                 } else {
                                     headingsNoFileHeadingsWithInterimLookup.add(new HeadingWithInterimLookup(azquoHeadingsAsString.toString(), reference));
                                 }
