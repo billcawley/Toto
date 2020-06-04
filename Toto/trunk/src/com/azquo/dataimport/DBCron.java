@@ -349,175 +349,177 @@ public class DBCron {
     // utr, e5 error description, e6 desc texts
     // e5 all data error
     @Scheduled(cron = "0 */5 * * * *")// 5 minutes?
-    public synchronized static void extractEdBrokingTrackingData() throws Exception {
-        System.out.println("running tracking db update");
-        String transNo = null;// may be added back in as a parameter later
-        String trackingdb = SpreadsheetService.getTrackingDb();
-        String trackingTable = SpreadsheetService.getTrackingTable();
-        if (trackingdb != null && !trackingdb.trim().isEmpty() && trackingTable != null && !trackingTable.trim().isEmpty()) {
-            Path tracking = Paths.get(SpreadsheetService.getHomeDir() + "/temp/tracking");
-            if (!Files.exists(tracking)) {
-                Files.createDirectories(tracking);
-            }
-            int maxKey = 2_200_000;
-            List<Map<String, String>> rows;
-            if (transNo != null){
-                rows = TrackingParser.findForTransactionNo(transNo);
-            } else {
-                try (Stream<Path> list1 = Files.list(tracking)) {
-                    Optional<Path> lastFilePath = list1    // here we get the stream with full directory listing
-                            .filter(f -> !Files.isDirectory(f))  // exclude subdirectories and non xml files from listing
-                            .max(Comparator.comparingLong(f -> f.toFile().lastModified()));  // finally get the last file using simple comparator by lastModified field
-                    if (lastFilePath.isPresent()) {
-                        String fileName = lastFilePath.get().getFileName().toString();
-                        int trackingIndex = fileName.indexOf("tracking");
-                        if (trackingIndex > 0 && NumberUtils.isDigits(fileName.substring(0, trackingIndex))) {
-                            maxKey = Integer.parseInt(fileName.substring(0, trackingIndex));
-                        }
-                    }
+    public void extractEdBrokingTrackingData() throws Exception {
+        synchronized (this) {
+            String transNo = null;// may be added back in as a parameter later
+            String trackingdb = SpreadsheetService.getTrackingDb();
+            String trackingTable = SpreadsheetService.getTrackingTable();
+            if (trackingdb != null && !trackingdb.trim().isEmpty() && trackingTable != null && !trackingTable.trim().isEmpty()) {
+                System.out.println("running tracking db update");
+                Path tracking = Paths.get(SpreadsheetService.getHomeDir() + "/temp/tracking");
+                if (!Files.exists(tracking)) {
+                    Files.createDirectories(tracking);
                 }
-                rows = TrackingParser.findGreaterThan(maxKey);
-            }
-
-            if (!rows.isEmpty()) {
-                // I don't think I can use the other XMl code, too different
-                DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-                final DocumentBuilder builder = factory.newDocumentBuilder();
-                List<Map<String, StringBuilder>> premiumsFilesValues = new ArrayList<>();
-                List<Map<String, StringBuilder>> claimsFilesValues = new ArrayList<>();
-                Collection<String> cheadings = new HashSet<>();
-                Collection<String> pheadings = new HashSet<>();
-                for (Map<String, String> row : rows) {
-                    Map<String, StringBuilder> thisFileValues = new HashMap<>();
-                    for (String col : row.keySet()) {
-                        if (col.equals(TrackingParser.TRACKMESSKEY)) {
-                            int trackMessKey = Integer.parseInt(row.get(col));
-                            if (trackMessKey > maxKey) {
-                                maxKey = trackMessKey;
+                int maxKey = 2_200_000;
+                List<Map<String, String>> rows;
+                if (transNo != null) {
+                    rows = TrackingParser.findForTransactionNo(transNo);
+                } else {
+                    try (Stream<Path> list1 = Files.list(tracking)) {
+                        Optional<Path> lastFilePath = list1    // here we get the stream with full directory listing
+                                .filter(f -> !Files.isDirectory(f))  // exclude subdirectories and non xml files from listing
+                                .max(Comparator.comparingLong(f -> f.toFile().lastModified()));  // finally get the last file using simple comparator by lastModified field
+                        if (lastFilePath.isPresent()) {
+                            String fileName = lastFilePath.get().getFileName().toString();
+                            int trackingIndex = fileName.indexOf("tracking");
+                            if (trackingIndex > 0 && NumberUtils.isDigits(fileName.substring(0, trackingIndex))) {
+                                maxKey = Integer.parseInt(fileName.substring(0, trackingIndex));
                             }
                         }
-                        if (col.equals(TrackingParser.TMXMLDATA)) {
-                            Document xml = builder.parse(new InputSource(new StringReader(row.get(col))));
-                            xml.normalizeDocument();
-                            Element documentElement = xml.getDocumentElement();
-                            for (int index = 0; index < documentElement.getChildNodes().getLength(); index++) {
-                                Node node = documentElement.getChildNodes().item(index);
-                                if (node.hasChildNodes()) {
-                                    if (node.getChildNodes().getLength() > 1) {
-                                        for (int index1 = 0; index1 < node.getChildNodes().getLength(); index1++) {
-                                            Node node1 = node.getChildNodes().item(index1);
-                                            if (!node1.getNodeName().equalsIgnoreCase("#text") && node1.getFirstChild() != null) {
-                                                // I know this is getting convoluted to get three levels down. If it goes one more I'll need a generic solution
-                                                if (node1.getChildNodes().getLength() > 1) {
-                                                    for (int index2 = 0; index2 < node1.getChildNodes().getLength(); index2++) {
-                                                        Node node2 = node1.getChildNodes().item(index2);
-                                                        if (!node2.getNodeName().equalsIgnoreCase("#text") && node2.getFirstChild() != null) {
-                                                            if (thisFileValues.get(node.getNodeName() + "-" + node1.getNodeName() + "-" + node2.getNodeName()) == null){
-                                                                thisFileValues.put(node.getNodeName() + "-" + node1.getNodeName() + "-" + node2.getNodeName(), new StringBuilder(node2.getFirstChild().getNodeValue()));
-                                                            } else {
-                                                                thisFileValues.get(node.getNodeName() + "-" + node1.getNodeName() + "-" + node2.getNodeName()).append("\n").append(node2.getFirstChild().getNodeValue());
+                    }
+                    rows = TrackingParser.findGreaterThan(maxKey);
+                }
+
+                if (!rows.isEmpty()) {
+                    // I don't think I can use the other XMl code, too different
+                    DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+                    final DocumentBuilder builder = factory.newDocumentBuilder();
+                    List<Map<String, StringBuilder>> premiumsFilesValues = new ArrayList<>();
+                    List<Map<String, StringBuilder>> claimsFilesValues = new ArrayList<>();
+                    Collection<String> cheadings = new HashSet<>();
+                    Collection<String> pheadings = new HashSet<>();
+                    for (Map<String, String> row : rows) {
+                        Map<String, StringBuilder> thisFileValues = new HashMap<>();
+                        for (String col : row.keySet()) {
+                            if (col.equals(TrackingParser.TRACKMESSKEY)) {
+                                int trackMessKey = Integer.parseInt(row.get(col));
+                                if (trackMessKey > maxKey) {
+                                    maxKey = trackMessKey;
+                                }
+                            }
+                            if (col.equals(TrackingParser.TMXMLDATA)) {
+                                Document xml = builder.parse(new InputSource(new StringReader(row.get(col))));
+                                xml.normalizeDocument();
+                                Element documentElement = xml.getDocumentElement();
+                                for (int index = 0; index < documentElement.getChildNodes().getLength(); index++) {
+                                    Node node = documentElement.getChildNodes().item(index);
+                                    if (node.hasChildNodes()) {
+                                        if (node.getChildNodes().getLength() > 1) {
+                                            for (int index1 = 0; index1 < node.getChildNodes().getLength(); index1++) {
+                                                Node node1 = node.getChildNodes().item(index1);
+                                                if (!node1.getNodeName().equalsIgnoreCase("#text") && node1.getFirstChild() != null) {
+                                                    // I know this is getting convoluted to get three levels down. If it goes one more I'll need a generic solution
+                                                    if (node1.getChildNodes().getLength() > 1) {
+                                                        for (int index2 = 0; index2 < node1.getChildNodes().getLength(); index2++) {
+                                                            Node node2 = node1.getChildNodes().item(index2);
+                                                            if (!node2.getNodeName().equalsIgnoreCase("#text") && node2.getFirstChild() != null) {
+                                                                if (thisFileValues.get(node.getNodeName() + "-" + node1.getNodeName() + "-" + node2.getNodeName()) == null) {
+                                                                    thisFileValues.put(node.getNodeName() + "-" + node1.getNodeName() + "-" + node2.getNodeName(), new StringBuilder(node2.getFirstChild().getNodeValue()));
+                                                                } else {
+                                                                    thisFileValues.get(node.getNodeName() + "-" + node1.getNodeName() + "-" + node2.getNodeName()).append("\n").append(node2.getFirstChild().getNodeValue());
+                                                                }
                                                             }
                                                         }
-                                                    }
-                                                } else {
-                                                    if (thisFileValues.get(node.getNodeName() + "-" + node1.getNodeName()) == null){
-                                                        thisFileValues.put(node.getNodeName() + "-" + node1.getNodeName(), new StringBuilder(node1.getFirstChild().getNodeValue()));
                                                     } else {
-                                                        thisFileValues.get(node.getNodeName() + "-" + node1.getNodeName()).append("\n").append(node1.getFirstChild().getNodeValue());
+                                                        if (thisFileValues.get(node.getNodeName() + "-" + node1.getNodeName()) == null) {
+                                                            thisFileValues.put(node.getNodeName() + "-" + node1.getNodeName(), new StringBuilder(node1.getFirstChild().getNodeValue()));
+                                                        } else {
+                                                            thisFileValues.get(node.getNodeName() + "-" + node1.getNodeName()).append("\n").append(node1.getFirstChild().getNodeValue());
+                                                        }
                                                     }
                                                 }
                                             }
-                                        }
-                                    } else {
-                                        if (thisFileValues.get(node.getNodeName()) == null){
-                                            thisFileValues.put(node.getNodeName(), new StringBuilder(node.getFirstChild().getNodeValue()));
                                         } else {
-                                            thisFileValues.get(node.getNodeName()).append("\n").append(node.getFirstChild().getNodeValue());
+                                            if (thisFileValues.get(node.getNodeName()) == null) {
+                                                thisFileValues.put(node.getNodeName(), new StringBuilder(node.getFirstChild().getNodeValue()));
+                                            } else {
+                                                thisFileValues.get(node.getNodeName()).append("\n").append(node.getFirstChild().getNodeValue());
+                                            }
                                         }
                                     }
                                 }
+                            } else {
+                                if (row.get(col) != null) {
+                                    thisFileValues.put(col, new StringBuilder(row.get(col)));
+                                }
                             }
-                        } else {
-                            if (row.get(col) != null){
-                                thisFileValues.put(col,new StringBuilder(row.get(col)));
+                        }
+                        if (thisFileValues.get(TrackingParser.TMVARCAT3) != null) {
+                            if ("Claims Tracking".equals(thisFileValues.get(TrackingParser.TMVARCAT3).toString())) {
+                                claimsFilesValues.add(thisFileValues);
+                                cheadings.addAll(thisFileValues.keySet());
+                            }
+                            if ("Premium".equals(thisFileValues.get(TrackingParser.TMVARCAT3).toString())
+                                    || "Bureau Submission".equals(thisFileValues.get(TrackingParser.TMVARCAT3).toString())
+                                    || "Client Submission".equals(thisFileValues.get(TrackingParser.TMVARCAT3).toString())) {
+                                premiumsFilesValues.add(thisFileValues);
+                                pheadings.addAll(thisFileValues.keySet());
                             }
                         }
-                    }
-                    if (thisFileValues.get(TrackingParser.TMVARCAT3) != null){
-                        if ("Claims Tracking".equals(thisFileValues.get(TrackingParser.TMVARCAT3).toString())) {
-                            claimsFilesValues.add(thisFileValues);
-                            cheadings.addAll(thisFileValues.keySet());
-                        }
-                        if ("Premium".equals(thisFileValues.get(TrackingParser.TMVARCAT3).toString())
-                                || "Bureau Submission".equals(thisFileValues.get(TrackingParser.TMVARCAT3).toString())
-                                || "Client Submission".equals(thisFileValues.get(TrackingParser.TMVARCAT3).toString())) {
-                            premiumsFilesValues.add(thisFileValues);
-                            pheadings.addAll(thisFileValues.keySet());
-                        }
-                    }
                     /*else {
                     }*/
 //                    System.out.println("key " + tp.getFirst());
 //                    System.out.println("xml " + tp.getSecond());
 
-                }
-                // crude initial version - try to load into any database with an import template attached that has a claims tracking sheet
-                if (!claimsFilesValues.isEmpty()) {
-                    String csvFileName = (transNo != null ? transNo : maxKey) + "tracking (importversion=ClaimsTracking).tsv";
-                    BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(tracking.resolve(csvFileName).toFile()));
-                    cheadings = new ArrayList<>(cheadings);
-                    pheadings = new ArrayList<>(pheadings);
-                    for (String heading : cheadings) {
-                        bufferedWriter.write(heading + "\t");
                     }
-                    bufferedWriter.newLine();
-                    for (Map<String, StringBuilder> row : claimsFilesValues) {
+                    // crude initial version - try to load into any database with an import template attached that has a claims tracking sheet
+                    if (!claimsFilesValues.isEmpty()) {
+                        String csvFileName = (transNo != null ? transNo : maxKey) + "tracking (importversion=ClaimsTracking).tsv";
+                        BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(tracking.resolve(csvFileName).toFile()));
+                        cheadings = new ArrayList<>(cheadings);
+                        pheadings = new ArrayList<>(pheadings);
                         for (String heading : cheadings) {
-                            StringBuilder value = row.get(heading);
-                            // using isconvertedfromworksheet will then preserve these characters in the system, I think we might need them
-                            bufferedWriter.write((value != null ? value.toString().replace("\n", "\\\\n").replace("\t", "\\\\t").trim() : "") + "\t");
+                            bufferedWriter.write(heading + "\t");
                         }
                         bufferedWriter.newLine();
-                    }
-                    bufferedWriter.close();
-                    // this may need to be changed, try and find any database with an appropriate import template
+                        for (Map<String, StringBuilder> row : claimsFilesValues) {
+                            for (String heading : cheadings) {
+                                StringBuilder value = row.get(heading);
+                                // using isconvertedfromworksheet will then preserve these characters in the system, I think we might need them
+                                bufferedWriter.write((value != null ? value.toString().replace("\n", "\\\\n").replace("\t", "\\\\t").trim() : "") + "\t");
+                            }
+                            bufferedWriter.newLine();
+                        }
+                        bufferedWriter.close();
+                        // this may need to be changed, try and find any database with an appropriate import template
 
-                    List<Business> businesses = BusinessDAO.findAll();
-                    HashMap<String, ImportTemplateData> templateCache = new HashMap<>();
-                    for (Business business : businesses){
-                        List<Database> databases = DatabaseDAO.findForBusinessId(business.getId());
-                        for (Database database : databases){
-                            if (database.getImportTemplateId() != 0){
-                                LoggedInUser loggedInUser = new LoggedInUser(""
-                                        , new User(0, LocalDateTime.now(), business.getId(), "tracking", "", "", "", "", "", 0, 0, "", "")
-                                        , DatabaseServerDAO.findById(database.getDatabaseServerId()), database, null, business.getBusinessDirectory());
-                                ImportTemplateData importTemplateForUploadedFile = ImportService.getImportTemplateForUploadedFile(loggedInUser, null, templateCache);
-                                if (importTemplateForUploadedFile != null && importTemplateForUploadedFile.getSheets().get("ClaimsTracking") != null){ // then here we go . . .
-                                    final Map<String, String> fileNameParams = new HashMap<>();
-                                    String fileName = tracking.resolve(csvFileName).getFileName().toString();
-                                    ImportService.addFileNameParametersToMap(fileName, fileNameParams);
-                                    ImportService.importTheFile(loggedInUser, new UploadedFile(tracking.resolve(csvFileName).toString()
-                                            , new ArrayList<>(Collections.singletonList(fileName)), fileNameParams, true, false), null, null);
+                        List<Business> businesses = BusinessDAO.findAll();
+                        HashMap<String, ImportTemplateData> templateCache = new HashMap<>();
+                        for (Business business : businesses) {
+                            List<Database> databases = DatabaseDAO.findForBusinessId(business.getId());
+                            for (Database database : databases) {
+                                if (database.getImportTemplateId() != 0) {
+                                    LoggedInUser loggedInUser = new LoggedInUser(""
+                                            , new User(0, LocalDateTime.now(), business.getId(), "tracking", "", "", "", "", "", 0, 0, "", "")
+                                            , DatabaseServerDAO.findById(database.getDatabaseServerId()), database, null, business.getBusinessDirectory());
+                                    ImportTemplateData importTemplateForUploadedFile = ImportService.getImportTemplateForUploadedFile(loggedInUser, null, templateCache);
+                                    if (importTemplateForUploadedFile != null && importTemplateForUploadedFile.getSheets().get("ClaimsTracking") != null) { // then here we go . . .
+                                        final Map<String, String> fileNameParams = new HashMap<>();
+                                        String fileName = tracking.resolve(csvFileName).getFileName().toString();
+                                        ImportService.addFileNameParametersToMap(fileName, fileNameParams);
+                                        ImportService.importTheFile(loggedInUser, new UploadedFile(tracking.resolve(csvFileName).toString()
+                                                , new ArrayList<>(Collections.singletonList(fileName)), fileNameParams, true, false), null, null);
+                                    }
                                 }
                             }
                         }
                     }
-                }
-                if (!premiumsFilesValues.isEmpty()) {
-                    String csvFileName = (transNo != null ? transNo : maxKey) + "tracking (importversion=PremiumTracking).tsv";
-                    BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(tracking.resolve(csvFileName).toFile()));
-                    for (String heading : pheadings) {
-                        bufferedWriter.write(heading + "\t");
-                    }
-                    bufferedWriter.newLine();
-                    for (Map<String, StringBuilder> row : premiumsFilesValues) {
+                    if (!premiumsFilesValues.isEmpty()) {
+                        String csvFileName = (transNo != null ? transNo : maxKey) + "tracking (importversion=PremiumTracking).tsv";
+                        BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(tracking.resolve(csvFileName).toFile()));
                         for (String heading : pheadings) {
-                            StringBuilder value = row.get(heading);
-                            bufferedWriter.write((value != null ? value.toString().replace("\n", "\\\\n").replace("\t", "\\\\t").trim() : "") + "\t");
+                            bufferedWriter.write(heading + "\t");
                         }
                         bufferedWriter.newLine();
+                        for (Map<String, StringBuilder> row : premiumsFilesValues) {
+                            for (String heading : pheadings) {
+                                StringBuilder value = row.get(heading);
+                                bufferedWriter.write((value != null ? value.toString().replace("\n", "\\\\n").replace("\t", "\\\\t").trim() : "") + "\t");
+                            }
+                            bufferedWriter.newLine();
+                        }
+                        bufferedWriter.close();
                     }
-                    bufferedWriter.close();
                 }
             }
         }
