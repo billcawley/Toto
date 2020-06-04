@@ -1,3 +1,29 @@
+27-05-20
+
+Track user activity in the database now
+
+Zap libreoffice hack, it's not reliable. Error instead to the user.
+
+Tweaks to compositionxl as it beginst to be used
+
+Check for empty files attached to XML and if so don't send
+
+Multi file upload
+
+Importer tweak for managing T-account lookups
+
+XLSX
+
+T-account work in the lookups + premium feed, Brokaerage Account Suffix etc.
+
+Oilfields previously paid
+
+Small limnet adjustment :"If Outstanding Amount is zero, the Lloyds / ILU / LIRMA Qualifiers must be set to T (To Be Advised) or N (Nil) for each currency on the claim."
+
+Claims, make it so trans desc can show Covid-19
+
+Weber started in SVN
+
 12-05-20
 
 Hide automated uploads unless the user clicks to see them

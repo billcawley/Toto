@@ -7,6 +7,7 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 
 import java.sql.ResultSet;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -68,6 +69,10 @@ public final class BusinessDAO {
 
     public static Business findById(int id){
         return StandardDAO.findById(id, TABLENAME, businessRowMapper);
+    }
+
+    public static List<Business> findAll(){
+        return StandardDAO.findAll(TABLENAME, businessRowMapper);
     }
 
     public static void removeById(Business business){

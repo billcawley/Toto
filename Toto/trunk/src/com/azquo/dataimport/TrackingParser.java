@@ -23,16 +23,11 @@ import java.util.Map;
  */
 public class TrackingParser {
 
-    // the default table name for this data.
-    private static final String TABLENAME = "tracking";
-
-    // column names except ID which is in the superclass
-
-    private static final String TRACKMESSKEY = "TrackMessKey";
+    public static final String TRACKMESSKEY = "TrackMessKey";
     public static final String TMXMLDATA = "TMXMLData";
     // extra fields Tony added in
     private static final String TMTRACKACT = "TMTrackAct";
-    private static final String TMVARCAT3 = "TMVarCat3";
+    public static final String TMVARCAT3 = "TMVarCat3";
     private static final String TMVARCAT4 = "TMVarCat4";
     private static final String TMAPPKEY = "TMAppKey";
 
@@ -60,11 +55,19 @@ public class TrackingParser {
     }
 
     // ok the tracking db is going to be big. Unless I start zapping what's in there I need to select where TRACKMESSKEY > something or it will be selecting 2 million records
-    public static List<Map<String, String>> findAll() {
+    public static List<Map<String, String>> findGreaterThan(int trackMessKey) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        namedParams.addValue(TRACKMESSKEY, 2_000_000); // greater than 2 million for the moment
+        namedParams.addValue(TRACKMESSKEY, trackMessKey); // greater than 2 million for the moment
 //        namedParams.addValue(REPORTID, reportId);
-        final String SQL_SELECT = "Select `" + SpreadsheetService.getTrackingDb() + "`.`" + TABLENAME + "`.* from `" + SpreadsheetService.getTrackingDb() + "`.`" + TABLENAME + "` where " + TRACKMESSKEY + " >  :" + TRACKMESSKEY;
+        final String SQL_SELECT = "Select `" + SpreadsheetService.getTrackingDb() + "`.`" + SpreadsheetService.getTrackingTable() + "`.* from `" + SpreadsheetService.getTrackingDb() + "`.`" + SpreadsheetService.getTrackingTable() + "` where " + TRACKMESSKEY + " >  :" + TRACKMESSKEY;
+        return StandardDAO.getJdbcTemplate().query(SQL_SELECT, namedParams, userRowMapper);
+    }
+
+    public static List<Map<String, String>> findForTransactionNo(String transactionNo) {
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(TMAPPKEY, "%" + transactionNo + "%"); // greater than 2 million for the moment
+//        namedParams.addValue(REPORTID, reportId);
+        final String SQL_SELECT = "Select `" + SpreadsheetService.getTrackingDb() + "`.`" + SpreadsheetService.getTrackingTable() + "`.* from `" + SpreadsheetService.getTrackingDb() + "`.`" + SpreadsheetService.getTrackingTable() + "` where " + TMAPPKEY + " LIKE  :" + TMAPPKEY;
         return StandardDAO.getJdbcTemplate().query(SQL_SELECT, namedParams, userRowMapper);
     }
 

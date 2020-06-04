@@ -93,6 +93,8 @@ public class SpreadsheetService {
 
     private static final String TRACKINGDB = "trackingdb";
 
+    private static final String TRACKINGTABLE = "trackingtable";
+
     private static String getProperty(String key) {
         if (properties.get(key) == null) {
             if (azquoProperties.getProperty(host + "." + key) != null) {
@@ -153,6 +155,10 @@ public class SpreadsheetService {
 
     public static String getTrackingDb() {
         return getProperty(TRACKINGDB);
+    }
+
+    public static String getTrackingTable() {
+        return getProperty(TRACKINGTABLE);
     }
 
     private static final String LOGONPAGEOVERRIDE = "logonpageoverride";
