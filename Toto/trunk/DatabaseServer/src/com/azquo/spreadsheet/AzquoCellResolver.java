@@ -684,9 +684,10 @@ But can use a library?
                             Value value = valuesHook.values.get(0);
                             selected = valueToTestFor == value; // I think this is the right logic - is the value the one drilled down from?
                             stringValue = value.getText();
-                            if (stringValue.contains("\n")) {
+                            // edd commenting, what was this for?? It's been there for ages and messes up formatting in zk sheet for Ed broking
+/*                            if (stringValue.contains("\n")) {
                                 stringValue = stringValue.replaceAll("\n", "<br/>");//this is unsatisfactory, but a quick fix.
-                            }
+                            }*/
                             // was isnumber test here to add a double to the
                         } else if (valuesHook.values != null && valuesHook.values.size() > 0) {
                             stringValue = doubleValue + "";
@@ -727,7 +728,8 @@ But can use a library?
                     }
                     // ZK would want this typed as in number or string? Maybe just sort out later?
                     if (attributeResult != null) {
-                        attributeResult = attributeResult.replace("\n", "<br/>");//unsatisfactory....
+                        // edd commenting, what was this for?? It's been there for ages and messes up formatting in zk sheet for Ed broking
+                        //attributeResult = attributeResult.replace("\n", "<br/>");//unsatisfactory....
                         stringValue = attributeResult;
                     } else {
                         stringValue = "";
