@@ -14,6 +14,8 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.Date;
 
+import static java.time.temporal.ChronoUnit.DAYS;
+
 public class DateUtils {
 
     public static final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
@@ -25,6 +27,7 @@ public class DateUtils {
     private static final DateTimeFormatter usdf3 = DateTimeFormatter.ofPattern("MMM-d-yyyy");
     private static final DateTimeFormatter usdf3a = DateTimeFormatter.ofPattern("MMM-d-yy");
     private static final DateTimeFormatter usdf4 = DateTimeFormatter.ofPattern("M-d-yyyy");
+    private static final LocalDate start = LocalDate.of(1970,1,1);
 
     // bottom two lines off the net, needed as result sets don't use the new date classes
     public static LocalDateTime getLocalDateTimeFromDate(Date date) {
@@ -80,6 +83,13 @@ public class DateUtils {
         return null;
     }
 
+    public static long excelDate(LocalDate date){
+        if (date==null){
+            return 0;
+        }
+        return start.until(date, DAYS);
+
+    }
     public static LocalDate isUSDate(String maybeDate) {
         String dateToTest = maybeDate.replace("/", "-").replace(" ", "-");
         if (dateToTest.length() > 5 && dateToTest.charAt(1) == '-') dateToTest = "0" + dateToTest;
@@ -131,4 +141,19 @@ public class DateUtils {
         }
         return newDate;
     }
+
+    public static String toUKDate(String intString){
+        int days = Integer.parseInt(intString);
+        LocalDate date = start.plus(days,DAYS);
+        return ukdf2.format(date);
+
+    }
+
+    public static String toUSDate(String intString){
+        int days = Integer.parseInt(intString);
+        LocalDate date = start.plus(days,DAYS);
+        return usdf2.format(date);
+
+    }
+
 }
