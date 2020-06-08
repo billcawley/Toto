@@ -93,16 +93,15 @@ class ImportCellWithHeading {
     todo consider other date formats on import - these may  be covered in setting up dates, but I'm not sure - WFC
     HeadingReader defines DATELANG and USDATELANG
     */
-            if (immutableImportHeading.attribute != null && immutableImportHeading.dateForm > 0) {
-                LocalDate date;
-                if (immutableImportHeading.dateForm == StringLiterals.UKDATE) {
-                    date = DateUtils.isADate(lineValue);
-                } else {
-                    date = DateUtils.isUSDate(lineValue);
-                }
-                if (date != null) {
-                    lineValue = DateUtils.dateTimeFormatter.format(date);
-                }
+            LocalDate date=null;
+            if (immutableImportHeading.datatype == StringLiterals.UKDATE) {
+                date = DateUtils.isADate(lineValue);
+            }
+            if (immutableImportHeading.datatype == StringLiterals.USDATE) {
+                date = DateUtils.isUSDate(lineValue);
+            }
+            if (date != null) {
+                lineValue = DateUtils.dateTimeFormatter.format(date);
             }
             // spaces remove. Before date? Does it matter?
             if (immutableImportHeading.removeSpaces) {
