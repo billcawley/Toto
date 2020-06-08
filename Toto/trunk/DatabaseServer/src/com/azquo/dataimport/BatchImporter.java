@@ -1,5 +1,6 @@
 package com.azquo.dataimport;
 
+import com.azquo.DateUtils;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.StringLiterals;
 import com.azquo.memorydb.core.Name;
@@ -536,6 +537,14 @@ public class BatchImporter implements Callable<Void> {
         if (value == null) {
             return false;
         }
+        if (cell.getImmutableImportHeading().compositionXL){
+            if (cell.getImmutableImportHeading().datatype==StringLiterals.UKDATE){
+                value = DateUtils.toUKDate(value);
+            }
+            if (cell.getImmutableImportHeading().datatype==StringLiterals.USDATE){
+                value = DateUtils.toUSDate(value);
+            }
+        }
         cell.setLineValue(value, azquoMemoryDBConnection, attributeNames);
         return true;
     }
@@ -607,6 +616,8 @@ public class BatchImporter implements Callable<Void> {
                 } else {
                     throw new Exception("Unable to find column : " + expression + " in composition pattern " + cell.getImmutableImportHeading().compositionPattern + " in heading " + cell.getImmutableImportHeading().heading);
                 }
+                int dataType = compCell.getImmutableImportHeading().datatype;
+
                 // skip until the referenced cell has been resolved - the loop outside checking for dependencies will send us back here
                 if (compCell != null && compCell.lineValueResolved()) {
                     String sourceVal;
@@ -653,8 +664,38 @@ public class BatchImporter implements Callable<Void> {
                         }
                         // todo more work on this, blank string?
                         // now replace and move the marker to the next possible place
-                        if (cell.getImmutableImportHeading().compositionXL && !NumberUtils.isNumber(sourceVal)){
-                            sourceVal = "\"" + sourceVal + "\"";// Excel likes its string literals with quotes
+
+                        if (cell.getImmutableImportHeading().compositionXL){
+                            switch (dataType) {
+                                case StringLiterals.UKDATE:
+                                    long days = DateUtils.excelDate(DateUtils.isADate(sourceVal));
+                                    if (days >0){
+                                        sourceVal = days + "";
+                                    }
+                                    break;
+                                case StringLiterals.USDATE:
+                                    long excelDays = DateUtils.excelDate(DateUtils.isUSDate(sourceVal));
+                                    if (excelDays >0){
+                                        sourceVal = excelDays + "";
+                                    }
+                                    break;
+                                case StringLiterals.STRING:
+                                    sourceVal = "\"" + sourceVal + "\"";// Excel likes its string literals with quotes
+                                    break;
+                                case StringLiterals.NUMBER:
+                                    if (sourceVal.length()==0){
+                                        sourceVal = "0";
+                                    }
+                                    if (sourceVal.charAt(0)=='-'){
+                                        //to avoid double negatives in expressions
+                                        sourceVal = "(0"+ sourceVal + ")";
+                                    }
+                                    break;
+                                case 0://make a guess
+                                    if (!NumberUtils.isNumber(sourceVal)) {
+                                        sourceVal = "\"" + sourceVal + "\"";// Excel likes its string literals with quotes
+                                    }
+                            }
                         }
                         // trying to helpfully deal with empty string literals. This may need tweaking over time
                         if (sourceVal.isEmpty() &&
