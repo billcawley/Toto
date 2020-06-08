@@ -44,6 +44,7 @@ class HeadingReader {
     static final String PARENTOF = "parent of ";
     static final String ATTRIBUTE = "attribute";
     static final String LANGUAGE = "language";
+    static final String DATATYPE = "datatype";
     static final String PEERS = "peers";
     static final String LOCAL = "local";
     /*
@@ -66,6 +67,8 @@ Attributes of the names in other cells can be referenced also
     private static final String REQUIRED = "required";
     static final String DATELANG = "date";
     private static final String USDATELANG = "us date";
+    private static final String STRING = "string";
+    private static final String NUMBER = "number";
     static final String ONLY = "only";
     static final String IGNORE = "ignore";
     static final String EXCLUSIVE = "exclusive";
@@ -311,9 +314,9 @@ Attributes of the names in other cells can be referenced also
             case LANGUAGE: // language being attribute
                 if (result.equalsIgnoreCase(DATELANG) || result.equalsIgnoreCase(USDATELANG)) {
                     if (result.equalsIgnoreCase(DATELANG)) {
-                        heading.dateForm = StringLiterals.UKDATE;
+                        heading.datatype = StringLiterals.UKDATE;
                     } else {
-                        heading.dateForm = StringLiterals.USDATE;
+                        heading.datatype = StringLiterals.USDATE;
                         result = DATELANG;
                     }
                     //Bill had commented these three lines, Edd uncommenting 13/07/2018 as it broke DG import
@@ -325,9 +328,21 @@ Attributes of the names in other cells can be referenced also
                 } else {
                     heading.isAttributeSubject = true; // language is important so we'll default it as the attribute subject if attributes are used later - I might need to check this
                 }
-                if (heading.attribute == null || heading.dateForm == 0) {
+                if (heading.attribute == null || heading.datatype== 0) {
                     heading.attribute = result;
                 }
+                break;
+            case DATATYPE: // language being attribute
+                if (result.equalsIgnoreCase(DATELANG)) {
+                    heading.datatype = StringLiterals.UKDATE;
+                } else if (result.equalsIgnoreCase(USDATELANG)){
+                    heading.datatype = StringLiterals.USDATE;
+                } else if (result.equalsIgnoreCase(STRING)){
+                    heading.datatype = StringLiterals.STRING;
+                } else if (result.equalsIgnoreCase(NUMBER)){
+                    heading.datatype = StringLiterals.NUMBER;
+                }
+
                 break;
             case ATTRIBUTE: // same as language really but .Name is special - it means default display name. Watch out for this.
                 if (result.startsWith("`") && result.endsWith(("`"))) {// indicating that the attribute NAME is to be taken from another column of the import.
