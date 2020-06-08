@@ -23,7 +23,7 @@ public class ImmutableImportHeading {
     final Set<Name> parentNames;
     final String attribute;
     final int attributeColumn;
-    final int dateForm;
+    final int datatype;
     final Set<Name> peerNames;
     final Set<Integer> peerIndexes;
     final boolean isLocal;
@@ -58,7 +58,7 @@ public class ImmutableImportHeading {
         this.parentNames = Collections.unmodifiableSet(new HashSet<>(mutableImportHeading.parentNames)); // copying the sets in a perhaps paranoid way
         this.attribute = mutableImportHeading.attribute;
         this.attributeColumn = mutableImportHeading.attributeColumn;
-        this.dateForm = mutableImportHeading.dateForm;
+        this.datatype = mutableImportHeading.datatype;
         this.peerNames = Collections.unmodifiableSet(new HashSet<>(mutableImportHeading.peerNames));
         this.peerIndexes = Collections.unmodifiableSet(new HashSet<>(mutableImportHeading.peerIndexes));
         this.isLocal = mutableImportHeading.isLocal;
