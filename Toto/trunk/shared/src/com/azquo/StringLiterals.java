@@ -14,8 +14,10 @@ public class StringLiterals {
     public static final String DEFAULT_DISPLAY_NAME = "DEFAULT_DISPLAY_NAME";
     public static final List<String> DEFAULT_DISPLAY_NAME_AS_LIST = Collections.singletonList(DEFAULT_DISPLAY_NAME);
     public static String IN_SPREADSHEET = "in spreadsheet"; // We'll do this by string literal for the moment - might reconsider later. This is shared as currently it's part of the drilldown syntax and provenance, I'm not sure about this!
-    public static int UKDATE = 1;
-    public static int USDATE = 2;
+    public static final int UKDATE = 1;
+    public static final int USDATE = 2;
+    public static final int STRING = 3;
+    public static final int NUMBER = 4;
     public static final String CALCULATION = "CALCULATION";
     public static final String DEFINITION = "DEFINITION";
     public static final String DISPLAYROWS = "DISPLAYROWS";
