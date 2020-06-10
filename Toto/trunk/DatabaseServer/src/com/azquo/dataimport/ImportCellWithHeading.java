@@ -26,6 +26,8 @@ class ImportCellWithHeading {
     private boolean lineNamesResolved;
     // we'll need to track this as children may not be able to be sorted when names are
     private boolean lineNamesChildrenResolved;
+    //formulae are increasingly complicated - this is the Excel formula before resolution.
+     private String debugInfo;
 
 
     ImportCellWithHeading(ImmutableImportHeading immutableImportHeading, String value) {
@@ -45,6 +47,10 @@ class ImportCellWithHeading {
         return lineValue;
     }
 
+    String getDebugInfo(){
+        return debugInfo;
+    }
+
     Set<Name> getLineNames() {
         return lineNames;
     }
@@ -53,6 +59,10 @@ class ImportCellWithHeading {
     void setLineValue(String lineValue, AzquoMemoryDBConnection azquoMemoryDBConnection, List<String> languages) throws Exception {
         this.lineValue = lineValue;
         setLineValueResolved(azquoMemoryDBConnection, languages);
+    }
+
+    void setDebugInfo(String debugInfo){
+        this.debugInfo = debugInfo;
     }
 
     // NOT thread safe - I assume that one thread will deal with one line
