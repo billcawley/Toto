@@ -503,7 +503,11 @@ Attributes of the names in other cells can be referenced also
                 heading.provisional = true;
                 break;
             default:
-                throw new Exception(firstWord + " not understood in heading '" + heading.heading + "'");
+                String headingName = heading.heading;
+                if (heading.attribute!=null) {
+                    headingName +="." + heading.attribute;
+                }
+                throw new Exception(firstWord + " not understood in heading '" + headingName + "'");
         }
     }
 
