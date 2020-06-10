@@ -1,3 +1,23 @@
+04-06-20
+
+Compositexl tweaks
+
+Can have an import version sheet without a model
+
+Tracking Db initial version, needs more work
+
+XLSX
+
+T account totals on specify premium feed
+
+Claims feed tweaks (Limnet currencies)
+
+Oilfield currencies work
+
+ECF fix - claims count on summary sheet
+
+Tracking db. Importer and additions to Specify Claims feed
+
 27-05-20
 
 Track user activity in the database now

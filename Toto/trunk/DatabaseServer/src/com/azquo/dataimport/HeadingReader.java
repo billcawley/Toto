@@ -332,7 +332,7 @@ Attributes of the names in other cells can be referenced also
                     heading.attribute = result;
                 }
                 break;
-            case DATATYPE: // language being attribute
+            case DATATYPE:// was just for dates but now supports number and string which is helpful to compositexl
                 if (result.equalsIgnoreCase(DATELANG)) {
                     heading.datatype = StringLiterals.UKDATE;
                 } else if (result.equalsIgnoreCase(USDATELANG)){

@@ -27,7 +27,7 @@ public class DateUtils {
     private static final DateTimeFormatter usdf3 = DateTimeFormatter.ofPattern("MMM-d-yyyy");
     private static final DateTimeFormatter usdf3a = DateTimeFormatter.ofPattern("MMM-d-yy");
     private static final DateTimeFormatter usdf4 = DateTimeFormatter.ofPattern("M-d-yyyy");
-    private static final LocalDate start = LocalDate.of(1899,12,31);
+    private static final LocalDate start = LocalDate.of(1899, 12, 31);
 
     // bottom two lines off the net, needed as result sets don't use the new date classes
     public static LocalDateTime getLocalDateTimeFromDate(Date date) {
@@ -59,7 +59,8 @@ public class DateUtils {
     public static LocalDate isADate(String maybeDate) {
         String dateToTest = maybeDate.replace("/", "-").replace(" ", "-");
         if (dateToTest.length() > 5 && dateToTest.charAt(1) == '-') dateToTest = "0" + dateToTest;
-        if (dateToTest.length() > 5 && dateToTest.charAt(2)=='-' && dateToTest.charAt(4) == '-') dateToTest = dateToTest.substring(0,3) + "0" + dateToTest.substring(3);
+        if (dateToTest.length() > 5 && dateToTest.charAt(2) == '-' && dateToTest.charAt(4) == '-')
+            dateToTest = dateToTest.substring(0, 3) + "0" + dateToTest.substring(3);
         LocalDate date = tryDate(dateToTest.length() > 10 ? dateToTest.substring(0, 10) : dateToTest, dateTimeFormatter);
         if (date != null) return date;
         date = tryDate(dateToTest.length() > 10 ? dateToTest.substring(0, 10) : dateToTest, ukdf4);
@@ -71,29 +72,29 @@ public class DateUtils {
          */
 
         date = tryDate(dateToTest.length() > 8 ? dateToTest.substring(0, 8) : dateToTest, ukdf2);
-        if (date!= null)
-        {
+        if (date != null) {
             return date.isAfter(LocalDate.now().plusYears(towDigitYearFutureThreshold)) ? date.minusYears(100) : date;
         }
         date = tryDate(dateToTest, ukdf3a);
-        if (date!= null)
-        {
+        if (date != null) {
             return date.isAfter(LocalDate.now().plusYears(towDigitYearFutureThreshold)) ? date.minusYears(100) : date;
         }
         return null;
     }
 
-    public static long excelDate(LocalDate date){
-        if (date==null){
+    public static long excelDate(LocalDate date) {
+        if (date == null) {
             return 0;
         }
         return start.until(date, DAYS);
 
     }
+
     public static LocalDate isUSDate(String maybeDate) {
         String dateToTest = maybeDate.replace("/", "-").replace(" ", "-");
         if (dateToTest.length() > 5 && dateToTest.charAt(1) == '-') dateToTest = "0" + dateToTest;
-        if (dateToTest.length() > 5 && dateToTest.charAt(2) == '-' && dateToTest.charAt(4) == '-') dateToTest = dateToTest.substring(0,3) + "0" + dateToTest.substring(3);
+        if (dateToTest.length() > 5 && dateToTest.charAt(2) == '-' && dateToTest.charAt(4) == '-')
+            dateToTest = dateToTest.substring(0, 3) + "0" + dateToTest.substring(3);
         LocalDate date = tryDate(dateToTest.length() > 10 ? dateToTest.substring(0, 10) : dateToTest, dateTimeFormatter);
         if (date != null) return date;
         date = tryDate(dateToTest.length() > 10 ? dateToTest.substring(0, 10) : dateToTest, usdf4);
@@ -104,13 +105,11 @@ public class DateUtils {
         /* as above compensate for formates with two digit years*/
 
         date = tryDate(dateToTest.length() > 11 ? dateToTest.substring(0, 11) : dateToTest, usdf3a);
-        if (date!= null)
-        {
+        if (date != null) {
             return date.isAfter(LocalDate.now().plusYears(towDigitYearFutureThreshold)) ? date.minusYears(100) : date;
         }
         date = tryDate(dateToTest.length() > 8 ? dateToTest.substring(0, 8) : dateToTest, usdf2);
-        if (date!= null)
-        {
+        if (date != null) {
             return date.isAfter(LocalDate.now().plusYears(towDigitYearFutureThreshold)) ? date.minusYears(100) : date;
         }
         return null;
@@ -142,12 +141,9 @@ public class DateUtils {
         return newDate;
     }
 
-    public static String toDate(String intString){
-        int days = (int)Double.parseDouble(intString);
-        LocalDate date = start.plus(days,DAYS);
+    public static String toDate(String intString) {
+        int days = (int) Double.parseDouble(intString);
+        LocalDate date = start.plus(days, DAYS);
         return dateTimeFormatter.format(date);
-
     }
-
-
 }

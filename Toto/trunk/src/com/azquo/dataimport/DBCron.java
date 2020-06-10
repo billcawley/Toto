@@ -355,7 +355,6 @@ public class DBCron {
             String trackingdb = SpreadsheetService.getTrackingDb();
             String trackingTable = SpreadsheetService.getTrackingTable();
             if (trackingdb != null && !trackingdb.trim().isEmpty() && trackingTable != null && !trackingTable.trim().isEmpty()) {
-                System.out.println("running tracking db update");
                 Path tracking = Paths.get(SpreadsheetService.getHomeDir() + "/temp/tracking");
                 if (!Files.exists(tracking)) {
                     Files.createDirectories(tracking);
@@ -381,6 +380,7 @@ public class DBCron {
                 }
 
                 if (!rows.isEmpty()) {
+                    System.out.println("running tracking db update");
                     // I don't think I can use the other XMl code, too different
                     DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
                     final DocumentBuilder builder = factory.newDocumentBuilder();

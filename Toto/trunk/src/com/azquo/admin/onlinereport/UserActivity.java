@@ -71,6 +71,19 @@ public final class UserActivity extends StandardEntity {
         return stringBuilder.toString();
     }
 
+    public String getParametersForWorkbook() {
+        StringBuilder stringBuilder = new StringBuilder();
+        for (Map.Entry<String, String> entry : parameters.entrySet()) {
+                if (stringBuilder.length() > 0) {
+                    stringBuilder.append(",");
+                }
+                stringBuilder.append(entry.getKey());
+                stringBuilder.append(", ");
+                stringBuilder.append(entry.getValue());
+        }
+        return stringBuilder.toString();
+    }
+
     public void setParameter(String key, String value){
         parameters.put(key, value);
     }

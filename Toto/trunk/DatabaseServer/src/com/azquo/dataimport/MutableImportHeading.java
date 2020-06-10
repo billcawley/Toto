@@ -34,7 +34,7 @@ class MutableImportHeading {
     String attribute = null;
     //used where the attribute name is taken from another column
     int attributeColumn = -1;
-    //should we try to treat the cell as a date?
+    //Now it is data type not just date type, compositionXL finds this useful
     int datatype = 0;
     /* the results of the peers clause are jammed in peers but then we need to know which headings those peers refer to. The heading with the clause can immediately be resolved as a name
     * as can peers referenced in the context, the others come from other columns referred to by their indexes. Peers can be defined in the main heading or context,

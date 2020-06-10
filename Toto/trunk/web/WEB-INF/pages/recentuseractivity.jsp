@@ -4,7 +4,7 @@
 <%@ include file="../includes/admin_header.jsp" %>
 
 <main>
-	<h1>Recent User Activity</h1>
+	<h1>Recent User Activity - <a href="/api/ManageUsers?downloadRecentId=${id}">Download</a></h1>
 	<table>
 		<thead>
 			<tr>

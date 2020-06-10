@@ -1,5 +1,6 @@
 package com.azquo.admin.controller;
 
+import com.azquo.DateUtils;
 import com.azquo.TypedPair;
 import com.azquo.admin.AdminService;
 import com.azquo.admin.BackupService;
@@ -22,6 +23,10 @@ import com.azquo.spreadsheet.controller.LoginController;
 import com.azquo.spreadsheet.zk.BookUtils;
 import com.azquo.spreadsheet.zk.ReportRenderer;
 import org.apache.commons.lang.math.NumberUtils;
+import org.apache.poi.ss.formula.functions.FreeRefFunction;
+import org.apache.poi.ss.formula.udf.AggregatingUDFFinder;
+import org.apache.poi.ss.formula.udf.DefaultUDFFinder;
+import org.apache.poi.ss.formula.udf.UDFFinder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -32,12 +37,18 @@ import org.zkoss.poi.ss.usermodel.Name;
 import org.zkoss.poi.ss.usermodel.Sheet;
 import org.zkoss.poi.ss.util.AreaReference;
 import org.zkoss.poi.xssf.usermodel.XSSFName;
+import org.zkoss.poi.xssf.usermodel.XSSFRow;
+import org.zkoss.poi.xssf.usermodel.XSSFSheet;
 import org.zkoss.poi.xssf.usermodel.XSSFWorkbook;
+import org.zkoss.zss.api.Exporter;
+import org.zkoss.zss.api.Exporters;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -61,9 +72,11 @@ public class ManageUsersController {
 //    private static final Logger logger = Logger.getLogger(ManageUsersController.class);
     @RequestMapping
     public String handleRequest(ModelMap model, HttpServletRequest request
+            , HttpServletResponse response
             , @RequestParam(value = "editId", required = false) String editId
             , @RequestParam(value = "deleteId", required = false) String deleteId
             , @RequestParam(value = "recentId", required = false) String recentId
+            , @RequestParam(value = "downloadRecentId", required = false) String downloadRecentId
             , @RequestParam(value = "endDate", required = false) String endDate
             , @RequestParam(value = "email", required = false) String email
             , @RequestParam(value = "name", required = false) String name
@@ -88,8 +101,35 @@ public class ManageUsersController {
                 User u = AdminService.getUserById(Integer.parseInt(recentId), loggedInUser);
                 List<UserActivity> userActivities = UserActivityDAO.findForUserAndBusinessId(loggedInUser.getUser().getBusinessId(), u.getEmail(), 0, 500);
                 model.put("useractivities", userActivities);
+                model.put("id", recentId);
                 AdminService.setBanner(model, loggedInUser);
                 return "recentuseractivity";
+            }
+
+            if (NumberUtils.isDigits(downloadRecentId)) {
+                User u = AdminService.getUserById(Integer.parseInt(downloadRecentId), loggedInUser);
+                List<UserActivity> userActivities = UserActivityDAO.findForUserAndBusinessId(loggedInUser.getUser().getBusinessId(), u.getEmail(), 0, 500);
+                XSSFWorkbook wb = new XSSFWorkbook();
+                XSSFSheet user_activity = wb.createSheet("User Activity");
+                int rownum = 0;
+                XSSFRow toprow = user_activity.createRow(rownum);
+                toprow.createCell(0).setCellValue("User Email");
+                toprow.createCell(1).setCellValue("Time");
+                toprow.createCell(2).setCellValue("Activity");
+                toprow.createCell(3).setCellValue("Parameters");
+                for (UserActivity userActivity : userActivities){
+                    rownum++;
+                    XSSFRow row = user_activity.createRow(rownum);
+                    row.createCell(0).setCellValue(userActivity.getUser());
+                    row.createCell(1).setCellValue(userActivity.getTimeStamp().toString());
+                    row.createCell(2).setCellValue(userActivity.getActivity());
+                    row.createCell(3).setCellValue(userActivity.getParametersForWorkbook());
+                }
+                response.setContentType("application/vnd.ms-excel"); // Set up mime type
+                response.addHeader("Content-Disposition", "attachment; filename=useractivity.xlsx");
+                OutputStream out = response.getOutputStream();
+                wb.write(out);
+                out.close();
             }
 
             if (NumberUtils.isDigits(editId)) {

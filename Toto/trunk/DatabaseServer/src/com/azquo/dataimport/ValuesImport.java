@@ -103,15 +103,14 @@ class ValuesImport {
                         linesBatched.add(new LineDataWithLineNumber(importCellsWithHeading, lineIterator.getCurrentLocation().getLineNr() - 1)); // line no - 1 as we want where it was, not where it's waiting now
                         // Start processing this batch. As the file is read the active threads will rack up to the maximum number allowed rather than starting at max. Store the futures to confirm all are done after all lines are read.
                         // batch size is derived by getLineIteratorAndBatchSize
-                        boolean debug = (uploadedFile.getTemplateParameter("debug")!=null);
                         if (linesBatched.size() == batchSize) {
                             futureBatches.add(ThreadPools.getMainThreadPool().submit(
                                     new BatchImporter(connection
                                             , linesBatched
-                                            , namesFoundCache, uploadedFile.getLanguages()
-                                            , linesRejected, noLinesRejected,
-                                            uploadedFile.getParameter("cleardata") != null
-                                            ,(uploadedFile.getTemplateParameter("debug")!=null)
+                                            , namesFoundCache
+                                            , linesRejected
+                                            , noLinesRejected
+                                            , uploadedFile
                                             , compositeIndexResolver))// line no should be the start
 
                             );
@@ -127,10 +126,9 @@ class ValuesImport {
             futureBatches.add(ThreadPools.getMainThreadPool().submit(new BatchImporter(connection
                     , linesBatched
                     , namesFoundCache
-                    , uploadedFile.getLanguages()
-                    , linesRejected, noLinesRejected
-                    , uploadedFile.getParameter("cleardata") != null
-                    , (uploadedFile.getTemplateParameter("debug")!=null)
+                    , linesRejected
+                    , noLinesRejected
+                    , uploadedFile
                     , compositeIndexResolver)));
             // check all work is done and memory is in sync
             for (Future<?> futureBatch : futureBatches) {

@@ -8,6 +8,7 @@ import com.azquo.memorydb.core.Value;
 import com.azquo.memorydb.service.NameQueryParser;
 import com.azquo.memorydb.service.NameService;
 import com.azquo.memorydb.service.ValueService;
+import com.azquo.spreadsheet.transport.UploadedFile;
 import net.objecthunter.exp4j.Expression;
 import net.objecthunter.exp4j.ExpressionBuilder;
 import org.apache.commons.lang.math.NumberUtils;
@@ -62,29 +63,27 @@ public class BatchImporter implements Callable<Void> {
     BatchImporter(AzquoMemoryDBConnection azquoMemoryDBConnection
             , List<LineDataWithLineNumber> dataToLoad
             , Map<String, Name> namesFoundCache
-            , List<String> attributeNames
             , Map<Integer, List<String>> linesRejected
             , AtomicInteger noLinesRejected
-            , boolean clearData
-            ,boolean debug
+            , UploadedFile uploadedFile
             , CompositeIndexResolver compositeIndexResolver) {
         this.azquoMemoryDBConnection = azquoMemoryDBConnection;
         this.dataToLoad = dataToLoad;
         this.namesFoundCache = namesFoundCache;
-        this.attributeNames = attributeNames;
+        this.attributeNames = uploadedFile.getLanguages();
         this.linesRejected = linesRejected;
         this.noLinesRejected = noLinesRejected;
-        this.clearData = clearData;
-        this.debug = debug;
+        this.clearData = uploadedFile.getParameter("cleardata") != null; // todo - string literals tidy
+        this.debug = uploadedFile.getTemplateParameter("debug") != null;
         this.compositeIndexResolver = compositeIndexResolver;
 
-
+        // workbook for compositeXL which has quickly become crucial functionality
         wb = new XSSFWorkbook();
         // fragment to add our function(s)
-        String[] functionNames = { "standardise" } ;
-        FreeRefFunction[] functionImpls = { new POIStandardise() } ;
-        UDFFinder udfs = new DefaultUDFFinder( functionNames, functionImpls ) ;
-        UDFFinder udfToolpack = new AggregatingUDFFinder( udfs ) ;
+        String[] functionNames = {"standardise"};
+        FreeRefFunction[] functionImpls = {new POIStandardise()};
+        UDFFinder udfs = new DefaultUDFFinder(functionNames, functionImpls);
+        UDFFinder udfToolpack = new AggregatingUDFFinder(udfs);
 
         wb.addToolPack(udfToolpack);
         excelCell = wb.createSheet("new sheet").createRow(0).createCell(0);
@@ -118,11 +117,11 @@ public class BatchImporter implements Callable<Void> {
                             // simple ignore list check
                             if (cell.getImmutableImportHeading().ignoreList != null) {
                                 for (String ignoreItem : cell.getImmutableImportHeading().ignoreList) {
-                                    if (ignoreItem.length()>6) {//this is a bit dodgy. should start with wildcard
+                                    if (ignoreItem.length() > 6) {//this is a bit dodgy. should start with wildcard
                                         if (cell.getLineValue().toLowerCase().contains(ignoreItem)) {
-                                              throw new LineRejectionException("ignored");
+                                            throw new LineRejectionException("ignored");
                                         }
-                                    }else {
+                                    } else {
                                         if (cell.getLineValue().toLowerCase().equals(ignoreItem)) {
                                             throw new LineRejectionException("ignored");
                                         }
@@ -218,7 +217,7 @@ public class BatchImporter implements Callable<Void> {
                         // lookups are pretty involved but here the notable thing is that they can reoslve both line values and names if its dependencies are met
                         ImportCellWithHeading parentCell = cells.get(cell.getImmutableImportHeading().lookupParentIndex);
                         if (parentCell.getLineNames() != null) {
-                            if (checkLookup(azquoMemoryDBConnection, cell, parentCell.getLineNames().iterator().next(), cells, compositeIndexResolver)){
+                            if (checkLookup(azquoMemoryDBConnection, cell, parentCell.getLineNames().iterator().next(), cells, compositeIndexResolver)) {
                                 adjusted = true;
                             }
                         }
@@ -541,11 +540,6 @@ public class BatchImporter implements Callable<Void> {
         if (value == null) {
             return false;
         }
-        if (cell.getImmutableImportHeading().compositionXL){
-            if (cell.getImmutableImportHeading().datatype==StringLiterals.UKDATE ||cell.getImmutableImportHeading().datatype==StringLiterals.USDATE){
-                value = DateUtils.toDate(value);
-            }
-        }
         cell.setLineValue(value, azquoMemoryDBConnection, attributeNames);
         return true;
     }
@@ -620,7 +614,7 @@ public class BatchImporter implements Callable<Void> {
                 int dataType = compCell.getImmutableImportHeading().datatype;
 
                 // skip until the referenced cell has been resolved - the loop outside checking for dependencies will send us back here
-                if (compCell != null && compCell.lineValueResolved()) {
+                if (compCell.lineValueResolved()) {
                     String sourceVal;
                     // we have a name attribute and it is a column with a name, we resolve the name if necessary and get the attribute
                     if (nameAttribute != null && compCell.getImmutableImportHeading().lineNameRequired) {
@@ -628,8 +622,8 @@ public class BatchImporter implements Callable<Void> {
                             return null; // this will stop ifs and composite resolving for the moment. If other cells are changed it the function will be called on the cell again
                         }
                         sourceVal = compCell.getLineNames().iterator().next().getAttribute(nameAttribute);
-                        if (sourceVal==null){
-                            sourceVal="";
+                        if (sourceVal == null) {
+                            sourceVal = "";
                         }
 
 
@@ -666,17 +660,17 @@ public class BatchImporter implements Callable<Void> {
                         // todo more work on this, blank string?
                         // now replace and move the marker to the next possible place
 
-                        if (cell.getImmutableImportHeading().compositionXL){
+                        if (cell.getImmutableImportHeading().compositionXL) {
                             switch (dataType) {
                                 case StringLiterals.UKDATE:
                                     long days = DateUtils.excelDate(DateUtils.isADate(sourceVal));
-                                    if (days >0){
+                                    if (days > 0) {
                                         sourceVal = days + "";
                                     }
                                     break;
                                 case StringLiterals.USDATE:
                                     long excelDays = DateUtils.excelDate(DateUtils.isUSDate(sourceVal));
-                                    if (excelDays >0){
+                                    if (excelDays > 0) {
                                         sourceVal = excelDays + "";
                                     }
                                     break;
@@ -684,12 +678,12 @@ public class BatchImporter implements Callable<Void> {
                                     sourceVal = "\"" + sourceVal + "\"";// Excel likes its string literals with quotes
                                     break;
                                 case StringLiterals.NUMBER:
-                                    if (sourceVal.length()==0){
+                                    if (sourceVal.length() == 0) {
                                         sourceVal = "0";
                                     }
-                                    if (sourceVal.charAt(0)=='-'){
+                                    if (sourceVal.charAt(0) == '-') {
                                         //to avoid double negatives in expressions
-                                        sourceVal = "(0"+ sourceVal + ")";
+                                        sourceVal = "(0" + sourceVal + ")";
                                     }
                                     break;
                                 case 0://make a guess
@@ -701,10 +695,10 @@ public class BatchImporter implements Callable<Void> {
                         // trying to helpfully deal with empty string literals. This may need tweaking over time
                         if (sourceVal.isEmpty() &&
                                 (compositionPattern.contains("+")
-                                        ||compositionPattern.contains("-")
-                                        ||compositionPattern.contains("/")
-                                        ||compositionPattern.contains("*")
-                                        )){
+                                        || compositionPattern.contains("-")
+                                        || compositionPattern.contains("/")
+                                        || compositionPattern.contains("*")
+                                )) {
                             sourceVal = "0";
                         }
                         compositionPattern = compositionPattern.replace(compositionPattern.substring(headingMarker, headingEnd + 1), sourceVal);
@@ -737,15 +731,19 @@ public class BatchImporter implements Callable<Void> {
             } catch (Exception ignored) { // following the previous convention we'll just fail silently
             }
         }
-        if (cell.getImmutableImportHeading().compositionXL){ // it's an excel formula that needs resolving
-            if (debug){
+        if (cell.getImmutableImportHeading().compositionXL) { // it's an excel formula that needs resolving
+            if (debug) {
                 cell.setDebugInfo(compositionPattern);
             }
             excelCell.setCellFormula(compositionPattern);
             formulaEvaluator.clearAllCachedResultValues();
             compositionPattern = formulaEvaluator.evaluate(excelCell).formatAsString();
-            if (compositionPattern.startsWith("\"") && compositionPattern.endsWith("\"")){
+            if (compositionPattern.startsWith("\"") && compositionPattern.endsWith("\"")) {
                 compositionPattern = compositionPattern.substring(1, compositionPattern.length() - 1);
+            }
+            // for Excel date is a number - on the way out standardise to our typically used date format
+            if (cell.getImmutableImportHeading().datatype == StringLiterals.UKDATE || cell.getImmutableImportHeading().datatype == StringLiterals.USDATE) {
+                compositionPattern = DateUtils.toDate(compositionPattern);
             }
         }
         return compositionPattern;
@@ -906,11 +904,7 @@ public class BatchImporter implements Callable<Void> {
                 cell.setLineNamesResolved(); // deal with its children later
                 return true;
             }
-            if (checkResult == CHECKMAYBE) {
-                provisional = true;//applies to the next condition only
-            } else {
-                provisional = false;
-            }
+            provisional = checkResult == CHECKMAYBE;//applies to the next condition only
         }
 
         if (nearestList.size() > 0) {
@@ -1161,9 +1155,9 @@ public class BatchImporter implements Callable<Void> {
                 String value = cell.getLineValue();
                 if (!(cell.getImmutableImportHeading().blankZeroes && isZero(value)) && value.trim().length() > 0) { // don't store if blank or zero and blank zeroes
                     // finally store our value and names for it - only increment the value count if something actually changed in the DB
-                    if (debug){
+                    if (debug) {
                         ValueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, value + DEBUGMARKER + cell.getDebugInfo(), namesForValue, cell.getImmutableImportHeading().replace);
-                    }else{
+                    } else {
                         ValueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, value, namesForValue, cell.getImmutableImportHeading().replace);
                     }
                 } else if (clearData || cell.getImmutableImportHeading().clearData) { // only kicks in if the cell is blank
@@ -1194,9 +1188,9 @@ public class BatchImporter implements Callable<Void> {
                         for (Name name : identityCell.getLineNames()) {
                             // provisional means if there's a value there already don't change it
                             if (!cell.getImmutableImportHeading().provisional || name.getAttribute(attribute) == null) {
-                                if (debug && cell.getDebugInfo()!=null){
+                                if (debug && cell.getDebugInfo() != null) {
                                     name.setAttributeWillBePersisted(attribute, cell.getLineValue() + DEBUGMARKER + cell.getDebugInfo(), azquoMemoryDBConnection);
-                                }else{
+                                } else {
                                     name.setAttributeWillBePersisted(attribute, cell.getLineValue(), azquoMemoryDBConnection);
                                 }
                             }
@@ -1263,5 +1257,4 @@ public class BatchImporter implements Callable<Void> {
         }
         return languages;
     }
-
 }
