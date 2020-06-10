@@ -27,7 +27,7 @@ public class DateUtils {
     private static final DateTimeFormatter usdf3 = DateTimeFormatter.ofPattern("MMM-d-yyyy");
     private static final DateTimeFormatter usdf3a = DateTimeFormatter.ofPattern("MMM-d-yy");
     private static final DateTimeFormatter usdf4 = DateTimeFormatter.ofPattern("M-d-yyyy");
-    private static final LocalDate start = LocalDate.of(1970,1,1);
+    private static final LocalDate start = LocalDate.of(1899,12,31);
 
     // bottom two lines off the net, needed as result sets don't use the new date classes
     public static LocalDateTime getLocalDateTimeFromDate(Date date) {
@@ -142,18 +142,12 @@ public class DateUtils {
         return newDate;
     }
 
-    public static String toUKDate(String intString){
-        int days = Integer.parseInt(intString);
+    public static String toDate(String intString){
+        int days = (int)Double.parseDouble(intString);
         LocalDate date = start.plus(days,DAYS);
-        return ukdf2.format(date);
+        return dateTimeFormatter.format(date);
 
     }
 
-    public static String toUSDate(String intString){
-        int days = Integer.parseInt(intString);
-        LocalDate date = start.plus(days,DAYS);
-        return usdf2.format(date);
-
-    }
 
 }
