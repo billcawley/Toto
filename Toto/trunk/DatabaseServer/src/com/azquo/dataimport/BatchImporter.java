@@ -41,6 +41,7 @@ public class BatchImporter implements Callable<Void> {
     private static final int CHECKFALSE = 0;
     private static final int CHECKMAYBE = 2;
     private static final String PROVISIONAL = "***";
+    private static final String DEBUGMARKER = "--DEBUG--";
 
     private final AzquoMemoryDBConnection azquoMemoryDBConnection;
     private final List<LineDataWithLineNumber> dataToLoad;
@@ -49,6 +50,7 @@ public class BatchImporter implements Callable<Void> {
     private final Map<Integer, List<String>> linesRejected;
     private final AtomicInteger noLinesRejected;
     private final boolean clearData;
+    private final boolean debug;
     private final CompositeIndexResolver compositeIndexResolver;
 
     // excel evaluation bits
@@ -64,6 +66,7 @@ public class BatchImporter implements Callable<Void> {
             , Map<Integer, List<String>> linesRejected
             , AtomicInteger noLinesRejected
             , boolean clearData
+            ,boolean debug
             , CompositeIndexResolver compositeIndexResolver) {
         this.azquoMemoryDBConnection = azquoMemoryDBConnection;
         this.dataToLoad = dataToLoad;
@@ -72,6 +75,7 @@ public class BatchImporter implements Callable<Void> {
         this.linesRejected = linesRejected;
         this.noLinesRejected = noLinesRejected;
         this.clearData = clearData;
+        this.debug = debug;
         this.compositeIndexResolver = compositeIndexResolver;
 
 
@@ -538,11 +542,8 @@ public class BatchImporter implements Callable<Void> {
             return false;
         }
         if (cell.getImmutableImportHeading().compositionXL){
-            if (cell.getImmutableImportHeading().datatype==StringLiterals.UKDATE){
-                value = DateUtils.toUKDate(value);
-            }
-            if (cell.getImmutableImportHeading().datatype==StringLiterals.USDATE){
-                value = DateUtils.toUSDate(value);
+            if (cell.getImmutableImportHeading().datatype==StringLiterals.UKDATE ||cell.getImmutableImportHeading().datatype==StringLiterals.USDATE){
+                value = DateUtils.toDate(value);
             }
         }
         cell.setLineValue(value, azquoMemoryDBConnection, attributeNames);
@@ -737,6 +738,9 @@ public class BatchImporter implements Callable<Void> {
             }
         }
         if (cell.getImmutableImportHeading().compositionXL){ // it's an excel formula that needs resolving
+            if (debug){
+                cell.setDebugInfo(compositionPattern);
+            }
             excelCell.setCellFormula(compositionPattern);
             formulaEvaluator.clearAllCachedResultValues();
             compositionPattern = formulaEvaluator.evaluate(excelCell).formatAsString();
@@ -1157,7 +1161,11 @@ public class BatchImporter implements Callable<Void> {
                 String value = cell.getLineValue();
                 if (!(cell.getImmutableImportHeading().blankZeroes && isZero(value)) && value.trim().length() > 0) { // don't store if blank or zero and blank zeroes
                     // finally store our value and names for it - only increment the value count if something actually changed in the DB
-                    ValueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, value, namesForValue, cell.getImmutableImportHeading().replace);
+                    if (debug){
+                        ValueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, value + DEBUGMARKER + cell.getDebugInfo(), namesForValue, cell.getImmutableImportHeading().replace);
+                    }else{
+                        ValueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, value, namesForValue, cell.getImmutableImportHeading().replace);
+                    }
                 } else if (clearData || cell.getImmutableImportHeading().clearData) { // only kicks in if the cell is blank
                     // EFC extracted out of value service, cleaner out here
                     final List<Value> existingValues = ValueService.findForNames(namesForValue);
@@ -1186,7 +1194,11 @@ public class BatchImporter implements Callable<Void> {
                         for (Name name : identityCell.getLineNames()) {
                             // provisional means if there's a value there already don't change it
                             if (!cell.getImmutableImportHeading().provisional || name.getAttribute(attribute) == null) {
-                                name.setAttributeWillBePersisted(attribute, cell.getLineValue(), azquoMemoryDBConnection);
+                                if (debug && cell.getDebugInfo()!=null){
+                                    name.setAttributeWillBePersisted(attribute, cell.getLineValue() + DEBUGMARKER + cell.getDebugInfo(), azquoMemoryDBConnection);
+                                }else{
+                                    name.setAttributeWillBePersisted(attribute, cell.getLineValue(), azquoMemoryDBConnection);
+                                }
                             }
                             // EFC note - need to check on definition - it means something like "the last three months"
                             if (attribute.toLowerCase().equals("definition")) {
