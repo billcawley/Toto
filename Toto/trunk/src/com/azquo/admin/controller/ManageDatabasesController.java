@@ -523,6 +523,7 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
 
     // as it says make something for users to read from a list of uploaded files.
     public static String formatUploadedFiles(List<UploadedFile> uploadedFiles, int checkboxId, boolean noClickableHeadings, Set<String> comments) {
+        StringBuilder errorList = new StringBuilder();
         StringBuilder toReturn = new StringBuilder();
         for (UploadedFile uploadedFile : uploadedFiles) {
             int id = uploadedFile.hashCode(); // stop clash with other div ids
@@ -659,8 +660,15 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
             }
 
             if (!uploadedFile.getLinesRejected().isEmpty()) {
+                if (errorList.length()==0) {
+                    errorList.append("ERRORS FOUND : ").append("\n<br/>");
+                }
+                for (String fileName:uploadedFile.getFileNames()){
+                     errorList.append(fileName + ".");
+                }
+                errorList.append(" - Line Errors : ").append(uploadedFile.getNoLinesRejected()).append("\n<br/>");
                 if (noClickableHeadings) {
-                    toReturn.append("Line Errors : ").append(uploadedFile.getNoLinesRejected()).append("\n<br/>");
+                      toReturn.append("Line Errors : ").append(uploadedFile.getNoLinesRejected()).append("\n<br/>");
                 } else {
                     toReturn.append("<a href=\"#\" onclick=\"showHideDiv('rejectedLines" + id + "'); return false;\">Line Errors : ").append(uploadedFile.getNoLinesRejected()).append("</a>\n<br/><div id=\"rejectedLines" + id + "\" style=\"display : none\">");
                 }
@@ -848,7 +856,15 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
             }
 
             if (uploadedFile.getError() != null) {
-                toReturn.append("ERROR : ").append(uploadedFile.getError()).append("\n<br/>");
+                if (uploadedFile.getError().toLowerCase().contains("empty sheet")){
+                    toReturn.append("WARNING :").append(uploadedFile.getError()).append("\n<br>");
+                }else{
+                    if (errorList.length()==0) {
+                        errorList.append("ERRORS FOUND : ").append("\n<br/>");
+                    }
+                    errorList.append(uploadedFile.getError()).append("\n<br/>");
+                    toReturn.append("ERROR : ").append(uploadedFile.getError()).append("\n<br/>");
+                }
             }
 
             if (!uploadedFile.isDataModified()) {
@@ -867,6 +883,9 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
             if (uploadedFile.isImportTemplate()) {
                 toReturn.append("Import template uploaded\n<br/>");
             }
+        }
+        if (errorList.length()>0){
+            return "<b>" + errorList.toString() + "\n</br></b>" + toReturn.toString();
         }
         return toReturn.toString();
     }
