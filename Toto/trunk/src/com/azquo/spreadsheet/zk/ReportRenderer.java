@@ -174,54 +174,61 @@ public class ReportRenderer {
                     List<String> repeatItems = CommonReportUtils.getDropdownListForQuery(loggedInUser, snameCell.getStringValue());
                     String firstItem = null; // for api purposes I need to set the initial sheet name after it's copied or I get NPEs
                     int sheetPosition = 0;
-                    for (String repeatItem : repeatItems) {
-                        if (firstItem == null) { // set the repeat tiem on this sheet
-                            SCell repeatItemCell = BookUtils.getSnameCell(az_repeatItem);
-                            repeatItemCell.setStringValue(repeatItem);
-                            firstItem = repeatItem;
-                        } else { // make a new one and copy names
-                            Range sheetRange = Ranges.range(sheet);
-                            // our modified version of the function
-                            CopySheet(sheetRange, repeatItem);
-                            Sheet newSheet = book.getSheetAt(book.getNumberOfSheets() - 1);// it will be the latest
-                            for (SName name : namesForSheet) {
-                                if (!name.getName().equalsIgnoreCase(AZREPEATSHEET)) { // don't copy the repeat or we'll get a recursive loop!
-                                    // cloneSheet won't copy the names, need to make new ones
-                                    // the new ones need to be applies to as well as refers to the new sheet
-                                    SName newName = book.getInternalBook().createName(name.getName(), newSheet.getSheetName());
-                                    String newFormula;
-                                    if (newSheet.getSheetName().contains(" ") && !name.getRefersToFormula().startsWith("'")) { // then we need to add quotes
-                                        newFormula = name.getRefersToFormula().replace(sheet.getSheetName() + "!", "'" + newSheet.getSheetName() + "'!");
-                                    } else {
-                                        if (name.getRefersToFormula().startsWith("'")) {
-                                            newFormula = name.getRefersToFormula().replace("'" + sheet.getSheetName() + "'!", "'" + newSheet.getSheetName() + "'!");
+                    if (repeatItems.size()==0){
+                        BookUtils.deleteSheet(book, sheetNumber);
+                        sheetNumber--;
+                        continue;
+                    }else {
+                        for (String repeatItem : repeatItems) {
+                            if (firstItem == null) { // set the repeat tiem on this sheet
+                                SCell repeatItemCell = BookUtils.getSnameCell(az_repeatItem);
+                                repeatItemCell.setStringValue(repeatItem);
+                                firstItem = repeatItem;
+                            } else { // make a new one and copy names
+                                Range sheetRange = Ranges.range(sheet);
+                                // our modified version of the function
+                                CopySheet(sheetRange, repeatItem);
+                                Sheet newSheet = book.getSheetAt(book.getNumberOfSheets() - 1);// it will be the latest
+                                for (SName name : namesForSheet) {
+                                    if (!name.getName().equalsIgnoreCase(AZREPEATSHEET)) { // don't copy the repeat or we'll get a recursive loop!
+                                        // cloneSheet won't copy the names, need to make new ones
+                                        // the new ones need to be applies to as well as refers to the new sheet
+                                        SName newName = book.getInternalBook().createName(name.getName(), newSheet.getSheetName());
+                                        String newFormula;
+                                        if (newSheet.getSheetName().contains(" ") && !name.getRefersToFormula().startsWith("'")) { // then we need to add quotes
+                                            newFormula = name.getRefersToFormula().replace(sheet.getSheetName() + "!", "'" + newSheet.getSheetName() + "'!");
                                         } else {
-                                            newFormula = name.getRefersToFormula().replace(sheet.getSheetName() + "!", newSheet.getSheetName() + "!");
+                                            if (name.getRefersToFormula().startsWith("'")) {
+                                                newFormula = name.getRefersToFormula().replace("'" + sheet.getSheetName() + "'!", "'" + newSheet.getSheetName() + "'!");
+                                            } else {
+                                                newFormula = name.getRefersToFormula().replace(sheet.getSheetName() + "!", newSheet.getSheetName() + "!");
+                                            }
                                         }
+                                        newName.setRefersToFormula(newFormula);
                                     }
-                                    newName.setRefersToFormula(newFormula);
                                 }
+                                SName newRepeatItem = BookUtils.getNameByName(AZREPEATITEM, newSheet);
+                                SCell repeatItemCell = BookUtils.getSnameCell(newRepeatItem);
+                                repeatItemCell.setStringValue(repeatItem);
+                                // now need to move it and rename - hopefully references e.g. names will be affected correctly?
+                                book.getInternalBook().moveSheetTo(newSheet.getInternalSheet(), book.getSheetIndex(sheet) + sheetPosition);
                             }
-                            SName newRepeatItem = BookUtils.getNameByName(AZREPEATITEM, newSheet);
-                            SCell repeatItemCell = BookUtils.getSnameCell(newRepeatItem);
-                            repeatItemCell.setStringValue(repeatItem);
-                            // now need to move it and rename - hopefully references e.g. names will be affected correctly?
-                            book.getInternalBook().moveSheetTo(newSheet.getInternalSheet(), book.getSheetIndex(sheet) + sheetPosition);
+                            sheetPosition++;
                         }
-                        sheetPosition++;
-                    }
-                    if (firstItem==null){
-                        firstItem = sheet.getSheetName();//the repeat list is void
-                    }
-                    sheetsToRename.put(sheet, firstItem);
-                    //need to rename current sheet now before data is loaded
-                    //book.getInternalBook().setSheetName(sheet.getInternalSheet(), suggestSheetName(book, firstItem));
+                        if (firstItem == null) {
+                            firstItem = sheet.getSheetName();//the repeat list is void
+                        }
+                        sheetsToRename.put(sheet, firstItem);
+                        //need to rename current sheet now before data is loaded
+                        //book.getInternalBook().setSheetName(sheet.getInternalSheet(), suggestSheetName(book, firstItem));
 
 
-                    choiceOptionsMap = ChoicesService.resolveAndSetChoiceOptions(loggedInUser, sheet, regionsToWatchForMerge);
-                    ReportService.resolveQueries(sheet.getBook(), loggedInUser); // after all options sorted should be ok
+                        choiceOptionsMap = ChoicesService.resolveAndSetChoiceOptions(loggedInUser, sheet, regionsToWatchForMerge);
+                        ReportService.resolveQueries(sheet.getBook(), loggedInUser); // after all options sorted should be ok
+                    }
                 }
             }
+
 
             // ok the plan here is remove merges that might be adversely affected by regions expanding then put them back in after the regions are expanded.
             List<CellRegion> mergesToTemporarilyRemove = new ArrayList<>(sheet.getInternalSheet().getMergedRegions());

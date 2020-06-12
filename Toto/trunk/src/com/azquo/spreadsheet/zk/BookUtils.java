@@ -352,4 +352,20 @@ java.lang.IllegalStateException: is ERROR, not the one of [STRING, BLANK]
         }
         return region;
     }
+
+    public static void deleteSheet(Book book, int sheetNumber) {
+        String sheetName = book.getSheetAt(sheetNumber).getSheetName();
+        List<SName> toBeDeleted = new ArrayList<>();
+        for (SName name : book.getInternalBook().getNames()) {
+            if (name.getRefersToSheetName().equals(sheetName)) {
+                toBeDeleted.add(name);
+            }
+        }
+        for (SName name:toBeDeleted){
+            book.getInternalBook().deleteName(name);
+        }
+        book.getInternalBook().deleteSheet(book.getInternalBook().getSheet(sheetNumber));
+
+    }
+
 }
