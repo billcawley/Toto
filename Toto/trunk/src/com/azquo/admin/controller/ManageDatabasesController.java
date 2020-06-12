@@ -660,13 +660,7 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
             }
 
             if (!uploadedFile.getLinesRejected().isEmpty()) {
-                if (errorList.length()==0) {
-                    errorList.append("ERRORS FOUND : ").append("\n<br/>");
-                }
-                for (String fileName:uploadedFile.getFileNames()){
-                     errorList.append(fileName + ".");
-                }
-                errorList.append(" - Line Errors : ").append(uploadedFile.getNoLinesRejected()).append("\n<br/>");
+                errorList.append(updateErrorList(uploadedFile,errorList,uploadedFile.getNoLinesRejected()+""));
                 if (noClickableHeadings) {
                       toReturn.append("Line Errors : ").append(uploadedFile.getNoLinesRejected()).append("\n<br/>");
                 } else {
@@ -859,10 +853,7 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
                 if (uploadedFile.getError().toLowerCase().contains("empty sheet")){
                     toReturn.append("WARNING :").append(uploadedFile.getError()).append("\n<br>");
                 }else{
-                    if (errorList.length()==0) {
-                        errorList.append("ERRORS FOUND : ").append("\n<br/>");
-                    }
-                    errorList.append(uploadedFile.getError()).append("\n<br/>");
+                    errorList.append(updateErrorList(uploadedFile, errorList, uploadedFile.getError()));
                     toReturn.append("ERROR : ").append(uploadedFile.getError()).append("\n<br/>");
                 }
             }
@@ -888,5 +879,18 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
             return "<b>" + errorList.toString() + "\n</br></b>" + toReturn.toString();
         }
         return toReturn.toString();
+    }
+
+    private static String updateErrorList(UploadedFile uploadedFile, StringBuilder errorList, String error){
+        StringBuilder appendString = new StringBuilder();
+        if (errorList.length()==0) {
+            appendString.append("ERRORS FOUND : ").append("\n<br/>");
+        }
+        for (String fileName:uploadedFile.getFileNames()){
+            appendString.append(fileName + ".");
+        }
+        appendString.append(error).append("\n<br/>");
+        return appendString.toString();
+
     }
 }
