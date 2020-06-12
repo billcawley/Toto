@@ -12,8 +12,8 @@ import java.text.SimpleDateFormat
 
 def fileProcess(Object[] args) {
     // now do it again
-    SimpleDateFormat df = new SimpleDateFormat("yyyy-mm-dd");
-    SimpleDateFormat usdf = new SimpleDateFormat("mm/dd/yyyy");
+    SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+    SimpleDateFormat usdf = new SimpleDateFormat("MM/dd/yyyy");
     println("risk all risks premium running ")
     def lineNo = 1
     int topLine = 0;
