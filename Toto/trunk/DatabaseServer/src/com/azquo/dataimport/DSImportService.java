@@ -322,6 +322,7 @@ public class DSImportService {
                                 if (!headingToAdd.toLowerCase().contains(HeadingReader.DEFAULT)
                                         && !leftOver.getHeading().toLowerCase().contains(HeadingReader.COMPOSITION)
                                         && !leftOver.getHeading().toLowerCase().contains(HeadingReader.COMPOSITIONXL)
+                                        && !leftOver.getHeading().toLowerCase().contains(HeadingReader.AZEQUALS)
                                         && !leftOver.getHeading().toLowerCase().contains(HeadingReader.LOOKUP)
                                         && uploadedFile.getParameter(clauses[0].trim().toLowerCase()) == null
                                 ) {
@@ -584,6 +585,10 @@ public class DSImportService {
                                 headings.set(colNo, heading);
                             } else {
                                 if (findReservedWord(heading)) {
+                                    if (heading.toLowerCase().startsWith(HeadingReader.AZEQUALS)) {
+                                        //with Excel style formulae, don't insist on a space after 'firstWord' - put it in
+                                        heading.replace(HeadingReader.AZEQUALS, HeadingReader.AZEQUALS+" ");
+                                    }
                                     headings.set(colNo, headings.get(colNo) + ";" + heading.trim());
                                 } else {
                                     headings.set(colNo, heading.trim() + "|" + headings.get(colNo));
@@ -614,6 +619,7 @@ public class DSImportService {
                 || heading.startsWith(HeadingReader.LOCAL)
                 || heading.startsWith(HeadingReader.COMPOSITION)
                 || heading.startsWith(HeadingReader.COMPOSITIONXL)
+                || heading.startsWith(HeadingReader.AZEQUALS)
                 || heading.startsWith(HeadingReader.IGNORE)
                 || heading.startsWith(HeadingReader.DEFAULT)
                 || heading.startsWith(HeadingReader.NONZERO)

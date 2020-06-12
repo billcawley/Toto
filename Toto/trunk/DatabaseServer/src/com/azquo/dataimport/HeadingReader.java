@@ -56,6 +56,7 @@ Attributes of the names in other cells can be referenced also
 
     static final String COMPOSITION = "composition";
     static final String COMPOSITIONXL = "compositionxl";
+    static final String AZEQUALS = "az=";
     // shorthand for parent of/child of/exclusive, see comments below where it's used
     static final String CLASSIFICATION = "classification";
     static final String DEFAULT = "default";
@@ -284,6 +285,7 @@ Attributes of the names in other cells can be referenced also
         if (clause.length() == firstWord.length()
                 && !firstWord.equals(COMPOSITION)
                 && !firstWord.equals(COMPOSITIONXL)
+                && !firstWord.equals(AZEQUALS)
                 && !firstWord.equals(LOCAL)
                 && !firstWord.equals(REQUIRED)
                 && !firstWord.equals(NONZERO)
@@ -356,6 +358,7 @@ Attributes of the names in other cells can be referenced also
             case ONLY:
                 heading.only = result;
                 break;
+            case AZEQUALS:
             case COMPOSITIONXL:// use excel formulae
                 heading.compositionXL = true;
             case DEFAULT: // default = composition in now but we'll leave the syntax support in
