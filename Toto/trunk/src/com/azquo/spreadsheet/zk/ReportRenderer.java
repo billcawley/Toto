@@ -57,6 +57,7 @@ public class ReportRenderer {
     static final String AZPIVOTHEADINGS = "az_pivotheadings";//old version
     public static final String AZREPORTNAME = "az_reportname";
     public static final String AZIMPORTNAME = "az_importname";
+    public static final String AZINPUTNAME = "az_input";
     public static final String EXECUTE = "az_execute";
     public static final String PREEXECUTE = "az_preexecute";
     public static final String FOLLOWON = "az_followon";
