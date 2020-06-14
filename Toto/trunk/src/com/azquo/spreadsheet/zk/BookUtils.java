@@ -290,15 +290,14 @@ java.lang.IllegalStateException: is ERROR, not the one of [STRING, BLANK]
 
     // duff names can casue all sorts of problems, best to zap them
     static void removeNamesWithNoRegion(Book book) {
+        List<SName> toBeDeleted = new ArrayList<>();
         for (SName name : book.getInternalBook().getNames()) {
             if (name.getRefersToCellRegion() == null && name.getRefersToFormula() == null) {
-                // how to remove the name?
-                try {
-                    book.getInternalBook().deleteName(name);
-                } catch (Exception e) {
-                    //maybe we cannot delete in this way
-                }
-            }
+                toBeDeleted.add(name);
+              }
+        }
+        for (SName name:toBeDeleted){
+            book.getInternalBook().deleteName(name);
         }
     }
 
@@ -311,6 +310,29 @@ java.lang.IllegalStateException: is ERROR, not the one of [STRING, BLANK]
         }
         // should we check the formula refers to the sheet here? I'm not sure. Applies will have been checked for above.
         return sheet.getBook().getInternalBook().getNameByName(name);
+    }
+
+    public static CellRegion getNameByName(String nameName, Book book)throws Exception {
+        //this call is case insensitive - I checked the decompiled code
+        for (SName name: book.getInternalBook().getNames()) {
+            if (name.getName().equalsIgnoreCase(nameName)){
+                if (name.getRefersToCellRegion()==null){
+                    break;
+                }
+                return name.getRefersToCellRegion();
+            }
+        }
+        throw new Exception("no valid range " + nameName + " found");
+    }
+
+    public static org.zkoss.zss.api.model.Sheet  getSheetFor(String nameName, Book book){
+        //only added because CellRegion does not appear to have a 'getSheet() method
+        for (SName name: book.getInternalBook().getNames()) {
+            if (name.getName().equalsIgnoreCase(nameName)){
+                return book.getSheet(name.getRefersToSheetName());
+             }
+        }
+        return null;
     }
 
     public static Name getNameByName(String name, org.zkoss.poi.ss.usermodel.Sheet sheet) {
@@ -354,17 +376,8 @@ java.lang.IllegalStateException: is ERROR, not the one of [STRING, BLANK]
     }
 
     public static void deleteSheet(Book book, int sheetNumber) {
-        String sheetName = book.getSheetAt(sheetNumber).getSheetName();
-        List<SName> toBeDeleted = new ArrayList<>();
-        for (SName name : book.getInternalBook().getNames()) {
-            if (name.getRefersToSheetName().equals(sheetName)) {
-                toBeDeleted.add(name);
-            }
-        }
-        for (SName name:toBeDeleted){
-            book.getInternalBook().deleteName(name);
-        }
-        book.getInternalBook().deleteSheet(book.getInternalBook().getSheet(sheetNumber));
+           book.getInternalBook().deleteSheet(book.getInternalBook().getSheet(sheetNumber));
+           removeNamesWithNoRegion(book);
 
     }
 
