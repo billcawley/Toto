@@ -1,8 +1,13 @@
 package com.azquo.dataimport;
 
+import com.azquo.DateUtils;
 import com.azquo.RowColumn;
 import com.azquo.spreadsheet.transport.HeadingWithInterimLookup;
 import com.azquo.util.CommandLineCalls;
+import com.fasterxml.jackson.databind.MappingIterator;
+import com.fasterxml.jackson.dataformat.csv.CsvMapper;
+import com.fasterxml.jackson.dataformat.csv.CsvParser;
+import com.fasterxml.jackson.dataformat.csv.CsvSchema;
 import net.lingala.zip4j.core.ZipFile;
 import org.apache.commons.lang.SystemUtils;
 import org.apache.log4j.Logger;
@@ -55,9 +60,12 @@ import org.zkoss.poi.ss.util.CellReference;
 import org.zkoss.poi.xssf.eventusermodel.ReadOnlySharedStringsTable;
 import org.zkoss.poi.xssf.eventusermodel.XSSFReader;
 import org.zkoss.poi.xssf.usermodel.XSSFWorkbook;
+import org.zkoss.zss.api.Importers;
 import org.zkoss.zss.api.Range;
 import org.zkoss.zss.api.Ranges;
+import org.zkoss.zss.api.model.Book;
 import org.zkoss.zss.api.model.CellData;
+import org.zkoss.zss.model.CellRegion;
 
 import javax.servlet.http.HttpSession;
 import javax.xml.parsers.*;
@@ -735,6 +743,7 @@ public final class ImportService {
     // things that can be read from "Parameters" in an import template sheet
     private static final String PRE_PROCESSOR = "pre-processor";
     private static final String PREPROCESSOR = "preprocessor";
+    private static final String PREPROCESS = "preprocess";
     public static final String POSTPROCESSOR = "postprocessor";
     public static final String PENDINGDATACLEAR = "pendingdataclear";
     private static final String VALIDATION = "validation";
@@ -1046,37 +1055,44 @@ public final class ImportService {
 
         // new thing - pre processor on the report server
         if (uploadedFile.getTemplateParameter(PREPROCESSOR) != null) {
-            File file = new File(SpreadsheetService.getGroovyDir() + "/" + uploadedFile.getTemplateParameter(PREPROCESSOR));
-            if (file.exists()) {
-                System.out.println("Groovy pre processor running  . . . ");
-                Object[] groovyParams = new Object[1];
-                groovyParams[0] = uploadedFile;
-                GroovyShell shell = new GroovyShell();
-                final Script script = shell.parse(file);
-                System.out.println("loaded groovy " + file.getPath());
-                // overly wordy way to override the path
-                try {
-                    uploadedFile.setPath((String) script.invokeMethod("fileProcess", groovyParams));
-                } catch (Exception e) {
-                    uploadedFile.setError("Preprocessor error in " + uploadedFile.getTemplateParameter(PREPROCESSOR) + " : " + e.getMessage());
+            String preProcessor = uploadedFile.getTemplateParameter(PREPROCESSOR);
+            if (preProcessor.toLowerCase().endsWith(".xlsx")){
+                ImportTemplate preProcess = ImportTemplateDAO.findForNameAndBusinessId(preProcessor, loggedInUser.getUser().getBusinessId());
+
+                preProcessUsingExcel(uploadedFile, SpreadsheetService.getHomeDir() + dbPath + loggedInUser.getBusinessDirectory() + importTemplatesDir + preProcess.getFilenameForDisk()); //
+            }else {
+                File file = new File(SpreadsheetService.getGroovyDir() + "/" + preProcessor);
+                if (file.exists()) {
+                    System.out.println("Groovy pre processor running  . . . ");
+                    Object[] groovyParams = new Object[1];
+                    groovyParams[0] = uploadedFile;
+                    GroovyShell shell = new GroovyShell();
+                    final Script script = shell.parse(file);
+                    System.out.println("loaded groovy " + file.getPath());
+                    // overly wordy way to override the path
+                    try {
+                        uploadedFile.setPath((String) script.invokeMethod("fileProcess", groovyParams));
+                    } catch (Exception e) {
+                        uploadedFile.setError("Preprocessor error in " + uploadedFile.getTemplateParameter(PREPROCESSOR) + " : " + e.getMessage());
+                        if (pendingUploadConfig != null) {
+                            pendingUploadConfig.incrementFileCounter();
+                        }
+                        return uploadedFile;
+                    }
+                    // todo - the import version switching will be broken!
+                    if (importVersion != null && !importVersion.equalsIgnoreCase(uploadedFile.getParameter(IMPORTVERSION))) { // the template changed! Call this function again to load the new template
+                        // there is a danger of a circular reference - protect against that?
+                        // must clear template based parameters, new object
+                        UploadedFile fileToProcessAgain = new UploadedFile(uploadedFile.getPath(), uploadedFile.getFileNames(), uploadedFile.getParameters(), true, uploadedFile.isValidationTest());
+                        return readPreparedFile(loggedInUser, fileToProcessAgain, false, pendingUploadConfig, templateCache);
+                    }
+                } else {
+                    uploadedFile.setError("unable to find preprocessor : " + uploadedFile.getTemplateParameter(PREPROCESSOR));
                     if (pendingUploadConfig != null) {
                         pendingUploadConfig.incrementFileCounter();
                     }
                     return uploadedFile;
                 }
-                // todo - the import version switching will be broken!
-                if (importVersion != null && !importVersion.equalsIgnoreCase(uploadedFile.getParameter(IMPORTVERSION))) { // the template changed! Call this function again to load the new template
-                    // there is a danger of a circular reference - protect against that?
-                    // must clear template based parameters, new object
-                    UploadedFile fileToProcessAgain = new UploadedFile(uploadedFile.getPath(), uploadedFile.getFileNames(), uploadedFile.getParameters(), true, uploadedFile.isValidationTest());
-                    return readPreparedFile(loggedInUser, fileToProcessAgain, false, pendingUploadConfig, templateCache);
-                }
-            } else {
-                uploadedFile.setError("unable to find preprocessor : " + uploadedFile.getTemplateParameter(PREPROCESSOR));
-                if (pendingUploadConfig != null) {
-                    pendingUploadConfig.incrementFileCounter();
-                }
-                return uploadedFile;
             }
         }
 
@@ -1085,6 +1101,9 @@ public final class ImportService {
         // right - here we're going to have to move the file if the DB server is not local.
         if (!databaseServer.getIp().equals(LOCALIP)) {// the call via RMI is the same the question is whether the path refers to this machine or another
             uploadedFile.setPath(SFTPUtilities.copyFileToDatabaseServer(new FileInputStream(uploadedFile.getPath()), databaseServer.getSftpUrl()));
+        }
+        if (uploadedFile.getParameter(PREPROCESS)!= null){
+
         }
         // used to be processed file, I see no advantage to that
         uploadedFile = RMIClient.getServerInterface(databaseServer.getIp()).readPreparedFile(databaseAccessToken
@@ -1832,5 +1851,78 @@ fr.close();
                 merges.add(attributes.getValue("ref"));
             }
         }
+    }
+
+    public static void preProcessUsingExcel(UploadedFile uploadedFile, String preprocessor)throws Exception{
+        String filePath = uploadedFile.getPath();
+        Book ppBook;
+        try {
+            ppBook = Importers.getImporter().imports(new File(preprocessor), "Report name");
+        } catch (Exception e) {
+            throw new Exception("Cannoot load preprocessor template from " + preprocessor);
+        }
+
+        CellRegion inputLineRegion = BookUtils.getNameByName("az_input", ppBook);
+        CellRegion outputLineRegion = BookUtils.getNameByName("az_output", ppBook);
+        org.zkoss.zss.api.model.Sheet inputSheet =  BookUtils.getSheetFor("az_input", ppBook);
+        org.zkoss.zss.api.model.Sheet outputSheet =  BookUtils.getSheetFor("az_output", ppBook);
+        String outFile = filePath + " converted";
+        File writeFile = new File(outFile);
+        writeFile.delete(); // to avoid confusion
+        BufferedWriter fileWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(outFile), StandardCharsets.UTF_8));
+        CsvMapper csvMapper = new CsvMapper();
+        csvMapper.enable(CsvParser.Feature.WRAP_AS_ARRAY);
+        CsvSchema schema = csvMapper.schemaFor(String[].class)
+                .withColumnSeparator('\t')
+                .withLineSeparator("\n")
+                .withoutQuoteChar();
+
+        MappingIterator<String[]> lineIterator = (csvMapper.readerFor(String[].class).with(schema).readValues(new File(filePath)));
+        boolean firstLine = true;
+        while (lineIterator.hasNext()) {
+            String[] line = lineIterator.next();
+            int colNo = 0;
+            for (String cellVal : line) {
+                if (firstLine) {
+                    String expected = getCellValue(inputSheet,inputLineRegion.row, inputLineRegion.column + colNo).getSecond();
+                    if (!cellVal.equalsIgnoreCase(expected)) {
+                        throw new Exception("on preprocessor template, expected '" + expected + "' found '" + cellVal + "'");
+                    }
+                } else {
+                    if (DateUtils.isADate(cellVal)!=null){
+                        inputSheet.getInternalSheet().getCell(inputLineRegion.row + 1,inputLineRegion.column + colNo).setNumberValue((double)DateUtils.excelDate(DateUtils.isADate(cellVal)));
+
+                    }else {
+                        if (NumberUtils.isNumber(cellVal)) {
+                            inputSheet.getInternalSheet().getCell(inputLineRegion.row + 1, inputLineRegion.column + colNo).setNumberValue(Double.parseDouble(cellVal));
+                        } else {
+                            inputSheet.getInternalSheet().getCell(inputLineRegion.row + 1, inputLineRegion.column + colNo).setStringValue(cellVal);
+                        }
+                    }
+                }
+                colNo++;
+            }
+            Ranges.range(inputSheet).notifyChange();
+            for (colNo = 0; colNo < outputLineRegion.getColumnCount(); colNo++) {
+                String cellVal;
+                if (firstLine) {
+                     cellVal = getCellValue(outputSheet,outputLineRegion.row,outputLineRegion.column + colNo).getSecond();
+
+                } else {
+                    cellVal = getCellValue(outputSheet,outputLineRegion.row + 1, outputLineRegion.column + colNo).getSecond();
+
+                }
+                if (colNo > 0) {
+                    fileWriter.write("\t" + cellVal);
+                } else {
+                    fileWriter.write(cellVal);
+                }
+            }
+            fileWriter.write("\r\n");
+            firstLine = false;
+        }
+        fileWriter.flush();
+        fileWriter.close();
+        uploadedFile.setPath(outFile);
     }
 }
