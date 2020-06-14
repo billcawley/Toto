@@ -195,6 +195,9 @@ public class UserUploadController {
                             if (importName != null) {
                                 isImportTemplate = true;
                             }
+                            if (BookUtils.getName(book, ReportRenderer.AZINPUTNAME)!=null){
+                                isImportTemplate = true;
+                            }
                             // windows file write locking paranoia
                             if (opcPackage != null){
                                 opcPackage.revert();
