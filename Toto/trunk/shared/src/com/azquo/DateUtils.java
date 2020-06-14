@@ -27,7 +27,7 @@ public class DateUtils {
     private static final DateTimeFormatter usdf3 = DateTimeFormatter.ofPattern("MMM-d-yyyy");
     private static final DateTimeFormatter usdf3a = DateTimeFormatter.ofPattern("MMM-d-yy");
     private static final DateTimeFormatter usdf4 = DateTimeFormatter.ofPattern("M-d-yyyy");
-    private static final LocalDate start = LocalDate.of(1899, 12, 31);
+    private static final LocalDate start = LocalDate.of(1899, 12, 30);
 
     // bottom two lines off the net, needed as result sets don't use the new date classes
     public static LocalDateTime getLocalDateTimeFromDate(Date date) {
