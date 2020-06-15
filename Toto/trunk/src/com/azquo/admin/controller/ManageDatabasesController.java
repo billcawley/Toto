@@ -376,6 +376,9 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
                             if (importName != null) {
                                 isImportTemplate = true;
                             }
+                            if (BookUtils.getName(book,ReportRenderer.AZINPUTNAME)!=null){
+                                isImportTemplate = true;
+                            }
                             boolean assignTemplateToDatabase = false;
                             if (database != null && !database.isEmpty() && !database.equalsIgnoreCase("none")) {
                                 LoginService.switchDatabase(loggedInUser, database); // could be blank now
