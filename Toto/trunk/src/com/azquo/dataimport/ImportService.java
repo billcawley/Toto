@@ -743,7 +743,6 @@ public final class ImportService {
     // things that can be read from "Parameters" in an import template sheet
     private static final String PRE_PROCESSOR = "pre-processor";
     private static final String PREPROCESSOR = "preprocessor";
-    private static final String PREPROCESS = "preprocess";
     public static final String POSTPROCESSOR = "postprocessor";
     public static final String PENDINGDATACLEAR = "pendingdataclear";
     private static final String VALIDATION = "validation";
@@ -1102,8 +1101,10 @@ public final class ImportService {
         if (!databaseServer.getIp().equals(LOCALIP)) {// the call via RMI is the same the question is whether the path refers to this machine or another
             uploadedFile.setPath(SFTPUtilities.copyFileToDatabaseServer(new FileInputStream(uploadedFile.getPath()), databaseServer.getSftpUrl()));
         }
-        if (uploadedFile.getParameter(PREPROCESS)!= null){
-
+        if (uploadedFile.getTemplateParameter("debug")!= null){
+            List<String> notice = new ArrayList<>();
+            notice.add("*DOWNLOAD " + uploadedFile.getPath() + " as "+ uploadedFile.getFileNames().get(0) + ".tsv");
+            uploadedFile.addToErrorHeadings(notice);
         }
         // used to be processed file, I see no advantage to that
         uploadedFile = RMIClient.getServerInterface(databaseServer.getIp()).readPreparedFile(databaseAccessToken
