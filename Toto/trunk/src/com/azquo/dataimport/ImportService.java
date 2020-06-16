@@ -59,6 +59,8 @@ import org.zkoss.poi.ss.util.CellRangeAddress;
 import org.zkoss.poi.ss.util.CellReference;
 import org.zkoss.poi.xssf.eventusermodel.ReadOnlySharedStringsTable;
 import org.zkoss.poi.xssf.eventusermodel.XSSFReader;
+import org.zkoss.poi.xssf.usermodel.XSSFFormulaEvaluator;
+import org.zkoss.poi.xssf.usermodel.XSSFSheet;
 import org.zkoss.poi.xssf.usermodel.XSSFWorkbook;
 import org.zkoss.zss.api.Importers;
 import org.zkoss.zss.api.Range;
@@ -1057,8 +1059,8 @@ public final class ImportService {
             String preProcessor = uploadedFile.getTemplateParameter(PREPROCESSOR);
             if (preProcessor.toLowerCase().endsWith(".xlsx")){
                 ImportTemplate preProcess = ImportTemplateDAO.findForNameAndBusinessId(preProcessor, loggedInUser.getUser().getBusinessId());
-
-                preProcessUsingExcel(uploadedFile, SpreadsheetService.getHomeDir() + dbPath + loggedInUser.getBusinessDirectory() + importTemplatesDir + preProcess.getFilenameForDisk()); //
+                //preProcessUsingExcel(uploadedFile, SpreadsheetService.getHomeDir() + dbPath + loggedInUser.getBusinessDirectory() + importTemplatesDir + preProcess.getFilenameForDisk()); //
+                preProcessUsingPoi(uploadedFile, SpreadsheetService.getHomeDir() + dbPath + loggedInUser.getBusinessDirectory() + importTemplatesDir + preProcess.getFilenameForDisk()); //
             }else {
                 File file = new File(SpreadsheetService.getGroovyDir() + "/" + preProcessor);
                 if (file.exists()) {
@@ -1929,4 +1931,90 @@ fr.close();
         fileWriter.close();
         uploadedFile.setPath(outFile);
     }
+
+    // maybe redo at some point checking variable names etc but this is fine enough for the moment
+    public static void preProcessUsingPoi(UploadedFile uploadedFile, String preprocessor)throws Exception{
+        String filePath = uploadedFile.getPath();
+        XSSFWorkbook ppBook;
+        OPCPackage opcPackage = null;
+        try {
+            FileInputStream fs = new FileInputStream(preprocessor);
+            opcPackage = OPCPackage.open(fs);
+            ppBook = new XSSFWorkbook(opcPackage);
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new Exception("Cannot load preprocessor template from " + preprocessor);
+        }
+        Name inputLineRegion = BookUtils.getName(ppBook,"az_input");
+        AreaReference inputAreaRef = new AreaReference(inputLineRegion.getRefersToFormula());
+        Name outputLineRegion = BookUtils.getName(ppBook,"az_output");
+        AreaReference outputAreaRef = new AreaReference(outputLineRegion.getRefersToFormula());
+        XSSFSheet inputSheet = ppBook.getSheet(inputLineRegion.getSheetName());
+        XSSFSheet outputSheet = ppBook.getSheet(outputLineRegion.getSheetName());
+        String outFile = filePath + " converted";
+        File writeFile = new File(outFile);
+        writeFile.delete(); // to avoid confusion
+        BufferedWriter fileWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(outFile), StandardCharsets.UTF_8));
+        CsvMapper csvMapper = new CsvMapper();
+        csvMapper.enable(CsvParser.Feature.WRAP_AS_ARRAY);
+        CsvSchema schema = csvMapper.schemaFor(String[].class)
+                .withColumnSeparator('\t')
+                .withLineSeparator("\n")
+                .withoutQuoteChar();
+
+        MappingIterator<String[]> lineIterator = (csvMapper.readerFor(String[].class).with(schema).readValues(new File(filePath)));
+        boolean firstLine = true;
+        int inputRow = inputAreaRef.getFirstCell().getRow();
+        int inputCol = inputAreaRef.getFirstCell().getCol();
+        while (lineIterator.hasNext()) {
+            String[] line = lineIterator.next();
+            int colNo = 0;
+            for (String cellVal : line) {
+                if (firstLine) {
+                    String expected = getCellValue(inputSheet.getRow(inputRow).getCell(inputCol + colNo));
+                    if (!cellVal.equalsIgnoreCase(expected)) {
+                        throw new Exception("on preprocessor template, expected '" + expected + "' found '" + cellVal + "'");
+                    }
+                } else {
+                    if (inputSheet.getRow(inputRow + 1).getCell(inputCol + colNo) == null){
+                        inputSheet.getRow(inputRow + 1).createCell(inputCol + colNo);
+                    }
+                    if (DateUtils.isADate(cellVal)!=null){
+                        inputSheet.getRow(inputRow + 1).getCell(inputCol + colNo).setCellValue((double)DateUtils.excelDate(DateUtils.isADate(cellVal)));
+                    }else {
+                        if (NumberUtils.isNumber(cellVal)) {
+                            inputSheet.getRow(inputRow + 1).getCell(inputCol + colNo).setCellValue(Double.parseDouble(cellVal));
+                        } else {
+                            inputSheet.getRow(inputRow + 1).getCell(inputCol + colNo).setCellValue(cellVal);
+                        }
+                    }
+                }
+                colNo++;
+            }
+            XSSFFormulaEvaluator.evaluateAllFormulaCells(ppBook);
+            int outputRow = outputAreaRef.getFirstCell().getRow();
+            int outputCol = outputAreaRef.getFirstCell().getCol();
+
+            for (colNo = outputCol; colNo < outputAreaRef.getLastCell().getCol(); colNo++) {
+                String cellVal;
+                if (firstLine) {
+                    cellVal = getCellValue(outputSheet.getRow(outputRow).getCell(colNo));
+                } else {
+                    cellVal = getCellValue(outputSheet.getRow(outputRow + 1).getCell(colNo));
+                }
+                if (colNo > 0) {
+                    fileWriter.write("\t" + cellVal);
+                } else {
+                    fileWriter.write(cellVal);
+                }
+            }
+            fileWriter.write("\r\n");
+            firstLine = false;
+        }
+        fileWriter.flush();
+        fileWriter.close();
+        uploadedFile.setPath(outFile);
+        opcPackage.revert();
+    }
+
 }
