@@ -1,3 +1,23 @@
+12-06-20
+
+More work on tracking
+
+Further improvements to compositionxl
+
+Recent user activity downloadable
+
+New error list shows at the top of the reports section if any errors occur
+
+will accept 'az=' instead of 'compositionXL'. Will also be tolerant of no space after '='
+
+if RepeatSheet set is empty, will not show the sheet
+
+XLSX
+
+Tracking stuff on AllRisks claims
+
+Oilfields build continues
+
 04-06-20
 
 Compositexl tweaks

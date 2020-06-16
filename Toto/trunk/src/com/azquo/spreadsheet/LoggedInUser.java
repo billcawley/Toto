@@ -79,6 +79,10 @@ public class LoggedInUser implements Serializable {
     private static final DateTimeFormatter df = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final DateTimeFormatter df2 = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"); // 24 hour
 
+    // a bit hacky, I just want a place to put the last converted file. For Modus, won't support more than one file etc. Just make it work for the mo
+    private String lastFile = null;
+    private String lastFileName = null;
+
     // public allowing hack for xml scanning - need to sort - todo
     public LoggedInUser(String sessionId, final User user, DatabaseServer databaseServer, Database database, String imageStoreName, String businessDirectory) {
         this.sessionId = sessionId;
@@ -262,6 +266,14 @@ public class LoggedInUser implements Serializable {
         UserActivityDAO.store(ua);
     }
 
+    public String getLastFile() {
+        return lastFile;
+    }
+
+    public void setLastFile(String lastFile) {
+        this.lastFile = lastFile;
+    }
+
     @Override
     public String toString() {
         return "LoggedInUser{" +
@@ -279,5 +291,13 @@ public class LoggedInUser implements Serializable {
                 ", jsTreeLookupMap=" + jsTreeLookupMap +
                 ", copyMode=" + copyMode +
                 '}';
+    }
+
+    public String getLastFileName() {
+        return lastFileName;
+    }
+
+    public void setLastFileName(String lastFileName) {
+        this.lastFileName = lastFileName;
     }
 }

@@ -1103,7 +1103,10 @@ public final class ImportService {
         }
         if (uploadedFile.getTemplateParameter("debug")!= null){
             List<String> notice = new ArrayList<>();
-            notice.add("*DOWNLOAD " + uploadedFile.getPath() + " as "+ uploadedFile.getFileNames().get(0) + ".tsv");
+            loggedInUser.setLastFile(uploadedFile.getPath());
+            loggedInUser.setLastFileName(uploadedFile.getFileNames().get(0) + ".tsv");
+            // should probably not be HTML in here . . .
+            notice.add("<a href=\"/api/Download?lastFile=true\">DOWNLOAD " + uploadedFile.getFileNames().get(0) + ".tsv</a>");
             uploadedFile.addToErrorHeadings(notice);
         }
         // used to be processed file, I see no advantage to that
@@ -1860,7 +1863,7 @@ fr.close();
         try {
             ppBook = Importers.getImporter().imports(new File(preprocessor), "Report name");
         } catch (Exception e) {
-            throw new Exception("Cannoot load preprocessor template from " + preprocessor);
+            throw new Exception("Cannot load preprocessor template from " + preprocessor);
         }
 
         CellRegion inputLineRegion = BookUtils.getNameByName("az_input", ppBook);

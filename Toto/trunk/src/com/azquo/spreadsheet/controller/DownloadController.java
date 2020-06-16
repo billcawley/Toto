@@ -38,6 +38,7 @@ public class DownloadController {
             , HttpServletResponse response
             , @RequestParam(value = "image", required = false) String image
             , @RequestParam(value = "puid", required = false) String puid
+            , @RequestParam(value = "lastFile", required = false) String lastFile
     ) {
         // deliver a pre prepared image. Are these names unique? Could images move between spreadsheets unintentionally?
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
@@ -58,6 +59,14 @@ public class DownloadController {
                     ex.printStackTrace();
                 }
             }
+        }
+        if ("true".equalsIgnoreCase(lastFile) && loggedInUser.getLastFile() != null) {
+            response.setContentType("text/tab-separated-values"); // Set up mime type
+                try {
+                    streamFileToBrowser(Paths.get(loggedInUser.getLastFile()), response,  loggedInUser.getLastFileName() != null ? loggedInUser.getLastFileName() : "download.tsv");
+                } catch (IOException ex) {
+                    ex.printStackTrace();
+                }
         }
         if (NumberUtils.isDigits(puid)) {
             final PendingUpload pu = PendingUploadDAO.findById(Integer.parseInt(puid));
