@@ -1105,10 +1105,16 @@ public final class ImportService {
         }
         if (uploadedFile.getTemplateParameter("debug")!= null){
             List<String> notice = new ArrayList<>();
+            String fileName = uploadedFile.getFileNames().get(0);
+            if (fileName.contains(".")){
+                fileName = fileName.substring(0, fileName.lastIndexOf("."));
+            }
+            fileName += ".tsv";
+
             loggedInUser.setLastFile(uploadedFile.getPath());
-            loggedInUser.setLastFileName(uploadedFile.getFileNames().get(0) + ".tsv");
+            loggedInUser.setLastFileName(fileName);
             // should probably not be HTML in here . . .
-            notice.add("<a href=\"/api/Download?lastFile=true\">DOWNLOAD " + uploadedFile.getFileNames().get(0) + ".tsv</a>");
+            notice.add("<a href=\"/api/Download?lastFile=true\">DOWNLOAD " + fileName + "</a>");
             uploadedFile.addToErrorHeadings(notice);
         }
         // used to be processed file, I see no advantage to that
@@ -1995,7 +2001,7 @@ fr.close();
             int outputRow = outputAreaRef.getFirstCell().getRow();
             int outputCol = outputAreaRef.getFirstCell().getCol();
 
-            for (colNo = outputCol; colNo < outputAreaRef.getLastCell().getCol(); colNo++) {
+            for (colNo = outputCol; colNo <= outputAreaRef.getLastCell().getCol(); colNo++) {
                 String cellVal;
                 if (firstLine) {
                     cellVal = getCellValue(outputSheet.getRow(outputRow).getCell(colNo));
