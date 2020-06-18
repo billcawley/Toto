@@ -729,11 +729,12 @@ public final class ImportService {
             }
         } catch (Exception e) {
             e.printStackTrace();
-            Throwable t = e;
-            while (t.getCause() != null) { // unwrap as much as possible
-                t = t.getCause();
-            }
-            uploadedFile.setError(t.getMessage());
+            //Throwable t = e;
+            //while (t.getCause() != null) { // unwrap as much as possible
+            //    t = t.getCause();
+            //}
+            //it turns out the e has a better message ('Error evaluating ...  ' rather than 'IFERROR')
+            uploadedFile.setError(e.getMessage());
             if (pendingUploadConfig != null) {
                 pendingUploadConfig.incrementFileCounter();
             }
@@ -1865,78 +1866,6 @@ fr.close();
         }
     }
 
-    public static void preProcessUsingExcel(UploadedFile uploadedFile, String preprocessor)throws Exception{
-        String filePath = uploadedFile.getPath();
-        Book ppBook;
-        try {
-            ppBook = Importers.getImporter().imports(new File(preprocessor), "Report name");
-        } catch (Exception e) {
-            throw new Exception("Cannot load preprocessor template from " + preprocessor);
-        }
-
-        CellRegion inputLineRegion = BookUtils.getNameByName("az_input", ppBook);
-        CellRegion outputLineRegion = BookUtils.getNameByName("az_output", ppBook);
-        org.zkoss.zss.api.model.Sheet inputSheet =  BookUtils.getSheetFor("az_input", ppBook);
-        org.zkoss.zss.api.model.Sheet outputSheet =  BookUtils.getSheetFor("az_output", ppBook);
-        String outFile = filePath + " converted";
-        File writeFile = new File(outFile);
-        writeFile.delete(); // to avoid confusion
-        BufferedWriter fileWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(outFile), StandardCharsets.UTF_8));
-        CsvMapper csvMapper = new CsvMapper();
-        csvMapper.enable(CsvParser.Feature.WRAP_AS_ARRAY);
-        CsvSchema schema = csvMapper.schemaFor(String[].class)
-                .withColumnSeparator('\t')
-                .withLineSeparator("\n")
-                .withoutQuoteChar();
-
-        MappingIterator<String[]> lineIterator = (csvMapper.readerFor(String[].class).with(schema).readValues(new File(filePath)));
-        boolean firstLine = true;
-        while (lineIterator.hasNext()) {
-            String[] line = lineIterator.next();
-            int colNo = 0;
-            for (String cellVal : line) {
-                if (firstLine) {
-                    String expected = getCellValue(inputSheet,inputLineRegion.row, inputLineRegion.column + colNo).getSecond();
-                    if (!cellVal.equalsIgnoreCase(expected)) {
-                        throw new Exception("on preprocessor template, expected '" + expected + "' found '" + cellVal + "'");
-                    }
-                } else {
-                    if (DateUtils.isADate(cellVal)!=null){
-                        inputSheet.getInternalSheet().getCell(inputLineRegion.row + 1,inputLineRegion.column + colNo).setNumberValue((double)DateUtils.excelDate(DateUtils.isADate(cellVal)));
-
-                    }else {
-                        if (NumberUtils.isNumber(cellVal)) {
-                            inputSheet.getInternalSheet().getCell(inputLineRegion.row + 1, inputLineRegion.column + colNo).setNumberValue(Double.parseDouble(cellVal));
-                        } else {
-                            inputSheet.getInternalSheet().getCell(inputLineRegion.row + 1, inputLineRegion.column + colNo).setStringValue(cellVal);
-                        }
-                    }
-                }
-                colNo++;
-            }
-            Ranges.range(inputSheet).notifyChange();
-            for (colNo = 0; colNo < outputLineRegion.getColumnCount(); colNo++) {
-                String cellVal;
-                if (firstLine) {
-                     cellVal = getCellValue(outputSheet,outputLineRegion.row,outputLineRegion.column + colNo).getSecond();
-
-                } else {
-                    cellVal = getCellValue(outputSheet,outputLineRegion.row + 1, outputLineRegion.column + colNo).getSecond();
-
-                }
-                if (colNo > 0) {
-                    fileWriter.write("\t" + cellVal);
-                } else {
-                    fileWriter.write(cellVal);
-                }
-            }
-            fileWriter.write("\r\n");
-            firstLine = false;
-        }
-        fileWriter.flush();
-        fileWriter.close();
-        uploadedFile.setPath(outFile);
-    }
 
     // maybe redo at some point checking variable names etc but this is fine enough for the moment
     public static void preProcessUsingPoi(UploadedFile uploadedFile, String preprocessor)throws Exception{
@@ -1957,6 +1886,8 @@ fr.close();
         AreaReference outputAreaRef = new AreaReference(outputLineRegion.getRefersToFormula());
         XSSFSheet inputSheet = ppBook.getSheet(inputLineRegion.getSheetName());
         XSSFSheet outputSheet = ppBook.getSheet(outputLineRegion.getSheetName());
+        int inputRow = inputAreaRef.getFirstCell().getRow();
+        int inputCol = inputAreaRef.getFirstCell().getCol();
         String outFile = filePath + " converted";
         File writeFile = new File(outFile);
         writeFile.delete(); // to avoid confusion
@@ -1969,35 +1900,55 @@ fr.close();
                 .withoutQuoteChar();
 
         MappingIterator<String[]> lineIterator = (csvMapper.readerFor(String[].class).with(schema).readValues(new File(filePath)));
+        Map<String, Integer> inputColumns = new HashMap<>();
+        for (int colNo = inputAreaRef.getFirstCell().getCol();colNo < inputAreaRef.getLastCell().getCol(); colNo++){
+            String heading = getCellValue(inputSheet.getRow(inputRow).getCell(inputCol + colNo));
+            inputColumns.put(heading,colNo);
+        }
+        Map <Integer,Integer> colOnInputRange = new HashMap<>();
         boolean firstLine = true;
-        int inputRow = inputAreaRef.getFirstCell().getRow();
-        int inputCol = inputAreaRef.getFirstCell().getCol();
+        Map <Integer, Integer> inputColumnMap = new HashMap<>();
+        int topLineCount = 0;
         while (lineIterator.hasNext()) {
+            if (firstLine){
+                inputColumnMap = new HashMap<>();
+            }
             String[] line = lineIterator.next();
             int colNo = 0;
             for (String cellVal : line) {
                 if (firstLine) {
                     String expected = getCellValue(inputSheet.getRow(inputRow).getCell(inputCol + colNo));
-                    if (!cellVal.equalsIgnoreCase(expected)) {
-                        throw new Exception("on preprocessor template, expected '" + expected + "' found '" + cellVal + "'");
+                    Integer targetCol = inputColumns.get(expected);
+                    if (targetCol==null) {
+                        topLineCount++;
+                        if (topLineCount > 12) {
+                            throw new Exception("on preprocessor template, expected '" + expected + "' found '" + cellVal + "'");
+                        }
+                        break;
+                    }else{
+                        inputColumnMap.put(colNo, targetCol);
                     }
                 } else {
-                    if (inputSheet.getRow(inputRow + 1).getCell(inputCol + colNo) == null){
-                        inputSheet.getRow(inputRow + 1).createCell(inputCol + colNo);
+                    Cell targetCell = inputSheet.getRow(inputRow + 1).getCell(inputCol + inputColumnMap.get(colNo));
+                    if (targetCell == null){
+                        inputSheet.getRow(inputRow + 1).createCell(inputCol + inputColumnMap.get(colNo));
+                        targetCell = inputSheet.getRow(inputRow + 1).getCell(inputCol + inputColumnMap.get(colNo));
                     }
                     if (DateUtils.isADate(cellVal)!=null){
-                        inputSheet.getRow(inputRow + 1).getCell(inputCol + colNo).setCellValue((double)DateUtils.excelDate(DateUtils.isADate(cellVal)));
+                        targetCell.setCellValue((double)DateUtils.excelDate(DateUtils.isADate(cellVal)));
                     }else {
                         if (NumberUtils.isNumber(cellVal)) {
-                            inputSheet.getRow(inputRow + 1).getCell(inputCol + colNo).setCellValue(Double.parseDouble(cellVal));
+                            targetCell.setCellValue(Double.parseDouble(cellVal));
                         } else {
-                            inputSheet.getRow(inputRow + 1).getCell(inputCol + colNo).setCellValue(cellVal);
+                            targetCell.setCellValue(cellVal);
                         }
                     }
                 }
                 colNo++;
             }
-            XSSFFormulaEvaluator.evaluateAllFormulaCells(ppBook);
+            if (!firstLine){
+                XSSFFormulaEvaluator.evaluateAllFormulaCells(ppBook);
+            }
             int outputRow = outputAreaRef.getFirstCell().getRow();
             int outputCol = outputAreaRef.getFirstCell().getCol();
 
