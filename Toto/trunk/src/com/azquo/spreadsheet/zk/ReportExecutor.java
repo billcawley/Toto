@@ -602,11 +602,16 @@ public class ReportExecutor {
         return indent;
     }
 
-    public static int generateXMLFilesAndSupportingReports(LoggedInUser loggedInUser, Sheet selectedSheet, Path destdir) throws ParserConfigurationException, TransformerException, IOException, Exception {
+    // a inclined not to let two users run at the same time. I have fixed a bug relating to checking existing files but still this has little harm and should be safer
+    public static synchronized int generateXMLFilesAndSupportingReports(LoggedInUser loggedInUser, Sheet selectedSheet, Path destdir) throws ParserConfigurationException, TransformerException, IOException, Exception {
         int fileCount = 0;
         // ok try to find the relevant regions
         List<SName> namesForSheet = BookUtils.getNamesForSheet(selectedSheet);
         Path azquoTempDir = Paths.get(SpreadsheetService.getHomeDir() + "/temp"); // do xml initially in here then copy across, we may need a capy of the file later to match back to errors
+        // make the file pointer out here - no point in it resetting for different regions. This was highlighted when doing just xml files which are generated much faster than 1 per second
+        LocalDateTime start = LocalDateTime.of(2019, Month.JANUARY, 1, 0, 0);
+        LocalDateTime now = LocalDateTime.now();
+        int filePointer = (int) (now.toEpochSecond(ZoneOffset.UTC) - start.toEpochSecond(ZoneOffset.UTC));
         for (SName name : namesForSheet) {
             if (name.getName().toLowerCase().startsWith(ReportRenderer.AZDATAREGION)) { // then we have a data region to deal with here
                 String region = name.getName().substring(ReportRenderer.AZDATAREGION.length()); // might well be an empty string
@@ -730,10 +735,6 @@ public class ReportExecutor {
                     transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4");
                     // going for one file per line as per brokersure, zip at the end
                     // tracking where we are in the xml, what elements we're in
-                    // new criteria for filenames - do a base 64 hash
-                    LocalDateTime start = LocalDateTime.of(2019, Month.JANUARY, 1, 0, 0);
-                    LocalDateTime now = LocalDateTime.now();
-                    int filePointer = (int) (now.toEpochSecond(ZoneOffset.UTC) - start.toEpochSecond(ZoneOffset.UTC));
                     for (int row = name.getRefersToCellRegion().row; row <= name.getRefersToCellRegion().lastRow; row++) {
                         boolean go = true;// the xml flag might make it false . . .
                         if (xmlFlagName != null) {
@@ -767,14 +768,11 @@ public class ReportExecutor {
                                          inbox. Hence I need a copy in temp, I'll use temp to check xml files are not duplicate names.
                                          A moot point in the case of zips but no harm
                                          */
-                            String fileName = eightCharInt(filePointer) + ".xml";
+                            String fileName = (filePrefix != null ? filePrefix : "") + eightCharInt(filePointer) + ".xml";
                             while (azquoTempDir.resolve(fileName).toFile().exists()) {
                                 filePointer++;
 //                                            fileName = base64int(filePointer) + ".xml";
-                                fileName = eightCharInt(filePointer) + ".xml";
-                                if (filePrefix != null) {
-                                    fileName = filePrefix + fileName;
-                                }
+                                fileName = (filePrefix != null ? filePrefix : "") + eightCharInt(filePointer) + ".xml";
                             }
                             // will be similar to file prefix lookup
                             if (multipleReports) {
@@ -827,10 +825,7 @@ public class ReportExecutor {
                                         filePointer++;
                                         reportFileName = (filePrefix != null ? filePrefix : "") + eightCharInt(filePointer) + ".xlsx";
                                         reportFileName = reportFileName.toLowerCase();
-                                        fileName = eightCharInt(filePointer) + ".xml";
-                                        if (filePrefix != null) {
-                                            fileName = filePrefix + fileName;
-                                        }
+                                        fileName = (filePrefix != null ? filePrefix : "") + eightCharInt(filePointer) + ".xml";
                                     }
 
                                     String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + onlineReport.getFilenameForDisk();
@@ -919,10 +914,6 @@ public class ReportExecutor {
                                 properties.store(output, null);
                             } catch (IOException io) {
                                 io.printStackTrace();
-                            }
-
-                            if (filePrefix != null && !fileName.startsWith(filePrefix)) { // I think above it can be set up with the prefix already
-                                fileName = filePrefix + fileName;
                             }
                             //System.out.println("file name : " + fileName);
                             Document doc = docBuilder.newDocument();
