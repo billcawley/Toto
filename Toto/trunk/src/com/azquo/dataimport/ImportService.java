@@ -14,6 +14,10 @@ import org.apache.log4j.Logger;
 import org.apache.poi.poifs.crypt.Decryptor;
 import org.apache.poi.poifs.crypt.EncryptionInfo;
 import org.apache.poi.poifs.filesystem.POIFSFileSystem;
+import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.xssf.usermodel.XSSFCell;
+import org.apache.poi.xssf.usermodel.XSSFFormulaEvaluator;
+import org.apache.poi.xssf.usermodel.XSSFName;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
@@ -59,15 +63,10 @@ import org.zkoss.poi.ss.util.CellRangeAddress;
 import org.zkoss.poi.ss.util.CellReference;
 import org.zkoss.poi.xssf.eventusermodel.ReadOnlySharedStringsTable;
 import org.zkoss.poi.xssf.eventusermodel.XSSFReader;
-import org.zkoss.poi.xssf.usermodel.XSSFFormulaEvaluator;
-import org.zkoss.poi.xssf.usermodel.XSSFSheet;
 import org.zkoss.poi.xssf.usermodel.XSSFWorkbook;
-import org.zkoss.zss.api.Importers;
 import org.zkoss.zss.api.Range;
 import org.zkoss.zss.api.Ranges;
-import org.zkoss.zss.api.model.Book;
 import org.zkoss.zss.api.model.CellData;
-import org.zkoss.zss.model.CellRegion;
 
 import javax.servlet.http.HttpSession;
 import javax.xml.parsers.*;
@@ -92,6 +91,8 @@ import java.util.*;
  * Deals with reports, set definitions and data files. Report schedules and users are now dealt with in dedicated classes.
  * <p>
  * Uploading of reports is going to stay in here for the mo as they will likely be packaged in zip files along with data.
+ *
+ * todo : switch all poi references to use the latest version
  */
 
 public final class ImportService {
@@ -1538,6 +1539,100 @@ public final class ImportService {
         return returnString.trim();
     }
 
+    // POI 4.0 version EFC pasted, I really don't like doing this but it's required at the moment - todo, consolidate later
+    private static org.apache.poi.ss.usermodel.DataFormatter df2 = new org.apache.poi.ss.usermodel.DataFormatter();
+
+    public static String getCellValue(XSSFCell cell) {
+        String returnString = "";
+        if (cell == null) {
+            return "";
+        }
+        //if (colCount++ > 0) bw.write('\t');
+        if (cell.getCellType() == CellType.STRING || (cell.getCellType() == CellType.FORMULA && cell.getCachedFormulaResultType() == CellType.STRING)) {
+            try {
+                returnString = cell.getStringCellValue().replace(Character.toString((char)160) ,"");// I assume means formatted text? The 160 is some kind of hard space that causes trouble and is unaffected by trim(), zap it
+            } catch (Exception ignored) {
+            }
+        } else if (cell.getCellType() == CellType.NUMERIC || (cell.getCellType() == CellType.FORMULA && cell.getCachedFormulaResultType() == CellType.NUMERIC)) {
+            // first we try to get it without locale - better match on built in formats it seems
+            String dataFormat = BuiltinFormats.getBuiltinFormat(cell.getCellStyle().getDataFormat());
+            if (dataFormat == null) {
+                dataFormat = cell.getCellStyle().getDataFormatString();
+            }
+            Double returnNumber = cell.getNumericCellValue();
+            returnString = returnNumber.toString();
+            if (returnString.contains("E")) {
+                returnString = String.format("%f", returnNumber);
+            }
+            if (returnNumber % 1 == 0) {
+                // specific condition - integer and format all 000, then actually use the format. For zip codes
+                if (dataFormat.length() > 1 && dataFormat.contains("0") && dataFormat.replace("0", "").isEmpty()) {
+                    // easylife tripped up this "zipcode" conditional by having a formula in there, requires a formula evaluator be passed
+                    if (cell.getCellType() == CellType.FORMULA) {
+                        returnString = df2.formatCellValue(cell, cell.getSheet().getWorkbook().getCreationHelper().createFormulaEvaluator()); // performance issues on the formula evaluator??
+                    } else {
+                        returnString = df2.formatCellValue(cell);
+                    }
+                } else {
+                    returnString = returnNumber.longValue() + "";
+                }
+            }
+            if (dataFormat.equals("h:mm") && returnString.length() == 4) {
+                //ZK BUG - reads "hh:mm" as "h:mm"
+                returnString = "0" + returnString;
+            } else {
+                if (dataFormat.toLowerCase().contains("m")) {
+                    if (dataFormat.length() > 6) {
+                        try {
+                            returnString = YYYYMMDD.format(cell.getDateCellValue());
+                        } catch (Exception e) {
+                            //not sure what to do here.
+                        }
+                    } else { // it's still a date - match the defauilt format
+                        // this seems to be required as if the date is based off another cell then the normal formatter will return the formula
+                        CellDateFormatter cdf = new CellDateFormatter(dataFormat, Locale.UK);
+                        returnString = cdf.format(cell.getDateCellValue());
+                    }
+                }
+            }
+        } else if (cell.getCellType() == CellType.BOOLEAN || (cell.getCellType() == CellType.FORMULA && cell.getCachedFormulaResultType() == CellType.BOOLEAN)) {
+            returnString = cell.getBooleanCellValue() + "";
+        } else if (cell.getCellType() != CellType.BLANK) {
+            if (cell.getCellType() == CellType.FORMULA) {
+                System.out.println("other formula cell type : " + cell.getCachedFormulaResultType());
+            }
+            System.out.println("other cell type : " + cell.getCellType());
+        }
+        if (returnString.contains("\"\"") && returnString.startsWith("\"") && returnString.endsWith("\"")) {
+            //remove spurious quote marks
+            returnString = returnString.substring(1, returnString.length() - 1).replace("\"\"", "\"");
+        }
+        if (returnString.startsWith("`") && returnString.indexOf("`", 1) < 0) {
+            returnString = returnString.substring(1);
+        }
+        if (returnString.startsWith("'") && returnString.indexOf("'", 1) < 0)
+            returnString = returnString.substring(1);//in Excel some cells are preceded by a ' to indicate that they should be handled as strings
+
+        // Deal with merged cells, not sure if there's a performance issue here? If a heading spans successive cells need to have the span value
+        if (returnString.isEmpty() && cell.getSheet().getNumMergedRegions() > 0) {
+            int rowIndex = cell.getRowIndex();
+            int cellIndex = cell.getColumnIndex();
+            for (int i = 0; i < cell.getSheet().getNumMergedRegions(); i++) {
+                org.apache.poi.ss.util.CellRangeAddress region = cell.getSheet().getMergedRegion(i); //Region of merged cells
+                //check first cell of the region
+                if (rowIndex == region.getFirstRow() && // logic change - only do the merge thing on the first column
+                        cellIndex > region.getFirstColumn() // greater than, we're only interested if not the first column
+                        && cellIndex <= region.getLastColumn()
+                        /*&& rowIndex >= region.getFirstRow()
+                        && rowIndex <= region.getLastRow()*/
+                ) {
+                    returnString = getCellValue(cell.getSheet().getRow(region.getFirstRow()).getCell(region.getFirstColumn()));
+                }
+            }
+        }
+        return returnString.trim();
+    }
+
     // ZK version of the above - still used by the "download a report, edit and upload it" functionality. Hopefully removed later.
 
     public static TypedPair<Double, String> getCellValue(org.zkoss.zss.api.model.Sheet sheet, int r, int c) {
@@ -1870,22 +1965,19 @@ fr.close();
     // maybe redo at some point checking variable names etc but this is fine enough for the moment
     public static void preProcessUsingPoi(UploadedFile uploadedFile, String preprocessor)throws Exception{
         String filePath = uploadedFile.getPath();
-        XSSFWorkbook ppBook;
-        OPCPackage opcPackage = null;
+        org.apache.poi.xssf.usermodel.XSSFWorkbook ppBook;
         try {
-            FileInputStream fs = new FileInputStream(preprocessor);
-            opcPackage = OPCPackage.open(fs);
-            ppBook = new XSSFWorkbook(opcPackage);
+            ppBook = new org.apache.poi.xssf.usermodel.XSSFWorkbook(new File(preprocessor));
         } catch (Exception e) {
             e.printStackTrace();
             throw new Exception("Cannot load preprocessor template from " + preprocessor);
         }
-        Name inputLineRegion = BookUtils.getName(ppBook,"az_input");
+        XSSFName inputLineRegion = BookUtils.getName(ppBook,"az_input");
         AreaReference inputAreaRef = new AreaReference(inputLineRegion.getRefersToFormula());
-        Name outputLineRegion = BookUtils.getName(ppBook,"az_output");
+        XSSFName outputLineRegion = BookUtils.getName(ppBook,"az_output");
         AreaReference outputAreaRef = new AreaReference(outputLineRegion.getRefersToFormula());
-        XSSFSheet inputSheet = ppBook.getSheet(inputLineRegion.getSheetName());
-        XSSFSheet outputSheet = ppBook.getSheet(outputLineRegion.getSheetName());
+        org.apache.poi.xssf.usermodel.XSSFSheet inputSheet = ppBook.getSheet(inputLineRegion.getSheetName());
+        org.apache.poi.xssf.usermodel.XSSFSheet outputSheet = ppBook.getSheet(outputLineRegion.getSheetName());
         int inputRow = inputAreaRef.getFirstCell().getRow();
         int inputCol = inputAreaRef.getFirstCell().getCol();
         String outFile = filePath + " converted";
@@ -1929,7 +2021,7 @@ fr.close();
                         inputColumnMap.put(colNo, targetCol);
                     }
                 } else {
-                    Cell targetCell = inputSheet.getRow(inputRow + 1).getCell(inputCol + inputColumnMap.get(colNo));
+                    XSSFCell targetCell = inputSheet.getRow(inputRow + 1).getCell(inputCol + inputColumnMap.get(colNo));
                     if (targetCell == null){
                         inputSheet.getRow(inputRow + 1).createCell(inputCol + inputColumnMap.get(colNo));
                         targetCell = inputSheet.getRow(inputRow + 1).getCell(inputCol + inputColumnMap.get(colNo));
@@ -1971,7 +2063,6 @@ fr.close();
         fileWriter.flush();
         fileWriter.close();
         uploadedFile.setPath(outFile);
-        opcPackage.revert();
     }
 
 }

@@ -9,6 +9,7 @@ import org.zkoss.poi.ss.usermodel.Name;
 import org.zkoss.poi.ss.usermodel.Workbook;
 import org.zkoss.poi.ss.util.AreaReference;
 import org.zkoss.poi.ss.util.CellReference;
+import org.zkoss.poi.xssf.usermodel.XSSFName;
 import org.zkoss.zss.api.Range;
 import org.zkoss.zss.api.Ranges;
 import org.zkoss.zss.api.model.Book;
@@ -354,6 +355,18 @@ java.lang.IllegalStateException: is ERROR, not the one of [STRING, BLANK]
         int nameCount = book.getNumberOfNames();
         for (int i = 0; i < nameCount; i++) {
             Name name = book.getNameAt(i);
+            if (name.getNameName().equalsIgnoreCase(stringName)) {
+                return name;
+            }
+        }
+        return null;
+    }
+
+    // todo we need to move all of this to proper POI but I need to clarify the issues - the XMLbeans conflict I had to override. Of course Kekai might make this redindant
+    public static org.apache.poi.xssf.usermodel.XSSFName getName(org.apache.poi.xssf.usermodel.XSSFWorkbook book, String stringName) {
+        int nameCount = book.getNumberOfNames();
+        for (int i = 0; i < nameCount; i++) {
+            org.apache.poi.xssf.usermodel.XSSFName name = book.getNameAt(i);
             if (name.getNameName().equalsIgnoreCase(stringName)) {
                 return name;
             }
