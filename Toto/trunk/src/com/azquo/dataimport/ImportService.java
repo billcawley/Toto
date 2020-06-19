@@ -1107,7 +1107,10 @@ public final class ImportService {
         }
         if (uploadedFile.getTemplateParameter("debug")!= null){
             List<String> notice = new ArrayList<>();
-            String fileName = uploadedFile.getFileNames().get(0);
+            //find the name of the workbook...
+            int nameCount = uploadedFile.getFileNames().size() -2;
+            if (nameCount < 0) nameCount = 0;
+            String fileName = uploadedFile.getFileNames().get(nameCount);
             if (fileName.contains(".")){
                 fileName = fileName.substring(0, fileName.lastIndexOf("."));
             }
@@ -1972,10 +1975,16 @@ fr.close();
             e.printStackTrace();
             throw new Exception("Cannot load preprocessor template from " + preprocessor);
         }
+         XSSFName topLines = BookUtils.getName(ppBook, "az_toplines");
+        AreaReference topLinesArea =null;
+        if (topLines!=null){
+            topLinesArea =new AreaReference(topLines.getRefersToFormula());
+        }
         XSSFName inputLineRegion = BookUtils.getName(ppBook,"az_input");
         AreaReference inputAreaRef = new AreaReference(inputLineRegion.getRefersToFormula());
         XSSFName outputLineRegion = BookUtils.getName(ppBook,"az_output");
         AreaReference outputAreaRef = new AreaReference(outputLineRegion.getRefersToFormula());
+
         org.apache.poi.xssf.usermodel.XSSFSheet inputSheet = ppBook.getSheet(inputLineRegion.getSheetName());
         org.apache.poi.xssf.usermodel.XSSFSheet outputSheet = ppBook.getSheet(outputLineRegion.getSheetName());
         int inputRow = inputAreaRef.getFirstCell().getRow();
@@ -1993,76 +2002,92 @@ fr.close();
 
         MappingIterator<String[]> lineIterator = (csvMapper.readerFor(String[].class).with(schema).readValues(new File(filePath)));
         Map<String, Integer> inputColumns = new HashMap<>();
-        for (int colNo = inputAreaRef.getFirstCell().getCol();colNo < inputAreaRef.getLastCell().getCol(); colNo++){
+        for (int colNo = inputAreaRef.getFirstCell().getCol();colNo <= inputAreaRef.getLastCell().getCol(); colNo++){
             String heading = getCellValue(inputSheet.getRow(inputRow).getCell(inputCol + colNo));
-            inputColumns.put(heading,colNo);
+            inputColumns.put(normalise(heading),colNo);
         }
         Map <Integer,Integer> colOnInputRange = new HashMap<>();
         boolean firstLine = true;
         Map <Integer, Integer> inputColumnMap = new HashMap<>();
-        int topLineCount = 0;
+        int topLinesCount = 0;
+        if (topLinesArea!=null){
+            topLinesCount = topLinesArea.getLastCell().getRow() + 1;
+        }
+        int lineNo = 0;
         while (lineIterator.hasNext()) {
-            if (firstLine){
-                inputColumnMap = new HashMap<>();
-            }
             String[] line = lineIterator.next();
             int colNo = 0;
-            for (String cellVal : line) {
-                if (firstLine) {
-                    String expected = getCellValue(inputSheet.getRow(inputRow).getCell(inputCol + colNo));
-                    Integer targetCol = inputColumns.get(expected);
-                    if (targetCol==null) {
-                        topLineCount++;
-                        if (topLineCount > 12) {
-                            throw new Exception("on preprocessor template, expected '" + expected + "' found '" + cellVal + "'");
-                        }
-                        break;
-                    }else{
-                        inputColumnMap.put(colNo, targetCol);
-                    }
-                } else {
-                    XSSFCell targetCell = inputSheet.getRow(inputRow + 1).getCell(inputCol + inputColumnMap.get(colNo));
-                    if (targetCell == null){
-                        inputSheet.getRow(inputRow + 1).createCell(inputCol + inputColumnMap.get(colNo));
-                        targetCell = inputSheet.getRow(inputRow + 1).getCell(inputCol + inputColumnMap.get(colNo));
-                    }
-                    if (DateUtils.isADate(cellVal)!=null){
-                        targetCell.setCellValue((double)DateUtils.excelDate(DateUtils.isADate(cellVal)));
-                    }else {
-                        if (NumberUtils.isNumber(cellVal)) {
-                            targetCell.setCellValue(Double.parseDouble(cellVal));
-                        } else {
-                            targetCell.setCellValue(cellVal);
-                        }
-                    }
-                }
-                colNo++;
-            }
-            if (!firstLine){
-                XSSFFormulaEvaluator.evaluateAllFormulaCells(ppBook);
-            }
-            int outputRow = outputAreaRef.getFirstCell().getRow();
-            int outputCol = outputAreaRef.getFirstCell().getCol();
+            boolean validLine = true;
+            if (lineNo < topLinesCount) {
 
-            for (colNo = outputCol; colNo <= outputAreaRef.getLastCell().getCol(); colNo++) {
-                String cellVal;
-                if (firstLine) {
-                    cellVal = getCellValue(outputSheet.getRow(outputRow).getCell(colNo));
-                } else {
-                    cellVal = getCellValue(outputSheet.getRow(outputRow + 1).getCell(colNo));
+                for (String cellVal:line){
+                    setCellValue(inputSheet,lineNo, colNo, cellVal);
+                    colNo++;
                 }
-                if (colNo > 0) {
-                    fileWriter.write("\t" + cellVal);
-                } else {
-                    fileWriter.write(cellVal);
+            }else{
+                for (String cellVal : line) {
+                    if (firstLine) {
+                        Integer targetCol = inputColumns.get(normalise(cellVal));
+                        if (targetCol == null) {
+                             throw new Exception("on preprocessor template, expected '" + inputSheet.getRow(inputRow).getCell(inputCol) + "'");
+                        }else {
+                            inputColumnMap.put(colNo, targetCol);
+                        }
+                    } else {
+                        if (inputColumnMap.get(colNo) != null) {
+                            setCellValue(inputSheet,inputRow + 1, inputColumnMap.get(colNo), cellVal);
+                        }
+                    }
+                    colNo++;
                 }
+                 XSSFFormulaEvaluator.evaluateAllFormulaCells(ppBook);
+                 int outputRow = outputAreaRef.getFirstCell().getRow();
+                 int outputCol = outputAreaRef.getFirstCell().getCol();
+
+                for (colNo = outputCol; colNo <= outputAreaRef.getLastCell().getCol(); colNo++) {
+                    String cellVal;
+                    if (firstLine) {
+                        cellVal = getCellValue(outputSheet.getRow(outputRow).getCell(colNo));
+                    } else {
+                        cellVal = getCellValue(outputSheet.getRow(outputRow + 1).getCell(colNo));
+                    }
+                    if (colNo > 0) {
+                        fileWriter.write("\t" + normalise(cellVal));
+                    } else {
+                        fileWriter.write(normalise(cellVal));
+                    }
+                }
+                fileWriter.write("\r\n");
+                firstLine = false;
             }
-            fileWriter.write("\r\n");
-            firstLine = false;
+            lineNo++;
         }
         fileWriter.flush();
         fileWriter.close();
         uploadedFile.setPath(outFile);
+    }
+
+    private static void setCellValue(org.apache.poi.xssf.usermodel.XSSFSheet sheet, int row, int col, String cellVal){
+        XSSFCell targetCell = sheet.getRow(row).getCell(col);
+        if (targetCell == null) {
+            sheet.getRow(row + 1).createCell(col);
+            targetCell = sheet.getRow(row).getCell(col);
+        }
+        if (DateUtils.isADate(cellVal) != null) {
+            targetCell.setCellValue((double) DateUtils.excelDate(DateUtils.isADate(cellVal)));
+        } else {
+            if (NumberUtils.isNumber(cellVal)) {
+                targetCell.setCellValue(Double.parseDouble(cellVal));
+            } else {
+                targetCell.setCellValue(cellVal);
+            }
+        }
+
+    }
+
+    private static String normalise(String value){
+        //not sure how the system read the cr as \\n
+        return value.replace("\n"," ").replace("\\\\n"," ").replace("  "," ");
     }
 
 }
