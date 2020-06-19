@@ -663,7 +663,15 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
             }
 
             if (!uploadedFile.getLinesRejected().isEmpty()) {
-                errorList.append(updateErrorList(uploadedFile,errorList,uploadedFile.getNoLinesRejected()+""));
+                String error = "Line errors: " + uploadedFile.getLinesRejected().size() + "\n</br>";
+                error += "</b>";
+                if (uploadedFile.getLinesRejected().size() < 100) {
+                    for (UploadedFile.RejectedLine lineRejected : uploadedFile.getLinesRejected()) {
+                        error += lineRejected.getLineNo() + ":" + lineRejected.getErrors() + "\n</br>";
+                    }
+                }
+                error += "<b>";
+                errorList.append(updateErrorList(uploadedFile,errorList,error));
                 if (noClickableHeadings) {
                       toReturn.append("Line Errors : ").append(uploadedFile.getNoLinesRejected()).append("\n<br/>");
                 } else {
