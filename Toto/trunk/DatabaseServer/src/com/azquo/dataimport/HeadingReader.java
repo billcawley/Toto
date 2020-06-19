@@ -277,8 +277,13 @@ Attributes of the names in other cells can be referenced also
         } else if (firstWord.startsWith(CHILDOF)) {
             firstWord = CHILDOF;
         } else {
-            if (firstWord.contains(" ")) {
-                firstWord = firstWord.substring(0, firstWord.indexOf(" "));
+            if (firstWord.startsWith(AZEQUALS)){
+                firstWord = AZEQUALS;
+            }else {
+
+                if (firstWord.contains(" ")) {
+                    firstWord = firstWord.substring(0, firstWord.indexOf(" "));
+                }
             }
         }
         clauseCounts.computeIfAbsent("heading - " + firstWord, t-> new AtomicInteger()).incrementAndGet();
