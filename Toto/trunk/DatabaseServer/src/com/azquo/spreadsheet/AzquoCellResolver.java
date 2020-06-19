@@ -984,8 +984,11 @@ But can use a library?
             return "";
         }
     }
-
-
+    // todo for EFC
+    // Edd,  I beileve that we have a need to permute on the basis of an attribute
+    // - e.g. (Permute(All Weeks, event BY EventDate) where this would have the same effect as permuting
+    // All Weeks and Events if events were elements of days, when the day is an attribute of the Event.
+    // I have a feeling that this may not be as difficult as it seems - is the solution mostly confined to 'permuteNames'?
     private static void permuteNames(List<List<Name>> result, List<Name>sharedNames, List<Collection<Name>> multiNames){
         if (multiNames.size() > 1){
             Collection<Name> onePermute = multiNames.get(0);

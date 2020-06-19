@@ -186,7 +186,7 @@ Attributes of the names in other cells can be referenced also
         }
         resolvePeersAttributesAndParentOf(azquoMemoryDBConnection, headings);
 
-        if (lastStatSave < (System.currentTimeMillis() - (1_000 * 60))){ // don't update stats more than once a minute
+        if (lastStatSave < (System.currentTimeMillis() - (1_000 * 60))) { // don't update stats more than once a minute
             saveStats();
         }
 
@@ -195,9 +195,9 @@ Attributes of the names in other cells can be referenced also
     }
 
     // I'm assuming this will be quick. Called periodically. synchronised a good idea as even if the map is ok with this running concurrently it seems like a bad idea on the database code
-    private static synchronized void saveStats(){
+    private static synchronized void saveStats() {
         lastStatSave = System.currentTimeMillis();
-        for (String name : clauseCounts.keySet()){
+        for (String name : clauseCounts.keySet()) {
             StatisticsDAO.addToNumber(name, clauseCounts.get(name).get());
         }
         clauseCounts.clear();
@@ -276,17 +276,12 @@ Attributes of the names in other cells can be referenced also
             firstWord = PARENTOF;
         } else if (firstWord.startsWith(CHILDOF)) {
             firstWord = CHILDOF;
-        } else {
-            if (firstWord.startsWith(AZEQUALS)){
-                firstWord = AZEQUALS;
-            }else {
-
-                if (firstWord.contains(" ")) {
-                    firstWord = firstWord.substring(0, firstWord.indexOf(" "));
-                }
-            }
+        } else if (firstWord.startsWith(AZEQUALS)) {
+            firstWord = AZEQUALS;
+        } else if (firstWord.contains(" ")) {
+            firstWord = firstWord.substring(0, firstWord.indexOf(" "));
         }
-        clauseCounts.computeIfAbsent("heading - " + firstWord, t-> new AtomicInteger()).incrementAndGet();
+        clauseCounts.computeIfAbsent("heading - " + firstWord, t -> new AtomicInteger()).incrementAndGet();
         if (clause.length() == firstWord.length()
                 && !firstWord.equals(COMPOSITION)
                 && !firstWord.equals(COMPOSITIONXL)
@@ -335,18 +330,18 @@ Attributes of the names in other cells can be referenced also
                 } else {
                     heading.isAttributeSubject = true; // language is important so we'll default it as the attribute subject if attributes are used later - I might need to check this
                 }
-                if (heading.attribute == null || heading.datatype== 0) {
+                if (heading.attribute == null || heading.datatype == 0) {
                     heading.attribute = result;
                 }
                 break;
             case DATATYPE:// was just for dates but now supports number and string which is helpful to compositexl
                 if (result.equalsIgnoreCase(DATELANG)) {
                     heading.datatype = StringLiterals.UKDATE;
-                } else if (result.equalsIgnoreCase(USDATELANG)){
+                } else if (result.equalsIgnoreCase(USDATELANG)) {
                     heading.datatype = StringLiterals.USDATE;
-                } else if (result.equalsIgnoreCase(STRING)){
+                } else if (result.equalsIgnoreCase(STRING)) {
                     heading.datatype = StringLiterals.STRING;
-                } else if (result.equalsIgnoreCase(NUMBER)){
+                } else if (result.equalsIgnoreCase(NUMBER)) {
                     heading.datatype = StringLiterals.NUMBER;
                 }
 
@@ -512,8 +507,8 @@ Attributes of the names in other cells can be referenced also
                 break;
             default:
                 String headingName = heading.heading;
-                if (heading.attribute!=null) {
-                    headingName +="." + heading.attribute;
+                if (heading.attribute != null) {
+                    headingName += "." + heading.attribute;
                 }
                 throw new Exception(firstWord + " not understood in heading '" + headingName + "'");
         }
