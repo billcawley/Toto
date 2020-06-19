@@ -585,11 +585,7 @@ public class DSImportService {
                                 headings.set(colNo, heading);
                             } else {
                                 if (findReservedWord(heading)) {
-                                    if (heading.toLowerCase().startsWith(HeadingReader.AZEQUALS)) {
-                                        //with Excel style formulae, don't insist on a space after 'firstWord' - put it in
-                                        heading.replace(HeadingReader.AZEQUALS, HeadingReader.AZEQUALS+" ");
-                                    }
-                                    headings.set(colNo, headings.get(colNo) + ";" + heading.trim());
+                                     headings.set(colNo, headings.get(colNo) + ";" + heading.trim());
                                 } else {
                                     headings.set(colNo, heading.trim() + "|" + headings.get(colNo));
                                 }
