@@ -155,8 +155,11 @@ public class DataRegionHeadingService {
                                         pName = NameService.findByName(azquoMemoryDBConnection, permutedName, attributeNames);
                                         if (pName == null) {
                                             Collection<Name> names = NameQueryParser.parseQuery(azquoMemoryDBConnection, permutedName, attributeNames, false);
-                                            if (names != null && names.size() == 1) {
+                                            if (names != null){
                                                 pName = names.iterator().next();
+                                                if (names.size() > 1) {//new list of temporary names - get parent
+                                                    pName = pName.getParents().iterator().next();
+                                                 }
                                             }
                                         }
                                     }
