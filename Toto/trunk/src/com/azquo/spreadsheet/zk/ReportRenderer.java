@@ -681,6 +681,7 @@ public class ReportRenderer {
             SpreadsheetService.saveData(loggedInUser, reportId, loggedInUser.getOnlineReport().getReportName(), sheet.getSheetName(), region, false);
         }
         CommonReportUtils.resolveQuery(loggedInUser,"edit:zap `temporary categorisation` children",null);
+        CommonReportUtils.resolveQuery(loggedInUser,"edit:zap `temporary categorisation`",null);
         return null; // will it get here ever?
     }
 
