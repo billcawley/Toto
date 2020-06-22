@@ -782,6 +782,7 @@ public final class ImportService {
         if (blankPos > 0) {
             templateName = templateName.substring(0, blankPos);
         }
+        String preProcessor = null;
         String importVersion = uploadedFile.getParameter(IMPORTVERSION);
         if (!templateName.toLowerCase().startsWith("sets") && !importTemplateUsedAlready) {
             ImportTemplateData importTemplateData = getImportTemplateForUploadedFile(loggedInUser, uploadedFile, templateCache);
@@ -795,6 +796,11 @@ public final class ImportService {
                             String firstCellValue = null;
                             for (String cellValue : row) {
                                 if (!cellValue.isEmpty()) {
+                                    if (importVersion!=null){
+                                        //pick up the preprocessor from the cell to the right of the import version
+                                        preProcessor = cellValue;
+                                        break rows;
+                                    }
                                     if (firstCellValue == null) {
                                         firstCellValue = cellValue;
                                     } else {
@@ -806,18 +812,20 @@ public final class ImportService {
                                                 String sheetName = firstCellValue.substring(bookEnd + 1).replace("'","");
                                                 if (uploadedFile.getFileNames().size()==2 && nameCompare(uploadedFile.getFileNames().get(1), sheetName) && nameCompare(uploadedFile.getFileNames().get(0), bookName)){
                                                     importVersion = cellValue;
-                                                    break rows;
 
                                                 }
                                             }else {
                                                 for (int i = uploadedFile.getFileNames().size() - 1; i >= 0; i--) {
                                                     if (nameCompare(uploadedFile.getFileNames().get(i),firstCellValue)) {
                                                         importVersion = cellValue;
-                                                        break rows;
-                                                    }
+                                                     }
                                                 }
                                             }
                                         }
+                                    }
+                                }else{
+                                    if (importVersion!=null){
+                                        break rows;
                                     }
                                 }
                             }
@@ -829,6 +837,9 @@ public final class ImportService {
                 }
                 // ok let's check here for the old style of import template as used by Ben Jones
                 Map<String, String> templateParameters = new HashMap<>(); // things like pre processor, file encoding etc
+                if (preProcessor !=null){
+                    templateParameters.put(PREPROCESSOR, preProcessor);
+                }
                 List<List<String>> standardHeadings = new ArrayList<>();
                 // scan first for the main model
                 List<List<String>> template;
@@ -1058,8 +1069,11 @@ public final class ImportService {
 
         // new thing - pre processor on the report server
         if (uploadedFile.getTemplateParameter(PREPROCESSOR) != null) {
-            String preProcessor = uploadedFile.getTemplateParameter(PREPROCESSOR);
-            if (preProcessor.toLowerCase().endsWith(".xlsx")){
+            preProcessor = uploadedFile.getTemplateParameter(PREPROCESSOR);
+            if (!preProcessor.toLowerCase().endsWith(".groovy")){
+                if (!preProcessor.toLowerCase().endsWith(".xlsx")){
+                    preProcessor += ".xlsx";
+                }
                 ImportTemplate preProcess = ImportTemplateDAO.findForNameAndBusinessId(preProcessor, loggedInUser.getUser().getBusinessId());
                 //preProcessUsingExcel(uploadedFile, SpreadsheetService.getHomeDir() + dbPath + loggedInUser.getBusinessDirectory() + importTemplatesDir + preProcess.getFilenameForDisk()); //
                 preProcessUsingPoi(uploadedFile, SpreadsheetService.getHomeDir() + dbPath + loggedInUser.getBusinessDirectory() + importTemplatesDir + preProcess.getFilenameForDisk()); //
