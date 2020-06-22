@@ -133,6 +133,13 @@ public class NameQueryParser {
             return toReturn;
         }
         boolean sorted = false;
+        /*
+        Code to handle 'categorised on' creates temporary names and a parent, all in a set called 'Temporary names'
+        which is cleared at the dne of any data region load
+         */
+        if (setFormula.toLowerCase().contains("categorised on")){
+            return parseCategorisation(azquoMemoryDBConnection,setFormula, languages.get(0));
+         }
         setFormula = replaceAttributes(azquoMemoryDBConnection, setFormula);//replaces quoted attributes as constants
         setFormula = StringUtils.prepareStatement(setFormula, nameStrings, attributeStrings, formulaStrings);
         if (!setFormula.contains(" + ") && setFormula.toLowerCase().endsWith(" " + StringLiterals.SORTED)) {
@@ -575,4 +582,67 @@ public class NameQueryParser {
         getNameListFromStringListCount.set(0);
         getNameFromListAndMarkerCount.set(0);
     }
+
+    private static Collection<Name>  parseCategorisation(AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula, String language)throws Exception {
+        String[] categoriseSets = setFormula.split("categorised on");
+        Collection<Name> namesToCategorise = parseQuery(azquoMemoryDBConnection, categoriseSets[0]);
+        String remaining = categoriseSets[1].trim();
+        remaining = insistOn(setFormula, remaining, "`");
+        int endquote = remaining.indexOf("`", 1);
+        if (endquote < 0) {
+            throw new Exception(setFormula + " not understood");
+        }
+        String attributeName = remaining.substring(0, endquote);
+        remaining = remaining.substring(endquote + 1).trim();
+        remaining = insistOn(setFormula, remaining, "in");
+        Collection<Name> headlineNames = parseQuery(azquoMemoryDBConnection, remaining);
+        Map<Name, Collection<Name>> categorisation = new HashMap<>();
+        for (Name name : headlineNames) {
+            categorisation.put(name, new HashSet<>());
+        }
+        for (Name name : namesToCategorise) {
+            String attribute = name.getAttribute(attributeName);
+            if (attribute != null) {
+                Name mapping = NameService.findByName(azquoMemoryDBConnection, attribute);
+                if (mapping != null) {
+                    Collection<Name> category = mapping.findAllParents();
+                    category.retainAll(headlineNames);
+                    if (category != null && category.size() > 0) {
+                        for (Name onePos:category){
+                            categorisation.get(onePos).add(name);
+                        }
+                    }
+                }
+            }
+        }
+        Name tempNames = NameService.findByName(azquoMemoryDBConnection,"Temporary names");
+        Name tempSet = newTemporaryName(azquoMemoryDBConnection,"temporary categorisation",tempNames, language);
+
+        for (Name name : headlineNames) {
+            Name tempElement = newTemporaryName(azquoMemoryDBConnection, name.getDefaultDisplayName(),tempSet, language);
+            for (Name child:categorisation.get(name)){
+                tempElement.addChildWillBePersisted(child, azquoMemoryDBConnection);
+            }
+
+        }
+        return tempSet.getChildren();
+    }
+
+    private static Name newTemporaryName(AzquoMemoryDBConnection azquoMemoryDBConnection, String tempName, Name parent, String language)throws Exception{
+        Name newName = new StandardName(azquoMemoryDBConnection.getAzquoMemoryDB(), null);
+        newName.setAttributeWillBePersisted(language,tempName, azquoMemoryDBConnection);
+        if (parent!=null)
+            parent.addChildWillBePersisted(newName,azquoMemoryDBConnection);
+        return newName;
+
+    }
+
+
+    private static String insistOn(String setFormula, String original, String requiredStart)throws Exception{
+        if (!original.startsWith(requiredStart)){
+            throw new Exception(setFormula + " not understood - looking for " + requiredStart);
+        }
+        return original.substring(requiredStart.length()).trim();
+    }
+
 }
