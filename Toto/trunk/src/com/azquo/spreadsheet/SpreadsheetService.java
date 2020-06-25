@@ -90,7 +90,8 @@ public class SpreadsheetService {
     private static final String XMLSCANDIR = "xmlscandir";
     // where to put XML
     private static final String XMLDESTINATIONDIR = "xmldestinationdir";
-
+    // option to override where the backups are put
+    private static final String DBBACKUPDIR = "dbbackupdir";
     private static final String TRACKINGDB = "trackingdb";
 
     private static final String TRACKINGTABLE = "trackingtable";
@@ -151,6 +152,10 @@ public class SpreadsheetService {
     // where we'll put generated XML for Ed Broking
     public static String getXMLDestinationDir() {
         return getProperty(XMLDESTINATIONDIR);
+    }
+
+    public static String getDBBackupDir() {
+        return getProperty(DBBACKUPDIR);
     }
 
     public static String getTrackingDb() {

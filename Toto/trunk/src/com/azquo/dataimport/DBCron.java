@@ -20,6 +20,7 @@ import org.xml.sax.SAXException;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -48,15 +49,16 @@ public class DBCron {
 //        System.out.println("every minute?" + LocalDateTime.now());
     }
 
-    @Scheduled(cron = "0 0 * * * *")
+    @Scheduled(cron = "0 */15 * * * *")// 15 mins as per ed broking requirements
     public void autoDBBakups() throws Exception {
-        System.out.println("hourly backup check " + LocalDateTime.now());
+        System.out.println("backup check " + LocalDateTime.now());
         List<Database> forBackup = DatabaseDAO.findForAutoBackup();
         for (Database toBackUp : forBackup) {
             // initially put the backup code in here, can factor it off later
 //            String backupname = RMIClient.getServerInterface(DatabaseServerDAO.findpById(toBackUp.getDatabaseServerId()).getIp()).getMostRecentProvenance(toBackUp.getPersistenceName());
             String backupname = toBackUp.getLastProvenance();
             // make backup name "safer" for file names?
+            // could a name in theory clash?
             if (backupname != null && backupname.length() > 0) {
                 backupname = backupname.replaceAll("[^A-Za-z0-9_]", "");
                 /* ok where do the backups go?
@@ -74,7 +76,13 @@ public class DBCron {
 
     public static String getDBBackupsDirectory(Database toBackUp) throws IOException {
         Business b = BusinessDAO.findById(toBackUp.getBusinessId());
-        String businessDir = SpreadsheetService.getHomeDir() + ImportService.dbPath + b.getBusinessDirectory();
+        String businessDir;
+        // put in switch to use config on the backup dir
+        if (SpreadsheetService.getDBBackupDir() != null){
+            businessDir = SpreadsheetService.getDBBackupDir() + b.getBusinessDirectory();
+        } else {
+            businessDir = SpreadsheetService.getHomeDir() + ImportService.dbPath + b.getBusinessDirectory();
+        }
         String dbBackupsDir = businessDir + "/" + dbBackupsDirectory + toBackUp.getPersistenceName(); // persistence name less likely to cause a problem with the file system
         Files.createDirectories(Paths.get(dbBackupsDir));
         return dbBackupsDir;
@@ -207,7 +215,7 @@ public class DBCron {
                                 List<Map<String, String>> lines = linesByDatabase.get(databasePersistenceName);
                                 // base the file name off the db name also
                                 String csvFileName = fileMillis + "-" + databasePersistenceName + " (importtemplate=BrokasureTemplates;importversion=Brokasure" + rootDocumentName.get() + ").tsv";
-                                BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(tagged.resolve(csvFileName).toFile()));
+                                BufferedWriter bufferedWriter = Files.newBufferedWriter(tagged.resolve(csvFileName), StandardCharsets.UTF_8);
                                 for (String heading : headings) {
                                     bufferedWriter.write(heading + "\t");
                                 }

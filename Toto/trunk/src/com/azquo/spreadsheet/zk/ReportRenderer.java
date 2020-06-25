@@ -680,6 +680,7 @@ public class ReportRenderer {
             // I'm using the logged in user to get the report and the report name - should this be used for report id? Or pass through the report?
             SpreadsheetService.saveData(loggedInUser, reportId, loggedInUser.getOnlineReport().getReportName(), sheet.getSheetName(), region, false);
         }
+        // EFC note : as described for the `temporary categorisation` but every time?
         CommonReportUtils.resolveQuery(loggedInUser,"edit:zap `temporary categorisation` children",null);
         CommonReportUtils.resolveQuery(loggedInUser,"edit:zap `temporary categorisation`",null);
         return null; // will it get here ever?

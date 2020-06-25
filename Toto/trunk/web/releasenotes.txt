@@ -1,3 +1,21 @@
+25-06-20
+
+
+
+19-06-20
+
+Further improvements to error messages
+
+New Excel based preprocessor (input and output regions in a workbook) - will be used on TMK
+
+XLSX
+
+Premiums AllRisks, can override Settlement Due Date
+
+Importer bug fix, complain properly about duff contract years (Premiums)
+
+Finish previous Hanover work as reference
+
 12-06-20
 
 More work on tracking
