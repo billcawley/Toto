@@ -40,6 +40,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.text.DecimalFormat;
 import java.time.LocalDateTime;
 import java.time.Month;
@@ -294,7 +295,7 @@ public class ReportExecutor {
                                     }
                                 }
                                 Sheet sheet = book.getSheet(export.getRefersToSheetName());
-                                try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(exportPath, existsAlready))) {
+                                try (BufferedWriter bufferedWriter = Files.newBufferedWriter(Paths.get(exportPath), StandardCharsets.UTF_8, existsAlready ? StandardOpenOption.APPEND : StandardOpenOption.CREATE)) {
                                     CellRegion refersToCellRegion = export.getRefersToCellRegion();
                                     for (int rNo = refersToCellRegion.row; rNo <= refersToCellRegion.lastRow; rNo++) {
                                         if (exportFirstLine != null && rNo == refersToCellRegion.row) {
@@ -993,6 +994,7 @@ public class ReportExecutor {
                                 node.getParentNode().removeChild(node); // reasonable syntax??
                             }
                             DOMSource source = new DOMSource(doc);
+                            // EFC comment - I'm not forcing UTF8 here, when sending files I'll let it default to the system charset
                             BufferedWriter bufferedWriter = Files.newBufferedWriter(azquoTempDir.resolve(fileName));
                             StreamResult result = new StreamResult(bufferedWriter);
                             transformer.transform(source, result);

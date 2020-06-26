@@ -473,7 +473,7 @@ public class DBCron {
                     // crude initial version - try to load into any database with an import template attached that has a claims tracking sheet
                     if (!claimsFilesValues.isEmpty()) {
                         String csvFileName = (transNo != null ? transNo : maxKey) + "tracking (importversion=ClaimsTracking).tsv";
-                        BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(tracking.resolve(csvFileName).toFile()));
+                        BufferedWriter bufferedWriter = Files.newBufferedWriter(tracking.resolve(csvFileName), StandardCharsets.UTF_8);
                         cheadings = new ArrayList<>(cheadings);
                         pheadings = new ArrayList<>(pheadings);
                         for (String heading : cheadings) {
@@ -514,7 +514,7 @@ public class DBCron {
                     }
                     if (!premiumsFilesValues.isEmpty()) {
                         String csvFileName = (transNo != null ? transNo : maxKey) + "tracking (importversion=PremiumTracking).tsv";
-                        BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(tracking.resolve(csvFileName).toFile()));
+                        BufferedWriter bufferedWriter = Files.newBufferedWriter(tracking.resolve(csvFileName), StandardCharsets.UTF_8);
                         for (String heading : pheadings) {
                             bufferedWriter.write(heading + "\t");
                         }

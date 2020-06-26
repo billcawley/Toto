@@ -42,6 +42,10 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
 import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -696,8 +700,8 @@ public class ExcelController {
                                     }
 
                                     if ("true".equalsIgnoreCase(formsubmit)) {
-                                        File target = new File(SpreadsheetService.getHomeDir() + "/temp/" + System.currentTimeMillis() + "formsubmit" + form + ".tsv"); // timestamp to stop file overwriting
-                                        try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(target))) {
+                                        Path target = Paths.get(SpreadsheetService.getHomeDir() + "/temp/" + System.currentTimeMillis() + "formsubmit" + form + ".tsv"); // timestamp to stop file overwriting
+                                        try (BufferedWriter bufferedWriter = Files.newBufferedWriter(target, StandardCharsets.UTF_8)) {
                                             // new logic - not going to use the import template for importing - will copy the top bits off the import template
                                             int row = 1;
                                             while (importTemplateData.getSheets().get(sheet).size() > row) {
@@ -718,8 +722,8 @@ public class ExcelController {
                                             bufferedWriter.newLine();
                                         }
                                         final Map<String, String> fileNameParams = new HashMap<>();
-                                        ImportService.addFileNameParametersToMap(target.getName(), fileNameParams);
-                                        UploadedFile uploadedFile = new UploadedFile(target.getAbsolutePath(), Collections.singletonList(target.getName()), fileNameParams, false, false);
+                                        ImportService.addFileNameParametersToMap(target.getFileName().toString(), fileNameParams);
+                                        UploadedFile uploadedFile = new UploadedFile(target.toAbsolutePath().toString(), Collections.singletonList(target.getFileName().toString()), fileNameParams, false, false);
                                         List<UploadedFile> uploadedFiles = ImportService.importTheFile(loggedInUser, uploadedFile, null, null);
                                         UploadedFile uploadedFile1 = uploadedFiles.get(0);
                                         if (uploadedFile1.getError() != null && !uploadedFile1.getError().isEmpty()) {

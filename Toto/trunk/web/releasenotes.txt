@@ -1,6 +1,12 @@
 25-06-20
 
+Augment auto backup to use a specified directory
 
+code to handle 'categorisation on'
+
+XLSX
+
+Further building on Weber/Oilfields/Hanover
 
 19-06-20
 
