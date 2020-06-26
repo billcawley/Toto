@@ -315,21 +315,23 @@ public final class ImportService {
                 if (files.size() > 1 && session != null) {
                     session.setAttribute(ManageDatabasesController.IMPORTSTATUS, counter + "/" + files.size());
                 }
-                // need new upload file object now!
-                List<String> names = new ArrayList<>(uploadedFile.getFileNames());
-                names.add(f.getName());
-                Map<String, String> fileNameParams = new HashMap<>(uploadedFile.getParameters());
-                addFileNameParametersToMap(f.getName(), fileNameParams);
-                // bit hacky to stop the loading but otherwise there'd just be another map
-                if (pendingUploadConfig != null && pendingUploadConfig.getParametersForFile(f.getName()) != null) {
-                    Map<String, String> parametersForFile = pendingUploadConfig.getParametersForFile(f.getName());
-                    // don't change this to entries - the keys are converted to lower case
-                    for (String key : parametersForFile.keySet()) {
-                        fileNameParams.put(key.toLowerCase(), parametersForFile.get(key));
+                if (!f.getName().equals("uploadreport.xlsx")){ // opposite of criteria above . . is this too hacky, should it be zapped or dealt with another way?
+                    // need new upload file object now!
+                    List<String> names = new ArrayList<>(uploadedFile.getFileNames());
+                    names.add(f.getName());
+                    Map<String, String> fileNameParams = new HashMap<>(uploadedFile.getParameters());
+                    addFileNameParametersToMap(f.getName(), fileNameParams);
+                    // bit hacky to stop the loading but otherwise there'd just be another map
+                    if (pendingUploadConfig != null && pendingUploadConfig.getParametersForFile(f.getName()) != null) {
+                        Map<String, String> parametersForFile = pendingUploadConfig.getParametersForFile(f.getName());
+                        // don't change this to entries - the keys are converted to lower case
+                        for (String key : parametersForFile.keySet()) {
+                            fileNameParams.put(key.toLowerCase(), parametersForFile.get(key));
+                        }
                     }
+                    UploadedFile zipEntryUploadFile = new UploadedFile(f.getPath(), names, fileNameParams, false, uploadedFile.isValidationTest());
+                    processedUploadedFiles.addAll(checkForCompressionAndImport(loggedInUser, zipEntryUploadFile, session, pendingUploadConfig, templateCache));
                 }
-                UploadedFile zipEntryUploadFile = new UploadedFile(f.getPath(), names, fileNameParams, false, uploadedFile.isValidationTest());
-                processedUploadedFiles.addAll(checkForCompressionAndImport(loggedInUser, zipEntryUploadFile, session, pendingUploadConfig, templateCache));
                 counter++;
             }
         } else { // nothing to decompress
