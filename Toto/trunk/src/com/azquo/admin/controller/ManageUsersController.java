@@ -1,32 +1,24 @@
 package com.azquo.admin.controller;
 
-import com.azquo.DateUtils;
 import com.azquo.TypedPair;
 import com.azquo.admin.AdminService;
-import com.azquo.admin.BackupService;
+import com.azquo.admin.business.Business;
+import com.azquo.admin.business.BusinessDAO;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseDAO;
-import com.azquo.admin.database.DatabaseServer;
-import com.azquo.admin.database.DatabaseServerDAO;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.onlinereport.UserActivity;
 import com.azquo.admin.onlinereport.UserActivityDAO;
 import com.azquo.admin.user.User;
 import com.azquo.admin.user.UserDAO;
-import com.azquo.dataimport.ImportService;
 import com.azquo.spreadsheet.LoggedInUser;
-import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.controller.CreateExcelForDownloadController;
 import com.azquo.spreadsheet.controller.LoginController;
 import com.azquo.spreadsheet.zk.BookUtils;
 import com.azquo.spreadsheet.zk.ReportRenderer;
 import org.apache.commons.lang.math.NumberUtils;
-import org.apache.poi.ss.formula.functions.FreeRefFunction;
-import org.apache.poi.ss.formula.udf.AggregatingUDFFinder;
-import org.apache.poi.ss.formula.udf.DefaultUDFFinder;
-import org.apache.poi.ss.formula.udf.UDFFinder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -36,24 +28,19 @@ import org.zkoss.poi.openxml4j.opc.OPCPackage;
 import org.zkoss.poi.ss.usermodel.Name;
 import org.zkoss.poi.ss.usermodel.Sheet;
 import org.zkoss.poi.ss.util.AreaReference;
-import org.zkoss.poi.xssf.usermodel.XSSFName;
 import org.zkoss.poi.xssf.usermodel.XSSFRow;
 import org.zkoss.poi.xssf.usermodel.XSSFSheet;
 import org.zkoss.poi.xssf.usermodel.XSSFWorkbook;
-import org.zkoss.zss.api.Exporter;
-import org.zkoss.zss.api.Exporters;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.OutputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
+import java.text.SimpleDateFormat;
+import java.time.Duration;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.*;
@@ -87,6 +74,7 @@ public class ManageUsersController {
             , @RequestParam(value = "reportId", required = false) String reportId
             , @RequestParam(value = "selections", required = false) String selections
             , @RequestParam(value = "submit", required = false) String submit
+            , @RequestParam(value = "downloadRecentActivity", required = false) String downloadRecentActivity
     ) throws Exception {
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
         // I assume secure until we move to proper spring security
@@ -127,6 +115,80 @@ public class ManageUsersController {
                 }
                 response.setContentType("application/vnd.ms-excel"); // Set up mime type
                 response.addHeader("Content-Disposition", "attachment; filename=useractivity.xlsx");
+                OutputStream out = response.getOutputStream();
+                wb.write(out);
+                out.close();
+            }
+
+            if ("true".equals(downloadRecentActivity)){
+                AdminService.getUserListForBusinessWithBasicSecurity(loggedInUser);
+                Business b = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
+                XSSFWorkbook wb = new XSSFWorkbook();
+                XSSFSheet user_activity = wb.createSheet("User Activity");
+                int rownum = 0;
+                XSSFRow toprow = user_activity.createRow(rownum);
+                DateTimeFormatter formatter2 = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+                toprow.createCell(0).setCellValue(b.getBusinessName() +  " user stats week ending " + formatter2.format(LocalDateTime.now()));
+                rownum++;
+                user_activity.createRow(rownum);
+                rownum++;
+                XSSFRow row = user_activity.createRow(rownum);
+                row.createCell(0).setCellValue("");
+                row.createCell(1).setCellValue("User ID");
+                row.createCell(2).setCellValue("Number of Logins");
+                row.createCell(3).setCellValue("Most recent login");
+                row.createCell(4).setCellValue("Total Duration");
+                row.createCell(5).setCellValue("Files Uploaded");
+                row.createCell(6).setCellValue("Files Downloaded");
+                rownum++;
+                user_activity.createRow(rownum);
+
+                for (User user : AdminService.getUserListForBusinessWithBasicSecurity(loggedInUser)){
+                    rownum++;
+                    List<UserActivity> userActivities = UserActivityDAO.findForUserAndBusinessIdSince(loggedInUser.getUser().getBusinessId(), user.getEmail(), LocalDateTime.now().plusWeeks(-1));
+                    LocalDateTime loginTime = null;
+                    long totalSeconds = 0;
+                    int numberOfLogins = 0;
+                    int filesUploaded = 0;
+                    int filesDownloaded = 0;
+                    LocalDateTime mostRecetLogin = null;
+                    for (UserActivity activity : userActivities){
+                        if (activity.getActivity().equalsIgnoreCase("Login")){
+                            loginTime = activity.getTimeStamp();
+                            numberOfLogins++;
+                            if (mostRecetLogin == null || loginTime.isAfter(mostRecetLogin)){
+                                mostRecetLogin = loginTime;
+                            }
+                        }
+                        if (activity.getActivity().startsWith("Logout") && loginTime != null){
+                            Duration d = Duration.between(loginTime, activity.getTimeStamp());
+                            totalSeconds += d.getSeconds();
+                            loginTime = null;
+                        }
+                        if (activity.getActivity().equalsIgnoreCase("upload file")){
+                            filesUploaded++;
+                        }
+                        if (activity.getActivity().equalsIgnoreCase("save") && activity.getParameters().containsKey("File")){
+                            filesDownloaded++;
+                        }
+                    }
+                    row = user_activity.createRow(rownum);
+                    row.createCell(0).setCellValue("");
+                    row.createCell(1).setCellValue(user.getEmail());
+                    row.createCell(2).setCellValue(numberOfLogins);
+                    row.createCell(3).setCellValue(mostRecetLogin != null ? mostRecetLogin.toString() : "n/a");
+                    row.createCell(4).setCellValue(String.format("%d:%02d:%02d", totalSeconds / 3600, (totalSeconds % 3600) / 60, (totalSeconds % 60)));
+                    row.createCell(5).setCellValue(filesUploaded);
+                    row.createCell(6).setCellValue(filesDownloaded);
+                }
+                user_activity.autoSizeColumn(1);
+                user_activity.autoSizeColumn(2);
+                user_activity.autoSizeColumn(3);
+                user_activity.autoSizeColumn(4);
+                user_activity.autoSizeColumn(5);
+                user_activity.autoSizeColumn(6);
+                response.setContentType("application/vnd.ms-excel"); // Set up mime type
+                response.addHeader("Content-Disposition", "attachment; filename=useractivitysummary.xlsx");
                 OutputStream out = response.getOutputStream();
                 wb.write(out);
                 out.close();

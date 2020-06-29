@@ -7,6 +7,7 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 
 import java.sql.ResultSet;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -103,6 +104,14 @@ public final class UserActivityDAO {
         namedParams.addValue(BUSINESSID, businessId);
         namedParams.addValue(USER, user);
         return StandardDAO.findListWithWhereSQLAndParameters(" WHERE " + BUSINESSID + " = :" + BUSINESSID + " and " + USER + " = :" + USER + " order by ts desc", TABLENAME, userActivityRowMapper, namedParams, from, limit);
+    }
+
+    public static List<UserActivity> findForUserAndBusinessIdSince(final int businessId, String user, LocalDateTime since) {
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(BUSINESSID, businessId);
+        namedParams.addValue(USER, user);
+        namedParams.addValue(TS, DateUtils.getDateFromLocalDateTime(since));
+        return StandardDAO.findListWithWhereSQLAndParameters(" WHERE " + BUSINESSID + " = :" + BUSINESSID + " and " + USER + " = :" + USER + "  and " + TS + " > :" + TS + " order by ts asc", TABLENAME, userActivityRowMapper, namedParams);
     }
 
     public static void removeById(UserActivity comment) {

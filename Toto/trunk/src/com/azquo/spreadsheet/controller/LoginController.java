@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.nio.file.*;
 import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 /**
@@ -88,7 +89,11 @@ public class LoginController {
             if (NumberUtils.isNumber(userid)) {
                 for (LoggedInUser loggedInUser : loggedInUsers) {
                     if (loggedInUser.getUser().getId() == Integer.parseInt(userid)) {
+                        if (session.getAttribute(LoginController.LOGGED_IN_USER_SESSION) != null){// then force a logout
+                            ((LoggedInUser) session.getAttribute(LoginController.LOGGED_IN_USER_SESSION)).userLog("Logout due to user switch", new HashMap<>());
+                        }
                         session.setAttribute(LOGGED_IN_USER_SESSION, loggedInUser);
+                        loggedInUser.userLog("Login", new HashMap<>());
                         if (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()) {
                             return "redirect:/api/ManageReports";
                         } else {
@@ -100,8 +105,9 @@ public class LoginController {
         }
         if ("true".equals(logoff)) {
             if (session.getAttribute(LOGGED_IN_USER_SESSION) != null) {
+                LoggedInUser loggedInUser = (LoggedInUser) session.getAttribute(LoginController.LOGGED_IN_USER_SESSION);
+                loggedInUser.userLog("Logout", new HashMap<>());
                 if (SpreadsheetService.inProduction() && !request.getRemoteAddr().equals("82.68.244.254") && !request.getRemoteAddr().equals("127.0.0.1") && !request.getRemoteAddr().startsWith("0")) { // if it's from us don't email us :)
-                    LoggedInUser loggedInUser = (LoggedInUser) session.getAttribute(LoginController.LOGGED_IN_USER_SESSION);
                     Business business = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
                     new Thread(() ->{
                         String title = SpreadsheetService.getAlias() + " Logout from " + loggedInUser.getUser().getEmail() + " - " + loggedInUser.getUser().getStatus() + " - " + (business != null ? business.getBusinessName() : "") + " from " + request.getRemoteAddr();
@@ -144,6 +150,7 @@ public class LoginController {
                     loggedInUser = loggedInUsers.get(0);
                 }
                 if (loggedInUser != null) {
+                    loggedInUser.userLog("Login", new HashMap<>());
                     // same checks as magento controller
                     if (!"nic@azquo.com".equalsIgnoreCase(userEmail) && SpreadsheetService.inProduction() && !request.getRemoteAddr().equals("82.68.244.254") && !request.getRemoteAddr().equals("127.0.0.1") && !request.getRemoteAddr().startsWith("0")) { // if it's from us don't email us :)
                         Business business = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());

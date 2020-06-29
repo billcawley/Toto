@@ -4,7 +4,7 @@
 <%@ include file="../includes/admin_header.jsp" %>
 
 <main>
-	<h1>Manage Users</h1>
+	<h1>Manage Users - <a href="/api/ManageUsers?downloadRecentActivity=true">Download Recent Activity Summary</a></h1>
 	<div class="error">${error}</div>
 	<table>
 		<thead>
