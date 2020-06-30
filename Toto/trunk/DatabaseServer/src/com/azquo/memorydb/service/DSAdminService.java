@@ -17,7 +17,7 @@ import com.azquo.memorydb.dao.MySQLDatabaseManager;
  */
 public class DSAdminService {
 
-    public static void emptyDatabase(String persistenceName) throws Exception {
+    public static void emptyDatabase(String persistenceName) {
         if (AzquoMemoryDB.isDBLoaded(persistenceName)) { // then persist via the loaded db, synchronizes thus solving the "delete or empty while persisting" problem
             final AzquoMemoryDB azquoMemoryDB = AzquoMemoryDB.getAzquoMemoryDB(persistenceName, null);
             azquoMemoryDB.synchronizedClear();
@@ -85,7 +85,7 @@ public class DSAdminService {
         MySQLDatabaseManager.emptyDatabase(persistenceName);
     }
 
-    public static void dropDatabase(String persistenceName) throws Exception {
+    public static void dropDatabase(String persistenceName) {
         if (AzquoMemoryDB.isDBLoaded(persistenceName)) { // then persist via the loaded db, synchronizes thus solving the "delete or empty while persisting" problem
             final AzquoMemoryDB azquoMemoryDB = AzquoMemoryDB.getAzquoMemoryDB(persistenceName, null);
             azquoMemoryDB.synchronizedDrop();

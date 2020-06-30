@@ -14,12 +14,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Copyright (C) 2016 Azquo Ltd.
- * <p>
- * Created with IntelliJ IDEA.
- * User: cawley
- * Date: 16/10/13
- * Time: 19:17
+ * Currently a prototype, unused, the memory savings so far didn't seem significant but this is probably the place to start if we're really pushed on performance
+ *
+ * Also this *could* enable significant extensions, e.g. child relationship types e.g. born in.
+ *
  * This class represents a Name, a fundamental Azquo object. Names now have attributes and what was the name (as in the text) is now simply an attribute of the name
  * defined currently in a static below. Names can have parent and child relationships with multiple other names. Sets of names.
  * <p>

@@ -1,3 +1,15 @@
+30-06-20
+
+New preprocessor bug fixes.
+
+Download a summary of recent user activity.
+
+XLSX
+
+AllRisks Premium bug fix, Claims new tags in (GrossAmt 0 and Lloyds Lead)
+
+Continue Oilfields Build
+
 25-06-20
 
 Augment auto backup to use a specified directory

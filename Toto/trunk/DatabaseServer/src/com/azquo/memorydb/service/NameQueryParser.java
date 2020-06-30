@@ -607,7 +607,7 @@ public class NameQueryParser {
                 if (mapping != null) {
                     Collection<Name> category = mapping.findAllParents();
                     category.retainAll(headlineNames);
-                    if (category != null && category.size() > 0) {
+                    if (category.size() > 0) {
                         for (Name onePos:category){
                             categorisation.get(onePos).add(name);
                         }
