@@ -2054,10 +2054,9 @@ fr.close();
                     }
                     if (firstLine) {
                         Integer targetCol = inputColumns.get(normalise(cellVal));
-                        if (targetCol == null) {
-                             throw new Exception("on preprocessor template, expected '" + inputSheet.getRow(inputRow).getCell(inputCol) + "'");
-                        }else {
-                            inputColumnMap.put(colNo, targetCol);
+                        if (targetCol != null) {
+                            //note - ignores heading if no map found
+                             inputColumnMap.put(colNo, targetCol);
                          }
                     } else {
                         if (inputColumnMap.get(colNo) != null) {
@@ -2111,8 +2110,7 @@ fr.close();
     private static void setCellValue(org.apache.poi.xssf.usermodel.XSSFSheet sheet, int row, int col, String cellVal){
         XSSFCell targetCell = sheet.getRow(row).getCell(col);
         if (targetCell == null) {
-            sheet.getRow(row + 1).createCell(col);
-            targetCell = sheet.getRow(row).getCell(col);
+            targetCell = sheet.getRow(row).createCell(col);
         }
         if (DateUtils.isADate(cellVal) != null) {
             targetCell.setCellValue((double) DateUtils.excelDate(DateUtils.isADate(cellVal)));
