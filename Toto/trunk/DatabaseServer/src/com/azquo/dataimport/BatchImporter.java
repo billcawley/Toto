@@ -447,8 +447,11 @@ public class BatchImporter implements Callable<Void> {
             Name exclusiveName = null;
             if (cellWithHeading.getImmutableImportHeading().exclusiveIndex == HeadingReader.EXCLUSIVETOCHILDOF) {
                 // blank exclusive clause, use "child of" clause - currently this only looks at the first name in that list to be exclusive of, more than one makes little sense
-                exclusiveName = cellWithHeading.getImmutableImportHeading().parentNames.iterator().next();
-            } else { // exclusive has a value, not null or blank, is referring to a name in another cell
+                Collection<Name> parents = cellWithHeading.getImmutableImportHeading().parentNames;
+                if (parents!=null && parents.size() > 0){
+                    exclusiveName = cellWithHeading.getImmutableImportHeading().parentNames.iterator().next();
+                }
+             } else { // exclusive has a value, not null or blank, is referring to a name in another cell
                 // what if the names have not been resolved yet? They ony could not be if local which I think would NOT be the exclusive set
                 Set<Name> exclusiveNameSet = cells.get(cellWithHeading.getImmutableImportHeading().exclusiveIndex).getLineNames();
                 if (exclusiveNameSet != null) {
