@@ -2030,6 +2030,7 @@ fr.close();
             topLinesCount = topLinesArea.getLastCell().getRow() + 1;
         }
         int lineNo = 0;
+        int headingsFound = 0;
         while (lineIterator.hasNext()) {
             String[] line = lineIterator.next();
             int colNo = 0;
@@ -2041,14 +2042,23 @@ fr.close();
                     colNo++;
                 }
             }else{
-                for (String cellVal : line) {
+                int headingCount = headingsFound;
+                if (firstLine) {
+                    headingCount =line.length;
+                    headingsFound = line.length;
+                }
+                 for (int datacount=0;datacount<headingCount;datacount++) {
+                    String cellVal = "";
+                     if (datacount< line.length){
+                        cellVal = line[datacount];
+                    }
                     if (firstLine) {
                         Integer targetCol = inputColumns.get(normalise(cellVal));
                         if (targetCol == null) {
                              throw new Exception("on preprocessor template, expected '" + inputSheet.getRow(inputRow).getCell(inputCol) + "'");
                         }else {
                             inputColumnMap.put(colNo, targetCol);
-                        }
+                         }
                     } else {
                         if (inputColumnMap.get(colNo) != null) {
                             setCellValue(inputSheet,inputRow + 1, inputColumnMap.get(colNo), cellVal);
@@ -2058,23 +2068,38 @@ fr.close();
                 }
                  XSSFFormulaEvaluator.evaluateAllFormulaCells(ppBook);
                  int outputRow = outputAreaRef.getFirstCell().getRow();
+                 int lastOutputRow = outputAreaRef.getLastCell().getRow();
                  int outputCol = outputAreaRef.getFirstCell().getCol();
 
-                for (colNo = outputCol; colNo <= outputAreaRef.getLastCell().getCol(); colNo++) {
-                    String cellVal;
-                    if (firstLine) {
-                        cellVal = getCellValue(outputSheet.getRow(outputRow).getCell(colNo));
-                    } else {
-                        cellVal = getCellValue(outputSheet.getRow(outputRow + 1).getCell(colNo));
+                if (firstLine) {
+                    for (colNo = outputCol; colNo <= outputAreaRef.getLastCell().getCol(); colNo++) {
+                        String cellVal = getCellValue(outputSheet.getRow(outputRow).getCell(colNo));
+                        if (colNo > 0) {
+                            fileWriter.write("\t" + normalise(cellVal));
+                        } else {
+                            fileWriter.write(normalise(cellVal));
+                        }
                     }
-                    if (colNo > 0) {
-                        fileWriter.write("\t" + normalise(cellVal));
-                    } else {
-                        fileWriter.write(normalise(cellVal));
+                    fileWriter.write("\r\n");
+                    firstLine = false;
+                }  else {
+                    for (int oRow=outputRow + 1;oRow<=lastOutputRow;oRow++){
+                        rows:
+                        for (colNo = outputCol; colNo <= outputAreaRef.getLastCell().getCol(); colNo++) {
+                            String cellVal = getCellValue(outputSheet.getRow(oRow).getCell(colNo));
+                            if (colNo > 0){
+                                fileWriter.write("\t" + normalise(cellVal));
+                            } else {
+                                if (normalise(cellVal).length() > 0) {
+                                    fileWriter.write(normalise(cellVal));
+                                } else {
+                                    break rows;
+                                }
+                            }
+                        }
+                        fileWriter.write("\r\n");
                     }
                 }
-                fileWriter.write("\r\n");
-                firstLine = false;
             }
             lineNo++;
         }
