@@ -709,7 +709,7 @@ public final class ImportService {
             }
             csvW.close();
             fos.close();
-            System.out.println("current sheet to csv on " + sheetName + " " + (System.currentTimeMillis() - test));
+            //System.out.println("current sheet to csv on " + sheetName + " " + (System.currentTimeMillis() - test));
             long convertTime = System.currentTimeMillis() - time;
             List<String> names = new ArrayList<>(uploadedFile.getFileNames());
             names.add(sheetName);
@@ -1991,110 +1991,116 @@ fr.close();
             e.printStackTrace();
             throw new Exception("Cannot load preprocessor template from " + preprocessor);
         }
-         XSSFName inputLineRegion = BookUtils.getName(ppBook,"az_input");
-        AreaReference inputAreaRef = new AreaReference(inputLineRegion.getRefersToFormula());
-        XSSFName outputLineRegion = BookUtils.getName(ppBook,"az_output");
-        AreaReference outputAreaRef = new AreaReference(outputLineRegion.getRefersToFormula());
+        try {
+            XSSFName inputLineRegion = BookUtils.getName(ppBook,"az_input");
+            AreaReference inputAreaRef = new AreaReference(inputLineRegion.getRefersToFormula());
+            XSSFName outputLineRegion = BookUtils.getName(ppBook,"az_output");
+            AreaReference outputAreaRef = new AreaReference(outputLineRegion.getRefersToFormula());
 
-        org.apache.poi.xssf.usermodel.XSSFSheet inputSheet = ppBook.getSheet(inputLineRegion.getSheetName());
-        org.apache.poi.xssf.usermodel.XSSFSheet outputSheet = ppBook.getSheet(outputLineRegion.getSheetName());
-        int inputRow = inputAreaRef.getFirstCell().getRow();
-        String outFile = filePath + " converted";
-        File writeFile = new File(outFile);
-        writeFile.delete(); // to avoid confusion
-        BufferedWriter fileWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(outFile), StandardCharsets.UTF_8));
-        CsvMapper csvMapper = new CsvMapper();
-        csvMapper.enable(CsvParser.Feature.WRAP_AS_ARRAY);
-        CsvSchema schema = csvMapper.schemaFor(String[].class)
-                .withColumnSeparator('\t')
-                .withLineSeparator("\n")
-                .withoutQuoteChar();
+            org.apache.poi.xssf.usermodel.XSSFSheet inputSheet = ppBook.getSheet(inputLineRegion.getSheetName());
+            org.apache.poi.xssf.usermodel.XSSFSheet outputSheet = ppBook.getSheet(outputLineRegion.getSheetName());
+            int inputRow = inputAreaRef.getFirstCell().getRow();
+            String outFile = filePath + " converted";
+            File writeFile = new File(outFile);
+            writeFile.delete(); // to avoid confusion
+            BufferedWriter fileWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(outFile), StandardCharsets.UTF_8));
+            CsvMapper csvMapper = new CsvMapper();
+            csvMapper.enable(CsvParser.Feature.WRAP_AS_ARRAY);
+            CsvSchema schema = csvMapper.schemaFor(String[].class)
+                    .withColumnSeparator('\t')
+                    .withLineSeparator("\n")
+                    .withoutQuoteChar();
 
-        MappingIterator<String[]> lineIterator = (csvMapper.readerFor(String[].class).with(schema).readValues(new File(filePath)));
-        Map<String, Integer> inputColumns = new HashMap<>();
-        for (int colNo = inputAreaRef.getFirstCell().getCol();colNo <= inputAreaRef.getLastCell().getCol(); colNo++){
-            String heading = getCellValue(inputSheet.getRow(inputRow).getCell( colNo));
-            inputColumns.put(normalise(heading),colNo);
-        }
-        Map <Integer,Integer> colOnInputRange = new HashMap<>();
-        boolean firstLine = true;
-        Map <Integer, Integer> inputColumnMap = new HashMap<>();
-        int lineNo = 0;
-        int headingsFound = 0;
-        while (lineIterator.hasNext()) {
-            String[] line = lineIterator.next();
-            int colNo = 0;
-            boolean validLine = true;
-            if (lineNo < inputRow) {
+            MappingIterator<String[]> lineIterator = (csvMapper.readerFor(String[].class).with(schema).readValues(new File(filePath)));
+            Map<String, Integer> inputColumns = new HashMap<>();
+            for (int colNo = inputAreaRef.getFirstCell().getCol();colNo <= inputAreaRef.getLastCell().getCol(); colNo++){
+                String heading = getCellValue(inputSheet.getRow(inputRow).getCell( colNo));
+                inputColumns.put(normalise(heading),colNo);
+            }
+            Map <Integer,Integer> colOnInputRange = new HashMap<>();
+            boolean firstLine = true;
+            Map <Integer, Integer> inputColumnMap = new HashMap<>();
+            int lineNo = 0;
+            int headingsFound = 0;
+            while (lineIterator.hasNext()) {
+                String[] line = lineIterator.next();
+                int colNo = 0;
+                boolean validLine = true;
+                if (lineNo < inputRow) {
 
-                for (String cellVal:line){
-                    setCellValue(inputSheet,lineNo, colNo, cellVal);
-                    colNo++;
-                }
-            }else{
-                int headingCount = headingsFound;
-                if (firstLine) {
-                    headingCount =line.length;
-                    headingsFound = line.length;
-                }
-                 for (int datacount=0;datacount<headingCount;datacount++) {
-                    String cellVal = "";
-                     if (datacount< line.length){
-                        cellVal = line[datacount];
+                    for (String cellVal:line){
+                        setCellValue(inputSheet,lineNo, colNo, cellVal);
+                        colNo++;
                     }
+                }else{
+                    int headingCount = headingsFound;
                     if (firstLine) {
-                        Integer targetCol = inputColumns.get(normalise(cellVal));
-                        if (targetCol != null) {
-                            //note - ignores heading if no map found
-                             inputColumnMap.put(colNo, targetCol);
-                         }
-                    } else {
-                        if (inputColumnMap.get(colNo) != null) {
-                            setCellValue(inputSheet,inputRow + 1, inputColumnMap.get(colNo), cellVal);
-                        }
+                        headingCount =line.length;
+                        headingsFound = line.length;
                     }
-                    colNo++;
-                }
-                 XSSFFormulaEvaluator.evaluateAllFormulaCells(ppBook);
-                 int outputRow = outputAreaRef.getFirstCell().getRow();
-                 int lastOutputRow = outputAreaRef.getLastCell().getRow();
-                 int outputCol = outputAreaRef.getFirstCell().getCol();
-
-                if (firstLine) {
-                    for (colNo = outputCol; colNo <= outputAreaRef.getLastCell().getCol(); colNo++) {
-                        String cellVal = getCellValue(outputSheet.getRow(outputRow).getCell(colNo));
-                        if (colNo > 0) {
-                            fileWriter.write("\t" + normalise(cellVal));
+                    for (int datacount=0;datacount<headingCount;datacount++) {
+                        String cellVal = "";
+                        if (datacount< line.length){
+                            cellVal = line[datacount];
+                        }
+                        if (firstLine) {
+                            Integer targetCol = inputColumns.get(normalise(cellVal));
+                            if (targetCol != null) {
+                                //note - ignores heading if no map found
+                                inputColumnMap.put(colNo, targetCol);
+                            }
                         } else {
-                            fileWriter.write(normalise(cellVal));
+                            if (inputColumnMap.get(colNo) != null) {
+                                setCellValue(inputSheet,inputRow + 1, inputColumnMap.get(colNo), cellVal);
+                            }
                         }
+                        colNo++;
                     }
-                    fileWriter.write("\r\n");
-                    firstLine = false;
-                }  else {
-                    for (int oRow=outputRow + 1;oRow<=lastOutputRow;oRow++){
-                        rows:
+                    XSSFFormulaEvaluator.evaluateAllFormulaCells(ppBook);
+                    int outputRow = outputAreaRef.getFirstCell().getRow();
+                    int lastOutputRow = outputAreaRef.getLastCell().getRow();
+                    int outputCol = outputAreaRef.getFirstCell().getCol();
+
+                    if (firstLine) {
                         for (colNo = outputCol; colNo <= outputAreaRef.getLastCell().getCol(); colNo++) {
-                            String cellVal = getCellValue(outputSheet.getRow(oRow).getCell(colNo));
-                            if (colNo > 0){
+                            String cellVal = getCellValue(outputSheet.getRow(outputRow).getCell(colNo));
+                            if (colNo > 0) {
                                 fileWriter.write("\t" + normalise(cellVal));
                             } else {
-                                if (normalise(cellVal).length() > 0) {
-                                    fileWriter.write(normalise(cellVal));
-                                } else {
-                                    break rows;
-                                }
+                                fileWriter.write(normalise(cellVal));
                             }
                         }
                         fileWriter.write("\r\n");
+                        firstLine = false;
+                    }  else {
+                        for (int oRow=outputRow + 1;oRow<=lastOutputRow;oRow++){
+                            rows:
+                            for (colNo = outputCol; colNo <= outputAreaRef.getLastCell().getCol(); colNo++) {
+                                String cellVal = getCellValue(outputSheet.getRow(oRow).getCell(colNo));
+                                if (colNo > 0){
+                                    fileWriter.write("\t" + normalise(cellVal));
+                                } else {
+                                    if (normalise(cellVal).length() > 0) {
+                                        fileWriter.write(normalise(cellVal));
+                                    } else {
+                                        break rows;
+                                    }
+                                }
+                            }
+                            fileWriter.write("\r\n");
+                        }
                     }
                 }
+                lineNo++;
             }
-            lineNo++;
+            fileWriter.flush();
+            fileWriter.close();
+            uploadedFile.setPath(outFile);
+            ppBook.close();
+        } catch (Exception e){
+            ppBook.close();
+            throw e;
         }
-        fileWriter.flush();
-        fileWriter.close();
-        uploadedFile.setPath(outFile);
     }
 
     private static void setCellValue(org.apache.poi.xssf.usermodel.XSSFSheet sheet, int row, int col, String cellVal){
