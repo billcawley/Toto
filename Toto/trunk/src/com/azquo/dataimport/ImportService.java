@@ -1991,12 +1991,7 @@ fr.close();
             e.printStackTrace();
             throw new Exception("Cannot load preprocessor template from " + preprocessor);
         }
-         XSSFName topLines = BookUtils.getName(ppBook, "az_toplines");
-        AreaReference topLinesArea =null;
-        if (topLines!=null){
-            topLinesArea =new AreaReference(topLines.getRefersToFormula());
-        }
-        XSSFName inputLineRegion = BookUtils.getName(ppBook,"az_input");
+         XSSFName inputLineRegion = BookUtils.getName(ppBook,"az_input");
         AreaReference inputAreaRef = new AreaReference(inputLineRegion.getRefersToFormula());
         XSSFName outputLineRegion = BookUtils.getName(ppBook,"az_output");
         AreaReference outputAreaRef = new AreaReference(outputLineRegion.getRefersToFormula());
@@ -2004,7 +1999,6 @@ fr.close();
         org.apache.poi.xssf.usermodel.XSSFSheet inputSheet = ppBook.getSheet(inputLineRegion.getSheetName());
         org.apache.poi.xssf.usermodel.XSSFSheet outputSheet = ppBook.getSheet(outputLineRegion.getSheetName());
         int inputRow = inputAreaRef.getFirstCell().getRow();
-        int inputCol = inputAreaRef.getFirstCell().getCol();
         String outFile = filePath + " converted";
         File writeFile = new File(outFile);
         writeFile.delete(); // to avoid confusion
@@ -2019,23 +2013,19 @@ fr.close();
         MappingIterator<String[]> lineIterator = (csvMapper.readerFor(String[].class).with(schema).readValues(new File(filePath)));
         Map<String, Integer> inputColumns = new HashMap<>();
         for (int colNo = inputAreaRef.getFirstCell().getCol();colNo <= inputAreaRef.getLastCell().getCol(); colNo++){
-            String heading = getCellValue(inputSheet.getRow(inputRow).getCell(inputCol + colNo));
+            String heading = getCellValue(inputSheet.getRow(inputRow).getCell( colNo));
             inputColumns.put(normalise(heading),colNo);
         }
         Map <Integer,Integer> colOnInputRange = new HashMap<>();
         boolean firstLine = true;
         Map <Integer, Integer> inputColumnMap = new HashMap<>();
-        int topLinesCount = 0;
-        if (topLinesArea!=null){
-            topLinesCount = topLinesArea.getLastCell().getRow() + 1;
-        }
         int lineNo = 0;
         int headingsFound = 0;
         while (lineIterator.hasNext()) {
             String[] line = lineIterator.next();
             int colNo = 0;
             boolean validLine = true;
-            if (lineNo < topLinesCount) {
+            if (lineNo < inputRow) {
 
                 for (String cellVal:line){
                     setCellValue(inputSheet,lineNo, colNo, cellVal);
