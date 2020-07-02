@@ -2045,7 +2045,7 @@ fr.close();
                         }
                         if (firstLine) {
                             Integer targetCol = inputColumns.get(normalise(cellVal));
-                            if (targetCol != null) {
+                            if (targetCol != null&& inputColumnMap.get(colNo)==null) {
                                 //note - ignores heading if no map found
                                 inputColumnMap.put(colNo, targetCol);
                             }
