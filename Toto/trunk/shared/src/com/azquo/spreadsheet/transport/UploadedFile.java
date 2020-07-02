@@ -139,7 +139,7 @@ public class UploadedFile implements Serializable {
         }
 
         public String getErrors() {
-            return errors;
+            return trimError(errors);
         }
 
     }
@@ -343,7 +343,18 @@ public class UploadedFile implements Serializable {
     }
 
     public String getError() {
+        return trimError(error);
+    }
+    private static String trimError(String error){
+        if (error == null){
+            return error;
+        }
+        int ePos = error.lastIndexOf("java.lang.Exception:");
+        if (ePos >=0){
+            return error.substring(ePos + "java.lang.Exception:".length()).trim();
+        }
         return error;
+
     }
 
     public void setError(String error) {
