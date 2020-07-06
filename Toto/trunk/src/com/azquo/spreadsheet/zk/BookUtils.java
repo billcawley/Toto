@@ -293,7 +293,8 @@ java.lang.IllegalStateException: is ERROR, not the one of [STRING, BLANK]
     static void removeNamesWithNoRegion(Book book) {
         List<SName> toBeDeleted = new ArrayList<>();
         for (SName name : book.getInternalBook().getNames()) {
-            if (name.getRefersToCellRegion() == null && name.getRefersToFormula() == null) {
+            if (book.getInternalBook().getSheetByName(name.getRefersToSheetName())==null || (name.getRefersToCellRegion() == null && name.getRefersToFormula() == null)
+            ) {
                 toBeDeleted.add(name);
               }
         }
