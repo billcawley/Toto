@@ -484,7 +484,7 @@ public class AzquoCellService {
             }
             List<Integer> sortedRows = new ArrayList<>();
             if (!sortOnColIndexes.isEmpty() || sortOnRowTotals) { // then we need to sort the rows
-                if (permute) {
+                if (permute&& !regionOptions.noPermuteTotals) {
                     // ok we need this to work on multiple levels. Start on the right and sort everything except totals
                     boolean first = true;
                     for (int sortingHeadingIndex = rowHeadings.get(0).size() - 1; sortingHeadingIndex >= 0; sortingHeadingIndex--){
