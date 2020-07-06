@@ -105,7 +105,7 @@ def fileProcess(Object[] args) {
                                 c.setTime(usdf.parse(exp_date))
                             } catch (Exception e) {
                                 e.printStackTrace();
-                                throw new Exception(e);
+                                throw new Exception(e + "-"+uploadedFile.getFileName());
                             }
                         }
                         c.add(Calendar.YEAR, -1);
