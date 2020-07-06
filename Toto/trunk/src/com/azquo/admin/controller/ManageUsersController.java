@@ -60,6 +60,9 @@ public class ManageUsersController {
     @RequestMapping
     public String handleRequest(ModelMap model, HttpServletRequest request
             , HttpServletResponse response
+            , @RequestParam(value = "apiKey", required = false) String apiKey
+            , @RequestParam(value = "apiAction", required = false) String apiAction
+            , @RequestParam(value = "business", required = false) String business
             , @RequestParam(value = "editId", required = false) String editId
             , @RequestParam(value = "deleteId", required = false) String deleteId
             , @RequestParam(value = "recentId", required = false) String recentId
@@ -77,13 +80,40 @@ public class ManageUsersController {
             , @RequestParam(value = "downloadRecentActivity", required = false) String downloadRecentActivity
     ) throws Exception {
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
+        // added for Ed Broking but could be used by others. As mentioned this should only be used on a private network
+        if (apiKey != null && apiKey.equals(SpreadsheetService.getManageusersapikey())){
+            // api access will give basic crud against users. There may be some duplication with the edit bit below, deal with that after if it's an issue
+            if (business == null || business.isEmpty()){
+                model.put("content", "business required");
+                return "utf8page";
+            }
+            Business b = BusinessDAO.findByName(business);
+            if (b == null){
+                model.put("content", "business " + business + " not found");
+                return "utf8page";
+            }
+            switch (apiAction){
+                case "delete" :
+                    if (AdminService.deleteUserByLogin(email, b)){
+                        model.put("content", "deleted " + email);
+                        return "utf8page";
+                    } else {
+                        model.put("content", "could not find " + email);
+                        return "utf8page";
+                    }
+                case "set" :
+                default:
+                    model.put("content", "unknown apiAction : " + apiAction);
+                    return "utf8page";
+            }
+        }
         // I assume secure until we move to proper spring security
         if (loggedInUser == null || !loggedInUser.getUser().isAdministrator()) {
             return "redirect:/api/Login";
         } else {
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
             if (NumberUtils.isDigits(deleteId)) {
-                AdminService.deleteUserById(Integer.parseInt(deleteId));
+                AdminService.deleteUserById(Integer.parseInt(deleteId), loggedInUser);
             }
             if (NumberUtils.isDigits(recentId)) {
                 User u = AdminService.getUserById(Integer.parseInt(recentId), loggedInUser);

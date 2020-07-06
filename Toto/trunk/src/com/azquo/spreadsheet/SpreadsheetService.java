@@ -96,6 +96,9 @@ public class SpreadsheetService {
 
     private static final String TRACKINGTABLE = "trackingtable";
 
+    // for an external system to manage users. Should only really be used on a local network/VPN etc. Not on a public server like data.azquo.com
+    private static final String MANAGEUSERSAPIKEY = "manageusersapikey";
+
     private static String getProperty(String key) {
         if (properties.get(key) == null) {
             if (azquoProperties.getProperty(host + "." + key) != null) {
@@ -164,6 +167,10 @@ public class SpreadsheetService {
 
     public static String getTrackingTable() {
         return getProperty(TRACKINGTABLE);
+    }
+
+    public static String getManageusersapikey() {
+        return getProperty(MANAGEUSERSAPIKEY);
     }
 
     private static final String LOGONPAGEOVERRIDE = "logonpageoverride";

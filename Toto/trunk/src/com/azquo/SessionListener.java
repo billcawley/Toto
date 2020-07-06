@@ -29,8 +29,7 @@ public class SessionListener implements HttpSessionListener {
         sessions.remove(sessionEvent.getSession());
         LoggedInUser loggedInUser = (LoggedInUser) sessionEvent.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
         if (loggedInUser != null){
-            loggedInUser.userLog("Logout by timetout", new HashMap<>());
+            loggedInUser.userLog("Logout by time out", new HashMap<>());
         }
-
     }
 }
