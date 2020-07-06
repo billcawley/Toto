@@ -459,9 +459,20 @@ this may now not work at all, perhaps delete?
         return pendingUploadForDisplays;
     }
 
-    public static void deleteUserById(int userId) {
+    public static void deleteUserById(int userId, LoggedInUser loggedInUser) {
         User user = UserDAO.findById(userId);
-        UserDAO.removeById(user);
+        if (user != null && loggedInUser.getUser().getBusinessId() == user.getBusinessId()) {
+            UserDAO.removeById(user);
+        }
+    }
+
+    public static boolean deleteUserByLogin(String login, Business b) {
+        User user = UserDAO.findByEmailAndBusinessId(login, b.getId());
+        if (user != null) {
+            UserDAO.removeById(user);
+            return true;
+        }
+        return false;
     }
 
     public static User getUserById(int userId, LoggedInUser loggedInUser) {
@@ -575,9 +586,19 @@ this may now not work at all, perhaps delete?
 
     //now also does the last audit
     public static void updateNameAndValueCounts(LoggedInUser loggedInUser, Database database) throws Exception {
-        database.setNameCount(AdminService.getNameCountWithBasicSecurity(loggedInUser, database));
-        database.setValueCount(AdminService.getValueCountWithBasicSecurity(loggedInUser, database));
-        database.setLastProvenance(getMostRecentProvenance(loggedInUser, database));
+        // security can cause a problem here hence the ifs
+        int nameCount = AdminService.getNameCountWithBasicSecurity(loggedInUser, database);
+        if (nameCount > 0){
+            database.setNameCount(nameCount);
+        }
+        int valueCount = AdminService.getValueCountWithBasicSecurity(loggedInUser, database);
+        if (valueCount > 0){
+            database.setValueCount(valueCount);
+        }
+        String recentProvenance = getMostRecentProvenance(loggedInUser, database);
+        if (recentProvenance != null){
+            database.setLastProvenance(recentProvenance);
+        }
         DatabaseDAO.store(database);
     }
 
