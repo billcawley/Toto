@@ -1078,7 +1078,13 @@ public final class ImportService {
                 }
                 ImportTemplate preProcess = ImportTemplateDAO.findForNameAndBusinessId(preProcessor, loggedInUser.getUser().getBusinessId());
                 //preProcessUsingExcel(uploadedFile, SpreadsheetService.getHomeDir() + dbPath + loggedInUser.getBusinessDirectory() + importTemplatesDir + preProcess.getFilenameForDisk()); //
-                preProcessUsingPoi(uploadedFile, SpreadsheetService.getHomeDir() + dbPath + loggedInUser.getBusinessDirectory() + importTemplatesDir + preProcess.getFilenameForDisk()); //
+
+                try{
+                    preProcessUsingPoi(uploadedFile, SpreadsheetService.getHomeDir() + dbPath + loggedInUser.getBusinessDirectory() + importTemplatesDir + preProcess.getFilenameForDisk()); //
+                }catch(Exception e){
+                    uploadedFile.setError("Preprocessor error in " + uploadedFile.getTemplateParameter(PREPROCESSOR) + " : " + e.getMessage());
+                    return uploadedFile;
+                }
             }else {
                 File file = new File(SpreadsheetService.getGroovyDir() + "/" + preProcessor);
                 if (file.exists()) {
