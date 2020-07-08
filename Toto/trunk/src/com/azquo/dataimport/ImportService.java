@@ -1512,7 +1512,7 @@ public final class ImportService {
                 //ZK BUG - reads "hh:mm" as "h:mm"
                 returnString = "0" + returnString;
             } else {
-                if (dataFormat.toLowerCase().contains("m")) {
+                if (dataFormat.toLowerCase().contains("m")||dataFormat.toLowerCase().contains("y")) {
                     if (dataFormat.length() > 6) {
                         try {
                             returnString = YYYYMMDD.format(cell.getDateCellValue());
