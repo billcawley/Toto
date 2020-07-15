@@ -551,6 +551,7 @@ Attributes of the names in other cells can be referenced also
                         // put on the end as usual. If composition was put on a subsequent heading it would reset the context as any clause does
                         if (contextHeading.compositionPattern != null) {
                             mutableImportHeading.compositionPattern = contextHeading.compositionPattern;
+                            mutableImportHeading.compositionXL = contextHeading.compositionXL;
                         }
                         resolvePeers(mutableImportHeading, contextHeading, headings);
                     }
