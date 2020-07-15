@@ -92,6 +92,7 @@ public class ManageUsersController {
                 model.put("content", "business " + business + " not found");
                 return "utf8page";
             }
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
             switch (apiAction){
                 case "delete" :
                     if (AdminService.deleteUserByLogin(email, b)){
@@ -102,6 +103,59 @@ public class ManageUsersController {
                         return "utf8page";
                     }
                 case "set" :
+                    User toEdit = UserDAO.findByEmailAndBusinessId(email, loggedInUser.getUser().getBusinessId()); // may or may not be null
+                    // ok check to see if data was submitted
+                    StringBuilder error = new StringBuilder();
+                        if (endDate == null || endDate.isEmpty()) {
+                            error.append("End date required (yyyy-MM-dd)\n");
+                        } else {
+                            try {
+                                formatter.parse(endDate);
+                            } catch (DateTimeParseException e) {
+                                error.append("End date format not yyyy-MM-dd\n");
+                            }
+                        }
+                        if (email == null || email.isEmpty()) {
+                            error.append("Email required\n");
+                        } else {
+                            email = email.trim();
+                        }
+                        if (name == null || name.isEmpty()) {
+                            error.append("Name required\n");
+                        }
+                        if (password == null || password.isEmpty()) {
+                            error.append("Password required\n");
+                        }
+                        if (error.length() == 0) {
+                            assert endDate != null;
+                            // then store, it might be new
+                            if (toEdit == null) {
+                                // Have to use  a LocalDate on the parse which is annoying http://stackoverflow.com/questions/27454025/unable-to-obtain-localdatetime-from-temporalaccessor-when-parsing-localdatetime
+                                AdminService.createUser(email, name, LocalDate.parse(endDate, formatter).atStartOfDay(), status, password, loggedInUser
+                                        , NumberUtils.isDigits(databaseId) ? Integer.parseInt(databaseId) : 0
+                                        , NumberUtils.isDigits(reportId) ? Integer.parseInt(reportId) : 0, selections, team);
+                                model.put("content", "user " + email + " created");
+                                return "utf8page";
+                            } else {
+                                toEdit.setEndDate(LocalDate.parse(endDate, formatter).atStartOfDay());
+                                toEdit.setEmail(email);
+                                toEdit.setName(name);
+                                toEdit.setStatus(status);
+                                toEdit.setTeam(team);
+                                toEdit.setDatabaseId(NumberUtils.isDigits(databaseId) ? Integer.parseInt(databaseId) : 0);
+                                toEdit.setReportId(NumberUtils.isDigits(reportId) ? Integer.parseInt(reportId) : 0);
+                                    final String salt = AdminService.shaHash(System.currentTimeMillis() + "salt");
+                                    toEdit.setSalt(salt);
+                                    toEdit.setPassword(AdminService.encrypt(password, salt));
+                                toEdit.setSelections(selections);
+                                UserDAO.store(toEdit);
+                                model.put("content", "user " + email + " updated");
+                                return "utf8page";
+                            }
+                        } else {
+                            model.put("content", "error :  " + error);
+                            return "utf8page";
+                        }
                 default:
                     model.put("content", "unknown apiAction : " + apiAction);
                     return "utf8page";
