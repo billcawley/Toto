@@ -825,11 +825,15 @@ public final class ImportService {
                                             }
                                         }
                                     }
-                                }
+                                }else{
                                     if (importVersion!=null){
                                         break rows;
                                     }
-
+                                }
+                            }
+                            // EFC hacked in, this code needs to be rewritten
+                            if (importVersion!=null){
+                                break;
                             }
                             if ("startswith".equalsIgnoreCase(firstCellValue)) {
                                 scanning = true;
