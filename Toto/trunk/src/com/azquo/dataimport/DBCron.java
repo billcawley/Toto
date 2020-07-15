@@ -426,7 +426,8 @@ public class DBCron {
                                                                 } else {
                                                                     thisFileValues.get(node.getNodeName() + "-" + node1.getNodeName() + "-" + node2.getNodeName()).append("\n").append(node2.getFirstChild().getNodeValue());
                                                                 }
-                                                            }
+                                                                     }
+
                                                         }
                                                     } else {
                                                         if (thisFileValues.get(node.getNodeName() + "-" + node1.getNodeName()) == null) {

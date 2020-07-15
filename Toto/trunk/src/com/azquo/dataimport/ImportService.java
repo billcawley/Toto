@@ -825,11 +825,11 @@ public final class ImportService {
                                             }
                                         }
                                     }
-                                }else{
+                                }
                                     if (importVersion!=null){
                                         break rows;
                                     }
-                                }
+
                             }
                             if ("startswith".equalsIgnoreCase(firstCellValue)) {
                                 scanning = true;

@@ -59,7 +59,7 @@ public class DSSpreadsheetService {
         List<List<AzquoCell>> data = AzquoCellService.getDataRegion(azquoMemoryDBConnection, regionName, rowHeadingsSource, colHeadingsSource, contextSource
                 , regionOptions, user, valueId, quiet);
         if (data.size() == 0) {
-            //when contextSource = null there is an error on attempting to save
+            //when contextSource = null there is an error on attauempting to save
             return new CellsAndHeadingsForDisplay(regionName, colHeadingsSource, null, null, null, new ArrayList<>(), rowHeadingsSource, colHeadingsSource, contextSource, azquoMemoryDBConnection.getDBLastModifiedTimeStamp(), regionOptions, null);
         }
         List<List<CellForDisplay>> displayData = new ArrayList<>(data.size());
