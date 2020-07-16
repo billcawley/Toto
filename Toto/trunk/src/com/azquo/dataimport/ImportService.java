@@ -859,6 +859,8 @@ public final class ImportService {
                         if (versionParameters.get("importmodel") != null){
                             importModel = versionParameters.get("importmodel"); // it may set it to "none" to bock an import model
                         }
+                    } else {
+                        throw new Exception("Import version " + importVersion + " not found in import template.");
                     }
 
                     template = importTemplateData.getSheets().get(importModel);
