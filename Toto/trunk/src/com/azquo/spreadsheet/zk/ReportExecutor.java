@@ -162,20 +162,20 @@ public class ReportExecutor {
                         onwardLineNo++;
                     }
                     lineNo = onwardLineNo - 1; // put line back to where it is now
-                    if (!subCommands.isEmpty()) { // then we have something to run for the for each!
-                        int inPos = findString(trimmedLine, " in ");
-                        String choiceName = trimmedLine.substring("for each".length(), inPos).trim();
-                        if (choiceName.startsWith("`") || choiceName.startsWith("[")) {
-                            choiceName = choiceName.substring(1, choiceName.length() - 1);
-                        }
-                        String choiceQuery = trimmedLine.substring(inPos + 4).trim();
-                        loopsLog.append(choiceName).append(" : ").append(choiceQuery).append("\r\n");
-                        final List<String> dropdownListForQuery = CommonReportUtils.getDropdownListForQuery(loggedInUser, choiceQuery, loggedInUser.getUser().getEmail(), false, provenanceId);
-                        if (dropdownListForQuery.size() > 0 && !dropdownListForQuery.get(0).startsWith("Error :")) {
-                            for (String choiceValue : dropdownListForQuery) { // run the "for" :)
-                                RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).addToLog(loggedInUser.getDataAccessToken(), choiceName + " : " + choiceValue);
-                                SpreadsheetService.setUserChoice(loggedInUser, choiceName.replace("`", ""), choiceValue);
-                                loopsLog.append(choiceValue).append("\r\n");
+                    int inPos = findString(trimmedLine, " in ");
+                    String choiceName = trimmedLine.substring("for each".length(), inPos).trim();
+                    if (choiceName.startsWith("`") || choiceName.startsWith("[")) {
+                        choiceName = choiceName.substring(1, choiceName.length() - 1);
+                    }
+                    String choiceQuery = trimmedLine.substring(inPos + 4).trim();
+                    loopsLog.append(choiceName).append(" : ").append(choiceQuery).append("\r\n");
+                    final List<String> dropdownListForQuery = CommonReportUtils.getDropdownListForQuery(loggedInUser, choiceQuery, loggedInUser.getUser().getEmail(), false, provenanceId);
+                    if (dropdownListForQuery.size() > 0 && !dropdownListForQuery.get(0).startsWith("Error :")) {
+                        for (String choiceValue : dropdownListForQuery) { // run the "for" :)
+                            RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).addToLog(loggedInUser.getDataAccessToken(), choiceName + " : " + choiceValue);
+                            SpreadsheetService.setUserChoice(loggedInUser, choiceName.replace("`", ""), choiceValue);
+                            loopsLog.append(choiceValue).append("\r\n");
+                            if (!subCommands.isEmpty()) { // then we have something to run for the for each!
                                 toReturn = executeCommands(loggedInUser, subCommands, exportPath, loopsLog, systemData2DArrays, count, provenanceId);
                             }
                         }
