@@ -41,7 +41,7 @@ public class UserChoiceService {
             }
         }else{
             //the default for new temporary sets is to be full.
-            if (setName.substring(0,3).equals("az_")){
+            if (set.getChildren().size()==0 && setName.substring(0,3).equals("az_")){
                 Name sourceSet = NameService.findByName(connectionFromAccessToken,setName.substring(3));
                 if (sourceSet!=null){
                     for (Name child:sourceSet.getChildren()){
