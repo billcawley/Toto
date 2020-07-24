@@ -140,6 +140,8 @@ public class OnlineController {
         if (!"1".equals(reportId) && "true".equals(request.getSession().getAttribute("excelToggle"))) {
             return "redirect:/api/ExcelInterface?" + request.getQueryString();
         }
+        String result = "error: report unavailable";
+
         try {
             //long startTime = System.currentTimeMillis();
             try {
@@ -197,9 +199,11 @@ public class OnlineController {
                             reportId = onlineReport.getId() + ""; // hack for permissions
                             LoginService.switchDatabase(loggedInUser, permission.getSecond());
                         }
+                    }else{
+                       result = "error: user has no permission for this report";
+
                     }
                 }
-                String result = "error: user has no permission for this report";
                 if (opcode.equalsIgnoreCase(UPLOAD)) {
                     // revised logic - this is ONLY for uploading data entered in a downloaded report
                     reportId = "";
