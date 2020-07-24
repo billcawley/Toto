@@ -611,6 +611,7 @@ public class DSImportService {
                 || heading.startsWith(HeadingReader.PARENTOF)
                 || heading.startsWith(HeadingReader.ATTRIBUTE)
                 || heading.startsWith(HeadingReader.LANGUAGE)
+                || heading.startsWith(HeadingReader.DATATYPE)
                 || heading.startsWith(HeadingReader.PEERS)
                 || heading.startsWith(HeadingReader.LOCAL)
                 || heading.startsWith(HeadingReader.COMPOSITION)
