@@ -81,7 +81,7 @@ public class ReportService {
                             if (database == null) {
                                 database = DatabaseDAO.findById(loggedInUser.getUser().getDatabaseId());
                             }
-                            if (report != null) {
+                            if (report != null && database!=null) {
                                 loggedInUser.setReportDatabasePermission(null, report, database);
                             }
                         }
