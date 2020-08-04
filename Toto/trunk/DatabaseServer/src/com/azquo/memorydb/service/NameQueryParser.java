@@ -458,6 +458,11 @@ public class NameQueryParser {
         getNameListFromStringListCount.incrementAndGet();
         List<Name> referencedNames = new ArrayList<>(nameStrings.size());
         for (String nameString : nameStrings) {
+            boolean temporaryName = false;
+            if (nameString.charAt(0)==StringLiterals.ASSYMBOL){
+                temporaryName = true;
+                nameString=nameString.substring(1);
+            }
             Name toAdd = NameService.findNameAndAttribute(azquoMemoryDBConnection, nameString, attributeNames);
             // a hack for pivot filters, should this be here?
             if (toAdd == null && nameString.startsWith("az_")) {
@@ -466,7 +471,7 @@ public class NameQueryParser {
             }
             // typically used with as, a bunch of sets may be created as part of a report but we then sap them when the report has finished loading
             nameString = nameString.replace(StringLiterals.QUOTE + "", "");
-            if (toAdd == null && nameString.toUpperCase().endsWith("(TEMPORARY)")) { // hacky? Factor the literal?
+            if (toAdd == null && temporaryName) {
                 Name temporaryNames = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, StringLiterals.TEMPORARYNAMES, null, false); // make if it's not there, I guess no harm in it hanging around
                 // create the temporary name to be used later in an "as" no doubt
                 toAdd = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, nameString, temporaryNames, true);
