@@ -201,8 +201,7 @@ class NameStackOperators {
             rowHeadings.add(Collections.singletonList(new DataRegionHeading(n, true, null, null, null, null, null, 0)));
         }
         List<List<DataRegionHeading>> colHeadings = new ArrayList<>(1);
-        filterByCriteria = filterByCriteria.substring(1, filterByCriteria.length() - 1);
-        colHeadings.add(Collections.singletonList(new DataRegionHeading(null, false, null, null, null, null, null, 0, filterByCriteria)));
+         colHeadings.add(Collections.singletonList(new DataRegionHeading(null, false, null, null, null, null, null, 0, filterByCriteria)));
         final List<DataRegionHeading> contextHeadings = DataRegionHeadingService.getContextHeadings(azquoMemoryDBConnection, contextSource, languages);
         List<List<AzquoCell>> dataToShow = AzquoCellService.getAzquoCellsForRowsColumnsAndContext(azquoMemoryDBConnection, rowHeadings, colHeadings, contextHeadings, languages, 0, true);
         //a set being built as a result of a value being non zero, a set being true
