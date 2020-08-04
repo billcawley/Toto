@@ -190,6 +190,7 @@ I should be ok for StringTokenizer at this point
 
         StringTokenizer st = new StringTokenizer(statement, " ");
         modifiedStatement = new StringBuilder();
+        String lastToken = "";
         while (st.hasMoreTokens()) {
             modifiedStatement.append(" ");
             String term = st.nextToken();
@@ -208,11 +209,17 @@ I should be ok for StringTokenizer at this point
                     attributeStrings.add(term.substring(1).replace("`", "")); // knock off the . and remove ``
                 } else {
                     modifiedStatement.append(StringLiterals.NAMEMARKER).append(twoDigit.format(nameNames.size()));
-                    nameNames.add(term);
+                    if (lastToken.equals("as")){
+                        //new behaviour - any name preceded by 'as' can be created as a temporary name.  This signals.
+                        nameNames.add(StringLiterals.ASSYMBOL + term);
+                    }else{
+                        nameNames.add(term);
+                    }
                 }
             } else {
                 modifiedStatement.append(term);
             }
+            lastToken = term.toLowerCase();
         }
         statement = modifiedStatement.toString().trim();
         statement = statement.replace("> =", ">=").replace("< =", "<=");//remove unnecessary blanks
