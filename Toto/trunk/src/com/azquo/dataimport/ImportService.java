@@ -442,10 +442,12 @@ public final class ImportService {
             // is it the type of import template as required by Ben Jones
             Name importName = BookUtils.getName(book, ReportRenderer.AZIMPORTNAME);
             // also just do a simple check on the file name
-            if (importName != null || uploadedFile.getFileName().toLowerCase().contains("import templates")) {
+            String lcName = uploadedFile.getFileName().toLowerCase();
+            if (importName != null || lcName.contains("import templates") || lcName.contains("preprocessor")) {
                 if ((loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
                     if (opcPackage != null) opcPackage.revert();
-                    return Collections.singletonList(uploadImportTemplate(uploadedFile, loggedInUser, true));
+                    //preprocessors are not assigned to the file, import templates are assigned
+                    return Collections.singletonList(uploadImportTemplate(uploadedFile, loggedInUser, lcName.contains("import templates")));
                 }
             }
 
