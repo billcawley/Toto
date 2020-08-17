@@ -588,11 +588,11 @@ this may now not work at all, perhaps delete?
     public static void updateNameAndValueCounts(LoggedInUser loggedInUser, Database database) throws Exception {
         // security can cause a problem here hence the ifs
         int nameCount = AdminService.getNameCountWithBasicSecurity(loggedInUser, database);
-        if (nameCount > 0){
+        if (nameCount >= 0){
             database.setNameCount(nameCount);
         }
         int valueCount = AdminService.getValueCountWithBasicSecurity(loggedInUser, database);
-        if (valueCount > 0){
+        if (valueCount >= 0){
             database.setValueCount(valueCount);
         }
         String recentProvenance = getMostRecentProvenance(loggedInUser, database);
@@ -646,7 +646,7 @@ this may now not work at all, perhaps delete?
                 || (loggedInUser.getUser().isDeveloper() && database.getUserId() == loggedInUser.getUser().getId()))) {
             return RMIClient.getServerInterface(DatabaseServerDAO.findById(database.getDatabaseServerId()).getIp()).getNameCount(database.getPersistenceName());
         }
-        return 0;
+        return -1;
     }
 
     private static int getValueCountWithBasicSecurity(LoggedInUser loggedInUser, Database database) throws Exception {
@@ -654,7 +654,7 @@ this may now not work at all, perhaps delete?
                 || (loggedInUser.getUser().isDeveloper() && database.getUserId() == loggedInUser.getUser().getId()))) {
             return RMIClient.getServerInterface(DatabaseServerDAO.findById(database.getDatabaseServerId()).getIp()).getValueCount(database.getPersistenceName());
         }
-        return 0;
+        return -1;
     }
 
     private static String getMostRecentProvenance(LoggedInUser loggedInUser, Database database) throws Exception {

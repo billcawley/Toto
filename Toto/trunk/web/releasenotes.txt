@@ -1,3 +1,27 @@
+15-07-20-3
+
+Import file template lookup bug fix
+
+XLSX
+
+Continue Oilfield Claims and WeSpeciality build
+
+08-07-20
+
+A few bug fixes - wespeciality
+
+06-07-20-2
+
+Bug fixes on the preprocessor, better error messages
+
+Initial work on the users API
+
+XLSX
+
+Continue Oilfield Claims and WeSpeciality build
+
+Allrisks Claims limnet currency to 002
+
 30-06-20-3
 
 New preprocessor bug fixes x 3

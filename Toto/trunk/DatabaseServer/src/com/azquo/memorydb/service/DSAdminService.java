@@ -12,7 +12,6 @@ import com.azquo.memorydb.dao.MySQLDatabaseManager;
  * <p>
  * Basic DB side admin functions.
  *
- * The copy functions have not been used in a long time.
  * <p>
  */
 public class DSAdminService {

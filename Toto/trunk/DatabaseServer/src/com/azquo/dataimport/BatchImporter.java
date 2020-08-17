@@ -40,8 +40,6 @@ public class BatchImporter implements Callable<Void> {
 
     private static final int CHECKTRUE = 1;
     private static final int CHECKFALSE = 0;
-    private static final int CHECKMAYBE = 2;
-    private static final String PROVISIONAL = "***";
     private static final String DEBUGMARKER = "--DEBUG--";
 
     private final AzquoMemoryDBConnection azquoMemoryDBConnection;
@@ -877,37 +875,18 @@ public class BatchImporter implements Callable<Void> {
         if (!m.find()) {
             conditionAttribute = condition;
         }
-        boolean provisional = false;
         Map<Name, String> nearestList = new HashMap<>();
         for (Name toTest : parentSet.getChildren()) {
             if (conditionAttribute != null) {
                 condition = toTest.getAttribute(conditionAttribute);
             }
-            int checkResult = checkCondition(lineToLoad, condition, compositeIndexResolver, toTest, nearestList, provisional);
+            int checkResult = checkCondition(lineToLoad, condition, compositeIndexResolver, toTest, nearestList);
             if (checkResult == CHECKTRUE) {
-                int indexForChild = cell.getImmutableImportHeading().indexForChild;
-                int indexForParent = cell.getImmutableImportHeading().exclusiveIndex;
-                if (provisional && indexForParent >= 0 && indexForChild >= 0) {//only set the value if there is not already a value in the database
-                    Set<Name> childNames = lineToLoad.get(indexForChild).getLineNames();
-                    if (childNames == null || childNames.size() == 0 || lineToLoad.get(indexForParent).getLineValue() == null) {
-                        return false; //not enough info yet to decide whether to fill in the value
-                    }
-                    Name childName = childNames.iterator().next();
-                    String existingName = childName.getAttribute(lineToLoad.get(indexForParent).getLineValue());
-                    if (existingName != null && existingName.length() > 0) {
-                        cell.setLineValue(existingName, azquoMemoryDBConnection, attributeNames);
-                        cell.addToLineNames(NameService.findByName(azquoMemoryDBConnection, existingName));
-                        cell.setLineNamesResolved();
-                        return true;
-                    }
-                }
-                //if provisional but can't find existing then just add to line names as normal
                 cell.addToLineNames(toTest);
                 cell.setLineValue(toTest.getDefaultDisplayName(), azquoMemoryDBConnection, attributeNames);
                 cell.setLineNamesResolved(); // deal with its children later
                 return true;
             }
-            provisional = checkResult == CHECKMAYBE;//applies to the next condition only
         }
 
         if (nearestList.size() > 0) {
@@ -938,10 +917,9 @@ public class BatchImporter implements Callable<Void> {
     */
     // and('Inception' < "2018-08-01", 'state' in {"DE","MD", "VA"})
 
-    private int checkCondition(List<ImportCellWithHeading> lineToLoad, String condition, CompositeIndexResolver compositeIndexResolver, Name nameToTest, final Map<Name, String> nearestList, boolean provisional) {
+    private int checkCondition(List<ImportCellWithHeading> lineToLoad, String condition, CompositeIndexResolver compositeIndexResolver, Name nameToTest, final Map<Name, String> nearestList) {
         //returns CHECKTRUE, CHECKFALSE, CHECKMAYBE
         int found = CHECKFALSE;
-        boolean maybe = false;
         if (condition.toLowerCase().equals("all"))
             return CHECKTRUE;// presumably the condition would be from the name attribute in this case - pointless to put it in a heading
         List<String> constants = new ArrayList<>();
@@ -1030,8 +1008,6 @@ public class BatchImporter implements Callable<Void> {
                 }
                 String fieldFound = constants.get(Integer.parseInt(fieldSt.substring(1)));
                 if (fieldFound == null) {
-                    maybe = true;
-                    found = 1;
                     break;
                 } else {
                     List<String> setFound = sets.get(Integer.parseInt(element.substring(inPos + 5)));
@@ -1052,22 +1028,8 @@ public class BatchImporter implements Callable<Void> {
                 String LHS = interpretTerm(constants, element.substring(0, m.start()).trim());
                 String RHS = interpretTerm(constants, element.substring(m.end()).trim());
                 if (LHS == null || RHS == null) {
-                    maybe = true;
-                    found = 1;
+                    break;
                 } else {
-                    if (RHS.endsWith(PROVISIONAL)) {
-                        //some explanation needed.
-                        /*categorisation of risk searches for three counties in florida.  Areas in Florida outside the three counties are treated differently
-                         * but, if there is no county information, but the state is known to be Florida, the risk is provisionally treated as if in the three counties
-                         *
-                         * EFC 04/03/20 note - this is a hack for BB304140 which I'm not sure is required any more, I'd quite like to zap it
-                         * */
-                        if (!provisional) {
-                            found = CHECKFALSE;
-                            break;
-                        }
-                        RHS = RHS.substring(0, RHS.indexOf(PROVISIONAL));
-                    }
                     String op = m.group();
                     for (int i = 0; i < op.length(); i++) {
                         switch (op.charAt(i)) {
@@ -1114,7 +1076,6 @@ public class BatchImporter implements Callable<Void> {
             }
             if (found == CHECKFALSE) return CHECKFALSE;
         }
-        if (maybe) return CHECKMAYBE;
         return found;
     }
 
