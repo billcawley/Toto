@@ -19,14 +19,14 @@ def fileProcess(Object[] args) {
     file.withReader { reader ->
         while ((line = reader.readLine()) != null) {
             if (lineNo == 1){
-                StringTokenizer st = new StringTokenizer(line, "\t");
+                String[] result = line.split("\t");
                 Set<String> headings = new HashSet<>();
                 int colNum = 0;
-                while (st.hasMoreTokens()) {
+                for (int x=0; x<result.length; x++){
                     if (colNum != 0){
                         fileWriter.write("\t");
                     }
-                    String heading = st.nextToken().toLowerCase();
+                    String heading = result[x].toLowerCase();
                     if (!heading.isEmpty()){
                         int num = 1;
                         if (headings.contains(heading)){
