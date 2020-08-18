@@ -443,7 +443,7 @@ public final class ImportService {
             Name importName = BookUtils.getName(book, ReportRenderer.AZIMPORTNAME);
             // also just do a simple check on the file name
             String lcName = uploadedFile.getFileName().toLowerCase();
-            if (importName != null || lcName.contains("import templates") || lcName.contains("preprocessor")) {
+            if (importName != null || lcName.contains("import templates") || (lcName.contains("preprocessor")&& !lcName.contains("preprocessor="))) {
                 if ((loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
                     if (opcPackage != null) opcPackage.revert();
                     //preprocessors are not assigned to the file, import templates are assigned
@@ -1078,8 +1078,12 @@ public final class ImportService {
         }
 
         // new thing - pre processor on the report server
-        if (uploadedFile.getTemplateParameter(PREPROCESSOR) != null) {
+        //override is the parameter is sent by the user
+        preProcessor = uploadedFile.getParameter(PREPROCESSOR);
+        if (preProcessor==null){
             preProcessor = uploadedFile.getTemplateParameter(PREPROCESSOR);
+        }
+        if (preProcessor!=null) {
             if (!preProcessor.toLowerCase().endsWith(".groovy")){
                 if (!preProcessor.toLowerCase().endsWith(".xlsx")){
                     preProcessor += ".xlsx";
