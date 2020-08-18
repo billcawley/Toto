@@ -104,6 +104,7 @@ public final class ImportService {
     private static final String IMPORTTEMPLATE = "importtemplate";
     public static final String IMPORTVERSION = "importversion";
     public static final String IMPORTMODEL = "Import Model";
+    public static final String SHEETNAME = "sheet name";
 
 
     /* external entry point, moves the file to a temp directory in case pre processing is required
@@ -719,6 +720,7 @@ public final class ImportService {
             Map<String, String> fileNameParams = new HashMap<>(uploadedFile.getParameters());
             addFileNameParametersToMap(sheetName, fileNameParams);
             // reassigning uploaded file so the correct object will be passed back on exception
+            fileNameParams.put(SHEETNAME, sheetName);
             uploadedFile = new UploadedFile(tempPath, names, fileNameParams, true, uploadedFile.isValidationTest()); // true, it IS converted from a worksheet
             if (emptySheet) {
                 if (pendingUploadConfig != null) {
@@ -749,7 +751,6 @@ public final class ImportService {
 
 
     // things that can be read from "Parameters" in an import template sheet
-    private static final String PRE_PROCESSOR = "pre-processor";
     private static final String PREPROCESSOR = "preprocessor";
     public static final String POSTPROCESSOR = "postprocessor";
     public static final String PENDINGDATACLEAR = "pendingdataclear";
@@ -758,6 +759,7 @@ public final class ImportService {
     private static final String LANGUAGE = "language";
     private static final String SKIPLINES = "skiplines";
     private static final String AZHEADINGS = "az_Headings";
+    public static final String SHEETNAMECONTAINS = "sheetnamecontains";
 
 
     // copy the file to the database server if it's on a different physical machine then tell the database server to process it
@@ -878,7 +880,6 @@ public final class ImportService {
                     importSheetScan(template, null, standardHeadings, null, templateParameters, null);
                 }
 
-
                 // without standard headings then there's nothing to work with
                 if (!standardHeadings.isEmpty()) {
                     Map<RowColumn, String> topHeadings = new HashMap<>();
@@ -904,6 +905,15 @@ public final class ImportService {
                         }
                     }
                     uploadedFile.setTemplateParameters(templateParameters);
+                    if (templateParameters.get(SHEETNAMECONTAINS) != null && uploadedFile.getParameter(SHEETNAME) != null) {
+                        String sheetNameContains =templateParameters.get(SHEETNAMECONTAINS).toLowerCase().trim();
+
+                        if (!uploadedFile.getParameter(SHEETNAME).toLowerCase().contains(sheetNameContains)){
+                            uploadedFile.setError("Not loading as not relevant according to the import template, sheet name must contain " + sheetNameContains);
+                            return uploadedFile;
+                        }
+                    }
+
 
                     if (templateParameters.get(LANGUAGE) != null) {
                         String languages = templateParameters.get(LANGUAGE);
