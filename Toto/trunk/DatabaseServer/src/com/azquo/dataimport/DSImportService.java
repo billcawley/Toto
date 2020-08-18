@@ -433,6 +433,7 @@ public class DSImportService {
                     // and now composite can have . between the literals so watch for that too. Writing parsers is a pain,
                     boolean inComposition = false;
                     StringBuilder replacedHeading = new StringBuilder();
+                    boolean hasAttribute = false;
                     for (char c : heading.toCharArray()) {
                         if (replacedHeading.toString().toLowerCase().endsWith("composition")) {
                             inComposition = true;
@@ -443,8 +444,10 @@ public class DSImportService {
                         if (c == '`') {
                             inStringLiteral = !inStringLiteral;
                         }
-                        if (c == '.' && !inStringLiteral && !inComposition) {
+                        if (c == '.' && !inStringLiteral && !inComposition && !hasAttribute) {
                             replacedHeading.append(";attribute ");
+                            //in case attributes contain '.'
+                            hasAttribute = true;
                         } else {
                             replacedHeading.append(c);
                         }
