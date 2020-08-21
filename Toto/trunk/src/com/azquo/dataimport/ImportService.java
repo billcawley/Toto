@@ -2028,6 +2028,7 @@ fr.close();
             org.apache.poi.xssf.usermodel.XSSFSheet inputSheet = ppBook.getSheet(inputLineRegion.getSheetName());
             org.apache.poi.xssf.usermodel.XSSFSheet outputSheet = ppBook.getSheet(outputLineRegion.getSheetName());
             int inputRow = inputAreaRef.getFirstCell().getRow();
+            int outputRow = outputAreaRef.getFirstCell().getRow();
             String outFile = filePath + " converted";
             File writeFile = new File(outFile);
             writeFile.delete(); // to avoid confusion
@@ -2041,11 +2042,17 @@ fr.close();
 
             MappingIterator<String[]> lineIterator = (csvMapper.readerFor(String[].class).with(schema).readValues(new File(filePath)));
             Map<String, Integer> inputColumns = new HashMap<>();
-            for (int colNo = inputAreaRef.getFirstCell().getCol();colNo <= inputAreaRef.getLastCell().getCol(); colNo++){
-                String heading = getCellValue(inputSheet.getRow(inputRow).getCell( colNo));
-                inputColumns.put(normalise(heading),colNo);
+            int inputHeadingCount = 0;
+            String heading= getCellValue(inputSheet.getRow(inputRow).getCell(inputHeadingCount));
+            while (heading.length() > 0){
+                inputColumns.put(normalise(heading),inputHeadingCount);
+                heading= getCellValue(inputSheet.getRow(inputRow).getCell(++inputHeadingCount));
+
             }
-            Map <Integer,Integer> colOnInputRange = new HashMap<>();
+            int lastOutputCol = 0;
+            while (getCellValue(outputSheet.getRow(outputRow).getCell(lastOutputCol)).length() > 0)
+                lastOutputCol++;
+            //Map <Integer,Integer> colOnInputRange = new HashMap<>();
             boolean firstLine = true;
             Map <Integer, Integer> inputColumnMap = new HashMap<>();
             int lineNo = 0;
@@ -2053,7 +2060,7 @@ fr.close();
             while (lineIterator.hasNext()) {
                 String[] line = lineIterator.next();
                 int colNo = 0;
-                boolean validLine = true;
+                //boolean validLine = true;
                 if (lineNo < inputRow) {
 
                     for (String cellVal:line){
@@ -2085,12 +2092,11 @@ fr.close();
                         colNo++;
                     }
                     XSSFFormulaEvaluator.evaluateAllFormulaCells(ppBook);
-                    int outputRow = outputAreaRef.getFirstCell().getRow();
                     int lastOutputRow = outputAreaRef.getLastCell().getRow();
-                    int outputCol = outputAreaRef.getFirstCell().getCol();
+                    int outputCol = 0;
 
                     if (firstLine) {
-                        for (colNo = outputCol; colNo <= outputAreaRef.getLastCell().getCol(); colNo++) {
+                        for (colNo = outputCol; colNo <= lastOutputCol; colNo++) {
                             String cellVal = getCellValue(outputSheet.getRow(outputRow).getCell(colNo));
                             if (colNo > 0) {
                                 fileWriter.write("\t" + normalise(cellVal));
@@ -2103,7 +2109,7 @@ fr.close();
                     }  else {
                         for (int oRow=outputRow + 1;oRow<=lastOutputRow;oRow++){
                             rows:
-                            for (colNo = outputCol; colNo <= outputAreaRef.getLastCell().getCol(); colNo++) {
+                            for (colNo = outputCol; colNo < lastOutputCol; colNo++) {
                                 String cellVal = getCellValue(outputSheet.getRow(oRow).getCell(colNo));
                                 if (colNo > 0){
                                     fileWriter.write("\t" + normalise(cellVal));
