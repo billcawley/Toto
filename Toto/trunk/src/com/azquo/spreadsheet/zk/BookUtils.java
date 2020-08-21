@@ -154,6 +154,12 @@ java.lang.IllegalStateException: is ERROR, not the one of [STRING, BLANK]
         return aref.getFirstCell();
     }
 
+    public static org.apache.poi.ss.util.CellReference getNameCell(org.apache.poi.ss.usermodel.Name sheetName) {
+        if (sheetName == null) return null;
+        org.apache.poi.ss.util.AreaReference aref = new org.apache.poi.ss.util.AreaReference(sheetName.getRefersToFormula(), null); // try null on the spreadsheet version, wasn't used in older versions of the api
+        return aref.getFirstCell();
+    }
+
     public static String rangeToText(int row, int col) {
         if (col > 26) {
             int hbit = (col - 1) / 26;
@@ -239,10 +245,10 @@ java.lang.IllegalStateException: is ERROR, not the one of [STRING, BLANK]
         return names;
     }
 
-    public static List<Name> getNamesForSheet(org.zkoss.poi.ss.usermodel.Sheet sheet) {
-        List<Name> names = new ArrayList<>();
+    public static List<org.apache.poi.ss.usermodel.Name> getNamesForSheet(org.apache.poi.ss.usermodel.Sheet sheet) {
+        List<org.apache.poi.ss.usermodel.Name> names = new ArrayList<>();
         for (int i = 0; i < sheet.getWorkbook().getNumberOfNames(); i++) {
-            Name name = sheet.getWorkbook().getNameAt(i);
+            org.apache.poi.ss.usermodel.Name name = sheet.getWorkbook().getNameAt(i);
             try {
                 if (sheet.getSheetName().equals(name.getSheetName())) {
                     names.add(name);
@@ -364,10 +370,10 @@ java.lang.IllegalStateException: is ERROR, not the one of [STRING, BLANK]
     }
 
     // todo we need to move all of this to proper POI but I need to clarify the issues - the XMLbeans conflict I had to override. Of course Kekai might make this redindant
-    public static org.apache.poi.xssf.usermodel.XSSFName getName(org.apache.poi.xssf.usermodel.XSSFWorkbook book, String stringName) {
+    public static org.apache.poi.ss.usermodel.Name getName(org.apache.poi.ss.usermodel.Workbook book, String stringName) {
         int nameCount = book.getNumberOfNames();
         for (int i = 0; i < nameCount; i++) {
-            org.apache.poi.xssf.usermodel.XSSFName name = book.getNameAt(i);
+            org.apache.poi.ss.usermodel.Name name = book.getNameAt(i);
             if (name.getNameName().equalsIgnoreCase(stringName)) {
                 return name;
             }

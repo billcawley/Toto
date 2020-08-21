@@ -4,15 +4,15 @@ import org.apache.commons.lang.math.NumberUtils;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
-import org.zkoss.poi.hssf.usermodel.HSSFDateUtil;
-import org.zkoss.poi.ss.format.CellDateFormatter;
-import org.zkoss.poi.ss.usermodel.BuiltinFormats;
-import org.zkoss.poi.ss.usermodel.DataFormatter;
-import org.zkoss.poi.ss.util.CellReference;
-import org.zkoss.poi.xssf.eventusermodel.ReadOnlySharedStringsTable;
-import org.zkoss.poi.xssf.model.StylesTable;
-import org.zkoss.poi.xssf.usermodel.XSSFCellStyle;
-import org.zkoss.poi.xssf.usermodel.XSSFRichTextString;
+import org.apache.poi.hssf.usermodel.HSSFDateUtil;
+import org.apache.poi.ss.format.CellDateFormatter;
+import org.apache.poi.ss.usermodel.BuiltinFormats;
+import org.apache.poi.ss.usermodel.DataFormatter;
+import org.apache.poi.ss.util.CellReference;
+import org.apache.poi.xssf.eventusermodel.ReadOnlySharedStringsTable;
+import org.apache.poi.xssf.model.StylesTable;
+import org.apache.poi.xssf.usermodel.XSSFCellStyle;
+import org.apache.poi.xssf.usermodel.XSSFRichTextString;
 
 import java.util.Locale;
 import java.util.Map;
@@ -23,6 +23,7 @@ import java.util.Map;
 // as mentioned initially decompiled from apache. It's about to be modified a lot but maybe put a note at the top about the Apache license? todo
 
 // various quirks about how to deal with white space are to match previous POI Workbook behavior
+// note : now we're on poi4.0 proper is this still required? Todo : investigate
 public class XSSFSheetXMLHandler extends DefaultHandler {
     private StylesTable stylesTable;
     private ReadOnlySharedStringsTable sharedStringsTable;
@@ -309,7 +310,7 @@ public class XSSFSheetXMLHandler extends DefaultHandler {
                         }
                     } else { // it's still a date - match the defauilt format
                         // this seems to be required as if the date is based off another cell then the normal formatter will return the formula
-                        CellDateFormatter cdf = new CellDateFormatter(formatString, Locale.UK);
+                        CellDateFormatter cdf = new CellDateFormatter(Locale.UK, formatString);
                         returnString = cdf.format(HSSFDateUtil.getJavaDate(returnNumber));
                     }
                 }

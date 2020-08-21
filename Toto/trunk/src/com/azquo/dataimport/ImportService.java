@@ -3,13 +3,11 @@ package com.azquo.dataimport;
 import com.azquo.DateUtils;
 import com.azquo.RowColumn;
 import com.azquo.spreadsheet.transport.HeadingWithInterimLookup;
-import com.azquo.util.CommandLineCalls;
 import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.dataformat.csv.CsvMapper;
 import com.fasterxml.jackson.dataformat.csv.CsvParser;
 import com.fasterxml.jackson.dataformat.csv.CsvSchema;
 import net.lingala.zip4j.core.ZipFile;
-import org.apache.commons.lang.SystemUtils;
 import org.apache.log4j.Logger;
 import org.apache.poi.poifs.crypt.Decryptor;
 import org.apache.poi.poifs.crypt.EncryptionInfo;
@@ -17,7 +15,6 @@ import org.apache.poi.poifs.filesystem.POIFSFileSystem;
 import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.xssf.usermodel.XSSFCell;
 import org.apache.poi.xssf.usermodel.XSSFFormulaEvaluator;
-import org.apache.poi.xssf.usermodel.XSSFName;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
@@ -25,9 +22,6 @@ import org.xml.sax.helpers.DefaultHandler;
 import org.zkoss.poi.poifs.crypt.EncryptionInfo;
 import org.zkoss.poi.poifs.filesystem.POIFSFileSystem;*/
 import org.zeroturnaround.zip.ZipException;
-import org.zkoss.poi.ss.usermodel.BuiltinFormats;
-import org.zkoss.poi.ss.usermodel.DataFormatter;
-import org.zkoss.poi.xssf.model.StylesTable;
 import com.azquo.StringLiterals;
 import com.azquo.TypedPair;
 import com.azquo.admin.AdminService;
@@ -54,16 +48,18 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.*;
 import org.zeroturnaround.zip.ZipUtil;
-import org.zkoss.poi.hssf.usermodel.HSSFWorkbook;
-import org.zkoss.poi.openxml4j.opc.OPCPackage;
-import org.zkoss.poi.ss.format.CellDateFormatter;
-import org.zkoss.poi.ss.usermodel.*;
-import org.zkoss.poi.ss.util.AreaReference;
-import org.zkoss.poi.ss.util.CellRangeAddress;
-import org.zkoss.poi.ss.util.CellReference;
-import org.zkoss.poi.xssf.eventusermodel.ReadOnlySharedStringsTable;
-import org.zkoss.poi.xssf.eventusermodel.XSSFReader;
-import org.zkoss.poi.xssf.usermodel.XSSFWorkbook;
+
+
+import org.apache.poi.xssf.model.StylesTable;
+import org.apache.poi.openxml4j.opc.OPCPackage;
+import org.apache.poi.ss.format.CellDateFormatter;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.ss.util.AreaReference;
+import org.apache.poi.ss.util.CellReference;
+import org.apache.poi.xssf.eventusermodel.ReadOnlySharedStringsTable;
+import org.apache.poi.xssf.eventusermodel.XSSFReader;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+
 import org.zkoss.zss.api.Range;
 import org.zkoss.zss.api.Ranges;
 import org.zkoss.zss.api.model.CellData;
@@ -257,7 +253,6 @@ public final class ImportService {
                                 boolean parametersMode = false;
                                 boolean readingRejectedLinesMode = false;
                                 String fileName = null;
-                                String sheetName = null;
                                 int sheetCounter = -1;
                                 // file load means the index of "final" files to load that is to say the things read by readPreparedFile
                                 Set<Integer> fileRejectFlags = new HashSet<>();
@@ -266,13 +261,13 @@ public final class ImportService {
                                     if (readingRejectedLinesMode) {
                                         if (lineSkipCol == -1) {
                                             for (int col = 0; col < 100; col++) {
-                                                if (row.getCell(col) != null && row.getCell(col).getCellType() == Cell.CELL_TYPE_STRING
+                                                if (row.getCell(col) != null && row.getCell(col).getCellType() == CellType.STRING
                                                         && row.getCell(col).getStringCellValue().equals("#")) {
                                                     lineSkipCol = col;
                                                     break;
                                                 }
                                             }
-                                        } else if (row.getCell(lineSkipCol) != null && row.getCell(lineSkipCol).getCellType() == Cell.CELL_TYPE_NUMERIC) {
+                                        } else if (row.getCell(lineSkipCol) != null && row.getCell(lineSkipCol).getCellType() == CellType.NUMERIC) {
                                             // that blank string is used in other circumstances to store the value used to look up the line in the file. In other circumstances used to identify comments which isn't relevant here
                                             fileRejectLines.computeIfAbsent(sheetCounter, t -> new HashMap<>()).put(new Double(row.getCell(lineSkipCol).getNumericCellValue()).intValue(), "");
                                         }
@@ -292,7 +287,6 @@ public final class ImportService {
                                             readingRejectedLinesMode = false;
                                             // if it goes down further levels this might get tripped up
                                             fileName = row.getCell(1).getStringCellValue();
-                                            sheetName = row.getCell(2).getStringCellValue();
                                             if (row.getCell(3) != null && StringLiterals.REJECTEDBYUSER.equals(row.getCell(3).getStringCellValue())) {
                                                 fileRejectFlags.add(sheetCounter);
                                             }
@@ -358,17 +352,17 @@ public final class ImportService {
     // a book will be a report to upload or a workbook which has to be converted into a csv for each sheet
     private static List<UploadedFile> readBook(LoggedInUser loggedInUser, UploadedFile uploadedFile, PendingUploadConfig pendingUploadConfig, HashMap<String, ImportTemplateData> templateCache) throws Exception {
         long time = System.currentTimeMillis();
-        Workbook book;
-        OPCPackage opcPackage = null;
+        org.apache.poi.ss.usermodel.Workbook book;
+        org.apache.poi.openxml4j.opc.OPCPackage opcPackage = null;
         // we now use apache POI which is faster than ZK but it has different implementations for .xls and .xlsx files
         try {
             // so, the try catches are there in case the file extension is incorrect. This has happened!
             if (uploadedFile.getFileName().toLowerCase().endsWith("xlsx")) {
                 // is the opcpackage dangerous under windows - holding a file lock? Not sure . . . .
                 try {
-                    opcPackage = OPCPackage.open(new FileInputStream(new File(uploadedFile.getPath())));
-                    book = new XSSFWorkbook(opcPackage);
-                } catch (org.zkoss.poi.openxml4j.exceptions.InvalidFormatException ife) {
+                    opcPackage = org.apache.poi.openxml4j.opc.OPCPackage.open(new FileInputStream(new File(uploadedFile.getPath())));
+                    book = new org.apache.poi.xssf.usermodel.XSSFWorkbook(opcPackage);
+                } catch (org.apache.poi.openxml4j.exceptions.InvalidFormatException ife) {
                     // Hanover may send 'em encrypted
                     POIFSFileSystem fileSystem = new POIFSFileSystem(new FileInputStream(uploadedFile.getPath()));
                     EncryptionInfo info = new EncryptionInfo(fileSystem);
@@ -378,14 +372,14 @@ public final class ImportService {
                         throw new RuntimeException("Unable to process: document is encrypted.");
                     }
                     InputStream dataStream = decryptor.getDataStream(fileSystem);
-                    book = new XSSFWorkbook(dataStream);
+                    book = new org.apache.poi.xssf.usermodel.XSSFWorkbook(dataStream);
                     //InputStream dataStream2 = decryptor.getDataStream(fileSystem);
                     //Files.copy(dataStream2, Paths.get("/home/edward/Downloads/test111.xlsx"));
                 }
                 //System.out.println("book open time " + (System.currentTimeMillis() - quicktest));
             } else {
                 try {
-                    book = new HSSFWorkbook(new FileInputStream(new File(uploadedFile.getPath())));
+                    book = new org.apache.poi.hssf.usermodel.HSSFWorkbook(new FileInputStream(new File(uploadedFile.getPath())));
                 } catch (Exception problem) {
                     throw new Exception("unable to open irregular xls file, please resave as an xlsx file");
                     // unfortunately this libreoffice conversion is not reliable
@@ -425,7 +419,7 @@ public final class ImportService {
         }
         if (!uploadedFile.isValidationTest()) {
             for (int sheetNo = 0; sheetNo < book.getNumberOfSheets(); sheetNo++) {
-                Sheet sheet = book.getSheetAt(sheetNo);
+                org.apache.poi.ss.usermodel.Sheet sheet = book.getSheetAt(sheetNo);
                 if (sheet.getSheetName().equalsIgnoreCase(ImportService.IMPORTMODEL)) {
                     if ((loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
                         if (opcPackage != null) opcPackage.revert();
@@ -433,7 +427,7 @@ public final class ImportService {
                     }
                 }
                 // Import Model is one way to detect a template but it's not always there - names beginning az_Headings are a sign also
-                for (Name name : BookUtils.getNamesForSheet(sheet)) {
+                for (org.apache.poi.ss.usermodel.Name name : BookUtils.getNamesForSheet(sheet)) {
                     if (name.getNameName().startsWith(AZHEADINGS)) {
                         if (opcPackage != null) opcPackage.revert();
                         return Collections.singletonList(uploadImportTemplate(uploadedFile, loggedInUser, true));
@@ -441,7 +435,7 @@ public final class ImportService {
                 }
             }
             // is it the type of import template as required by Ben Jones
-            Name importName = BookUtils.getName(book, ReportRenderer.AZIMPORTNAME);
+            org.apache.poi.ss.usermodel.Name importName = BookUtils.getName(book, ReportRenderer.AZIMPORTNAME);
             // also just do a simple check on the file name
             String lcName = uploadedFile.getFileName().toLowerCase();
             if (importName != null || lcName.contains("import templates") || (lcName.contains("preprocessor")&& !lcName.contains("preprocessor="))) {
@@ -453,7 +447,7 @@ public final class ImportService {
             }
 
             // on an upload file, should this file be flagged as one that moves with backups and is available for non admin users to download
-            Name fileTypeRange = BookUtils.getName(book, ReportRenderer.AZFILETYPE);
+            org.apache.poi.ss.usermodel.Name fileTypeRange = BookUtils.getName(book, ReportRenderer.AZFILETYPE);
             if (fileTypeRange != null) {
                 CellReference sheetNameCell = BookUtils.getNameCell(fileTypeRange);
                 if (sheetNameCell != null) {
@@ -472,7 +466,7 @@ public final class ImportService {
 
             String reportName = null;
             // a misleading name now we have the ImportTemplate object
-            Name reportRange = BookUtils.getName(book, ReportRenderer.AZREPORTNAME);
+            org.apache.poi.ss.usermodel.Name reportRange = BookUtils.getName(book, ReportRenderer.AZREPORTNAME);
             if (reportRange != null) {
                 CellReference sheetNameCell = BookUtils.getNameCell(reportRange);
                 if (sheetNameCell != null) {
@@ -534,7 +528,7 @@ public final class ImportService {
         // with more than one sheet to convert this is why the function returns a list
         List<UploadedFile> toReturn = new ArrayList<>();
         for (int sheetNo = 0; sheetNo < book.getNumberOfSheets(); sheetNo++) {
-            Sheet sheet = book.getSheetAt(sheetNo);
+            org.apache.poi.ss.usermodel.Sheet sheet = book.getSheetAt(sheetNo);
             if (!book.isSheetHidden(sheetNo)) {
                 List<UploadedFile> uploadedFiles = readSheet(loggedInUser, uploadedFile, sheet, knownValues, pendingUploadConfig, templateCache);
                 for (UploadedFile uploadedFile1 : uploadedFiles) {
@@ -604,7 +598,7 @@ public final class ImportService {
     }
 
 
-    private static List<UploadedFile> readSheet(LoggedInUser loggedInUser, UploadedFile uploadedFile, Sheet sheet, Map<String, String> knownValues, PendingUploadConfig pendingUploadConfig, HashMap<String, ImportTemplateData> templateCache) {
+    private static List<UploadedFile> readSheet(LoggedInUser loggedInUser, UploadedFile uploadedFile, org.apache.poi.ss.usermodel.Sheet sheet, Map<String, String> knownValues, PendingUploadConfig pendingUploadConfig, HashMap<String, ImportTemplateData> templateCache) {
         String sheetName = sheet.getSheetName();
         long time = System.currentTimeMillis();
         try {
@@ -625,7 +619,7 @@ public final class ImportService {
                         if (sheetData.size() > row && sheetData.get(row).size() > col) {
                             valueToLookFor = sheetData.get(row).get(col);
                         }
-                        Cell cell = null;
+                        org.apache.poi.ss.usermodel.Cell cell = null;
                         if (sheet.getRow(row) != null) {
                             cell = sheet.getRow(row).getCell(col);
                         }
@@ -686,7 +680,7 @@ public final class ImportService {
             // poi convert - notably the iterators skip blank rows and cells hence the checking that indexes match
             int rowIndex = -1;
             boolean emptySheet = true;
-            for (Row row : sheet) {
+            for (org.apache.poi.ss.usermodel.Row row : sheet) {
                 emptySheet = false;
                 // turns out blank lines are important
                 if (++rowIndex != row.getRowNum()) {
@@ -696,8 +690,8 @@ public final class ImportService {
                     }
                 }
                 int cellIndex = -1;
-                for (Iterator<Cell> ri = row.cellIterator(); ri.hasNext(); ) {
-                    Cell cell = ri.next();
+                for (Iterator<org.apache.poi.ss.usermodel.Cell> ri = row.cellIterator(); ri.hasNext(); ) {
+                    org.apache.poi.ss.usermodel.Cell cell = ri.next();
                     if (++cellIndex != cell.getColumnIndex()) {
                         while (cellIndex != cell.getColumnIndex()) {
                             csvW.write("");
@@ -1494,102 +1488,10 @@ public final class ImportService {
 
     // POI Version, used when converting sheets to csv. Essentially get a value of the cell as either an unformatted number or as a string similar to how it
     // is rendered in Excel, Some hacking to standardise date formats and remove escape characters
-
-    public static String getCellValue(Cell cell) {
-        String returnString = "";
-        if (cell == null) {
-            return "";
-        }
-        //if (colCount++ > 0) bw.write('\t');
-        if (cell.getCellType() == Cell.CELL_TYPE_STRING || (cell.getCellType() == Cell.CELL_TYPE_FORMULA && cell.getCachedFormulaResultType() == Cell.CELL_TYPE_STRING)) {
-            try {
-                returnString = cell.getStringCellValue().replace(Character.toString((char)160) ,"");// I assume means formatted text? The 160 is some kind of hard space that causes trouble and is unaffected by trim(), zap it
-            } catch (Exception ignored) {
-            }
-        } else if (cell.getCellType() == Cell.CELL_TYPE_NUMERIC || (cell.getCellType() == Cell.CELL_TYPE_FORMULA && cell.getCachedFormulaResultType() == Cell.CELL_TYPE_NUMERIC)) {
-            // first we try to get it without locale - better match on built in formats it seems
-            String dataFormat = BuiltinFormats.getBuiltinFormat(cell.getCellStyle().getDataFormat());
-            if (dataFormat == null) {
-                dataFormat = cell.getCellStyle().getDataFormatString();
-            }
-            Double returnNumber = cell.getNumericCellValue();
-            returnString = returnNumber.toString();
-            if (returnString.contains("E")) {
-                returnString = String.format("%f", returnNumber);
-            }
-            if (returnNumber % 1 == 0) {
-                // specific condition - integer and format all 000, then actually use the format. For zip codes
-                if (dataFormat.length() > 1 && dataFormat.contains("0") && dataFormat.replace("0", "").isEmpty()) {
-                    // easylife tripped up this "zipcode" conditional by having a formula in there, requires a formula evaluator be passed
-                    if (cell.getCellType() == Cell.CELL_TYPE_FORMULA) {
-                        returnString = df.formatCellValue(cell, cell.getSheet().getWorkbook().getCreationHelper().createFormulaEvaluator()); // performance issues on the formula evaluator??
-                    } else {
-                        returnString = df.formatCellValue(cell);
-                    }
-                } else {
-                    returnString = returnNumber.longValue() + "";
-                }
-            }
-            if (dataFormat.equals("h:mm") && returnString.length() == 4) {
-                //ZK BUG - reads "hh:mm" as "h:mm"
-                returnString = "0" + returnString;
-            } else {
-                if (dataFormat.toLowerCase().contains("m")||dataFormat.toLowerCase().contains("y")) {
-                    if (dataFormat.length() > 6) {
-                        try {
-                            returnString = YYYYMMDD.format(cell.getDateCellValue());
-                        } catch (Exception e) {
-                            //not sure what to do here.
-                        }
-                    } else { // it's still a date - match the defauilt format
-                        // this seems to be required as if the date is based off another cell then the normal formatter will return the formula
-                        CellDateFormatter cdf = new CellDateFormatter(dataFormat, Locale.UK);
-                        returnString = cdf.format(cell.getDateCellValue());
-                    }
-                }
-            }
-        } else if (cell.getCellType() == Cell.CELL_TYPE_BOOLEAN || (cell.getCellType() == Cell.CELL_TYPE_FORMULA && cell.getCachedFormulaResultType() == Cell.CELL_TYPE_BOOLEAN)) {
-            returnString = cell.getBooleanCellValue() + "";
-        } else if (cell.getCellType() != Cell.CELL_TYPE_BLANK) {
-            if (cell.getCellType() == Cell.CELL_TYPE_FORMULA) {
-                System.out.println("other formula cell type : " + cell.getCachedFormulaResultType());
-            }
-            System.out.println("other cell type : " + cell.getCellType());
-        }
-        if (returnString.contains("\"\"") && returnString.startsWith("\"") && returnString.endsWith("\"")) {
-            //remove spurious quote marks
-            returnString = returnString.substring(1, returnString.length() - 1).replace("\"\"", "\"");
-        }
-        if (returnString.startsWith("`") && returnString.indexOf("`", 1) < 0) {
-            returnString = returnString.substring(1);
-        }
-        if (returnString.startsWith("'") && returnString.indexOf("'", 1) < 0)
-            returnString = returnString.substring(1);//in Excel some cells are preceded by a ' to indicate that they should be handled as strings
-
-        // Deal with merged cells, not sure if there's a performance issue here? If a heading spans successive cells need to have the span value
-        if (returnString.isEmpty() && cell.getSheet().getNumMergedRegions() > 0) {
-            int rowIndex = cell.getRowIndex();
-            int cellIndex = cell.getColumnIndex();
-            for (int i = 0; i < cell.getSheet().getNumMergedRegions(); i++) {
-                CellRangeAddress region = cell.getSheet().getMergedRegion(i); //Region of merged cells
-                //check first cell of the region
-                if (rowIndex == region.getFirstRow() && // logic change - only do the merge thing on the first column
-                        cellIndex > region.getFirstColumn() // greater than, we're only interested if not the first column
-                        && cellIndex <= region.getLastColumn()
-                        /*&& rowIndex >= region.getFirstRow()
-                        && rowIndex <= region.getLastRow()*/
-                ) {
-                    returnString = getCellValue(cell.getSheet().getRow(region.getFirstRow()).getCell(region.getFirstColumn()));
-                }
-            }
-        }
-        return returnString.trim();
-    }
-
-    // POI 4.0 version EFC pasted, I really don't like doing this but it's required at the moment - todo, consolidate later
+    // POI 4.0 version EFC pasted, I really don't like doing this but it's required at the moment
     private static org.apache.poi.ss.usermodel.DataFormatter df2 = new org.apache.poi.ss.usermodel.DataFormatter();
 
-    public static String getCellValue(XSSFCell cell) {
+    public static String getCellValue(org.apache.poi.ss.usermodel.Cell cell) {
         String returnString = "";
         if (cell == null) {
             return "";
@@ -1637,7 +1539,7 @@ public final class ImportService {
                         }
                     } else { // it's still a date - match the defauilt format
                         // this seems to be required as if the date is based off another cell then the normal formatter will return the formula
-                        CellDateFormatter cdf = new CellDateFormatter(dataFormat, Locale.UK);
+                        CellDateFormatter cdf = new CellDateFormatter(Locale.UK, dataFormat);
                         returnString = cdf.format(cell.getDateCellValue());
                     }
                 }
@@ -2020,10 +1922,10 @@ fr.close();
             throw new Exception("Cannot load preprocessor template from " + preprocessor);
         }
         try {
-            XSSFName inputLineRegion = BookUtils.getName(ppBook,"az_input");
-            AreaReference inputAreaRef = new AreaReference(inputLineRegion.getRefersToFormula());
-            XSSFName outputLineRegion = BookUtils.getName(ppBook,"az_output");
-            AreaReference outputAreaRef = new AreaReference(outputLineRegion.getRefersToFormula());
+            org.apache.poi.ss.usermodel.Name inputLineRegion = BookUtils.getName(ppBook,"az_input");
+            AreaReference inputAreaRef = new AreaReference(inputLineRegion.getRefersToFormula(), null);
+            org.apache.poi.ss.usermodel.Name outputLineRegion = BookUtils.getName(ppBook,"az_output");
+            AreaReference outputAreaRef = new AreaReference(outputLineRegion.getRefersToFormula(), null);
 
             org.apache.poi.xssf.usermodel.XSSFSheet inputSheet = ppBook.getSheet(inputLineRegion.getSheetName());
             org.apache.poi.xssf.usermodel.XSSFSheet outputSheet = ppBook.getSheet(outputLineRegion.getSheetName());

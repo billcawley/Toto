@@ -1,3 +1,17 @@
+18-08-20
+
+Various bug fixes
+
+Admins can test user menus
+
+Adjustments for wespecialty - handle duplicate headings better and files containing premiums and claims
+
+XLSX
+
+Considerable work building Oilfield and Wespeciality
+
+AllRisks tweaks - what is there now does seem to submit on 0 grossamt claims
+
 15-07-20-3
 
 Import file template lookup bug fix
