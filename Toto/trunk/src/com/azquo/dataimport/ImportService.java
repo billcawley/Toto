@@ -1527,11 +1527,13 @@ public final class ImportService {
                 }
             }
             if (dataFormat.equals("h:mm") && returnString.length() == 4) {
-                //ZK BUG - reads "hh:mm" as "h:mm"
+                //ZK BUG - reads "hh:mm" as "h:mm" - this may be a moot point now we're POI
                 returnString = "0" + returnString;
             } else {
                 if (dataFormat.toLowerCase().contains("m") || dataFormat.toLowerCase().contains("y")) {
-                    if (dataFormat.length() > 6) {
+                    if ((dataFormat.indexOf("/") > 0 && dataFormat.indexOf("/", dataFormat.indexOf("/") + 1) > 0)
+                    || (dataFormat.indexOf("-") > 0 && dataFormat.indexOf("-", dataFormat.indexOf("-") + 1) > 0)
+                    || dataFormat.length() > 6) { // two dashes or two slashes or greater than 6. Used to be just greater than 6, now poi says things like d/m/yy so we need to be a bit more clever
                         try {
                             returnString = YYYYMMDD.format(cell.getDateCellValue());
                         } catch (Exception e) {
