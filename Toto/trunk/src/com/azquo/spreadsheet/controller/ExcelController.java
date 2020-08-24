@@ -25,8 +25,10 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -38,6 +40,7 @@ import org.zkoss.poi.ss.usermodel.WorkbookFactory;
 import org.zkoss.zss.api.Importers;
 import org.zkoss.zss.api.model.Book;
 
+import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
@@ -58,6 +61,9 @@ import java.util.concurrent.ConcurrentHashMap;
 @Controller
 @RequestMapping("/Excel")
 public class ExcelController {
+
+    @Autowired
+    ServletContext servletContext;
 
     // I would liked to have zapped this but the audit seems to open a new window with a new session. Hence can't use standard servlet session tracking
     public static final Map<String, LoggedInUser> excelConnections = new ConcurrentHashMap<>();// simple, for the moment should do it
@@ -179,6 +185,7 @@ public class ExcelController {
             , @RequestParam(value = "chosen", required = false) String chosen
             , @RequestParam(value = "context", required = false) String context
             , @RequestParam(value = "json", required = false) String json
+            , @RequestParam(value = "filename", required = false) String fileName
             , @RequestParam(value = "template", required = false) String template
     ) {
         String result = "no action taken";
@@ -201,6 +208,30 @@ public class ExcelController {
         }
 
         try {
+            if (op.equals("download64")){ // this means an xlsx file from WEB-INF, public anyway so no security but we still need to base 64 encode it
+                // basic hack protection though I'm not sure whether anyone could get anything that worrying
+                while (fileName.contains("\\") || fileName.contains("/")){
+                    fileName = fileName.replace("\\","");
+                    fileName = fileName.replace("/","");
+                }
+                // similar to below but less going on
+                byte[] encodedBytes = Base64.getEncoder().encode(IOUtils.toByteArray(servletContext.getResourceAsStream("/WEB-INF/" + fileName)));
+                String string64 = new String(encodedBytes);
+                int sliceSize = 8000;
+                Base64Return base64Return = new Base64Return();
+                int startPos = 0;
+                while (startPos < encodedBytes.length) {
+                    int thisSlice = sliceSize;
+                    if (startPos + sliceSize > encodedBytes.length) {
+                        thisSlice = encodedBytes.length - startPos;
+                    }
+                    base64Return.slices.add(string64.substring(startPos, startPos + thisSlice));
+                    startPos += sliceSize;
+                }
+                return jacksonMapper.writeValueAsString(base64Return);
+            }
+
+
             LoggedInUser loggedInUser = null;
             // todo - try to tidy up the login ogic if possible. Hacked to support users that cross businesses
             if (op.equals("logon")) {
@@ -967,8 +998,8 @@ public class ExcelController {
             , @RequestParam(value = "chosen", required = false) String chosen
             , @RequestParam(value = "context", required = false) String context
             , @RequestParam(value = "json", required = false) String json
-
+            , @RequestParam(value = "filename", required = false) String fileName
     ) {
-        return handleRequest(request, response, sessionId, userId,  op, database, form, formsubmit, reportName, sheetName, logon, password, region, options, regionrow, regioncol, choice, chosen, context, json, "true");
+        return handleRequest(request, response, sessionId, userId,  op, database, form, formsubmit, reportName, sheetName, logon, password, region, options, regionrow, regioncol, choice, chosen, context, json, fileName, "true");
     }
 }
