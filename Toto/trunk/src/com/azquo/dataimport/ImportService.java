@@ -754,6 +754,7 @@ public final class ImportService {
     private static final String SKIPLINES = "skiplines";
     private static final String AZHEADINGS = "az_Headings";
     public static final String SHEETNAMECONTAINS = "sheetnamecontains";
+    public static final String SHEETNAMEMATCHES = "sheetnamematches";
 
 
     // copy the file to the database server if it's on a different physical machine then tell the database server to process it
@@ -904,6 +905,15 @@ public final class ImportService {
 
                         if (!uploadedFile.getParameter(SHEETNAME).toLowerCase().contains(sheetNameContains)){
                             uploadedFile.setError("Not loading as not relevant according to the import template, sheet name must contain " + sheetNameContains);
+                            return uploadedFile;
+                        }
+                    }
+
+                    if (templateParameters.get(SHEETNAMEMATCHES) != null && uploadedFile.getParameter(SHEETNAME) != null) {
+                        String sheetNameMatches =templateParameters.get(SHEETNAMEMATCHES).toLowerCase().trim();
+
+                        if (!uploadedFile.getParameter(SHEETNAME).toLowerCase().equals(sheetNameMatches)){
+                            uploadedFile.setError("Not loading as not relevant according to the import template, sheet name must be " + sheetNameMatches);
                             return uploadedFile;
                         }
                     }
@@ -1537,7 +1547,7 @@ public final class ImportService {
                         try {
                             returnString = YYYYMMDD.format(cell.getDateCellValue());
                         } catch (Exception e) {
-                            //not sure what to do here.
+                            //not sure what to do herce.
                         }
                     } else { // it's still a date - match the defauilt format
                         // this seems to be required as if the date is based off another cell then the normal formatter will return the formula
