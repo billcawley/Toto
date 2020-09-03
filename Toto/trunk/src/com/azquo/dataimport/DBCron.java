@@ -312,7 +312,7 @@ public class DBCron {
     }
 
     // factored as it will be called a second time for errors
-    private static boolean readXML(String fileKey, Map<String, Map<String, String>> filesValues, AtomicReference<String> rootDocumentName
+    public static boolean readXML(String fileKey, Map<String, Map<String, String>> filesValues, AtomicReference<String> rootDocumentName
             , DocumentBuilder builder, Path path, Set<String> headings, FileTime lastModifiedTime) throws IOException, SAXException {
         // unlike the above, before moving it I need to read it
         Map<String, String> thisFileValues = filesValues.computeIfAbsent(fileKey, t -> new HashMap<>());

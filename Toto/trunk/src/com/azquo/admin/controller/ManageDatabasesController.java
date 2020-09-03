@@ -31,12 +31,23 @@ import org.zkoss.poi.xssf.usermodel.XSSFWorkbook;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.attribute.FileTime;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Stream;
 
 /**
  * Copyright (C) 2016 Azquo Ltd.
@@ -148,7 +159,74 @@ public class ManageDatabasesController {
             , @RequestParam(value = "deleteTemplateId", required = false) String deleteTemplateId
             , @RequestParam(value = "templateassign", required = false) String templateassign
             , @RequestParam(value = "withautos", required = false) String withautos
+            , @RequestParam(value = "eddtest", required = false) String eddtest
     ) {
+        if (eddtest != null) {
+            Map<String, Map<String, String>> filesValues = new HashMap<>();// filename, values
+            AtomicReference<String> rootDocumentName = new AtomicReference<>();
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            final DocumentBuilder builder;
+            try {
+                builder = factory.newDocumentBuilder();
+                Set<String> headings = new HashSet<>();
+                Path testDir = Paths.get("/home/edward/Downloads/artest/Risk/Renewal/");
+                try (Stream<Path> list = Files.list(testDir)) {
+                    list.forEach(path -> {
+                        // Do stuff
+                        if (!Files.isDirectory(path)) { // skip any directories
+                            try {
+                                            /*
+
+                                            Note : I was assuming files being returned in pairs but it seems not,
+                                            if the file name contains error then look for the original in temp and load that as well
+
+                                             */
+
+                                String origName = path.getFileName().toString();
+                                if (origName.toLowerCase().contains(".xml")) {
+                                    String fileKey = origName.substring(0, origName.lastIndexOf("."));
+                                    FileTime lastModifiedTime = Files.getLastModifiedTime(path);
+                                    System.out.println("file : " + origName);
+                                    // newer logic, start with the original sent data then add anything from brokasure on. Will help Bill/Nic to parse
+                                    // further to this we'll only process files that have a corresponding temp file as Dev and UAT share directories so if there's no matching file in temp don't do anything
+                                        DBCron.readXML(fileKey, filesValues, rootDocumentName, builder, path, headings, lastModifiedTime);
+                                }
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    });
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+                if (!filesValues.isEmpty()) {
+                    // now Hanover has been added there's an issue that files can come back and go in different databases
+                    // so we may need to make more than one file for a block of parsed files, batch them up
+                    List<Map<String, String>> lines = new ArrayList<>(filesValues.values());
+                    // base the file name off the db name also
+                    String csvFileName = System.currentTimeMillis() + "-eddtest" + rootDocumentName.get() + ".tsv";
+                    BufferedWriter bufferedWriter = Files.newBufferedWriter(testDir.resolve(csvFileName), StandardCharsets.UTF_8);
+                    for (String heading : headings) {
+                        bufferedWriter.write(heading + "\t");
+                    }
+                    bufferedWriter.newLine();
+                    for (Map<String, String> lineValues : lines) {
+                        for (String heading : headings) {
+                            String value = lineValues.get(heading);
+                            bufferedWriter.write((value != null ? value : "") + "\t");
+                        }
+                        bufferedWriter.newLine();
+                    }
+                    bufferedWriter.close();
+                }
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+
         // I assume secure until we move to proper spring security
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
         if (loggedInUser != null && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
@@ -293,13 +371,14 @@ public class ManageDatabasesController {
             , @RequestParam(value = "template", required = false) String template
             , @RequestParam(value = "team", required = false) String team
     ) {
+
         if (database != null) {
             request.getSession().setAttribute("lastSelected", database);
         }
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
         // I assume secure until we move to proper spring security
         MultipartFile uploadFile = null;
-        if (uploadFiles.length > 0){
+        if (uploadFiles.length > 0) {
             uploadFile = uploadFiles[0];
         }
         if (loggedInUser != null && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
@@ -376,7 +455,7 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
                             if (importName != null) {
                                 isImportTemplate = true;
                             }
-                            if (BookUtils.getName(book,ReportRenderer.AZINPUTNAME)!=null){
+                            if (BookUtils.getName(book, ReportRenderer.AZINPUTNAME) != null) {
                                 isImportTemplate = true;
                             }
                             boolean assignTemplateToDatabase = false;
@@ -488,14 +567,14 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
             }
             new Thread(() -> {
                 List<UploadedFile> toSetInSession = new ArrayList<>();
-                for (UploadedFile uploadedFile : uploadedFiles){
+                for (UploadedFile uploadedFile : uploadedFiles) {
                     // so in here the new thread we set up the loading as it was originally before and then redirect the user straight to the logging page
                     try {
                         toSetInSession.addAll(ImportService.importTheFile(loggedInUser, uploadedFile, session, null));
                         Map<String, String> params = new HashMap<>();
                         params.put("File", uploadedFile.getFileName());
                         UploadRecord mostRecentForUser = UploadRecordDAO.findMostRecentForUser(loggedInUser.getUser().getId());
-                        if (mostRecentForUser != null){
+                        if (mostRecentForUser != null) {
                             params.put("Link", "/api/DownloadFile?uploadRecordId=" + mostRecentForUser.getId());
                         }
                         loggedInUser.userLog("Upload file", params);
@@ -671,9 +750,9 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
                     }
                 }
                 error += "<b>";
-                errorList.append(updateErrorList(uploadedFile,errorList,error));
+                errorList.append(updateErrorList(uploadedFile, errorList, error));
                 if (noClickableHeadings) {
-                      toReturn.append("Line Errors : ").append(uploadedFile.getNoLinesRejected()).append("\n<br/>");
+                    toReturn.append("Line Errors : ").append(uploadedFile.getNoLinesRejected()).append("\n<br/>");
                 } else {
                     toReturn.append("<a href=\"#\" onclick=\"showHideDiv('rejectedLines" + id + "'); return false;\">Line Errors : ").append(uploadedFile.getNoLinesRejected()).append("</a>\n<br/><div id=\"rejectedLines" + id + "\" style=\"display : none\">");
                 }
@@ -861,9 +940,9 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
             }
 
             if (uploadedFile.getError() != null) {
-                if (uploadedFile.getError().toLowerCase().contains("empty sheet")){
+                if (uploadedFile.getError().toLowerCase().contains("empty sheet")) {
                     toReturn.append("WARNING :").append(uploadedFile.getError()).append("\n<br>");
-                }else{
+                } else {
                     errorList.append(updateErrorList(uploadedFile, errorList, uploadedFile.getError()));
                     toReturn.append("ERROR : ").append(uploadedFile.getError()).append("\n<br/>");
                 }
@@ -886,18 +965,18 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
                 toReturn.append("Import template uploaded\n<br/>");
             }
         }
-        if (errorList.length()>0){
+        if (errorList.length() > 0) {
             return "<b>" + errorList.toString() + "\n</br></b>" + toReturn.toString();
         }
         return toReturn.toString();
     }
 
-    private static String updateErrorList(UploadedFile uploadedFile, StringBuilder errorList, String error){
+    private static String updateErrorList(UploadedFile uploadedFile, StringBuilder errorList, String error) {
         StringBuilder appendString = new StringBuilder();
-        if (errorList.length()==0) {
+        if (errorList.length() == 0) {
             appendString.append("ERRORS FOUND : ").append("\n<br/>");
         }
-        for (String fileName:uploadedFile.getFileNames()){
+        for (String fileName : uploadedFile.getFileNames()) {
             appendString.append(fileName + ".");
         }
         appendString.append(error).append("\n<br/>");
