@@ -1958,22 +1958,21 @@ fr.close();
             Map<String, Integer> inputColumns = new HashMap<>();
             int inputHeadingCount = 0;
             String heading= getCellValue(inputSheet.getRow(inputRow).getCell(inputHeadingCount));
-            while (heading.length() > 0){
+            while (inputHeadingCount <= inputSheet.getRow(inputRow).getLastCellNum()){
                 inputColumns.put(normalise(heading),inputHeadingCount);
                 heading= getCellValue(inputSheet.getRow(inputRow).getCell(++inputHeadingCount));
 
             }
-            int lastOutputCol = 0;
-            while (getCellValue(outputSheet.getRow(outputRow).getCell(lastOutputCol)).length() > 0)
-                lastOutputCol++;
+            int lastOutputCol = outputSheet.getRow(outputRow).getLastCellNum();
             //Map <Integer,Integer> colOnInputRange = new HashMap<>();
             boolean firstLine = true;
             Map <Integer, Integer> inputColumnMap = new HashMap<>();
             int lineNo = 0;
             int headingsFound = 0;
             while (lineIterator.hasNext()) {
+                clearRow(inputSheet.getRow(inputRow + 1));
                 String[] line = lineIterator.next();
-                int colNo = 0;
+                 int colNo = 0;
                 //boolean validLine = true;
                 if (lineNo < inputRow) {
 
@@ -2030,8 +2029,6 @@ fr.close();
                                 } else {
                                     if (normalise(cellVal).length() > 0) {
                                         fileWriter.write(normalise(cellVal));
-                                    } else {
-                                        break rows;
                                     }
                                 }
                             }
@@ -2059,13 +2056,35 @@ fr.close();
         if (DateUtils.isADate(cellVal) != null) {
             targetCell.setCellValue((double) DateUtils.excelDate(DateUtils.isADate(cellVal)));
         } else {
-            if (NumberUtils.isNumber(cellVal)) {
+            //isNumber returns 'true' for cellVal = "16L", then parseDouble exceptions
+            try{
                 targetCell.setCellValue(Double.parseDouble(cellVal));
+            } catch(Exception e){
+                    targetCell.setCellValue(cellVal);
+            }
+            /*
+             if (NumberUtils.isNumber(cellVal)) {
+               targetCell.setCellValue(Double.parseDouble(cellVal));
             } else {
                 targetCell.setCellValue(cellVal);
             }
+
+             */
         }
 
+    }
+    private static void clearRow(Row row) {
+        int lastCol = row.getLastCellNum();
+        for (int col = 0; col <= lastCol;col++) {
+            Cell cell = row.getCell(col);
+            if (cell != null) {
+                CellStyle cs = cell.getCellStyle();
+                row.removeCell(cell);
+                cell = row.createCell(col);
+                cell.setCellStyle(cs);
+
+            }
+        }
     }
 
     private static String normalise(String value){
