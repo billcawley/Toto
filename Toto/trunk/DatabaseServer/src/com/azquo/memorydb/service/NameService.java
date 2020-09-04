@@ -5,6 +5,7 @@ import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.StringUtils;
 import com.azquo.memorydb.core.StandardName;
+import com.azquo.spreadsheet.UserChoiceService;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 import org.apache.log4j.Logger;
 
@@ -181,7 +182,23 @@ public final class NameService {
             }
         }
         if (possibleParents == null) {
-            return getNameByAttribute(azquoMemoryDBConnection, name, null, attributeNames);
+            Name found =getNameByAttribute(azquoMemoryDBConnection, name, null, attributeNames);
+            if (found==null){
+                //check whether this is a local name that needs creating
+                if (name.toLowerCase().substring(0,3).equals("az_") && attributeNames.size()>1){
+                    Name possibleExisting = getNameByAttribute(azquoMemoryDBConnection, name.substring(3), null, attributeNames);
+                    if (possibleExisting!=null){
+                        //then copy it and include it in Filter Sets
+                        for (String language:attributeNames){
+                            if (!language.equals(StringLiterals.DEFAULT_DISPLAY_NAME)){
+                                found= UserChoiceService.createFilterSetWithQuery(azquoMemoryDBConnection,name,language,null);
+                                break;
+                            }
+                        }
+                     }
+                }
+            }
+            return found;
         } else {
             for (Name parent : possibleParents) {
                 Name found = getNameByAttribute(azquoMemoryDBConnection, name, parent, attributeNames);
