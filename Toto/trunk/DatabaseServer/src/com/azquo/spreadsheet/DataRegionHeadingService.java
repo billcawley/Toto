@@ -147,12 +147,14 @@ public class DataRegionHeadingService {
                                 Name pName = null;
                                 // now need try catch - might get an error if other users made the name but this one didn't thus the lookup is ambiguous
                                 try{
+                                    // edd adding a check that what's in the az pname is actually valid!
+                                    Name fullPname = NameService.findByName(azquoMemoryDBConnection, permutedName, attributeNames);
                                     pName = NameService.findByName(azquoMemoryDBConnection, "az_" + permutedName.replace("`", "").trim(), attributeNames);
                                     // if no set chosen, find the original set
-                                    if (pName == null || pName.getChildren().size() == 0) {
+                                    if (pName == null || pName.getChildren().size() == 0 || (fullPname != null && !fullPname.getChildren().containsAll(pName.getChildren()))) {
                                         // in new logic keep the attribute names in the search - otherwise inconsistent with above, will break on temporary names populated wth "as"
                                         // I don't think I need to zap the quotes
-                                        pName = NameService.findByName(azquoMemoryDBConnection, permutedName, attributeNames);
+                                        pName = fullPname;
                                         if (pName == null) {
                                             Collection<Name> names = NameQueryParser.parseQuery(azquoMemoryDBConnection, permutedName, attributeNames, false);
                                             if (names != null){
