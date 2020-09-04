@@ -24,7 +24,10 @@ public class UserChoiceService {
     // Filter set being a multi selection list
 
     public static void createFilterSetWithQuery(DatabaseAccessToken databaseAccessToken, String setName, String userName, List<Integer> childrenIds) throws Exception {
-        final AzquoMemoryDBConnection connectionFromAccessToken = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
+        createFilterSetWithQuery(AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken), setName,userName, childrenIds);
+    }
+
+     public static Name createFilterSetWithQuery(AzquoMemoryDBConnection connectionFromAccessToken, String setName, String userName, List<Integer> childrenIds) throws Exception {
         List<String> justUserNameLanguages = new ArrayList<>();
         justUserNameLanguages.add(userName);
         connectionFromAccessToken.suggestProvenance(userName, "multi select", "", "");
@@ -50,6 +53,7 @@ public class UserChoiceService {
                 }
             }
         }
+        return set;
     }
 
     // support for passing a query, for creating [all] sets on initial report load
