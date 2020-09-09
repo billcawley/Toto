@@ -439,7 +439,20 @@ Created by IntelliJ IDEA.
 
                     </tbody>
                 </table>
-                <td><input type="submit" name="Save Changes" value="Save Changes" class="button "/></td>
+                <input type="submit" name="Save Changes" value="Save Changes" class="button "/>
+            </form>
+
+            <br/>
+            <br/>
+            <h3>Test pre-processor. Select a pre-processor and a zip of data to test</h3>
+            <form action="/api/ManageDatabases#tab5" method="post" enctype="multipart/form-data" onsubmit="$('#working').show();">
+                <table>
+                    <tbody>
+                    <tr>
+                        <td><label for="uploadFile">Upload Files:</label> <input id="preprocessorTest" type="file" name="preprocessorTest" multiple>&nbsp;&nbsp;<input type="submit" name="Upload" value="Upload" class="button "/></td>
+                    </tr>
+                    </tbody>
+                </table>
             </form>
 
         </div>

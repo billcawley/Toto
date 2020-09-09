@@ -16,12 +16,19 @@ import com.azquo.spreadsheet.controller.LoginController;
 import com.azquo.spreadsheet.CommonReportUtils;
 import com.azquo.spreadsheet.zk.BookUtils;
 import com.azquo.spreadsheet.zk.ReportRenderer;
+import com.csvreader.CsvWriter;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.math.NumberUtils;
+import org.apache.poi.poifs.crypt.Decryptor;
+import org.apache.poi.poifs.crypt.EncryptionInfo;
+import org.apache.poi.poifs.filesystem.POIFSFileSystem;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
+import org.zeroturnaround.zip.ZipException;
+import org.zeroturnaround.zip.ZipUtil;
 import org.zkoss.poi.hssf.usermodel.HSSFWorkbook;
 import org.zkoss.poi.openxml4j.opc.OPCPackage;
 import org.zkoss.poi.ss.usermodel.Name;
@@ -34,10 +41,7 @@ import javax.servlet.http.HttpSession;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -162,19 +166,29 @@ public class ManageDatabasesController {
             , @RequestParam(value = "eddtest", required = false) String eddtest
     ) {
         if (eddtest != null) {
-            Map<String, Map<String, String>> filesValues = new HashMap<>();// filename, values
-            AtomicReference<String> rootDocumentName = new AtomicReference<>();
+            List<Path> paths = new ArrayList<>();
+            paths.add(Paths.get("/home/edward/Downloads/artest/Risk/RENEWAL/"));
+            paths.add(Paths.get("/home/edward/Downloads/artest/Risk/POLICY/"));
+            paths.add(Paths.get("/home/edward/Downloads/artest/Risk/ENDORSEMENT/"));
+            paths.add(Paths.get("/home/edward/Downloads/artest/Premium/RENEWAL/"));
+            paths.add(Paths.get("/home/edward/Downloads/artest/Premium/POLICY/"));
+            paths.add(Paths.get("/home/edward/Downloads/artest/Premium/ENDORSEMENT/"));
+            paths.add(Paths.get("/home/edward/Downloads/artest/Premium/Reinstate/"));
+            paths.add(Paths.get("/home/edward/Downloads/artest/Premium/Cancel/"));
+
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
             final DocumentBuilder builder;
             try {
                 builder = factory.newDocumentBuilder();
-                Set<String> headings = new HashSet<>();
-                Path testDir = Paths.get("/home/edward/Downloads/artest/Risk/Renewal/");
-                try (Stream<Path> list = Files.list(testDir)) {
-                    list.forEach(path -> {
-                        // Do stuff
-                        if (!Files.isDirectory(path)) { // skip any directories
-                            try {
+                for (Path testDir : paths) {
+                    Map<String, Map<String, String>> filesValues = new HashMap<>();// filename, values
+                    AtomicReference<String> rootDocumentName = new AtomicReference<>();
+                    Set<String> headings = new HashSet<>();
+                    try (Stream<Path> list = Files.list(testDir)) {
+                        list.forEach(path -> {
+                            // Do stuff
+                            if (!Files.isDirectory(path)) { // skip any directories
+                                try {
                                             /*
 
                                             Note : I was assuming files being returned in pairs but it seems not,
@@ -182,45 +196,45 @@ public class ManageDatabasesController {
 
                                              */
 
-                                String origName = path.getFileName().toString();
-                                if (origName.toLowerCase().contains(".xml")) {
-                                    String fileKey = origName.substring(0, origName.lastIndexOf("."));
-                                    FileTime lastModifiedTime = Files.getLastModifiedTime(path);
-                                    System.out.println("file : " + origName);
-                                    // newer logic, start with the original sent data then add anything from brokasure on. Will help Bill/Nic to parse
-                                    // further to this we'll only process files that have a corresponding temp file as Dev and UAT share directories so if there's no matching file in temp don't do anything
+                                    String origName = path.getFileName().toString();
+                                    if (origName.toLowerCase().contains(".xml")) {
+                                        String fileKey = origName.substring(0, origName.lastIndexOf("."));
+                                        FileTime lastModifiedTime = Files.getLastModifiedTime(path);
+                                        System.out.println("file : " + origName);
+                                        // newer logic, start with the original sent data then add anything from brokasure on. Will help Bill/Nic to parse
+                                        // further to this we'll only process files that have a corresponding temp file as Dev and UAT share directories so if there's no matching file in temp don't do anything
                                         DBCron.readXML(fileKey, filesValues, rootDocumentName, builder, path, headings, lastModifiedTime);
+                                    }
+                                } catch (Exception e) {
+                                    e.printStackTrace();
                                 }
-                            } catch (Exception e) {
-                                e.printStackTrace();
                             }
-                        }
-                    });
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-
-                if (!filesValues.isEmpty()) {
-                    // now Hanover has been added there's an issue that files can come back and go in different databases
-                    // so we may need to make more than one file for a block of parsed files, batch them up
-                    List<Map<String, String>> lines = new ArrayList<>(filesValues.values());
-                    // base the file name off the db name also
-                    String csvFileName = System.currentTimeMillis() + "-eddtest" + rootDocumentName.get() + ".tsv";
-                    BufferedWriter bufferedWriter = Files.newBufferedWriter(testDir.resolve(csvFileName), StandardCharsets.UTF_8);
-                    for (String heading : headings) {
-                        bufferedWriter.write(heading + "\t");
+                        });
+                    } catch (IOException e) {
+                        e.printStackTrace();
                     }
-                    bufferedWriter.newLine();
-                    for (Map<String, String> lineValues : lines) {
+
+                    if (!filesValues.isEmpty()) {
+                        // now Hanover has been added there's an issue that files can come back and go in different databases
+                        // so we may need to make more than one file for a block of parsed files, batch them up
+                        List<Map<String, String>> lines = new ArrayList<>(filesValues.values());
+                        // base the file name off the db name also
+                        String csvFileName = System.currentTimeMillis() + "-eddtest" + rootDocumentName.get() + ".tsv";
+                        BufferedWriter bufferedWriter = Files.newBufferedWriter(testDir.resolve(csvFileName), StandardCharsets.UTF_8);
                         for (String heading : headings) {
-                            String value = lineValues.get(heading);
-                            bufferedWriter.write((value != null ? value : "") + "\t");
+                            bufferedWriter.write(heading + "\t");
                         }
                         bufferedWriter.newLine();
+                        for (Map<String, String> lineValues : lines) {
+                            for (String heading : headings) {
+                                String value = lineValues.get(heading);
+                                bufferedWriter.write((value != null ? value : "") + "\t");
+                            }
+                            bufferedWriter.newLine();
+                        }
+                        bufferedWriter.close();
                     }
-                    bufferedWriter.close();
                 }
-
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -370,6 +384,7 @@ public class ManageDatabasesController {
             , @RequestParam(value = "backup", required = false) String backup
             , @RequestParam(value = "template", required = false) String template
             , @RequestParam(value = "team", required = false) String team
+            , @RequestParam(value = "preprocessorTest", required = false) MultipartFile[] preprocessorTest
     ) {
 
         if (database != null) {
@@ -527,6 +542,12 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
             } catch (Exception e) {
                 e.printStackTrace();
             }
+            // now preprocessor test - should this be factored? Can it bounce to a straight download? One thing at a time . . .
+            // also the copied code todo
+            if (preprocessorTest.length > 0) {
+                ImportService.preprocesorTest(preprocessorTest, model, loggedInUser);
+            }
+
             model.put("databases", displayDataBases);
             final List<DatabaseServer> allServers = DatabaseServerDAO.findAll();
             if (allServers.size() > 1) {

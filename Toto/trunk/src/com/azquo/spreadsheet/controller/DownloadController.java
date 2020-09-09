@@ -61,7 +61,11 @@ public class DownloadController {
             }
         }
         if ("true".equalsIgnoreCase(lastFile) && loggedInUser.getLastFile() != null) {
-            response.setContentType("text/tab-separated-values"); // Set up mime type
+            if (loggedInUser.getLastFileName() != null && loggedInUser.getLastFileName().toLowerCase().endsWith(".zip")){
+                response.setContentType("application/zip");
+            } else {
+                response.setContentType("text/tab-separated-values"); // Set up mime type
+            }
                 try {
                     streamFileToBrowser(Paths.get(loggedInUser.getLastFile()), response,  loggedInUser.getLastFileName() != null ? loggedInUser.getLastFileName() : "download.tsv");
                 } catch (IOException ex) {

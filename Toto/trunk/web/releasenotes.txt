@@ -1,3 +1,21 @@
+07-09-20
+
+Important bug fix relating to empty ECF files
+
+03-09-20
+
+Some initial code for AllRisks integration
+
+Preprocessor adjustment : clears the input line between lines, so that values from last line do not persist. Also does not break when it finds a blank cell
+
+sheetnamematches, another constraint for wespecialty
+
+Import Wizard work
+
+XLSX
+
+OIlfield tweak, finishing wespecialy deduction problems
+
 21-08-20
 
 Wespecialty had a file that was jamming poi. Latest version fixed that, much of the importer moved to that, more can be tidied but the fix is required now

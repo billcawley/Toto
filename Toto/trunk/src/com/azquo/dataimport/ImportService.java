@@ -15,6 +15,8 @@ import org.apache.poi.poifs.filesystem.POIFSFileSystem;
 import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.xssf.usermodel.XSSFCell;
 import org.apache.poi.xssf.usermodel.XSSFFormulaEvaluator;
+import org.springframework.ui.ModelMap;
+import org.springframework.web.multipart.MultipartFile;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
@@ -2021,7 +2023,6 @@ fr.close();
                         firstLine = false;
                     }  else {
                         for (int oRow=outputRow + 1;oRow<=lastOutputRow;oRow++){
-                            rows:
                             for (colNo = outputCol; colNo < lastOutputCol; colNo++) {
                                 String cellVal = getCellValue(outputSheet.getRow(oRow).getCell(colNo));
                                 if (colNo > 0){
@@ -2090,6 +2091,143 @@ fr.close();
     private static String normalise(String value){
         //not sure how the system read the cr as \\n
         return value.replace("\n"," ").replace("\\\\n"," ").replace("  "," ");
+    }
+
+    // todo factor. Makes sense in here
+    public static void preprocesorTest(MultipartFile[] preprocessorTest, ModelMap model, LoggedInUser loggedInUser){
+        MultipartFile zip = null;
+        MultipartFile preProcessor = null;
+        if (preprocessorTest.length == 2) {
+            if (preprocessorTest[0].getOriginalFilename().toLowerCase().endsWith(".xlsx")) {
+                preProcessor = preprocessorTest[0];
+            }
+            if (preprocessorTest[1].getOriginalFilename().toLowerCase().endsWith(".xlsx")) {
+                preProcessor = preprocessorTest[1];
+            }
+            if (preprocessorTest[0].getOriginalFilename().toLowerCase().endsWith(".zip")) {
+                zip = preprocessorTest[0];
+            }
+            if (preprocessorTest[1].getOriginalFilename().toLowerCase().endsWith(".zip")) {
+                zip = preprocessorTest[1];
+            }
+        }
+        if (zip == null || preProcessor == null) {
+            model.put("error", "preprocessor upload test requires a zip and an XLSX file");
+        } else { // ok try to load the files
+            try {
+                String preprocessorName = preProcessor.getOriginalFilename();
+                File preprocessorTempLocation = new File(SpreadsheetService.getHomeDir() + "/temp/" + System.currentTimeMillis() + preprocessorName); // timestamp to stop file overwriting
+                preProcessor.transferTo(preprocessorTempLocation);
+
+                String fileName = zip.getOriginalFilename();
+                // always move uploaded files now, they'll need to be transferred to the DB server after code split
+                File moved = new File(SpreadsheetService.getHomeDir() + "/temp/" + System.currentTimeMillis() + fileName); // timestamp to stop file overwriting
+                zip.transferTo(moved);
+
+                ZipUtil.explode(new File(moved.getPath()));
+                // after exploding the original file is replaced with a directory
+                File zipDir = new File(moved.getPath());
+                zipDir.deleteOnExit();
+                // todo - go to Files.list()?
+                List<File> files = new ArrayList<>(FileUtils.listFiles(zipDir, null, true));
+                Map<String, String> fileNameParams = new HashMap<>();
+                ImportService.addFileNameParametersToMap(fileName, fileNameParams);
+                Path zipforuploadresult = Files.createTempDirectory("preprocessortestresult");
+
+                for (File f : files) {
+                    ImportService.addFileNameParametersToMap(f.getName(), fileNameParams);
+                    UploadedFile zipEntryUploadFile = new UploadedFile(f.getPath(), Collections.singletonList(f.getName()), fileNameParams, false, false);
+                    // ok I need to convert the excel input files here hhhhhhhngh
+                    org.apache.poi.xssf.usermodel.XSSFWorkbook book;
+                    try {
+                        book = new org.apache.poi.xssf.usermodel.XSSFWorkbook(org.apache.poi.openxml4j.opc.OPCPackage.open(new FileInputStream(new File(zipEntryUploadFile.getPath()))));
+                    } catch (org.apache.poi.openxml4j.exceptions.InvalidFormatException ife) {
+                        // Hanover may send 'em encrypted
+                        POIFSFileSystem fileSystem = new POIFSFileSystem(new FileInputStream(zipEntryUploadFile.getPath()));
+                        EncryptionInfo info = new EncryptionInfo(fileSystem);
+                        Decryptor decryptor = Decryptor.getInstance(info);
+                        String password = zipEntryUploadFile.getParameter("password") != null ? zipEntryUploadFile.getParameter("password") : "b0702"; // defaulting to an old Hanover password. Maybe zap . . .
+                        if (!decryptor.verifyPassword(password)) { // currently hardcoded, this will change
+                            throw new RuntimeException("Unable to process: document is encrypted.");
+                        }
+                        InputStream dataStream = decryptor.getDataStream(fileSystem);
+                        book = new org.apache.poi.xssf.usermodel.XSSFWorkbook(dataStream);
+                    }
+
+                    for (int sheetNo = 0; sheetNo < book.getNumberOfSheets(); sheetNo++) {
+                        org.apache.poi.ss.usermodel.Sheet sheet = book.getSheetAt(sheetNo);
+
+                        File temp = File.createTempFile(f.getPath() + sheet.getSheetName(), ".tsv");
+                        String tempPath = temp.getPath();
+                        temp.deleteOnExit();
+                        FileOutputStream fos = new FileOutputStream(tempPath);
+                        CsvWriter csvW = new CsvWriter(fos, '\t', StandardCharsets.UTF_8);
+                        csvW.setUseTextQualifier(false);
+                        // poi convert - notably the iterators skip blank rows and cells hence the checking that indexes match
+                        int rowIndex = -1;
+                        boolean emptySheet = true;
+                        for (org.apache.poi.ss.usermodel.Row row : sheet) {
+                            emptySheet = false;
+                            // turns out blank lines are important
+                            if (++rowIndex != row.getRowNum()) {
+                                while (rowIndex != row.getRowNum()) {
+                                    csvW.endRecord();
+                                    rowIndex++;
+                                }
+                            }
+                            int cellIndex = -1;
+                            for (Iterator<org.apache.poi.ss.usermodel.Cell> ri = row.cellIterator(); ri.hasNext(); ) {
+                                org.apache.poi.ss.usermodel.Cell cell = ri.next();
+                                if (++cellIndex != cell.getColumnIndex()) {
+                                    while (cellIndex != cell.getColumnIndex()) {
+                                        csvW.write("");
+                                        cellIndex++;
+                                    }
+                                }
+                                final String cellValue = ImportService.getCellValue(cell);
+                                csvW.write(cellValue.replace("\n", "\\\\n").replace("\r", "")
+                                        .replace("\t", "\\\\t"));
+                            }
+                            csvW.endRecord();
+                        }
+                        csvW.close();
+                        fos.close();
+                        if (!emptySheet){
+                            UploadedFile uf = new UploadedFile(tempPath, zipEntryUploadFile.getFileNames(), fileNameParams, true, false);
+                            ImportService.preProcessUsingPoi(uf, preprocessorTempLocation.getPath());
+                            String name = uf.getPath();
+                            if (name.contains("/")){
+                                name = name.substring(name.lastIndexOf("/") + 1);
+                            } else if (name.contains("\\")){
+                                name = name.substring(name.lastIndexOf("\\") + 1);
+                            }
+                            if (name.endsWith(" converted")){
+                                name = name.substring(0, name.length() - 10);
+                                // now try to zap the last number
+                                int timestampLength = (System.currentTimeMillis() + "").length();
+                                if (name.endsWith(".tsv")){
+                                    name = name.substring(0, name.length() - (timestampLength + 4)) + ".tsv";
+                                }
+                            }
+                            Files.copy(Paths.get(uf.getPath()), zipforuploadresult.resolve(name));
+
+                        }
+                    }
+                }
+                ZipUtil.unexplode(zipforuploadresult.toFile());
+                loggedInUser.setLastFile(zipforuploadresult.toString());
+                loggedInUser.setLastFileName(zipforuploadresult.getFileName().toString() + ".zip");
+                // should probably not be HTML in here . . .
+                model.put("error", "<a href=\"/api/Download?lastFile=true\">DOWNLOAD pre-processor test results " + zipforuploadresult.getFileName().toString() + ".zip" + "</a>");
+
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                model.put("error", e.getMessage());
+            }
+
+        }
+
     }
 
 }
