@@ -1562,9 +1562,9 @@ public final class ImportService {
             returnString = cell.getBooleanCellValue() + "";
         } else if (cell.getCellType() != CellType.BLANK) {
             if (cell.getCellType() == CellType.FORMULA) {
-                System.out.println("other formula cell type : " + cell.getCachedFormulaResultType());
+                //System.out.println("other formula cell type : " + cell.getCachedFormulaResultType());
             }
-            System.out.println("other cell type : " + cell.getCellType());
+            //System.out.println("other cell type : " + cell.getCellType());
         }
         if (returnString.contains("\"\"") && returnString.startsWith("\"") && returnString.endsWith("\"")) {
             //remove spurious quote marks

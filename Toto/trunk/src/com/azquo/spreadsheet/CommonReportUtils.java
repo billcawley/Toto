@@ -62,8 +62,8 @@ public class CommonReportUtils {
         }
     }
 
-    public static List<String> getDropdownListForQuery(LoggedInUser loggedInUser, String querye) {
-        return getDropdownListForQuery(loggedInUser, querye, null, null);
+    public static List<String> getDropdownListForQuery(LoggedInUser loggedInUser, String query) {
+        return getDropdownListForQuery(loggedInUser, query, null, null);
     }
 
     public static List<String> getDropdownListForQuery(LoggedInUser loggedInUser, String query, String fieldName, String searchTerm) {// WFC added fieldname taken from the spreadsheet (<fieldName>Choice) to pick chosen values from user selection list

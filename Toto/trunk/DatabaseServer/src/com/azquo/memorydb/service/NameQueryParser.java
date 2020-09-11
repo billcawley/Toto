@@ -309,6 +309,9 @@ public class NameQueryParser {
                     if (defSet != null) {
                         defName.setChildrenWillBePersisted(defSet, azquoMemoryDBConnection);
                         //note that defName is a temporary set, so, to get the name, look at the parent
+                        if (defName.getParents().isEmpty()){
+                            throw new Exception(defName + " does not have any parents, this will crash calc definitions.");
+                        }
                         String defChangedRecursive = defName.getParents().iterator().next().getDefaultDisplayName();
                         if (defChangedRecursive == null){
                             throw new Exception("Parent of " + defName + " does not have a default display name, this will crash calc definitions.");
