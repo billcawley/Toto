@@ -1945,6 +1945,11 @@ fr.close();
             org.apache.poi.xssf.usermodel.XSSFSheet outputSheet = ppBook.getSheet(outputLineRegion.getSheetName());
             int inputRow = inputAreaRef.getFirstCell().getRow();
             int outputRow = outputAreaRef.getFirstCell().getRow();
+            org.apache.poi.ss.usermodel.Name rejectRegion = BookUtils.getName(ppBook,"az_RejectIfBlank");
+            int rejectColumn = -1;
+            if (rejectRegion!=null){
+                rejectColumn =new AreaReference(rejectRegion.getRefersToFormula(),null).getFirstCell().getCol();
+            }
             String outFile = filePath + " converted";
             File writeFile = new File(outFile);
             writeFile.delete(); // to avoid confusion
@@ -1961,7 +1966,7 @@ fr.close();
             int inputHeadingCount = 0;
             String heading= getCellValue(inputSheet.getRow(inputRow).getCell(inputHeadingCount));
             while (inputHeadingCount <= inputSheet.getRow(inputRow).getLastCellNum()){
-                inputColumns.put(normalise(heading),inputHeadingCount);
+                inputColumns.put(normaliseFurther(heading),inputHeadingCount);
                 heading= getCellValue(inputSheet.getRow(inputRow).getCell(++inputHeadingCount));
 
             }
@@ -1988,52 +1993,60 @@ fr.close();
                         headingCount =line.length;
                         headingsFound = line.length;
                     }
+                    boolean ok=true;
                     for (int datacount=0;datacount<headingCount;datacount++) {
+                        ok=true;
                         String cellVal = "";
                         if (datacount< line.length){
                             cellVal = line[datacount];
                         }
                         if (firstLine) {
-                            Integer targetCol = inputColumns.get(normalise(cellVal));
+                            Integer targetCol = inputColumns.get(normaliseFurther(cellVal));
                             if (targetCol != null&& inputColumnMap.get(colNo)==null) {
                                 //note - ignores heading if no map found
                                 inputColumnMap.put(colNo, targetCol);
                             }
                         } else {
                             if (inputColumnMap.get(colNo) != null) {
+                                if (colNo==rejectColumn && cellVal.length()==0){
+                                    ok=false;
+                                    break;
+                                }
                                 setCellValue(inputSheet,inputRow + 1, inputColumnMap.get(colNo), cellVal);
                             }
                         }
                         colNo++;
                     }
-                    XSSFFormulaEvaluator.evaluateAllFormulaCells(ppBook);
-                    int lastOutputRow = outputAreaRef.getLastCell().getRow();
-                    int outputCol = 0;
+                    if (ok) {
+                        XSSFFormulaEvaluator.evaluateAllFormulaCells(ppBook);
+                        int lastOutputRow = outputAreaRef.getLastCell().getRow();
+                        int outputCol = 0;
 
-                    if (firstLine) {
-                        for (colNo = outputCol; colNo <= lastOutputCol; colNo++) {
-                            String cellVal = getCellValue(outputSheet.getRow(outputRow).getCell(colNo));
-                            if (colNo > 0) {
-                                fileWriter.write("\t" + normalise(cellVal));
-                            } else {
-                                fileWriter.write(normalise(cellVal));
-                            }
-                        }
-                        fileWriter.write("\r\n");
-                        firstLine = false;
-                    }  else {
-                        for (int oRow=outputRow + 1;oRow<=lastOutputRow;oRow++){
-                            for (colNo = outputCol; colNo < lastOutputCol; colNo++) {
-                                String cellVal = getCellValue(outputSheet.getRow(oRow).getCell(colNo));
-                                if (colNo > 0){
+                        if (firstLine) {
+                            for (colNo = outputCol; colNo <= lastOutputCol; colNo++) {
+                                String cellVal = getCellValue(outputSheet.getRow(outputRow).getCell(colNo));
+                                if (colNo > 0) {
                                     fileWriter.write("\t" + normalise(cellVal));
                                 } else {
-                                    if (normalise(cellVal).length() > 0) {
-                                        fileWriter.write(normalise(cellVal));
-                                    }
+                                    fileWriter.write(normalise(cellVal));
                                 }
                             }
                             fileWriter.write("\r\n");
+                            firstLine = false;
+                        } else {
+                            for (int oRow = outputRow + 1; oRow <= lastOutputRow; oRow++) {
+                                for (colNo = outputCol; colNo < lastOutputCol; colNo++) {
+                                    String cellVal = getCellValue(outputSheet.getRow(oRow).getCell(colNo));
+                                    if (colNo > 0) {
+                                        fileWriter.write("\t" + normalise(cellVal));
+                                    } else {
+                                        if (normalise(cellVal).length() > 0) {
+                                            fileWriter.write(normalise(cellVal));
+                                        }
+                                    }
+                                }
+                                fileWriter.write("\r\n");
+                            }
                         }
                     }
                 }
@@ -2086,6 +2099,10 @@ fr.close();
 
             }
         }
+    }
+
+    private static String normaliseFurther(String value){
+        return normalise(value).toLowerCase().replace("_"," ");
     }
 
     private static String normalise(String value){
