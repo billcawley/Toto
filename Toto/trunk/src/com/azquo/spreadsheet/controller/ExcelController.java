@@ -208,7 +208,7 @@ public class ExcelController {
         }
 
         try {
-            if (op.equals("download64")){ // this means an xlsx file from WEB-INF, public anyway so no security but we still need to base 64 encode it
+            if (op.equals("download64") && fileName != null){ // this means an xlsx file from WEB-INF, public anyway so no security but we still need to base 64 encode it
                 // basic hack protection though I'm not sure whether anyone could get anything that worrying
                 while (fileName.contains("\\") || fileName.contains("/")){
                     fileName = fileName.replace("\\","");
