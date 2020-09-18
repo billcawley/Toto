@@ -1940,12 +1940,6 @@ fr.close();
             AreaReference inputAreaRef = new AreaReference(inputLineRegion.getRefersToFormula(), null);
             org.apache.poi.ss.usermodel.Name outputLineRegion = BookUtils.getName(ppBook,"az_output");
             AreaReference outputAreaRef = new AreaReference(outputLineRegion.getRefersToFormula(), null);
-            org.apache.poi.ss.usermodel.Name synonymsRegion = BookUtils.getName(ppBook,"az_synonyms");
-            int synonymsRow = 0;
-            if (synonymsRegion!=null){
-                synonymsRow = new AreaReference(synonymsRegion.getRefersToFormula(), null).getFirstCell().getRow();
-            }
-
 
             org.apache.poi.xssf.usermodel.XSSFSheet inputSheet = ppBook.getSheet(inputLineRegion.getSheetName());
             org.apache.poi.xssf.usermodel.XSSFSheet outputSheet = ppBook.getSheet(outputLineRegion.getSheetName());
@@ -1972,13 +1966,10 @@ fr.close();
             int inputHeadingCount = 0;
             String heading= getCellValue(inputSheet.getRow(inputRow).getCell(inputHeadingCount));
             while (inputHeadingCount <= inputSheet.getRow(inputRow).getLastCellNum()){
-                inputColumns.put(normaliseFurther(heading),inputHeadingCount);
-                if (synonymsRow > 0){
-                    String synonymList = getCellValue(inputSheet.getRow(synonymsRow).getCell(inputHeadingCount));
-                    for (String synonym:synonymList.split(",")){
-                        //NOTE that we cannot currently have commas in the middle of synonyms
-                        inputColumns.put(normaliseFurther(synonym), inputHeadingCount);
-                    }
+                //note - this assumes that no heading contains a comma.   If we want to change that, we'll need to use quotes
+                String[] headingOptions = heading.split((","));
+                for (String headingOption:headingOptions){
+                    inputColumns.put(normaliseFurther(headingOption),inputHeadingCount);
                 }
                 heading= getCellValue(inputSheet.getRow(inputRow).getCell(++inputHeadingCount));
 
