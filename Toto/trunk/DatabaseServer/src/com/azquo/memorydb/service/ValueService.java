@@ -74,7 +74,8 @@ public final class ValueService {
             valueString = replaced;
         }
         //long marker = System.currentTimeMillis();
-        final List<Value> existingValues = findForNames(names);
+        final List<Value> existingValues = findForNamesExact(names);
+        // if we do not find the exact name we get into a cumulative summation loop with all the subsidiary names
         //addToTimesForConnection(azquoMemoryDBConnection, "storeValueWithProvenanceAndNames2", marker - System.currentTimeMillis());
         //marker = System.currentTimeMillis();
         boolean alreadyInDatabase = false;
@@ -146,6 +147,17 @@ public final class ValueService {
     // doesn't work down the name children - generally this is used when storing
 
     private static AtomicInteger findForNamesCount = new AtomicInteger(0);
+
+    private static List<Value> findForNamesExact(final Collection<Name>names){
+        List<Value> toReturn = new ArrayList<>();
+        List<Value> found = findForNames(names);
+        for (Value v:found){
+            if (v.getNames().size() == names.size()){
+                toReturn.add(v);
+            }
+        }
+        return toReturn;
+    }
 
     public static List<Value> findForNames(final Collection<Name> names) {
         findForNamesCount.incrementAndGet();
