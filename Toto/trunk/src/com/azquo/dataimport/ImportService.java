@@ -318,6 +318,44 @@ public final class ImportService {
                     names.add(f.getName());
                     Map<String, String> fileNameParams = new HashMap<>(uploadedFile.getParameters());
                     addFileNameParametersToMap(f.getName(), fileNameParams);
+                    String importVersion = fileNameParams.get(IMPORTVERSION);
+                    String preprocessor = fileNameParams.get(PREPROCESSOR);
+                    if(importVersion==null && preprocessor!=null){
+                        //load some sheets off the preprocessor without using it - hence cancel 'preprocessor' for the moment
+                        fileNameParams.remove(PREPROCESSOR);
+                        uploadedFile.setParameters(fileNameParams);
+                        if (!preprocessor.toLowerCase().endsWith(".xlsx")){
+                            preprocessor += ".xlsx";
+                        }
+                        List<String>pNames = new ArrayList<>();
+                        pNames.add(preprocessor);
+                        XSSFWorkbook ppBook = null;
+                        ImportTemplate preProcess = ImportTemplateDAO.findForNameAndBusinessId(preprocessor, loggedInUser.getUser().getBusinessId());
+                        try {
+                            ppBook = new org.apache.poi.xssf.usermodel.XSSFWorkbook(new File(SpreadsheetService.getHomeDir() + dbPath + loggedInUser.getBusinessDirectory() + importTemplatesDir + preProcess.getFilenameForDisk()));
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                            throw new Exception("Cannot load preprocessor template from " + preprocessor);
+                        }
+                        for (int sheetNo = 0; sheetNo < ppBook.getNumberOfSheets(); sheetNo++) {
+                            org.apache.poi.ss.usermodel.Sheet sheet = ppBook.getSheetAt(sheetNo);
+                            if (sheet.getSheetName().toLowerCase().contains("lookups")) {
+                                List<UploadedFile> uploadedFiles = readSheet(loggedInUser, uploadedFile, sheet, null, pendingUploadConfig, templateCache);
+                                processedUploadedFiles.addAll(uploadedFiles);
+                            }
+                        }
+                        org.apache.poi.ss.usermodel.Name importVersionRange = BookUtils.getName(ppBook, "az_importversion");
+                        if (importVersionRange != null) {
+                            CellReference sheetNameCell = BookUtils.getNameCell(importVersionRange);
+                            if (sheetNameCell != null) {
+                                importVersion = ppBook.getSheet(importVersionRange.getSheetName()).getRow(sheetNameCell.getRow()).getCell(sheetNameCell.getCol()).getStringCellValue();
+                                fileNameParams.put(IMPORTVERSION, importVersion);
+                                fileNameParams.put(PREPROCESSOR, preprocessor);
+                                uploadedFile.setParameters(fileNameParams);
+                            }
+                        }
+                        ppBook.close();
+                     }
                     // bit hacky to stop the loading but otherwise there'd just be another map
                     if (pendingUploadConfig != null && pendingUploadConfig.getParametersForFile(f.getName()) != null) {
                         Map<String, String> parametersForFile = pendingUploadConfig.getParametersForFile(f.getName());
@@ -2022,7 +2060,12 @@ fr.close();
                         colNo++;
                     }
                     if (ok) {
-                        XSSFFormulaEvaluator.evaluateAllFormulaCells(ppBook);
+                        try {
+                            XSSFFormulaEvaluator.evaluateAllFormulaCells(ppBook);
+                        }catch(Exception e){
+                            e.printStackTrace();
+                            throw new Exception("preprocessor formula exception");
+                        }
                         int lastOutputRow = outputAreaRef.getLastCell().getRow();
                         int outputCol = 0;
 
