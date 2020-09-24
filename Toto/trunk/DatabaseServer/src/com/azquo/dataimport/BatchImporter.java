@@ -551,7 +551,7 @@ public class BatchImporter implements Callable<Void> {
         int headingMarker = compositionPattern.indexOf("`");
         while (headingMarker >= 0) {
             boolean doubleQuotes = false;
-            if (headingMarker < compositionPattern.length() && compositionPattern.charAt(headingMarker + 1) == '`') {
+            if (headingMarker < compositionPattern.length() - 1 && compositionPattern.charAt(headingMarker + 1) == '`') {
                 doubleQuotes = true;
                 headingMarker++;
             }
