@@ -318,44 +318,6 @@ public final class ImportService {
                     names.add(f.getName());
                     Map<String, String> fileNameParams = new HashMap<>(uploadedFile.getParameters());
                     addFileNameParametersToMap(f.getName(), fileNameParams);
-                    String importVersion = fileNameParams.get(IMPORTVERSION);
-                    String preprocessor = fileNameParams.get(PREPROCESSOR);
-                    if(importVersion==null && preprocessor!=null){
-                        //load some sheets off the preprocessor without using it - hence cancel 'preprocessor' for the moment
-                        fileNameParams.remove(PREPROCESSOR);
-                        uploadedFile.setParameters(fileNameParams);
-                        if (!preprocessor.toLowerCase().endsWith(".xlsx")){
-                            preprocessor += ".xlsx";
-                        }
-                        List<String>pNames = new ArrayList<>();
-                        pNames.add(preprocessor);
-                        XSSFWorkbook ppBook = null;
-                        ImportTemplate preProcess = ImportTemplateDAO.findForNameAndBusinessId(preprocessor, loggedInUser.getUser().getBusinessId());
-                        try {
-                            ppBook = new org.apache.poi.xssf.usermodel.XSSFWorkbook(new File(SpreadsheetService.getHomeDir() + dbPath + loggedInUser.getBusinessDirectory() + importTemplatesDir + preProcess.getFilenameForDisk()));
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                            throw new Exception("Cannot load preprocessor template from " + preprocessor);
-                        }
-                        for (int sheetNo = 0; sheetNo < ppBook.getNumberOfSheets(); sheetNo++) {
-                            org.apache.poi.ss.usermodel.Sheet sheet = ppBook.getSheetAt(sheetNo);
-                            if (sheet.getSheetName().toLowerCase().contains("lookups")) {
-                                List<UploadedFile> uploadedFiles = readSheet(loggedInUser, uploadedFile, sheet, null, pendingUploadConfig, templateCache);
-                                processedUploadedFiles.addAll(uploadedFiles);
-                            }
-                        }
-                        org.apache.poi.ss.usermodel.Name importVersionRange = BookUtils.getName(ppBook, "az_importversion");
-                        if (importVersionRange != null) {
-                            CellReference sheetNameCell = BookUtils.getNameCell(importVersionRange);
-                            if (sheetNameCell != null) {
-                                importVersion = ppBook.getSheet(importVersionRange.getSheetName()).getRow(sheetNameCell.getRow()).getCell(sheetNameCell.getCol()).getStringCellValue();
-                                fileNameParams.put(IMPORTVERSION, importVersion);
-                                fileNameParams.put(PREPROCESSOR, preprocessor);
-                                uploadedFile.setParameters(fileNameParams);
-                            }
-                        }
-                        ppBook.close();
-                     }
                     // bit hacky to stop the loading but otherwise there'd just be another map
                     if (pendingUploadConfig != null && pendingUploadConfig.getParametersForFile(f.getName()) != null) {
                         Map<String, String> parametersForFile = pendingUploadConfig.getParametersForFile(f.getName());
@@ -1983,11 +1945,6 @@ fr.close();
             org.apache.poi.xssf.usermodel.XSSFSheet outputSheet = ppBook.getSheet(outputLineRegion.getSheetName());
             int inputRow = inputAreaRef.getFirstCell().getRow();
             int outputRow = outputAreaRef.getFirstCell().getRow();
-            org.apache.poi.ss.usermodel.Name rejectRegion = BookUtils.getName(ppBook,"az_RejectIfBlank");
-            int rejectColumn = -1;
-            if (rejectRegion!=null){
-                rejectColumn =new AreaReference(rejectRegion.getRefersToFormula(),null).getFirstCell().getCol();
-            }
             String outFile = filePath + " converted";
             File writeFile = new File(outFile);
             writeFile.delete(); // to avoid confusion
@@ -2004,11 +1961,7 @@ fr.close();
             int inputHeadingCount = 0;
             String heading= getCellValue(inputSheet.getRow(inputRow).getCell(inputHeadingCount));
             while (inputHeadingCount <= inputSheet.getRow(inputRow).getLastCellNum()){
-                //note - this assumes that no heading contains a comma.   If we want to change that, we'll need to use quotes
-                String[] headingOptions = heading.split((","));
-                for (String headingOption:headingOptions){
-                    inputColumns.put(normaliseFurther(headingOption),inputHeadingCount);
-                }
+                inputColumns.put(normalise(heading),inputHeadingCount);
                 heading= getCellValue(inputSheet.getRow(inputRow).getCell(++inputHeadingCount));
 
             }
@@ -2035,65 +1988,52 @@ fr.close();
                         headingCount =line.length;
                         headingsFound = line.length;
                     }
-                    boolean ok=true;
                     for (int datacount=0;datacount<headingCount;datacount++) {
-                        ok=true;
                         String cellVal = "";
                         if (datacount< line.length){
                             cellVal = line[datacount];
                         }
                         if (firstLine) {
-                            Integer targetCol = inputColumns.get(normaliseFurther(cellVal));
+                            Integer targetCol = inputColumns.get(normalise(cellVal));
                             if (targetCol != null&& inputColumnMap.get(colNo)==null) {
                                 //note - ignores heading if no map found
                                 inputColumnMap.put(colNo, targetCol);
                             }
                         } else {
                             if (inputColumnMap.get(colNo) != null) {
-                                if (colNo==rejectColumn && cellVal.length()==0){
-                                    ok=false;
-                                    break;
-                                }
                                 setCellValue(inputSheet,inputRow + 1, inputColumnMap.get(colNo), cellVal);
                             }
                         }
                         colNo++;
                     }
-                    if (ok) {
-                        try {
-                            XSSFFormulaEvaluator.evaluateAllFormulaCells(ppBook);
-                        }catch(Exception e){
-                            e.printStackTrace();
-                            throw new Exception("preprocessor formula exception");
-                        }
-                        int lastOutputRow = outputAreaRef.getLastCell().getRow();
-                        int outputCol = 0;
+                    XSSFFormulaEvaluator.evaluateAllFormulaCells(ppBook);
+                    int lastOutputRow = outputAreaRef.getLastCell().getRow();
+                    int outputCol = 0;
 
-                        if (firstLine) {
-                            for (colNo = outputCol; colNo <= lastOutputCol; colNo++) {
-                                String cellVal = getCellValue(outputSheet.getRow(outputRow).getCell(colNo));
-                                if (colNo > 0) {
+                    if (firstLine) {
+                        for (colNo = outputCol; colNo <= lastOutputCol; colNo++) {
+                            String cellVal = getCellValue(outputSheet.getRow(outputRow).getCell(colNo));
+                            if (colNo > 0) {
+                                fileWriter.write("\t" + normalise(cellVal));
+                            } else {
+                                fileWriter.write(normalise(cellVal));
+                            }
+                        }
+                        fileWriter.write("\r\n");
+                        firstLine = false;
+                    }  else {
+                        for (int oRow=outputRow + 1;oRow<=lastOutputRow;oRow++){
+                            for (colNo = outputCol; colNo < lastOutputCol; colNo++) {
+                                String cellVal = getCellValue(outputSheet.getRow(oRow).getCell(colNo));
+                                if (colNo > 0){
                                     fileWriter.write("\t" + normalise(cellVal));
                                 } else {
-                                    fileWriter.write(normalise(cellVal));
+                                    if (normalise(cellVal).length() > 0) {
+                                        fileWriter.write(normalise(cellVal));
+                                    }
                                 }
                             }
                             fileWriter.write("\r\n");
-                            firstLine = false;
-                        } else {
-                            for (int oRow = outputRow + 1; oRow <= lastOutputRow; oRow++) {
-                                for (colNo = outputCol; colNo < lastOutputCol; colNo++) {
-                                    String cellVal = getCellValue(outputSheet.getRow(oRow).getCell(colNo));
-                                    if (colNo > 0) {
-                                        fileWriter.write("\t" + normalise(cellVal));
-                                    } else {
-                                        if (normalise(cellVal).length() > 0) {
-                                            fileWriter.write(normalise(cellVal));
-                                        }
-                                    }
-                                }
-                                fileWriter.write("\r\n");
-                            }
                         }
                     }
                 }
@@ -2148,13 +2088,9 @@ fr.close();
         }
     }
 
-    private static String normaliseFurther(String value){
-        return normalise(value).toLowerCase().replace("_"," ");
-    }
-
     private static String normalise(String value){
         //not sure how the system read the cr as \\n
-        return value.replace("\n"," ").replace("\\\\n"," ").replace("  "," ").trim();
+        return value.replace("\n"," ").replace("\\\\n"," ").replace("  "," ");
     }
 
     // todo factor. Makes sense in here
