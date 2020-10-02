@@ -107,8 +107,10 @@ public class NameQueryParser {
             if (setFormula.toLowerCase().indexOf(StringLiterals.FILTERBY, firstQuote) != -1) {
                 throw new Exception("cannot have more than one filterby " + setFormula);
             }
+
             if (contextSource == null) {
-                throw new Exception("cannot use filterby without context source - query must be matched to a region " + setFormula);
+                //throw new Exception("cannot use filterby without context source - query must be matched to a region " + setFormula);
+                contextSource = new ArrayList<>();
             }
 
             filterByCriteria = setFormula.substring(firstQuote + 1, secondQuote);
