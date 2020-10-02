@@ -254,12 +254,12 @@ I should be ok for StringTokenizer at this point
     */
 
     public static String shuntingYardAlgorithm(String calc) {
-        Pattern p = Pattern.compile("[" + StringLiterals.ASSYMBOL + StringLiterals.ASGLOBALSYMBOL + "&|<=>" + StringLiterals.GREATEROREQUAL + StringLiterals.LESSOREQUAL + StringLiterals.MATHFUNCTION + StringLiterals.CONTAINSSYMBOL + "\\-\\+/\\*\\(\\)&]"); // only simple maths allowed at present
+        Pattern p = Pattern.compile("[" + StringLiterals.ASSYMBOL + StringLiterals.ASGLOBALSYMBOL + "&|<=>" + StringLiterals.GREATEROREQUAL + StringLiterals.LESSOREQUAL + StringLiterals.MATHFUNCTION + StringLiterals.CONTAINSSYMBOL + StringLiterals.FILTERBYSYMBOL + "\\-\\+/\\*\\(\\)&]"); // only simple maths allowed at present
         StringBuilder sb = new StringBuilder();
         String stack = "";
         Matcher m = p.matcher(calc);
         int startPos = 0;
-        final String funcOrder = "" + StringLiterals.ASSYMBOL + StringLiterals.ASGLOBALSYMBOL + "&|<=>" + StringLiterals.GREATEROREQUAL + StringLiterals.LESSOREQUAL + StringLiterals.CONTAINSSYMBOL + "+-/*" + StringLiterals.MATHFUNCTION;//if a CONTAINS b  then result is  b - a, so CONTAINSSYMBOL has higher priority than + or -)
+        final String funcOrder = "" + StringLiterals.ASSYMBOL + StringLiterals.ASGLOBALSYMBOL + "&|<=>" + StringLiterals.GREATEROREQUAL + StringLiterals.LESSOREQUAL + StringLiterals.CONTAINSSYMBOL + StringLiterals.FILTERBYSYMBOL + "+-/*" + StringLiterals.MATHFUNCTION;//if a CONTAINS b  then result is  b - a, so CONTAINSSYMBOL has higher priority than + or -)
         while (m.find()) {
             String opfound = m.group();
             char thisOp = opfound.charAt(0);
