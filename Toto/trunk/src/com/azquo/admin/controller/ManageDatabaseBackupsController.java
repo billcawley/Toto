@@ -17,6 +17,8 @@ import javax.servlet.http.HttpServletRequest;
 import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -83,6 +85,9 @@ public class ManageDatabaseBackupsController {
                         }
                         displayBackupList.add(new DisplayBackup(file.getName(), df.format(file.lastModified())));
                     }
+                    Collections.sort(displayBackupList, Comparator.comparing(displayBackup -> displayBackup.date));
+                    Collections.reverse(displayBackupList);
+
                     // todo - factor, this could cause problems!
                     if (restoreBackupOk) {
                         loggedInUser.setDatabaseWithServer(DatabaseServerDAO.findById(databaseById.getDatabaseServerId()), databaseById);
