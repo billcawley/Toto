@@ -1,0 +1,12 @@
+<component name="libraryTable">
+  <library name="com.github.jbytecode:RCaller:3.0" type="repository">
+    <properties maven-id="com.github.jbytecode:RCaller:3.0" />
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/lib/RCaller-3.0.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/commons-lang3-3.1.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/commons-lang-2.6.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

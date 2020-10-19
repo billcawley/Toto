@@ -1,10 +1,28 @@
+08-10-20
+
+order auto backups list
+
+05-10-20
+
+A few bug fixes
+
+Filterby without context
+
+XLSX
+
+Work on standardised database that can be used with the import wizard
+
+15-09-20
+
+plugin bug fix
+
 07-09-20
 
 Important bug fix relating to empty ECF files
 
 03-09-20
 
-Some initial code for AllRisks integration
+Some initial code for AllRisks integrationau
 
 Preprocessor adjustment : clears the input line between lines, so that values from last line do not persist. Also does not break when it finds a blank cell
 

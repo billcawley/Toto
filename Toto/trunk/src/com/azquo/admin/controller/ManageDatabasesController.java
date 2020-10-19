@@ -17,6 +17,8 @@ import com.azquo.spreadsheet.CommonReportUtils;
 import com.azquo.spreadsheet.zk.BookUtils;
 import com.azquo.spreadsheet.zk.ReportRenderer;
 import com.csvreader.CsvWriter;
+import com.github.rcaller.rstuff.RCaller;
+import com.github.rcaller.rstuff.RCode;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.poi.poifs.crypt.Decryptor;
@@ -166,7 +168,7 @@ public class ManageDatabasesController {
             , @RequestParam(value = "eddtest", required = false) String eddtest
     ) {
         if (eddtest != null) {
-            List<Path> paths = new ArrayList<>();
+/*            List<Path> paths = new ArrayList<>();
             paths.add(Paths.get("/home/edward/Downloads/artest/Risk/RENEWAL/"));
             paths.add(Paths.get("/home/edward/Downloads/artest/Risk/POLICY/"));
             paths.add(Paths.get("/home/edward/Downloads/artest/Risk/ENDORSEMENT/"));
@@ -189,12 +191,6 @@ public class ManageDatabasesController {
                             // Do stuff
                             if (!Files.isDirectory(path)) { // skip any directories
                                 try {
-                                            /*
-
-                                            Note : I was assuming files being returned in pairs but it seems not,
-                                            if the file name contains error then look for the original in temp and load that as well
-
-                                             */
 
                                     String origName = path.getFileName().toString();
                                     if (origName.toLowerCase().contains(".xml")) {
@@ -237,7 +233,18 @@ public class ManageDatabasesController {
                 }
             } catch (Exception e) {
                 e.printStackTrace();
-            }
+            }*/
+
+            RCaller caller = RCaller.create();
+            RCode code = RCode.create();
+
+            double[] arr = new double[]{1.0, 2.0, 3.0};
+            code.addDoubleArray("myarr", arr);
+            code.addRCode("avg <- mean(myarr)");
+            caller.setRCode(code);
+            caller.runAndReturnResult("avg");
+            double[] result = caller.getParser().getAsDoubleArray("avg");
+            System.out.println(result[0]);
         }
 
 

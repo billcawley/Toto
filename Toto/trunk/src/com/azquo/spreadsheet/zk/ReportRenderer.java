@@ -10,11 +10,15 @@ import com.azquo.spreadsheet.controller.OnlineController;
 import com.azquo.spreadsheet.*;
 import com.azquo.spreadsheet.transport.CellForDisplay;
 import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
+import com.github.rcaller.rstuff.RCaller;
+import com.github.rcaller.rstuff.RCode;
+import org.apache.commons.lang.math.NumberUtils;
 import org.zkoss.zss.api.*;
 import org.zkoss.zss.api.model.*;
 import org.zkoss.zss.api.model.Sheet;
 import org.zkoss.zss.model.*;
 
+import java.io.ByteArrayOutputStream;
 import java.rmi.RemoteException;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -43,6 +47,8 @@ public class ReportRenderer {
     static final String AZDISPLAYCOLUMNHEADINGS = "az_displaycolumnheadings";
     public static final String AZCOLUMNHEADINGS = "az_columnheadings";
     public static final String AZROWHEADINGS = "az_rowheadings";
+    public static final String AZRDATA = "az_RData";
+    public static final String AZRQUERY = "az_RQuery";
     static final String AZXML = "az_xml";
     static final String AZXMLEXTRAINFO = "az_xmlextrainfo";
     static final String AZXMLFILENAME = "az_xmlfilename";
@@ -350,6 +356,97 @@ public class ReportRenderer {
                     sheet.getBook().getInternalBook().setAttribute(OnlineController.LOCKED, false);
                 }
             }
+            // 19/10/20. Initial R implementation, may require modifying later to increase capacity
+            for (SName name : namesForSheet) {
+                // Old one was case insensitive - not so happy about this. Will allow it on prefixes. (fast load being set outside the loop so is there a problem with it not being found before data regions??)
+                if (name.getName().startsWith(ReportRenderer.AZRQUERY)) {
+                    SName rDataName = BookUtils.getNameByName( AZRDATA + name.getName().substring(ReportRenderer.AZRQUERY.length()), sheet);
+                    if (rDataName != null){
+                        RCaller caller = RCaller.create();
+                        RCode code = RCode.create();
+
+                        List<List<String>> rData = BookUtils.nameToStringLists(rDataName);
+                        List<List<String>> transposed = MultidimensionalListUtils.transpose2DList(rData);
+                        StringBuilder headings = new StringBuilder();
+                        for (List<String> row : transposed) {
+                            boolean first = true;
+                            List<Double> asDoubles = new ArrayList<>();
+                            String heading = null;
+                            for (String value : row){
+                                if (first) {
+                                    if (value.startsWith(".")){
+                                        value = value.substring(1);
+                                    }
+                                    heading = value;
+                                } else {
+                                    if (value.isEmpty()){
+                                        asDoubles.add(0.0);
+                                    } else {
+                                        if (NumberUtils.isNumber(value)){
+                                            asDoubles.add(Double.parseDouble(value));
+                                        } else {
+                                            break;
+                                        }
+                                    }
+                                }
+                                first = false;
+                            }
+                            if (asDoubles.size() == (row.size() - 1)){ // then we can use numbers
+                                // apparently we have to array copy here hhhhngh
+                                double[] target = new double[asDoubles.size()];
+                                for (int i = 0; i < target.length; i++) {
+                                    target[i] = asDoubles.get(i);
+                                }
+                                code.addDoubleArray(heading, target);
+                            } else {
+                                // apparently we have to array copy here hhhhngh
+                                String[] target = new String[row.size() - 1];
+                                for (int i = 0; i < target.length; i++) {
+                                    target[i] = row.get(i + 1);
+                                }
+                                code.addStringArray(heading, target);
+                            }
+                            headings.append(heading).append(",");
+                        }
+                        code.addRCode("BaseFrame <- as.data.frame(cbind(" + headings.substring(0, headings.length() - 1) + "))");
+                        String query = BookUtils.getSnameCell(name).getStringValue();
+                        String[] rcommands = query.split("\\n");
+                        for (int i = 0; i < rcommands.length; i++){
+                            code.addRCode(rcommands[i]);
+                        }
+                        caller.setRCode(code);
+                        ByteArrayOutputStream stream = new ByteArrayOutputStream();
+                        caller.redirectROutputToStream(stream);
+//                        caller.runAndReturnResult("result");
+                        caller.runOnly();
+                        String finalString = new String(stream.toByteArray());
+                        finalString = finalString.replace("Output:", "");
+                        sheet.getInternalSheet().getCell(name.getRefersToCellRegion().row + 1, name.getRefersToCellRegion().column).setStringValue(finalString);
+                        //System.out.println(finalString);
+
+
+//                        String[] result = caller.getParser().getAsStringArray("azquoresult");
+//                        System.out.println(result[0]);
+//                        System.out.println(result);
+/*                        for (String rName : caller.getParser().getNames()){
+                            System.out.println(rName);
+                            System.out.println(caller.getParser().getType(rName));
+
+                        }*/
+
+/*                        double[] arr = new double[]{1.0, 2.0, 3.0};
+                        code.addDoubleArray("myarr", arr);
+                        code.addRCode("avg <- mean(myarr)");
+                        caller.setRCode(code);
+                        caller.runAndReturnResult("avg");
+                        double[] result = caller.getParser().getAsDoubleArray("avg");
+                        System.out.println(result[0]);*/
+
+                    }
+                }
+            }
+
+
             System.out.println("regions populated in : " + (System.currentTimeMillis() - track) + "ms");
 // commenting just this line for the mo
             // now protect. Doing so before seems to cause problems
