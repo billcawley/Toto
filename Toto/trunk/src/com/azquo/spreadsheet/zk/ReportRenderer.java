@@ -421,7 +421,10 @@ public class ReportRenderer {
                         caller.runOnly();
                         String finalString = new String(stream.toByteArray());
                         finalString = finalString.replace("Output:", "");
-                        sheet.getInternalSheet().getCell(name.getRefersToCellRegion().row + 1, name.getRefersToCellRegion().column).setStringValue(finalString);
+                        String[] lines = finalString.split("\\n");
+                        for (int i = 0; i < lines.length; i++){
+                            sheet.getInternalSheet().getCell(name.getRefersToCellRegion().row + 1 + i, name.getRefersToCellRegion().column).setStringValue(lines[i]);
+                        }
                         //System.out.println(finalString);
 
 

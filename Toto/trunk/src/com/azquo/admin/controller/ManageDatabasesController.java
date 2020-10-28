@@ -167,11 +167,13 @@ public class ManageDatabasesController {
             , @RequestParam(value = "withautos", required = false) String withautos
             , @RequestParam(value = "eddtest", required = false) String eddtest
     ) {
-        if (eddtest != null) {
-/*            List<Path> paths = new ArrayList<>();
+/*        if (eddtest != null) {
+            List<Path> paths = new ArrayList<>();
             paths.add(Paths.get("/home/edward/Downloads/artest/Risk/RENEWAL/"));
             paths.add(Paths.get("/home/edward/Downloads/artest/Risk/POLICY/"));
             paths.add(Paths.get("/home/edward/Downloads/artest/Risk/ENDORSEMENT/"));
+            paths.add(Paths.get("/home/edward/Downloads/artest/Risk/Reinstate/"));
+            paths.add(Paths.get("/home/edward/Downloads/artest/Risk/Cancel/"));
             paths.add(Paths.get("/home/edward/Downloads/artest/Premium/RENEWAL/"));
             paths.add(Paths.get("/home/edward/Downloads/artest/Premium/POLICY/"));
             paths.add(Paths.get("/home/edward/Downloads/artest/Premium/ENDORSEMENT/"));
@@ -233,9 +235,9 @@ public class ManageDatabasesController {
                 }
             } catch (Exception e) {
                 e.printStackTrace();
-            }*/
+            }
 
-            RCaller caller = RCaller.create();
+            /*RCaller caller = RCaller.create();
             RCode code = RCode.create();
 
             double[] arr = new double[]{1.0, 2.0, 3.0};
@@ -244,8 +246,8 @@ public class ManageDatabasesController {
             caller.setRCode(code);
             caller.runAndReturnResult("avg");
             double[] result = caller.getParser().getAsDoubleArray("avg");
-            System.out.println(result[0]);
-        }
+            System.out.println(result[0]);*/
+//        }
 
 
         // I assume secure until we move to proper spring security

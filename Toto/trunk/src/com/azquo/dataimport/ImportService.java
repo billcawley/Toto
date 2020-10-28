@@ -89,7 +89,7 @@ import java.util.*;
  * Deals with reports, set definitions and data files. Report schedules and users are now dealt with in dedicated classes.
  * <p>
  * Uploading of reports is going to stay in here for the mo as they will likely be packaged in zip files along with data.
- *
+ * <p>
  * todo : switch all poi references to use the latest version
  */
 
@@ -189,11 +189,11 @@ public final class ImportService {
     private static List<UploadedFile> checkForCompressionAndImport(final LoggedInUser loggedInUser, final UploadedFile uploadedFile, HttpSession session, PendingUploadConfig pendingUploadConfig, HashMap<String, ImportTemplateData> templateCache) throws Exception {
         List<UploadedFile> processedUploadedFiles = new ArrayList<>();
         if (uploadedFile.getFileName().toLowerCase().endsWith(".zip") || uploadedFile.getFileName().toLowerCase().endsWith(".7z")) {
-            try{
-                if (uploadedFile.getParameter("password") != null){
+            try {
+                if (uploadedFile.getParameter("password") != null) {
                     File theFile = new File(uploadedFile.getPath());
                     ZipFile zf = new ZipFile(theFile);
-                    if (zf.isEncrypted()){
+                    if (zf.isEncrypted()) {
                         // do what ziputil explode does, extract into a directory of the same name
                         File tempFile = org.zeroturnaround.zip.commons.FileUtils.getTempFileFor(theFile);
                         org.zeroturnaround.zip.commons.FileUtils.moveFile(theFile, tempFile);
@@ -206,7 +206,7 @@ public final class ImportService {
                 } else {
                     ZipUtil.explode(new File(uploadedFile.getPath()));
                 }
-            } catch (ZipException ze){ // try for decrypt
+            } catch (ZipException ze) { // try for decrypt
             }
             // after exploding the original file is replaced with a directory
             File zipDir = new File(uploadedFile.getPath());
@@ -312,7 +312,7 @@ public final class ImportService {
                 if (files.size() > 1 && session != null) {
                     session.setAttribute(ManageDatabasesController.IMPORTSTATUS, counter + "/" + files.size());
                 }
-                if (!f.getName().equals("uploadreport.xlsx")){ // opposite of criteria above . . is this too hacky, should it be zapped or dealt with another way?
+                if (!f.getName().equals("uploadreport.xlsx")) { // opposite of criteria above . . is this too hacky, should it be zapped or dealt with another way?
                     // need new upload file object now!
                     List<String> names = new ArrayList<>(uploadedFile.getFileNames());
                     names.add(f.getName());
@@ -440,7 +440,7 @@ public final class ImportService {
             org.apache.poi.ss.usermodel.Name importName = BookUtils.getName(book, ReportRenderer.AZIMPORTNAME);
             // also just do a simple check on the file name
             String lcName = uploadedFile.getFileName().toLowerCase();
-            if (importName != null || lcName.contains("import templates") || (lcName.contains("preprocessor")&& !lcName.contains("preprocessor="))) {
+            if (importName != null || lcName.contains("import templates") || (lcName.contains("preprocessor") && !lcName.contains("preprocessor="))) {
                 if ((loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
                     if (opcPackage != null) opcPackage.revert();
                     //preprocessors are not assigned to the file, import templates are assigned
@@ -790,16 +790,17 @@ public final class ImportService {
         if (!templateName.toLowerCase().startsWith("sets") && !importTemplateUsedAlready) {
             ImportTemplateData importTemplateData = getImportTemplateForUploadedFile(loggedInUser, uploadedFile, templateCache);
             if (importTemplateData != null) {
-                if (importVersion == null){
+                if (importVersion == null) {
                     // so, if there is no import version set can we derive it from the name?
                     List<List<String>> fivl = sheetInfo(importTemplateData, "Filename Import Version Lookup");
-                    if (fivl != null){
+                    if (fivl != null) {
                         boolean scanning = false;
-                        rows : for (List<String> row : fivl) {
+                        rows:
+                        for (List<String> row : fivl) {
                             String firstCellValue = null;
                             for (String cellValue : row) {
                                 if (!cellValue.isEmpty()) {
-                                    if (importVersion!=null){
+                                    if (importVersion != null) {
                                         //pick up the preprocessor from the cell to the right of the import version
                                         preProcessor = cellValue;
                                         break rows;
@@ -807,33 +808,33 @@ public final class ImportService {
                                     if (firstCellValue == null) {
                                         firstCellValue = cellValue;
                                     } else {
-                                        if (scanning){
+                                        if (scanning) {
                                             //amended by WFC to look for particular sheets in a book (book!sheet) and 'contains' - using '*' as wildcard
-                                            if (firstCellValue.contains("!")){
+                                            if (firstCellValue.contains("!")) {
                                                 int bookEnd = firstCellValue.indexOf("!");
-                                                String bookName = firstCellValue.substring(0,bookEnd).replace("'","");
-                                                String sheetName = firstCellValue.substring(bookEnd + 1).replace("'","");
-                                                if (uploadedFile.getFileNames().size()==2 && nameCompare(uploadedFile.getFileNames().get(1), sheetName) && nameCompare(uploadedFile.getFileNames().get(0), bookName)){
+                                                String bookName = firstCellValue.substring(0, bookEnd).replace("'", "");
+                                                String sheetName = firstCellValue.substring(bookEnd + 1).replace("'", "");
+                                                if (uploadedFile.getFileNames().size() == 2 && nameCompare(uploadedFile.getFileNames().get(1), sheetName) && nameCompare(uploadedFile.getFileNames().get(0), bookName)) {
                                                     importVersion = cellValue;
 
                                                 }
-                                            }else {
+                                            } else {
                                                 for (int i = uploadedFile.getFileNames().size() - 1; i >= 0; i--) {
-                                                    if (nameCompare(uploadedFile.getFileNames().get(i),firstCellValue)) {
+                                                    if (nameCompare(uploadedFile.getFileNames().get(i), firstCellValue)) {
                                                         importVersion = cellValue;
-                                                     }
+                                                    }
                                                 }
                                             }
                                         }
                                     }
-                                }else{
-                                    if (importVersion!=null){
+                                } else {
+                                    if (importVersion != null) {
                                         break rows;
                                     }
                                 }
                             }
                             // EFC hacked in, this code needs to be rewritten
-                            if (importVersion!=null){
+                            if (importVersion != null) {
                                 break;
                             }
                             if ("startswith".equalsIgnoreCase(firstCellValue)) {
@@ -844,7 +845,7 @@ public final class ImportService {
                 }
                 // ok let's check here for the old style of import template as used by Ben Jones
                 Map<String, String> templateParameters = new HashMap<>(); // things like pre processor, file encoding etc
-                if (preProcessor !=null){
+                if (preProcessor != null) {
                     templateParameters.put(PREPROCESSOR, preProcessor);
                 }
                 List<List<String>> standardHeadings = new ArrayList<>();
@@ -855,9 +856,9 @@ public final class ImportService {
                     String importModel = ImportService.IMPORTMODEL;
                     // new logic - an import version's parameters can override the import model
                     List<List<String>> versionSheet = sheetInfo(importTemplateData, importVersion);//case insensitive
-                    if (versionSheet != null){
+                    if (versionSheet != null) {
                         Map<String, String> versionParameters = scanJustParameters(versionSheet);
-                        if (versionParameters.get("importmodel") != null){
+                        if (versionParameters.get("importmodel") != null) {
                             importModel = versionParameters.get("importmodel"); // it may set it to "none" to bock an import model
                         }
                     } else {
@@ -903,18 +904,18 @@ public final class ImportService {
                     }
                     uploadedFile.setTemplateParameters(templateParameters);
                     if (templateParameters.get(SHEETNAMECONTAINS) != null && uploadedFile.getParameter(SHEETNAME) != null) {
-                        String sheetNameContains =templateParameters.get(SHEETNAMECONTAINS).toLowerCase().trim();
+                        String sheetNameContains = templateParameters.get(SHEETNAMECONTAINS).toLowerCase().trim();
 
-                        if (!uploadedFile.getParameter(SHEETNAME).toLowerCase().contains(sheetNameContains)){
+                        if (!uploadedFile.getParameter(SHEETNAME).toLowerCase().contains(sheetNameContains)) {
                             uploadedFile.setError("Not loading as not relevant according to the import template, sheet name must contain " + sheetNameContains);
                             return uploadedFile;
                         }
                     }
 
                     if (templateParameters.get(SHEETNAMEMATCHES) != null && uploadedFile.getParameter(SHEETNAME) != null) {
-                        String sheetNameMatches =templateParameters.get(SHEETNAMEMATCHES).toLowerCase().trim();
+                        String sheetNameMatches = templateParameters.get(SHEETNAMEMATCHES).toLowerCase().trim();
 
-                        if (!uploadedFile.getParameter(SHEETNAME).toLowerCase().equals(sheetNameMatches)){
+                        if (!uploadedFile.getParameter(SHEETNAME).toLowerCase().equals(sheetNameMatches)) {
                             uploadedFile.setError("Not loading as not relevant according to the import template, sheet name must be " + sheetNameMatches);
                             return uploadedFile;
                         }
@@ -1007,7 +1008,7 @@ public final class ImportService {
                                     } else if (headingReference.get(index).size() > 1) { // add the extra ones
                                         extraVersionClauses.addAll(headingReference.get(index).subList(1, headingReference.get(index).size()));
                                     }
-                                }else{
+                                } else {
                                     azquoClauses.addAll(headingReference.get(index));
                                 }
                                 StringBuilder azquoHeadingsAsString = new StringBuilder();
@@ -1096,24 +1097,24 @@ public final class ImportService {
         // new thing - pre processor on the report server
         //override is the parameter is sent by the user
         preProcessor = uploadedFile.getParameter(PREPROCESSOR);
-        if (preProcessor==null){
+        if (preProcessor == null) {
             preProcessor = uploadedFile.getTemplateParameter(PREPROCESSOR);
         }
-        if (preProcessor!=null) {
-            if (!preProcessor.toLowerCase().endsWith(".groovy")){
-                if (!preProcessor.toLowerCase().endsWith(".xlsx")){
+        if (preProcessor != null) {
+            if (!preProcessor.toLowerCase().endsWith(".groovy")) {
+                if (!preProcessor.toLowerCase().endsWith(".xlsx")) {
                     preProcessor += ".xlsx";
                 }
                 ImportTemplate preProcess = ImportTemplateDAO.findForNameAndBusinessId(preProcessor, loggedInUser.getUser().getBusinessId());
                 //preProcessUsingExcel(uploadedFile, SpreadsheetService.getHomeDir() + dbPath + loggedInUser.getBusinessDirectory() + importTemplatesDir + preProcess.getFilenameForDisk()); //
 
-                try{
+                try {
                     preProcessUsingPoi(uploadedFile, SpreadsheetService.getHomeDir() + dbPath + loggedInUser.getBusinessDirectory() + importTemplatesDir + preProcess.getFilenameForDisk()); //
-                }catch(Exception e){
+                } catch (Exception e) {
                     uploadedFile.setError("Preprocessor error in " + uploadedFile.getTemplateParameter(PREPROCESSOR) + " : " + e.getMessage());
                     return uploadedFile;
                 }
-            }else {
+            } else {
                 File file = new File(SpreadsheetService.getGroovyDir() + "/" + preProcessor);
                 if (file.exists()) {
                     System.out.println("Groovy pre processor running  . . . ");
@@ -1155,13 +1156,13 @@ public final class ImportService {
         if (!databaseServer.getIp().equals(LOCALIP)) {// the call via RMI is the same the question is whether the path refers to this machine or another
             uploadedFile.setPath(SFTPUtilities.copyFileToDatabaseServer(new FileInputStream(uploadedFile.getPath()), databaseServer.getSftpUrl()));
         }
-        if (uploadedFile.getTemplateParameter("debug")!= null){
+        if (uploadedFile.getTemplateParameter("debug") != null) {
             List<String> notice = new ArrayList<>();
             //find the name of the workbook...
-            int nameCount = uploadedFile.getFileNames().size() -2;
+            int nameCount = uploadedFile.getFileNames().size() - 2;
             if (nameCount < 0) nameCount = 0;
             String fileName = uploadedFile.getFileNames().get(nameCount);
-            if (fileName.contains(".")){
+            if (fileName.contains(".")) {
                 fileName = fileName.substring(0, fileName.lastIndexOf("."));
             }
             fileName += ".tsv";
@@ -1270,6 +1271,16 @@ public final class ImportService {
                                     }
                                     index++;
                                 }
+                                // need a new criteria for the import wizard - try to match the heading straight, hopefully will not interfere with existing matching
+                                if (index == uploadedFile.getFileHeadings().size()) { // nothing found, try a straight match
+                                    index = 0;
+                                    for (List<String> fileHeading : uploadedFile.getFileHeadings()) {
+                                        if (!fileHeading.isEmpty() && fileHeading.get(0).equalsIgnoreCase(keyColumn.trim())) {
+                                            break;
+                                        }
+                                        index++;
+                                    }
+                                }
                             }
                             if (index < uploadedFile.getFileHeadings().size()) { // then we found the relevant column
                                 // I'm going to go to the server code to look this up
@@ -1313,12 +1324,12 @@ public final class ImportService {
     }
 
 
-    private static boolean nameCompare(String target, String source){
-        if (source.startsWith("*")){
+    private static boolean nameCompare(String target, String source) {
+        if (source.startsWith("*")) {
             if (target.toLowerCase().contains(source.toLowerCase().substring(1))) {
                 return true;
-             }
-        }else {
+            }
+        } else {
             if (target.toLowerCase().startsWith(source.toLowerCase())) {
                 return true;
             }
@@ -1373,7 +1384,7 @@ public final class ImportService {
                             while (customHeadings.size() <= (cellIndex + 1)) { // make sure there are enough lists to represent the heading columns were adding to
                                 customHeadings.add(new ArrayList<>());
                             }
-                            customHeadings.get(cellIndex).add(cellValue.toLowerCase().replace("\n"," ").replace("  ", " ")); // NOTE! We want the looking up fo file headings to be case insensetive, hence the lower case here, also zap carriage returns, they can sneak in and out
+                            customHeadings.get(cellIndex).add(cellValue.toLowerCase().replace("\n", " ").replace("  ", " ")); // NOTE! We want the looking up fo file headings to be case insensetive, hence the lower case here, also zap carriage returns, they can sneak in and out
                         }
                     } else if (mode == ImportSheetScanMode.STANDARDHEADINGS) { // build headings
                         // make sure there are enough lists to represent the heading columns we're adding to. Uses "while" as blank columns could make the cellIndex increase more than one
@@ -1511,7 +1522,7 @@ public final class ImportService {
         //if (colCount++ > 0) bw.write('\t');
         if (cell.getCellType() == CellType.STRING || (cell.getCellType() == CellType.FORMULA && cell.getCachedFormulaResultType() == CellType.STRING)) {
             try {
-                returnString = cell.getStringCellValue().replace(Character.toString((char)160) ,"");// I assume means formatted text? The 160 is some kind of hard space that causes trouble and is unaffected by trim(), zap it
+                returnString = cell.getStringCellValue().replace(Character.toString((char) 160), "");// I assume means formatted text? The 160 is some kind of hard space that causes trouble and is unaffected by trim(), zap it
             } catch (Exception ignored) {
             }
         } else if (cell.getCellType() == CellType.NUMERIC || (cell.getCellType() == CellType.FORMULA && cell.getCachedFormulaResultType() == CellType.NUMERIC)) {
@@ -1544,8 +1555,8 @@ public final class ImportService {
             } else {
                 if (dataFormat.toLowerCase().contains("m") || dataFormat.toLowerCase().contains("y")) {
                     if ((dataFormat.indexOf("/") > 0 && dataFormat.indexOf("/", dataFormat.indexOf("/") + 1) > 0)
-                    || (dataFormat.indexOf("-") > 0 && dataFormat.indexOf("-", dataFormat.indexOf("-") + 1) > 0)
-                    || dataFormat.length() > 6) { // two dashes or two slashes or greater than 6. Used to be just greater than 6, now poi says things like d/m/yy so we need to be a bit more clever
+                            || (dataFormat.indexOf("-") > 0 && dataFormat.indexOf("-", dataFormat.indexOf("-") + 1) > 0)
+                            || dataFormat.length() > 6) { // two dashes or two slashes or greater than 6. Used to be just greater than 6, now poi says things like d/m/yy so we need to be a bit more clever
                         try {
                             returnString = YYYYMMDD.format(cell.getDateCellValue());
                         } catch (Exception e) {
@@ -1926,7 +1937,7 @@ fr.close();
 
 
     // maybe redo at some point checking variable names etc but this is fine enough for the moment todo - further changes since then, EFC check
-    public static void preProcessUsingPoi(UploadedFile uploadedFile, String preprocessor)throws Exception{
+    public static void preProcessUsingPoi(UploadedFile uploadedFile, String preprocessor) throws Exception {
         String filePath = uploadedFile.getPath();
         org.apache.poi.xssf.usermodel.XSSFWorkbook ppBook;
         try {
@@ -1936,9 +1947,9 @@ fr.close();
             throw new Exception("Cannot load preprocessor template from " + preprocessor);
         }
         try {
-            org.apache.poi.ss.usermodel.Name inputLineRegion = BookUtils.getName(ppBook,"az_input");
+            org.apache.poi.ss.usermodel.Name inputLineRegion = BookUtils.getName(ppBook, "az_input");
             AreaReference inputAreaRef = new AreaReference(inputLineRegion.getRefersToFormula(), null);
-            org.apache.poi.ss.usermodel.Name outputLineRegion = BookUtils.getName(ppBook,"az_output");
+            org.apache.poi.ss.usermodel.Name outputLineRegion = BookUtils.getName(ppBook, "az_output");
             AreaReference outputAreaRef = new AreaReference(outputLineRegion.getRefersToFormula(), null);
 
             org.apache.poi.xssf.usermodel.XSSFSheet inputSheet = ppBook.getSheet(inputLineRegion.getSheetName());
@@ -1959,49 +1970,49 @@ fr.close();
             MappingIterator<String[]> lineIterator = (csvMapper.readerFor(String[].class).with(schema).readValues(new File(filePath)));
             Map<String, Integer> inputColumns = new HashMap<>();
             int inputHeadingCount = 0;
-            String heading= getCellValue(inputSheet.getRow(inputRow).getCell(inputHeadingCount));
-            while (inputHeadingCount <= inputSheet.getRow(inputRow).getLastCellNum()){
-                inputColumns.put(normalise(heading),inputHeadingCount);
-                heading= getCellValue(inputSheet.getRow(inputRow).getCell(++inputHeadingCount));
+            String heading = getCellValue(inputSheet.getRow(inputRow).getCell(inputHeadingCount));
+            while (inputHeadingCount <= inputSheet.getRow(inputRow).getLastCellNum()) {
+                inputColumns.put(normalise(heading), inputHeadingCount);
+                heading = getCellValue(inputSheet.getRow(inputRow).getCell(++inputHeadingCount));
 
             }
             int lastOutputCol = outputSheet.getRow(outputRow).getLastCellNum();
             //Map <Integer,Integer> colOnInputRange = new HashMap<>();
             boolean firstLine = true;
-            Map <Integer, Integer> inputColumnMap = new HashMap<>();
+            Map<Integer, Integer> inputColumnMap = new HashMap<>();
             int lineNo = 0;
             int headingsFound = 0;
             while (lineIterator.hasNext()) {
                 clearRow(inputSheet.getRow(inputRow + 1));
                 String[] line = lineIterator.next();
-                 int colNo = 0;
+                int colNo = 0;
                 //boolean validLine = true;
                 if (lineNo < inputRow) {
 
-                    for (String cellVal:line){
-                        setCellValue(inputSheet,lineNo, colNo, cellVal);
+                    for (String cellVal : line) {
+                        setCellValue(inputSheet, lineNo, colNo, cellVal);
                         colNo++;
                     }
-                }else{
+                } else {
                     int headingCount = headingsFound;
                     if (firstLine) {
-                        headingCount =line.length;
+                        headingCount = line.length;
                         headingsFound = line.length;
                     }
-                    for (int datacount=0;datacount<headingCount;datacount++) {
+                    for (int datacount = 0; datacount < headingCount; datacount++) {
                         String cellVal = "";
-                        if (datacount< line.length){
+                        if (datacount < line.length) {
                             cellVal = line[datacount];
                         }
                         if (firstLine) {
                             Integer targetCol = inputColumns.get(normalise(cellVal));
-                            if (targetCol != null&& inputColumnMap.get(colNo)==null) {
+                            if (targetCol != null && inputColumnMap.get(colNo) == null) {
                                 //note - ignores heading if no map found
                                 inputColumnMap.put(colNo, targetCol);
                             }
                         } else {
                             if (inputColumnMap.get(colNo) != null) {
-                                setCellValue(inputSheet,inputRow + 1, inputColumnMap.get(colNo), cellVal);
+                                setCellValue(inputSheet, inputRow + 1, inputColumnMap.get(colNo), cellVal);
                             }
                         }
                         colNo++;
@@ -2021,11 +2032,11 @@ fr.close();
                         }
                         fileWriter.write("\r\n");
                         firstLine = false;
-                    }  else {
-                        for (int oRow=outputRow + 1;oRow<=lastOutputRow;oRow++){
+                    } else {
+                        for (int oRow = outputRow + 1; oRow <= lastOutputRow; oRow++) {
                             for (colNo = outputCol; colNo < lastOutputCol; colNo++) {
                                 String cellVal = getCellValue(outputSheet.getRow(oRow).getCell(colNo));
-                                if (colNo > 0){
+                                if (colNo > 0) {
                                     fileWriter.write("\t" + normalise(cellVal));
                                 } else {
                                     if (normalise(cellVal).length() > 0) {
@@ -2043,13 +2054,13 @@ fr.close();
             fileWriter.close();
             uploadedFile.setPath(outFile);
             ppBook.close();
-        } catch (Exception e){
+        } catch (Exception e) {
             ppBook.close();
             throw e;
         }
     }
 
-    private static void setCellValue(org.apache.poi.xssf.usermodel.XSSFSheet sheet, int row, int col, String cellVal){
+    private static void setCellValue(org.apache.poi.xssf.usermodel.XSSFSheet sheet, int row, int col, String cellVal) {
         XSSFCell targetCell = sheet.getRow(row).getCell(col);
         if (targetCell == null) {
             targetCell = sheet.getRow(row).createCell(col);
@@ -2058,10 +2069,10 @@ fr.close();
             targetCell.setCellValue((double) DateUtils.excelDate(DateUtils.isADate(cellVal)));
         } else {
             //isNumber returns 'true' for cellVal = "16L", then parseDouble exceptions
-            try{
+            try {
                 targetCell.setCellValue(Double.parseDouble(cellVal));
-            } catch(Exception e){
-                    targetCell.setCellValue(cellVal);
+            } catch (Exception e) {
+                targetCell.setCellValue(cellVal);
             }
             /*
              if (NumberUtils.isNumber(cellVal)) {
@@ -2074,9 +2085,10 @@ fr.close();
         }
 
     }
+
     private static void clearRow(Row row) {
         int lastCol = row.getLastCellNum();
-        for (int col = 0; col <= lastCol;col++) {
+        for (int col = 0; col <= lastCol; col++) {
             Cell cell = row.getCell(col);
             if (cell != null) {
                 CellStyle cs = cell.getCellStyle();
@@ -2088,13 +2100,13 @@ fr.close();
         }
     }
 
-    private static String normalise(String value){
+    private static String normalise(String value) {
         //not sure how the system read the cr as \\n
-        return value.replace("\n"," ").replace("\\\\n"," ").replace("  "," ");
+        return value.replace("\n", " ").replace("\\\\n", " ").replace("  ", " ");
     }
 
     // todo factor. Makes sense in here
-    public static void preprocesorTest(MultipartFile[] preprocessorTest, ModelMap model, LoggedInUser loggedInUser){
+    public static void preprocesorTest(MultipartFile[] preprocessorTest, ModelMap model, LoggedInUser loggedInUser) {
         MultipartFile zip = null;
         MultipartFile preProcessor = null;
         if (preprocessorTest.length == 2) {
@@ -2192,20 +2204,20 @@ fr.close();
                         }
                         csvW.close();
                         fos.close();
-                        if (!emptySheet){
+                        if (!emptySheet) {
                             UploadedFile uf = new UploadedFile(tempPath, zipEntryUploadFile.getFileNames(), fileNameParams, true, false);
                             ImportService.preProcessUsingPoi(uf, preprocessorTempLocation.getPath());
                             String name = uf.getPath();
-                            if (name.contains("/")){
+                            if (name.contains("/")) {
                                 name = name.substring(name.lastIndexOf("/") + 1);
-                            } else if (name.contains("\\")){
+                            } else if (name.contains("\\")) {
                                 name = name.substring(name.lastIndexOf("\\") + 1);
                             }
-                            if (name.endsWith(" converted")){
+                            if (name.endsWith(" converted")) {
                                 name = name.substring(0, name.length() - 10);
                                 // now try to zap the last number
                                 int timestampLength = (System.currentTimeMillis() + "").length();
-                                if (name.endsWith(".tsv")){
+                                if (name.endsWith(".tsv")) {
                                     name = name.substring(0, name.length() - (timestampLength + 4)) + ".tsv";
                                 }
                             }
