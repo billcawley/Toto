@@ -430,6 +430,10 @@ public class ZKComposer extends SelectorComposer<Component> {
                                 if (!deleted && (rowNo >= size || !sheet.getInternalSheet().getCell(newHeadings.getRow() + rowNo, newHeadings.getColumn()).getStringValue().equals(oldHeadings.get(rowNo).get(0)))) {
                                     rowNo += oldSize - size;
                                     deleted = true;
+                                    // EFC note - I do not fully understand the code here but I do know it was causing an index out of bounds exception by pushing rowNo >= oldData size so breakif that's the case
+                                    if (rowNo >= oldSize){
+                                        break;
+                                    }
                                 }
                                 revisedData.add(oldData.get(rowNo));
                                 revisedHeadings.add(oldHeadings.get(rowNo));
