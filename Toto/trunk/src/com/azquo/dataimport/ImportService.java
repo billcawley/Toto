@@ -1955,6 +1955,7 @@ fr.close();
             org.apache.poi.xssf.usermodel.XSSFSheet inputSheet = ppBook.getSheet(inputLineRegion.getSheetName());
             org.apache.poi.xssf.usermodel.XSSFSheet outputSheet = ppBook.getSheet(outputLineRegion.getSheetName());
             int inputRow = inputAreaRef.getFirstCell().getRow();
+            int existingHeadingRows = inputAreaRef.getLastCell().getRow() - inputRow;
             int outputRow = outputAreaRef.getFirstCell().getRow();
             String outFile = filePath + " converted";
             File writeFile = new File(outFile);
@@ -1968,60 +1969,99 @@ fr.close();
                     .withoutQuoteChar();
 
             MappingIterator<String[]> lineIterator = (csvMapper.readerFor(String[].class).with(schema).readValues(new File(filePath)));
-            Map<String, Integer> inputColumns = new HashMap<>();
+            Map<List<String>, Integer> inputColumns = new HashMap<>();
             int inputHeadingCount = 0;
-            String heading = getCellValue(inputSheet.getRow(inputRow).getCell(inputHeadingCount));
-            while (inputHeadingCount <= inputSheet.getRow(inputRow).getLastCellNum()) {
-                inputColumns.put(normalise(heading), inputHeadingCount);
-                heading = getCellValue(inputSheet.getRow(inputRow).getCell(++inputHeadingCount));
+            String heading = getCellValue(inputSheet.getRow(inputRow + existingHeadingRows - 1).getCell(inputHeadingCount));
+            int lastCellNum = inputSheet.getRow(inputRow).getLastCellNum();
+            while (inputHeadingCount <= lastCellNum) {
+                if (heading.length() > 0){
+                    List<String> headings = new ArrayList<>();
+                    for (int row = 0;row < existingHeadingRows;row++){
+                        headings.add(getCellValue(inputSheet.getRow(inputRow + row).getCell(inputHeadingCount)));
 
+                    }
+                    inputColumns.put(headings, inputHeadingCount++);
+
+                }
             }
             int lastOutputCol = outputSheet.getRow(outputRow).getLastCellNum();
             //Map <Integer,Integer> colOnInputRange = new HashMap<>();
-            boolean firstLine = true;
-            Map<Integer, Integer> inputColumnMap = new HashMap<>();
+            boolean isNewHeadings = true;
+            Map <Integer, Integer> inputColumnMap = new HashMap<>();
             int lineNo = 0;
             int headingsFound = 0;
             while (lineIterator.hasNext()) {
-                clearRow(inputSheet.getRow(inputRow + 1));
+                clearRow(inputSheet.getRow(inputRow + existingHeadingRows));
                 String[] line = lineIterator.next();
-                int colNo = 0;
+                 int colNo = 0;
                 //boolean validLine = true;
                 if (lineNo < inputRow) {
 
-                    for (String cellVal : line) {
-                        setCellValue(inputSheet, lineNo, colNo, cellVal);
+                    for (String cellVal:line){
+                        setCellValue(inputSheet,lineNo, colNo, cellVal);
                         colNo++;
                     }
-                } else {
-                    int headingCount = headingsFound;
-                    if (firstLine) {
-                        headingCount = line.length;
-                        headingsFound = line.length;
-                    }
-                    for (int datacount = 0; datacount < headingCount; datacount++) {
-                        String cellVal = "";
-                        if (datacount < line.length) {
-                            cellVal = line[datacount];
-                        }
-                        if (firstLine) {
-                            Integer targetCol = inputColumns.get(normalise(cellVal));
-                            if (targetCol != null && inputColumnMap.get(colNo) == null) {
-                                //note - ignores heading if no map found
-                                inputColumnMap.put(colNo, targetCol);
+                }else{
+                    if (isNewHeadings) {
+                        //read off all the headings.  If there is more than one line of headings, then all but the last
+                        // line inherit headings from the columns to the left.
+                        List<List<String>> newHeadings = new ArrayList<>();
+                        for (int col = 0;col < line.length; col++){
+                            List<String> newHeading = new ArrayList<>();
+                            String cellVal = normalise(line[col]);
+                            if (existingHeadingRows> 1 && cellVal=="" && col > 0){
+                                cellVal = newHeadings.get(col - 1).get(0);
                             }
-                        } else {
+                            newHeading.add(line[col]);
+                            newHeadings.add(newHeading);
+                        }
+                        for (int headingRow = 1; headingRow < existingHeadingRows;headingRow++){
+                            if (!lineIterator.hasNext()){
+                                break;
+                            }
+                            line = lineIterator.next();
+                            for (int col = 0;col < line.length;col++){
+                                String cellVal = normalise(line[col]);
+                                if (existingHeadingRows> 1 && cellVal=="" && col > 0){
+                                    cellVal = newHeadings.get(col - 1).get(0);
+                                }
+                                if (col>= newHeadings.size()){//if the next line is longer, copy the last cell
+                                    newHeadings.add(newHeadings.get(col - 1));
+                                    newHeadings.get(col).set(headingRow, cellVal);
+                                }else{
+                                    newHeadings.get(col).add(cellVal);
+                                }
+                            }
+                        }
+                        for (int col = 0;col<newHeadings.size();col++){
+                           Integer targetCol = inputColumns.get(newHeadings.get(col));
+                           //check that the last row of headings is not blank, then look it up
+                           if (newHeadings.get(col).get(existingHeadingRows - 1).length() > 0 && targetCol != null&& inputColumnMap.get(col)==null) {
+                               //note - ignores heading if no map found
+                               inputColumnMap.put(col, targetCol);
+                           }
+                        }
+                        if (!lineIterator.hasNext())
+                            break;
+                        line = lineIterator.next();
+
+                    }else {
+                        //handle the data
+                        for (int datacount = 0; datacount < inputColumnMap.size(); datacount++) {
                             if (inputColumnMap.get(colNo) != null) {
-                                setCellValue(inputSheet, inputRow + 1, inputColumnMap.get(colNo), cellVal);
+                                String cellVal = "";
+                                if (datacount < line.length) {
+                                    cellVal = line[datacount];
+                                 }
+                                setCellValue(inputSheet, inputRow + existingHeadingRows, inputColumnMap.get(colNo), cellVal);
                             }
+                            colNo++;
                         }
-                        colNo++;
                     }
                     XSSFFormulaEvaluator.evaluateAllFormulaCells(ppBook);
-                    int lastOutputRow = outputAreaRef.getLastCell().getRow();
                     int outputCol = 0;
 
-                    if (firstLine) {
+                    if (isNewHeadings) {
                         for (colNo = outputCol; colNo <= lastOutputCol; colNo++) {
                             String cellVal = getCellValue(outputSheet.getRow(outputRow).getCell(colNo));
                             if (colNo > 0) {
@@ -2031,21 +2071,20 @@ fr.close();
                             }
                         }
                         fileWriter.write("\r\n");
-                        firstLine = false;
-                    } else {
-                        for (int oRow = outputRow + 1; oRow <= lastOutputRow; oRow++) {
-                            for (colNo = outputCol; colNo < lastOutputCol; colNo++) {
-                                String cellVal = getCellValue(outputSheet.getRow(oRow).getCell(colNo));
-                                if (colNo > 0) {
-                                    fileWriter.write("\t" + normalise(cellVal));
-                                } else {
-                                    if (normalise(cellVal).length() > 0) {
-                                        fileWriter.write(normalise(cellVal));
-                                    }
+                        isNewHeadings = false;
+                    }  else {
+                        int oRow=outputRow + 1;
+                        for (colNo = outputCol; colNo < lastOutputCol; colNo++) {
+                            String cellVal = getCellValue(outputSheet.getRow(oRow).getCell(colNo));
+                            if (colNo > 0){
+                                fileWriter.write("\t" + normalise(cellVal));
+                            } else {
+                                if (normalise(cellVal).length() > 0) {
+                                    fileWriter.write(normalise(cellVal));
                                 }
                             }
-                            fileWriter.write("\r\n");
                         }
+                        fileWriter.write("\r\n");
                     }
                 }
                 lineNo++;
@@ -2054,7 +2093,7 @@ fr.close();
             fileWriter.close();
             uploadedFile.setPath(outFile);
             ppBook.close();
-        } catch (Exception e) {
+        } catch (Exception e){
             ppBook.close();
             throw e;
         }
