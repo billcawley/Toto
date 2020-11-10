@@ -107,15 +107,35 @@ public class NameQueryParser {
             if (setFormula.toLowerCase().indexOf(StringLiterals.FILTERBY, firstQuote) != -1) {
                 throw new Exception("cannot have more than one filterby " + setFormula);
             }
-
-            if (contextSource == null) {
-                //throw new Exception("cannot use filterby without context source - query must be matched to a region " + setFormula);
-                contextSource = new ArrayList<>();
-            }
-
             filterByCriteria = setFormula.substring(firstQuote + 1, secondQuote);
             setFormula = setFormula.substring(0, firstQuote) + setFormula.substring(secondQuote + 1); // zap the criteria - it will mess up the parsing below
-        }
+
+            if (contextSource == null) {
+                contextSource = new ArrayList<>();
+                int contextStart = setFormula.toLowerCase().indexOf(StringLiterals.CONTEXT);
+                if (contextStart >=0){
+
+                    //context `name1` `name2` ....
+                    int contextIndex = contextStart + + StringLiterals.CONTEXT.length() + 1;
+                    List<String> context = new ArrayList<>();
+                    while (contextIndex< setFormula.length() && setFormula.substring(contextIndex).trim().charAt(0)=='`'){
+                        int endName = setFormula.substring(contextIndex).trim().substring(1).indexOf('`');
+                        if (endName >=0){
+                             context.add(setFormula.substring(contextIndex + 1).trim().substring(0,endName).trim());
+                             contextIndex += endName + 2;
+                             while (contextIndex < setFormula.length() && (setFormula.charAt(contextIndex)==',' || setFormula.charAt(contextIndex)==' ')){
+                                 contextIndex++;
+                             }
+                        }
+                    }
+                    contextSource. add(context);
+                    //zap the clause....
+                    setFormula = setFormula.substring(0, contextStart) + setFormula.substring(contextIndex);
+                }
+
+            }
+
+         }
 
         List<NameSetList> nameStack = new ArrayList<>(); // now use the container object, means we only create new collections at the last minute as required
         List<String> formulaStrings = new ArrayList<>();
@@ -158,6 +178,8 @@ public class NameQueryParser {
         }
         setFormula = setFormula.replace(StringLiterals.ASGLOBAL, StringLiterals.ASGLOBALSYMBOL + "").replace(StringLiterals.FILTERBY, StringLiterals.FILTERBYSYMBOL + "");
         setFormula = setFormula.replace(StringLiterals.AS, StringLiterals.ASSYMBOL + "").replace(StringLiterals.CONTAINS, StringLiterals.CONTAINSSYMBOL + "");
+
+
 
         setFormula = StringUtils.shuntingYardAlgorithm(setFormula);
         Pattern p = Pattern.compile("[\\+\\-\\*/" + StringLiterals.NAMEMARKER + StringLiterals.ASSYMBOL + StringLiterals.ASGLOBALSYMBOL + StringLiterals.CONTAINSSYMBOL + StringLiterals.FILTERBYSYMBOL + "]");//recognises + - * / NAMEMARKER  NOTE THAT - NEEDS BACKSLASHES (not mentioned in the regex tutorial on line
