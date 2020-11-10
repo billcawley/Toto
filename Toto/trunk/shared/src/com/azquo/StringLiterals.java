@@ -38,6 +38,7 @@ public class StringLiterals {
     public static final String CHILDREN = "children";
     public static final String ATTRIBUTESET = "attributeset";
     public static final String FILTERBY = "filterby"; // see how this is used in NameQueryParser
+    public static final String CONTEXT= "context"; // see how this is used in NameQueryParser
     public static final String SELECT = "select";
     public static final String CONTAINS = "contains";
     public static final String TEMPORARYNAMES  = "temporary names";
