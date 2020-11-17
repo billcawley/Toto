@@ -13,10 +13,10 @@ import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
 import com.github.rcaller.rstuff.RCaller;
 import com.github.rcaller.rstuff.RCode;
 import org.apache.commons.lang.math.NumberUtils;
-import org.zkoss.zss.api.*;
-import org.zkoss.zss.api.model.*;
-import org.zkoss.zss.api.model.Sheet;
-import org.zkoss.zss.model.*;
+import io.keikai.api.*;
+import io.keikai.api.model.*;
+import io.keikai.api.model.Sheet;
+import io.keikai.model.*;
 
 import java.io.ByteArrayOutputStream;
 import java.rmi.RemoteException;
@@ -197,10 +197,10 @@ public class ReportRenderer {
                                 CopySheet(sheetRange, repeatItem);
                                 Sheet newSheet = book.getSheetAt(book.getNumberOfSheets() - 1);// it will be the latest
                                 for (SName name : namesForSheet) {
+                                    SName newName = book.getInternalBook().getNameByName(name.getName(), newSheet.getSheetName());
                                     if (!name.getName().equalsIgnoreCase(AZREPEATSHEET)) { // don't copy the repeat or we'll get a recursive loop!
                                         // cloneSheet won't copy the names, need to make new ones
                                         // the new ones need to be applies to as well as refers to the new sheet
-                                        SName newName = book.getInternalBook().createName(name.getName(), newSheet.getSheetName());
                                         String newFormula;
                                         if (newSheet.getSheetName().contains(" ") && !name.getRefersToFormula().startsWith("'")) { // then we need to add quotes
                                             newFormula = name.getRefersToFormula().replace(sheet.getSheetName() + "!", "'" + newSheet.getSheetName() + "'!");
@@ -212,6 +212,8 @@ public class ReportRenderer {
                                             }
                                         }
                                         newName.setRefersToFormula(newFormula);
+                                    } else {
+                                        book.getInternalBook().deleteName(newName); // now Keikai is automatically copying all names then we need to zap the repeat sheet to stop recursion
                                     }
                                 }
                                 SName newRepeatItem = BookUtils.getNameByName(AZREPEATITEM, newSheet);

@@ -14,8 +14,8 @@ import javax.servlet.http.HttpServletResponse;
 
 
 import com.azquo.spreadsheet.controller.OnlineController;
-import org.zkoss.zss.api.model.Book;
-import org.zkoss.zss.jsp.BookProvider;
+import io.keikai.api.model.Book;
+import io.keikai.jsp.BookProvider;
 
 public class BookProviderForJSP implements BookProvider {
     public Book loadBook(ServletContext servletContext, HttpServletRequest request, HttpServletResponse res) {

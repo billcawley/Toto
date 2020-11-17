@@ -17,7 +17,7 @@
         window.skipSetting = 0;
         window.skipMarker = 0;
 //get the necessary zk ids form zssjsp[component_id]
-//'myzss' is the sparedhseet id that you gaved in sparedsheet tag
+//'myzss' is the sparedhseet id that you gave in spreadsheet tag
         var desktopId = zssjsp['myzss'].desktopId;
         var zssUuid = zssjsp['myzss'].uuid;
 //use jquery api to post ajax to your servlet (in this demo, it is AjaxBookServlet),

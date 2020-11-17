@@ -1,6 +1,6 @@
 <zk>
     <library-property>
-        <name>org.zkoss.zssex.rt.Runtime.directory</name>
+        <name>io.keikaiex.rt.Runtime.directory</name>
         <value>/usr/share/zklicense/</value>
     </library-property>
     <library-property>
@@ -12,7 +12,7 @@
         <value>en_GB</value>
     </library-property>
     <library-property>
-        <name>org.zkoss.zss.import.cache</name>
+        <name>io.keikai.import.cache</name>
         <value>true</value> <!-- turn the import cache on; default is false if not specified -->
     </library-property>
 </zk>

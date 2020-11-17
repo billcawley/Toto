@@ -45,9 +45,8 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.nio.file.*;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -168,32 +167,36 @@ public class ManageDatabasesController {
             , @RequestParam(value = "eddtest", required = false) String eddtest
     ) {
 /*        if (eddtest != null) {
-            List<Path> paths = new ArrayList<>();
-            paths.add(Paths.get("/home/edward/Downloads/artest/Risk/RENEWAL/"));
-            paths.add(Paths.get("/home/edward/Downloads/artest/Risk/POLICY/"));
-            paths.add(Paths.get("/home/edward/Downloads/artest/Risk/ENDORSEMENT/"));
-            paths.add(Paths.get("/home/edward/Downloads/artest/Risk/Reinstate/"));
-            paths.add(Paths.get("/home/edward/Downloads/artest/Risk/Cancel/"));
-            paths.add(Paths.get("/home/edward/Downloads/artest/Premium/RENEWAL/"));
-            paths.add(Paths.get("/home/edward/Downloads/artest/Premium/POLICY/"));
-            paths.add(Paths.get("/home/edward/Downloads/artest/Premium/ENDORSEMENT/"));
-            paths.add(Paths.get("/home/edward/Downloads/artest/Premium/Reinstate/"));
-            paths.add(Paths.get("/home/edward/Downloads/artest/Premium/Cancel/"));
-
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
             final DocumentBuilder builder;
             try {
                 builder = factory.newDocumentBuilder();
-                for (Path testDir : paths) {
-                    Map<String, Map<String, String>> filesValues = new HashMap<>();// filename, values
-                    AtomicReference<String> rootDocumentName = new AtomicReference<>();
-                    Set<String> headings = new HashSet<>();
-                    try (Stream<Path> list = Files.list(testDir)) {
+                Files.walkFileTree(Paths.get("/home/edward/Downloads/artest/"), new FileVisitor<Path>() {
+                    @Override
+                    public FileVisitResult preVisitDirectory(Path path, BasicFileAttributes basicFileAttributes) throws IOException {
+                        return FileVisitResult.CONTINUE;
+                    }
+
+                    @Override
+                    public FileVisitResult visitFile(Path path, BasicFileAttributes basicFileAttributes) throws IOException {
+                        return FileVisitResult.CONTINUE;
+                    }
+
+                    @Override
+                    public FileVisitResult visitFileFailed(Path path, IOException e) throws IOException {
+                        return FileVisitResult.CONTINUE;
+                    }
+
+                    @Override
+                    public FileVisitResult postVisitDirectory(Path testDir, IOException e) throws IOException {
+                        Map<String, Map<String, String>> filesValues = new HashMap<>();// filename, values
+                        AtomicReference<String> rootDocumentName = new AtomicReference<>();
+                        Set<String> headings = new HashSet<>();
+                        Stream<Path> list = Files.list(testDir);
                         list.forEach(path -> {
                             // Do stuff
                             if (!Files.isDirectory(path)) { // skip any directories
                                 try {
-
                                     String origName = path.getFileName().toString();
                                     if (origName.toLowerCase().contains(".xml")) {
                                         String fileKey = origName.substring(0, origName.lastIndexOf("."));
@@ -203,36 +206,35 @@ public class ManageDatabasesController {
                                         // further to this we'll only process files that have a corresponding temp file as Dev and UAT share directories so if there's no matching file in temp don't do anything
                                         DBCron.readXML(fileKey, filesValues, rootDocumentName, builder, path, headings, lastModifiedTime);
                                     }
-                                } catch (Exception e) {
-                                    e.printStackTrace();
+                                } catch (Exception e1) {
+                                    e1.printStackTrace();
                                 }
                             }
                         });
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-
-                    if (!filesValues.isEmpty()) {
-                        // now Hanover has been added there's an issue that files can come back and go in different databases
-                        // so we may need to make more than one file for a block of parsed files, batch them up
-                        List<Map<String, String>> lines = new ArrayList<>(filesValues.values());
-                        // base the file name off the db name also
-                        String csvFileName = System.currentTimeMillis() + "-eddtest" + rootDocumentName.get() + ".tsv";
-                        BufferedWriter bufferedWriter = Files.newBufferedWriter(testDir.resolve(csvFileName), StandardCharsets.UTF_8);
-                        for (String heading : headings) {
-                            bufferedWriter.write(heading + "\t");
-                        }
-                        bufferedWriter.newLine();
-                        for (Map<String, String> lineValues : lines) {
+                        if (!filesValues.isEmpty()) {
+                            // now Hanover has been added there's an issue that files can come back and go in different databases
+                            // so we may need to make more than one file for a block of parsed files, batch them up
+                            List<Map<String, String>> lines = new ArrayList<>(filesValues.values());
+                            // base the file name off the db name also
+                            String csvFileName = System.currentTimeMillis() + "-eddtest" + rootDocumentName.get() + ".tsv";
+                            BufferedWriter bufferedWriter = Files.newBufferedWriter(testDir.resolve(csvFileName), StandardCharsets.UTF_8);
                             for (String heading : headings) {
-                                String value = lineValues.get(heading);
-                                bufferedWriter.write((value != null ? value : "") + "\t");
+                                bufferedWriter.write(heading + "\t");
                             }
                             bufferedWriter.newLine();
+                            for (Map<String, String> lineValues : lines) {
+                                for (String heading : headings) {
+                                    String value = lineValues.get(heading);
+                                    bufferedWriter.write((value != null ? value : "") + "\t");
+                                }
+                                bufferedWriter.newLine();
+                            }
+                            bufferedWriter.close();
                         }
-                        bufferedWriter.close();
+
+                        return FileVisitResult.CONTINUE;
                     }
-                }
+                });
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -247,7 +249,7 @@ public class ManageDatabasesController {
             caller.runAndReturnResult("avg");
             double[] result = caller.getParser().getAsDoubleArray("avg");
             System.out.println(result[0]);*/
-//        }
+        //}
 
 
         // I assume secure until we move to proper spring security

@@ -10,15 +10,15 @@ import org.zkoss.poi.ss.usermodel.Workbook;
 import org.zkoss.poi.ss.util.AreaReference;
 import org.zkoss.poi.ss.util.CellReference;
 import org.zkoss.poi.xssf.usermodel.XSSFName;
-import org.zkoss.zss.api.Range;
-import org.zkoss.zss.api.Ranges;
-import org.zkoss.zss.api.model.Book;
-import org.zkoss.zss.api.model.CellData;
-import org.zkoss.zss.api.model.Sheet;
-import org.zkoss.zss.model.CellRegion;
-import org.zkoss.zss.model.SCell;
-import org.zkoss.zss.model.SName;
-import org.zkoss.zss.model.SSheet;
+import io.keikai.api.Range;
+import io.keikai.api.Ranges;
+import io.keikai.api.model.Book;
+import io.keikai.api.model.CellData;
+import io.keikai.api.model.Sheet;
+import io.keikai.model.CellRegion;
+import io.keikai.model.SCell;
+import io.keikai.model.SName;
+import io.keikai.model.SSheet;
 
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
@@ -92,8 +92,8 @@ public class BookUtils {
                                 /*
                                 todo, sort this
 java.lang.IllegalStateException: is ERROR, not the one of [STRING, BLANK]
-        at org.zkoss.zss.model.impl.AbstractCellAdv.checkFormulaResultType(AbstractCellAdv.java:71)
-        at org.zkoss.zss.model.impl.AbstractCellAdv.getStringValue(AbstractCellAdv.java:92)
+        at io.keikai.model.impl.AbstractCellAdv.checkFormulaResultType(AbstractCellAdv.java:71)
+        at io.keikai.model.impl.AbstractCellAdv.getStringValue(AbstractCellAdv.java:92)
         at com.azquo.spreadsheet.zk.BookUtils.nameToStringLists(BookUtils.java:79)
         at com.azquo.spreadsheet.zk.BookUtils.nameToStringLists(BookUtils.java:32)
 
@@ -333,7 +333,7 @@ java.lang.IllegalStateException: is ERROR, not the one of [STRING, BLANK]
         throw new Exception("no valid range " + nameName + " found");
     }
 
-    public static org.zkoss.zss.api.model.Sheet  getSheetFor(String nameName, Book book){
+    public static io.keikai.api.model.Sheet  getSheetFor(String nameName, Book book){
         //only added because CellRegion does not appear to have a 'getSheet() method
         for (SName name: book.getInternalBook().getNames()) {
             if (name.getName().equalsIgnoreCase(nameName)){

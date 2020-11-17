@@ -15,11 +15,11 @@ import com.azquo.spreadsheet.transport.CellForDisplay;
 import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
 import com.azquo.util.AzquoMailer;
 import org.zkoss.zk.ui.util.Clients;
-import org.zkoss.zss.api.Ranges;
-import org.zkoss.zss.api.model.Book;
-import org.zkoss.zss.api.model.Sheet;
-import org.zkoss.zss.model.*;
-import org.zkoss.zss.ui.Spreadsheet;
+import io.keikai.api.Ranges;
+import io.keikai.api.model.Book;
+import io.keikai.api.model.Sheet;
+import io.keikai.model.*;
+import io.keikai.ui.Spreadsheet;
 
 import java.time.format.DateTimeFormatter;
 import java.util.*;
