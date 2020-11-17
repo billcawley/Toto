@@ -4,6 +4,7 @@ import com.azquo.DateUtils;
 import com.azquo.StringLiterals;
 import com.azquo.memorydb.core.Name;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
+import org.apache.commons.lang.math.NumberUtils;
 
 import java.util.*;
 
@@ -53,6 +54,10 @@ class NameFilterFunctions {
                 String valRhs = "";
                 boolean fixed = false;
                 boolean isADate = false;
+                boolean isNumber = false;
+                double lhsNum = 0;
+                double rhsNum = 0;
+
                 if (clauseRhs.charAt(0) == '"') {
                     valRhs = strings.get(Integer.parseInt(clauseRhs.substring(1, 3)));// anything left in quotes is referenced in the strings list
                     fixed = true;
@@ -60,13 +65,28 @@ class NameFilterFunctions {
                     if (DateUtils.isADate(valRhs) != null) {
                         isADate = true;
                     }
+                }else{
+                    if (NumberUtils.isNumber(clauseRhs)){
+                        rhsNum = Double.parseDouble(clauseRhs);
+                        isNumber = true;
+                        fixed = true;
+
+                    }
                 }
 
                 Set<Name> namesToRemove = HashObjSets.newMutableSet();
                 for (Name name : namesToFilter) {
                     String valLhs = name.getAttribute(clauseLhs);
+
                     if (valLhs == null) {
                         valLhs = "";
+                    }
+                    if (isNumber){
+                        try{
+                            lhsNum = Double.parseDouble(valLhs);
+                        }catch (Exception e){
+                            rhsNum = 0;
+                        }
                     }
                     if (isADate) {
                         valLhs = DateUtils.standardizeDate(valLhs);
@@ -78,7 +98,12 @@ class NameFilterFunctions {
                         }
                     }
                     boolean OK = false;
-                    int comp = valLhs.compareTo(valRhs);
+                    double comp = 0;
+                    if (isNumber){
+                        comp = lhsNum - rhsNum;
+                    }else{
+                        comp = valLhs.compareTo(valRhs);
+                    }
                     switch (op) {
                         case '=':
                             // todo - add string wildcards, shouldn't be too difficult. Use * as that's what excel uses
