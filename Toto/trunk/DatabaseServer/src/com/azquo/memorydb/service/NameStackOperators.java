@@ -92,7 +92,7 @@ class NameStackOperators {
             lastName = bottomNames;
         }
         for (Name child : lastName) {
-            child.findAllParents(parents); // new call to internal function cuts garbage generation a lot
+            child.findAllParents(parents, 1); // new call to internal function cuts garbage generation a lot
         }
         //System.out.println("find all parents in parse query part 1 " + (now - start) + " set sizes parents " + parents.size() + " heap increase = " + (((runtime.totalMemory() - runtime.freeMemory()) / mb) - heapMarker) + "MB");
         //start = System.currentTimeMillis();
