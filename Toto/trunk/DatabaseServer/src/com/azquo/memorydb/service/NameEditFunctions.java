@@ -27,14 +27,29 @@ class NameEditFunctions {
             return findDuplicateNames(azquoMemoryDBConnection, setFormula);
         }
 // todo, finish and make it work
-/*        if (setFormula.startsWith("remove")) {
+
+        if (setFormula.startsWith("orphan")) {
+            //e.g  orphan `suspect set` children from `global set` children  removes all grandchildren in 'global set' which are in 'suspect set` children
             setFormula = setFormula.substring("remove".length()).trim();
             if (setFormula.indexOf(" from ") > 0){
-                String parent = setFormula.substring(0, setFormula.indexOf(" from "));
-                String childToRemove = setFormula.substring(setFormula.indexOf(" from ") + " from ".length()).trim();
+                String child = setFormula.substring(0, setFormula.indexOf(" from "));
+                String parent = setFormula.substring(setFormula.indexOf(" from ") + " from ".length()).trim();
+                Collection<Name> children = NameQueryParser.parseQuery(azquoMemoryDBConnection,child);
+                Collection<Name> parents = NameQueryParser.parseQuery(azquoMemoryDBConnection, parent);
+                for (Name parentName:parents){
+                    for (Name childName:parentName.getChildren()){
+                        if (children.contains(childName)){
+                            //note only removing one child at a time - for loop may be corrupted
+                            parentName.removeFromChildrenWillBePersisted(childName, azquoMemoryDBConnection);
+                            break;
+                        }
+                    }
+                }
+
+
             }
-//            return findDuplicateNames(azquoMemoryDBConnection, setFormula);
-        }*/
+            return findDuplicateNames(azquoMemoryDBConnection, setFormula);
+        }
         if (setFormula.startsWith("zap ")) {
             Collection<Name> names;
             try {
