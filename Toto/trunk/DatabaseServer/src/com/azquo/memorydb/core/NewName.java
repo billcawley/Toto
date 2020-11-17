@@ -394,7 +394,7 @@ public final class NewName extends Name {
     public Collection<Name> findAllParents() {
         findAllParentsCount.incrementAndGet();
         final Set<Name> allParents = HashObjSets.newMutableSet(); // should be ok to use these now - maybe use updateable map?
-        findAllParents(allParents);
+        findAllParents(allParents, 1);
         return allParents;
     }
 
@@ -402,7 +402,7 @@ public final class NewName extends Name {
 
     // note : this was using getParents, since it was really being hammered this was no good due to the garbage generation of that function, hence the change
     // public and stateless, in here as it accesses things I don't want accessed outside
-    public void findAllParents(final Set<Name> allParents) {
+    public void findAllParents(final Set<Name> allParents, int level) {
         findAllParents2Count.incrementAndGet();
         Name[] parentsRefCopy = parents; // ok in theory the parents could get modified in the for loop, this wouldn't be helpful so I'll keep a copy of the reference to use in case name.parents gets switched out
         for (Name parent : parentsRefCopy) { // should be the same as a for int i; i < parentsRefCopy.length; i++
@@ -410,7 +410,7 @@ public final class NewName extends Name {
                 System.out.println("DATABASE CORRUPTION " + getDefaultDisplayName() + " id " + getId() + " has a null parent");
             } else {
                 if (allParents.add(parent)) { // the function was moved in here to access this array directly. Externally it would need to be wrapped in an unmodifiable List. Means garbage!
-                    parent.findAllParents(allParents);
+                    parent.findAllParents(allParents, level++);
                 }
             }
         }
