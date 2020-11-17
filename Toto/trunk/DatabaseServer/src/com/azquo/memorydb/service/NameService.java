@@ -185,7 +185,7 @@ public final class NameService {
             Name found =getNameByAttribute(azquoMemoryDBConnection, name, null, attributeNames);
             if (found==null){
                 //check whether this is a local name that needs creating
-                if (name.toLowerCase().substring(0,3).equals("az_") && attributeNames.size()>1){
+                if (name.toLowerCase().startsWith("az_") && attributeNames.size()>1){
                     Name possibleExisting = getNameByAttribute(azquoMemoryDBConnection, name.substring(3), null, attributeNames);
                     if (possibleExisting!=null){
                         //then copy it and include it in Filter Sets
