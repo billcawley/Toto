@@ -1,6 +1,6 @@
 <%-- Copyright (C) 2016 Azquo Ltd. --%><%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/functions" prefix="fn" %>
-<%@ taglib prefix="zssjsp" uri="http://www.zkoss.org/jsp/zss" %>
+<%@ taglib prefix="kkjsp" uri="http://www.keikai.io/jsp/kk" %>
 <!DOCTYPE html>
 <html lang="en-GB">
 
@@ -20,7 +20,7 @@
 	<link href="https://code.jquery.com/ui/1.11.4/themes/black-tie/jquery-ui.css" rel="stylesheet" type="text/css">
 	
 	<c:if test="${requirezss}">
-		<zssjsp:head/>
+		<kkjsp:head/>
 	</c:if>
 	
 	<link href="/css/style.css" rel="stylesheet" type="text/css">

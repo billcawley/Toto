@@ -40,14 +40,16 @@ public class ZKComposer extends SelectorComposer<Component> {
     @Wire
     Spreadsheet myzss;
     private ZKContextMenu zkContextMenu;
-    private Popup filterPopup;
+    private Window filterPopup;
 
     public void doAfterCompose(Component comp) throws Exception {
         super.doAfterCompose(comp);
         zkContextMenu = new ZKContextMenu(myzss);
-        filterPopup = new Popup();
+        filterPopup = new Window();
+        filterPopup.setMode(Window.Mode.OVERLAPPED);
+        filterPopup.setVisible(false);
         filterPopup.setId("filterPopup");
-        ZKContextMenu.setPopupStyle(filterPopup);
+        //ZKContextMenu.setPopupStyle(filterPopup);
          // much hacking went into getting an appropriate object to hook into to make our extra contextual menu
         if (myzss.getFirstChild() != null) {
             myzss.getFirstChild().appendChild(filterPopup);
@@ -251,7 +253,7 @@ public class ZKComposer extends SelectorComposer<Component> {
             }
         }
         if (reload) {
-            Clients.showBusy("Reloading . . .");
+            Clients.showBusy(myzss,"Reloading . . .");
             org.zkoss.zk.ui.event.Events.echoEvent("onReloadWhileClientProcessing", myzss, null);
         }
     }
@@ -259,7 +261,7 @@ public class ZKComposer extends SelectorComposer<Component> {
     @Listen("onReloadWhileClientProcessing = #myzss")
     public void onReloadWhileClientProcessing() {
         ZKComposerUtils.reloadBook(myzss, myzss.getBook());
-        Clients.clearBusy();
+        Clients.clearBusy(myzss);
     }
 
     // used directly below, I need a list of the following
@@ -529,7 +531,6 @@ public class ZKComposer extends SelectorComposer<Component> {
             });
             listbox.setMold("paging");
             listbox.setPageSize(10);*/
-        listbox.setRows(10);
         Listhead listhead = new Listhead();
         Listheader listheader = new Listheader();
         listheader.setLabel("Select All");
@@ -538,6 +539,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         listbox.setMultiple(true);
         listbox.setCheckmark(true);
         listbox.setWidth("350px");
+        listbox.setHeight("550px");
         listbox.appendChild(listhead);
         try {
             List<FilterTriple> filterOptions = CommonReportUtils.getFilterListForQuery(loggedInUser, selectionList, selectionName);
@@ -577,7 +579,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                         SpreadsheetService.setUserChoice(loggedInUser, selectionName, first.getLabel());
                     }
                     RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).createFilterSet(loggedInUser.getDataAccessToken(), selectionName, loggedInUser.getUser().getEmail(), childIds);
-                    filterPopup.close();
+                    filterPopup.setVisible(false);
                 });
 
         Button saveAndReload = new Button();
@@ -601,9 +603,9 @@ public class ZKComposer extends SelectorComposer<Component> {
                         SpreadsheetService.setUserChoice(loggedInUser, selectionName, first.getLabel());
                     }
                     RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).createFilterSet(loggedInUser.getDataAccessToken(), selectionName, loggedInUser.getUser().getEmail(), childIds);
-                    filterPopup.close();
+                    filterPopup.setVisible(false);
                     try {
-                        Clients.showBusy("Reloading . . .");
+                        Clients.showBusy(myzss,"Reloading . . .");
                         org.zkoss.zk.ui.event.Events.echoEvent("onReloadWhileClientProcessing", myzss, null);
 //                        ZKComposerUtils.reloadBook(myzss, book);
                     } catch (Exception e) {
@@ -613,8 +615,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         Button cancel = new Button();
         cancel.setWidth("80px");
         cancel.setLabel("Cancel");
-        cancel.addEventListener("onClick",
-                event1 -> filterPopup.close());
+        cancel.addEventListener("onClick",event1 -> filterPopup.setVisible(false));
         filterPopup.appendChild(new Separator());
         filterPopup.appendChild(save);
         filterPopup.appendChild(new Space());
@@ -622,7 +623,14 @@ public class ZKComposer extends SelectorComposer<Component> {
         filterPopup.appendChild(new Separator());
         filterPopup.appendChild(saveAndReload);
         // "after_start" is the position we'd want
-        filterPopup.open(pageX, pageY);
+        filterPopup.setLeft(pageX + "px");
+        pageY-=300;
+        if (pageY < 0){
+            pageY = 0;
+        }
+        filterPopup.setTop(pageY + "px");
+        filterPopup.setVisible(true);
+        //filterPopup.open(pageX, pageY);
     }
 /* not used might as well comment for the mo
     @Listen("onCellSelection = #myzss")

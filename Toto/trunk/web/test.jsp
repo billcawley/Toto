@@ -1,5 +1,5 @@
 <%@page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
-<%@ taglib prefix="zssjsp" uri="http://www.zkoss.org/jsp/zss" %>
+<%@ taglib prefix="kkjsp" uri="http://www.keikai.io/jsp/kk" %>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -133,7 +133,7 @@
 
 
     </style>
-    <zssjsp:head/>
+    <kkjsp:head/>
 </head>
 <%
     //prevent page cache in browser side
@@ -161,10 +161,10 @@
         // on any of these we may want to see the log . . .
         window.skipSetting = 0;
         window.skipMarker = 0;
-//get the necessary zk ids form zssjsp[component_id]
+//get the necessary zk ids form kkjsp[component_id]
 //'myzss' is the sparedhseet id that you gaved in sparedsheet tag
-        var desktopId = zssjsp['myzss'].desktopId;
-        var zssUuid = zssjsp['myzss'].uuid;
+        var desktopId = kkjsp['myzss'].desktopId;
+        var zssUuid = kkjsp['myzss'].uuid;
 //use jquery api to post ajax to your servlet (in this demo, it is AjaxBookServlet),
 //provide desktop id and spreadsheet uuid to access zk component data in your servlet
         jq.ajax({url: "/api/ZKSpreadsheetCommand",//the servlet url to handle ajax request
@@ -174,7 +174,7 @@
     //the method to handle ajax result from your servlet
     function handleAjaxResult(result) {
 //process the json result that contains zk client update information
-        zssjsp.processJson(result);
+        kkjsp.processJson(result);
 //use your way to hanlde you ajax message or error
         if (result.message) {
             alert(result.message);
@@ -323,9 +323,9 @@
     </div>
 </div>
 <div style="height: calc(100% - 100px);">
-    <zssjsp:spreadsheet
+    <kkjsp:spreadsheet
             id="myzss"  src="/home/edward/Downloads/TEST.xlsx" width="100%"
-            height="800px" maxVisibleRows="200" maxVisibleColumns="40" showSheetbar="true" showToolbar="true" showFormulabar="true" showContextMenu="true"/>    <!--    zssjsp:spreadsheet id="myzss"
+            height="800px" maxVisibleRows="200" maxVisibleColumns="40" showSheetbar="true" showToolbar="true" showFormulabar="true" showContextMenu="true"/>    <!--    kkjsp:spreadsheet id="myzss"
                             bookProvider="ZKAzquoBookProvider"
                             apply="ZKComposer"
                             width="1850px" height="900px"
