@@ -52,6 +52,7 @@ public class ValueCalculationService {
         int valNo = 0;
         StringTokenizer st = new StringTokenizer(calcString, " ");
         // exposure * PD * LGD - exp(ECL)
+        boolean counting = false;
         while (st.hasMoreTokens()) {
             String term = st.nextToken();
             if (OPS.contains(term)) { // operation
@@ -142,6 +143,8 @@ public class ValueCalculationService {
             } else { // a value, not in the Azquo sense, a number or reference to a name
                 if (StringLiterals.EXP.equalsIgnoreCase(term)) { // factor off to something more general later
                     values[valNo++] = EXPFUNCTION;
+                }else if (StringLiterals.COUNT.equalsIgnoreCase(term)){
+                    counting = true;
                 } else if (NumberUtils.isNumber(term)) {
                     values[valNo++] = Double.parseDouble(term);
                 } else {
@@ -229,7 +232,11 @@ public class ValueCalculationService {
                     if (debugInfo != null) {
                         debugInfo.append("\t").append(value).append("\t");
                     }
-                    values[valNo++] = value;
+                    if (counting){
+                        values[valNo++]= valuesHook.values.size();
+                    }else{
+                        values[valNo++] = value;
+                    }
                 }
             }
         }
