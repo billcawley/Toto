@@ -14,6 +14,7 @@ import com.azquo.dataimport.ImportService;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.spreadsheet.transport.json.JsonChildren;
 import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
+import io.keikai.api.model.Book;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -49,6 +50,7 @@ public class LoggedInUser implements Serializable {
 
     private Database database;
     private OnlineReport onlineReport;
+    private Book book;
 
     // I'm a little unsure about this being separate but it will work for the moment
     private DatabaseServer databaseServer;
@@ -91,6 +93,7 @@ public class LoggedInUser implements Serializable {
         sentCellsMaps = new HashMap<>();
         this.database = database;
         this.onlineReport = null;
+        this.book = null;
         this.databaseServer = databaseServer;
         //this.readPermissions = readPermissions;
         //this.writePermissions = writePermissions;
@@ -179,10 +182,17 @@ public class LoggedInUser implements Serializable {
         return onlineReport;
     }
 
+    public void setBook(Book book){
+        this.book = book;
+    }
+
+    public Book getBook() {
+        return book;
+    }
+
     public void setOnlineReport(OnlineReport onlineReport){
         this.onlineReport = onlineReport;
     }
-
     public void setDatabaseWithServer(DatabaseServer databaseServer, Database database) {
         this.databaseServer = databaseServer;
         this.database = database;
