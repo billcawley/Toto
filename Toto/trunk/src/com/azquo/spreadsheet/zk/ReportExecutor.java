@@ -90,6 +90,7 @@ public class ReportExecutor {
             return book; // unchanged, nothing to run
         }
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
+        loggedInUser.setBook(book);
         StringBuilder loops = runExecute(loggedInUser, executeCommand.toString(), null, -1, true);
         if (book.getInternalBook().getAttribute(OnlineController.BOOK_PATH) != null) { // it might be null in the case of the Excel Controller, not a problem, return null
             final Book newBook = Importers.getImporter().imports(new File((String) book.getInternalBook().getAttribute(OnlineController.BOOK_PATH)), "Report name");
@@ -153,6 +154,8 @@ public class ReportExecutor {
             for (int lineNo = 0; lineNo < commands.size(); lineNo++) { // makes checking ahead easier
                 String line = commands.get(lineNo);
                 String trimmedLine = CommonReportUtils.replaceUserChoicesInQuery(loggedInUser, line);//replaces [choice] with chosen
+                String message = "Executing: " + trimmedLine;
+                System.out.println(message);
                 if (trimmedLine.toLowerCase().startsWith("for each")) {
                     // gather following lines - what we'll be executing
                     int onwardLineNo = lineNo + 1;
@@ -181,7 +184,11 @@ public class ReportExecutor {
                         }
                     }
                     // if not a for each I guess we just execute? Will check for "do"
-                } else if (trimmedLine.toLowerCase().startsWith("do")) {
+                }else if (trimmedLine.toLowerCase().startsWith("execute ")){
+                    runExecuteCommandForBook(loggedInUser.getBook(), trimmedLine.substring(8).trim());
+                }
+
+                else if (trimmedLine.toLowerCase().startsWith("do")) {
                     boolean debug = false;
                     if (trimmedLine.toLowerCase().endsWith("debug")) {
                         debug = true;
@@ -328,7 +335,7 @@ public class ReportExecutor {
                             }
                         }
                     }
-                } else if (trimmedLine.toLowerCase().startsWith("repeat until outcome")) { // new conditional logic
+                }else if (trimmedLine.toLowerCase().startsWith("repeat until outcome")) { // new conditional logic
                     // similar to the for each - gather sub commands
                     String condition = trimmedLine.substring("repeat until outcome".length()).trim();
                     if (condition.contains(" ")) {
