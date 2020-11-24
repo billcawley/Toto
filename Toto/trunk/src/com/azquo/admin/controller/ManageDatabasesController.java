@@ -164,6 +164,7 @@ public class ManageDatabasesController {
             , @RequestParam(value = "deleteTemplateId", required = false) String deleteTemplateId
             , @RequestParam(value = "templateassign", required = false) String templateassign
             , @RequestParam(value = "withautos", required = false) String withautos
+            , @RequestParam(value = "userComment", required = false) String userComment
     ) {
         // I assume secure until we move to proper spring security
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
@@ -308,8 +309,9 @@ public class ManageDatabasesController {
             , @RequestParam(value = "backup", required = false) String backup
             , @RequestParam(value = "template", required = false) String template
             , @RequestParam(value = "team", required = false) String team
+            , @RequestParam(value = "userComment", required = false) String userComment
             , @RequestParam(value = "preprocessorTest", required = false) MultipartFile[] preprocessorTest
-    ) {
+     ) {
 
         if (database != null) {
             request.getSession().setAttribute("lastSelected", database);
@@ -437,7 +439,7 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
 
                             } else { // a straight upload, this is the only place that can deal with multiple files being selected for upload
                                 HttpSession session = request.getSession();
-                                return handleImport(loggedInUser, session, model, uploadFiles);
+                                return handleImport(loggedInUser, session, model, userComment, uploadFiles);
                             }
                         }
                     }
@@ -493,7 +495,7 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
     }
 
     // factored due to pending uploads, need to check the factoring after the prototype is done
-    private static String handleImport(LoggedInUser loggedInUser, HttpSession session, ModelMap model, final MultipartFile[] uploadFiles) {
+    private static String handleImport(LoggedInUser loggedInUser, HttpSession session, ModelMap model, String userComment, final MultipartFile[] uploadFiles) {
         // need to add in code similar to report loading to give feedback on imports
         final List<UploadedFile> uploadedFiles = new ArrayList<>();
         UploadedFile uf = null;
@@ -515,7 +517,7 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
                 for (UploadedFile uploadedFile : uploadedFiles) {
                     // so in here the new thread we set up the loading as it was originally before and then redirect the user straight to the logging page
                     try {
-                        toSetInSession.addAll(ImportService.importTheFile(loggedInUser, uploadedFile, session, null));
+                        toSetInSession.addAll(ImportService.importTheFile(loggedInUser, uploadedFile, session, null, userComment));
                         Map<String, String> params = new HashMap<>();
                         params.put("File", uploadedFile.getFileName());
                         UploadRecord mostRecentForUser = UploadRecordDAO.findMostRecentForUser(loggedInUser.getUser().getId());
@@ -841,7 +843,7 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
                     toReturn.append("<tr>");
                     if (checkboxId != -1) {
                         toReturn.append("<td><div align=\"center\"><input type=\"checkbox\" name=\"" + checkboxId + "-" + warningLine.getLineNo() + "\" id=\"" + checkboxId + "-" + warningLine.getLineNo() + "\" /></div></td>");
-                        toReturn.append("<td nowrap><a href=\"#\" onclick=\"doComment('" + checkboxId + "-" + warningLine.getLineNo() + "'); return false;\">" + (comments != null && comments.contains(warningLine.getIdentifier()) ? "See Comment(s)" : "Add Comment") + "</a></td>");
+                        toReturn.append("<td nowrap><a href=\"#\" onclick=\"doComment('" + checkboxId + "-" + warningLine.getLineNo() + "'); return false;\">" + (comments != null && comments.contains(warningLine.getIdentifier()) ? "Edit" : "Add Comment") + "</a></td>");
                     }
                     for (String error : errors) {
                         toReturn.append("<td nowrap>" + (warningLine.getErrors().containsKey(error) ? "<span style=\"background-color: #FFAAAA; color: #000000\">" + warningLine.getErrors().get(error) + "</span>" : "") + "</td>");

@@ -74,6 +74,7 @@ Created by IntelliJ IDEA.
                         <tbody>
                         <tr>
                             <td><label for="uploadFile">Upload Files:</label> <input id="uploadFile" type="file" name="uploadFile" multiple></td>
+                            <td><label for="userComment">Comment:</label><input id="userComment" size="40" name="userComment"></td>
                             <td>
                                 <label for="uploadDatabase">Database:</label>
                                 <select name="database" id="uploadDatabase">
@@ -106,7 +107,7 @@ Created by IntelliJ IDEA.
                         <form method="post"> File Name <input size="20" name="fileSearch"></form>
                     </td>
                     <td>Count</td>
-                    <td>File Type</td>
+                    <td width= "30%">Comment</td>
                     <td colspan="4"><a href="/api/ManageDatabases?withautos=true" class="button small" title="Show Automated Uploads">Show Automated Uploads</a></td>
                 </tr>
                 </thead>
@@ -119,11 +120,11 @@ Created by IntelliJ IDEA.
                         <td>${upload.userName}</td>
                         <td>${upload.fileName}</td>
                         <td><a href="/api/ManageDatabases?fileSearch=${upload.fileName}">${upload.count}</a></td>
-                        <td>${upload.fileType}</td>
+                        <td>${upload.userComment}</td>
                         <td><a href="/api/UploadRecordComment?urid=${upload.id}" target="new"
-                               class="button inspect small" data-title="Comment" title="Comment" id="comment${upload.id}">
+                               class="button inspect small" data-title="Edit" title="Comment" id="comment${upload.id}">
                             <c:if test="${upload.userComment.length() > 0}">
-                                See Comment
+                                Edit
                             </c:if>
                             <c:if test="${upload.userComment.length() == 0}">
                                 Comment

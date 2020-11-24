@@ -113,6 +113,11 @@ public final class ImportService {
      parameters per file down to the file (not sheet!) check for parameters that have been set in a big chunk on the pending uploads screen
      */
     public static List<UploadedFile> importTheFile(final LoggedInUser loggedInUser, final UploadedFile uploadedFile, HttpSession session, PendingUploadConfig pendingUploadConfig) throws Exception { // setup just to flag it
+        return importTheFile(loggedInUser, uploadedFile, session, pendingUploadConfig, null);
+    }
+
+
+        public static List<UploadedFile> importTheFile(final LoggedInUser loggedInUser, final UploadedFile uploadedFile, HttpSession session, PendingUploadConfig pendingUploadConfig, String userComment) throws Exception { // setup just to flag it
         if (session != null) {
             session.removeAttribute(ManageDatabasesController.IMPORTSTATUS);
         }
@@ -173,7 +178,7 @@ public final class ImportService {
             }
             UploadRecord uploadRecord = new UploadRecord(0, LocalDateTime.now(), loggedInUser.getUser().getBusinessId()
                     , loggedInUser.getDatabase().getId(), loggedInUser.getUser().getId()
-                    , uploadedFile.getFileName() + (processedUploadedFiles.size() == 1 && processedUploadedFiles.get(0).getReportName() != null ? " - (" + processedUploadedFiles.get(0).getReportName() + ")" : ""), uploadedFile.getFileType() != null ? uploadedFile.getFileType() : "", comments, originalFilePath, null);
+                    , uploadedFile.getFileName() + (processedUploadedFiles.size() == 1 && processedUploadedFiles.get(0).getReportName() != null ? " - (" + processedUploadedFiles.get(0).getReportName() + ")" : ""), uploadedFile.getFileType() != null ? uploadedFile.getFileType() : "", comments, originalFilePath, userComment);
             UploadRecordDAO.store(uploadRecord);
             // and update the counts on the manage database page
             AdminService.updateNameAndValueCounts(loggedInUser, loggedInUser.getDatabase());
