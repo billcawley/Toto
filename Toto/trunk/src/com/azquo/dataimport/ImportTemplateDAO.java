@@ -92,6 +92,13 @@ public class ImportTemplateDAO {
         return StandardDAO.findOneWithWhereSQLAndParameters("  WHERE " + TEMPLATE_NAME + " = :" + TEMPLATE_NAME + " and " + BUSINESSID + " = :" + BUSINESSID, TABLENAME, importTemplateRowMapper, namedParams);
     }
 
+    public static ImportTemplate findForName(final String name) {
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(TEMPLATE_NAME, name);
+        return StandardDAO.findOneWithWhereSQLAndParameters("  WHERE " + TEMPLATE_NAME + " = :" + TEMPLATE_NAME, TABLENAME, importTemplateRowMapper, namedParams);
+    }
+
+
     public static ImportTemplate findForNameAndUserId(final String name, int userId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(TEMPLATE_NAME, name + "%");
