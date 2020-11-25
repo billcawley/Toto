@@ -404,12 +404,14 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
                                 LoginService.switchDatabase(loggedInUser, database); // could be blank now
                                 assignTemplateToDatabase = true;
                             }
+                            String warning = "";
 
                             if (!isImportTemplate) {
-                                model.put("error", "That does not appear to be an import template.");
-                            } else {
-                                model.put("error", formatUploadedFiles(Collections.singletonList(ImportService.uploadImportTemplate(uploadedFile, loggedInUser, assignTemplateToDatabase)), -1, false, null));
+                                warning = "</br>That does not appear to be an import template.  Assume that it's an 'include' file";
                             }
+                            String error = formatUploadedFiles(Collections.singletonList(ImportService.uploadImportTemplate(uploadedFile, loggedInUser, assignTemplateToDatabase)), -1, false, null);
+                            model.put("error", error + warning);
+
                         } catch (Exception e) {
                             model.put("error", e.getMessage());
                             e.printStackTrace();
