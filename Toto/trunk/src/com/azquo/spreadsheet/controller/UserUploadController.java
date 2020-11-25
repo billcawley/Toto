@@ -211,13 +211,14 @@ public class UserUploadController {
 
                                 }
                             }
-
+                            String warning = "";
                             if (!isImportTemplate) {
-                                model.put("error", "That does not appear to be an import template.");
-                            } else {
-                                model.put("error", ManageDatabasesController.formatUploadedFiles(Collections.singletonList(ImportService.uploadImportTemplate(uploadedFile, loggedInUser, assignTemplateToDatabase)), -1, false, null));
+                                warning = "</br>That does not appear to be an import template.  Assuming that it's an 'include' file";
                             }
-                        } catch (Exception e) {
+                            String error = ManageDatabasesController.formatUploadedFiles(Collections.singletonList(ImportService.uploadImportTemplate(uploadedFile, loggedInUser, assignTemplateToDatabase)), -1, false, null);
+                            model.put("error", error + warning);
+
+                         } catch (Exception e) {
                             model.put("error", e.getMessage());
                         }
                     } else if (database != null) {
