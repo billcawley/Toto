@@ -17,6 +17,7 @@ import org.apache.poi.xssf.usermodel.XSSFCell;
 import org.apache.poi.xssf.usermodel.XSSFFormulaEvaluator;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.multipart.MultipartFile;
+import org.w3c.dom.*;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
@@ -44,10 +45,6 @@ import groovy.lang.GroovyShell;
 import groovy.lang.Script;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.math.NumberUtils;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 import org.xml.sax.*;
 import org.zeroturnaround.zip.ZipUtil;
 
@@ -1111,10 +1108,9 @@ public final class ImportService {
                     preProcessor += ".xlsx";
                 }
                 ImportTemplate preProcess = ImportTemplateDAO.findForNameAndBusinessId(preProcessor, loggedInUser.getUser().getBusinessId());
-                //preProcessUsingExcel(uploadedFile, SpreadsheetService.getHomeDir() + dbPath + loggedInUser.getBusinessDirectory() + importTemplatesDir + preProcess.getFilenameForDisk()); //
 
                 try {
-                    preProcessUsingPoi(uploadedFile, SpreadsheetService.getHomeDir() + dbPath + loggedInUser.getBusinessDirectory() + importTemplatesDir + preProcess.getFilenameForDisk()); //
+                    preProcessUsingPoi(loggedInUser,uploadedFile, SpreadsheetService.getHomeDir() + dbPath + loggedInUser.getBusinessDirectory() + importTemplatesDir + preProcess.getFilenameForDisk()); //
                 } catch (Exception e) {
                     uploadedFile.setError("Preprocessor error in " + uploadedFile.getTemplateParameter(PREPROCESSOR) + " : " + e.getMessage());
                     return uploadedFile;
@@ -1942,7 +1938,7 @@ fr.close();
 
 
     // maybe redo at some point checking variable names etc but this is fine enough for the moment todo - further changes since then, EFC check
-    public static void preProcessUsingPoi(UploadedFile uploadedFile, String preprocessor) throws Exception {
+    public static void preProcessUsingPoi(LoggedInUser loggedInUser, UploadedFile uploadedFile, String preprocessor) throws Exception {
         String filePath = uploadedFile.getPath();
         org.apache.poi.xssf.usermodel.XSSFWorkbook ppBook;
         try {
@@ -1956,7 +1952,61 @@ fr.close();
             AreaReference inputAreaRef = new AreaReference(inputLineRegion.getRefersToFormula(), null);
             org.apache.poi.ss.usermodel.Name outputLineRegion = BookUtils.getName(ppBook, "az_output");
             AreaReference outputAreaRef = new AreaReference(outputLineRegion.getRefersToFormula(), null);
+            org.apache.poi.ss.usermodel.Name includesLineRegion = BookUtils.getName(ppBook, "az_includes");
 
+            AreaReference includesAreaRef = null;
+            if(includesLineRegion!=null){
+                org.apache.poi.xssf.usermodel.XSSFSheet inputSheet = ppBook.getSheet(inputLineRegion.getSheetName());
+                includesAreaRef = new AreaReference(includesLineRegion.getRefersToFormula(), null);
+                org.apache.poi.xssf.usermodel.XSSFSheet includesSheet = ppBook.getSheet(includesLineRegion.getSheetName());
+
+                for (int inRow=includesAreaRef.getFirstCell().getRow(); inRow <= includesAreaRef.getLastCell().getRow(); inRow++){
+                    String sourceName = getCellValue(includesSheet.getRow(inRow).getCell(0));
+                    String existingSheetName = getCellValue(includesSheet.getRow(inRow).getCell(1));
+                    if (existingSheetName.length()> 0){
+                        org.apache.poi.xssf.usermodel.XSSFSheet includeSheet = ppBook.getSheet(existingSheetName);
+                        if (includeSheet!=null){
+                            //removeSheetAt does NOT remove the name! hence.
+                            String newName = "deleted" + inRow;
+                            ppBook.setSheetName(ppBook.getSheetIndex(existingSheetName), newName);
+                            ppBook.removeSheetAt(ppBook.getSheetIndex(newName));
+                        }
+                    }
+                    String ppSheetName = ppBook.getSheetAt(0).getSheetName();
+                    org.apache.poi.xssf.usermodel.XSSFWorkbook includeBook;
+                    ImportTemplate includeFile = ImportTemplateDAO.findForName(sourceName);
+                     try {
+                        includeBook = new org.apache.poi.xssf.usermodel.XSSFWorkbook(new File(SpreadsheetService.getHomeDir() + dbPath + loggedInUser.getBusinessDirectory() + importTemplatesDir + includeFile.getFilenameForDisk()));
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        throw new Exception("Cannot load include book: " + sourceName);
+                    }
+                     String insertName = includeBook.getSheetAt(0).getSheetName();
+                     //TODO  Test for existing sheet with the name
+                     Sheet newSheet = ppBook.createSheet(insertName);
+                     ppBook.setSheetOrder(insertName,1);
+
+                     PoiCopySheet.copySheet(includeBook.getSheetAt(0), ppBook.getSheetAt(1));
+                    String newSheetName = ppBook.getSheetAt(1).getSheetName();
+                    includesSheet.getRow(inRow).getCell(1).setCellValue(newSheetName );
+                    int nameCount = ppBook.getNumberOfNames();
+                    for (int i = 0; i < nameCount; i++) {
+                        org.apache.poi.ss.usermodel.Name name = ppBook.getNameAt(i);
+                        if (name.getSheetName().equals(newSheetName) && name.getNameName().startsWith("az_")){
+                            Name ppName = ppBook.getName(name.getNameName());
+                            if (ppName!=null){
+                                String formula = name.getRefersToFormula();
+                                if (formula!=null&& formula.startsWith("=")){
+                                    ppName.setRefersToFormula("testing");
+                                }else{
+                                    name.setRefersToFormula("testing");
+                                }
+
+                            }
+                        }
+                    }
+                 }
+            }
             org.apache.poi.xssf.usermodel.XSSFSheet inputSheet = ppBook.getSheet(inputLineRegion.getSheetName());
             org.apache.poi.xssf.usermodel.XSSFSheet outputSheet = ppBook.getSheet(outputLineRegion.getSheetName());
             int inputRow = inputAreaRef.getFirstCell().getRow();
@@ -1982,7 +2032,7 @@ fr.close();
                 if (heading.length() > 0){
                     List<String> headings = new ArrayList<>();
                     for (int row = 0;row < existingHeadingRows;row++){
-                        headings.add(getCellValue(inputSheet.getRow(inputRow + row).getCell(inputHeadingCount)));
+                        headings.add(normalise(getCellValue(inputSheet.getRow(inputRow + row).getCell(inputHeadingCount))));
 
                     }
                     inputColumns.put(headings, inputHeadingCount++);
@@ -2017,7 +2067,7 @@ fr.close();
                             if (existingHeadingRows> 1 && cellVal=="" && col > 0){
                                 cellVal = newHeadings.get(col - 1).get(0);
                             }
-                            newHeading.add(line[col]);
+                            newHeading.add(cellVal);
                             newHeadings.add(newHeading);
                         }
                         for (int headingRow = 1; headingRow < existingHeadingRows;headingRow++){
@@ -2146,7 +2196,7 @@ fr.close();
 
     private static String normalise(String value) {
         //not sure how the system read the cr as \\n
-        return value.replace("\n", " ").replace("\\\\n", " ").replace("  ", " ");
+        return value.replace("\\\\n", " ").replace("\n", " ").replace("  ", " ");
     }
 
     // todo factor. Makes sense in here
@@ -2250,7 +2300,7 @@ fr.close();
                         fos.close();
                         if (!emptySheet) {
                             UploadedFile uf = new UploadedFile(tempPath, zipEntryUploadFile.getFileNames(), fileNameParams, true, false);
-                            ImportService.preProcessUsingPoi(uf, preprocessorTempLocation.getPath());
+                            ImportService.preProcessUsingPoi(loggedInUser, uf, preprocessorTempLocation.getPath());
                             String name = uf.getPath();
                             if (name.contains("/")) {
                                 name = name.substring(name.lastIndexOf("/") + 1);
