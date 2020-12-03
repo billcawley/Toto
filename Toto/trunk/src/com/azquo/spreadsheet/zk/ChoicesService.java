@@ -96,11 +96,16 @@ public class ChoicesService {
                                         row++;// like starting at 1
                                         SCell vCell = validationSheet.getInternalSheet().getCell(row, numberOfValidationsAdded);
                                         vCell.setCellStyle(sheet.getInternalSheet().getCell(chosenRegion.getRow(), chosenRegion.getColumn()).getCellStyle());
-                                        try {
-                                            Date date = df.parse(choiceOption);
-                                            vCell.setDateValue(date);
-                                        } catch (Exception e) {
+                                        // so the following bit of code was parsing a date on, for example 2020-11-24 policies which we wouldn't want it to. For the mo will check for spaces and not do the parse then
+                                        if (choiceOption.trim().contains(" ")){
                                             BookUtils.setValue(vCell, choiceOption);
+                                        } else {
+                                            try {
+                                                Date date = df.parse(choiceOption);
+                                                vCell.setDateValue(date);
+                                            } catch (Exception e) {
+                                                BookUtils.setValue(vCell, choiceOption);
+                                            }
                                         }
                                     }
                                     if (row > 0) { // if choice options is empty this will not work
