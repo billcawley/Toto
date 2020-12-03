@@ -1,3 +1,25 @@
+02-12-20
+
+Keikai license allocation adjusted
+
+Another xls bug fixed for risk agg
+
+Includes on the Import Wizard
+
+23-11-20
+
+R integration
+
+Support for more than one headings line in the pre processor
+
+Filterby improvements
+
+Moved to Keikai
+
+XLSX
+
+Considerable import wizard supporting work for the new "generic" database
+
 08-10-20
 
 order auto backups list

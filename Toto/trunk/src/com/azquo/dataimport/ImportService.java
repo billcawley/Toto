@@ -1534,6 +1534,9 @@ public final class ImportService {
             if (dataFormat == null) {
                 dataFormat = cell.getCellStyle().getDataFormatString();
             }
+            if (dataFormat == null) {
+                dataFormat = ""; // stop npes, can seem to happen with xls files
+            }
             Double returnNumber = cell.getNumericCellValue();
             returnString = returnNumber.toString();
             if (returnString.contains("E")) {

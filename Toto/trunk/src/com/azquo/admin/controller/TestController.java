@@ -2,8 +2,13 @@ package com.azquo.admin.controller;
 
 import com.azquo.dataimport.*;
 import com.azquo.spreadsheet.transport.json.ExcelJsonRequest;
+import com.csvreader.CsvWriter;
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.node.ValueNode;
 import com.github.rcaller.rstuff.RCaller;
 import com.github.rcaller.rstuff.RCode;
 import com.microsoft.aad.adal4jsample.HttpClientHelper;
@@ -165,22 +170,20 @@ public class TestController {
                     stringBuffer.append(line);
                 }
 
-                 OauthResponse oauthResponse = jacksonMapper.readValue(stringBuffer.toString(), OauthResponse.class);
+                OauthResponse oauthResponse = jacksonMapper.readValue(stringBuffer.toString(), OauthResponse.class);
 /*
 
 order ok - date constraint?
 line items ok - can get in bulk? Perhaps not . . .
 delivery address - again with the bulk question
 returns - nothing there?
-order source
+order source - slaes channel? Seems emptyn on first poc but ok
 cancelled
-customer
+customer - address enough?
 
  */
-//                url = new URL("http://jbi.shopwaretest.de/api/v3/order");
-//                url = new URL("http://jbi.shopwaretest.de/api/v3/order/dba074b5514b4b27821c203d5ff2c3d3/lineItems");
-//                url = new URL("http://jbi.shopwaretest.de/api/v3/order/dba074b5514b4b27821c203d5ff2c3d3/addresses");
                 url = new URL("http://jbi.shopwaretest.de/api/v3/order");
+//                url = new URL("http://jbi.shopwaretest.de/api/v3/product");
 
                 conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestProperty("Accept", "application/json");
@@ -190,11 +193,204 @@ customer
                 while ((line = reader.readLine()) != null) {
                     stringBuffer.append(line);
                 }
+                reader.close();
+// this may not be that efficient, just get it working first
+                String json = stringBuffer.toString();
+                Set<String> ordersheadings = new HashSet<>();
+                Set<String> orderlinesheadings = new HashSet<>();
+                Set<String> productheadings = new HashSet<>();
+                JsonNode jsonNode = new ObjectMapper().readTree(json);
+                List<Map<String, String>> ordersmaplist = new ArrayList<>();
+                List<Map<String, String>> productsmaplist = new ArrayList<>();
+                List<Map<String, String>> orderlinesmaplist = new ArrayList<>();
+                if (jsonNode.isObject()) {
+                    ObjectNode objectNode = (ObjectNode) jsonNode;
+                    Iterator<Map.Entry<String, JsonNode>> iter = objectNode.fields();
+                    while (iter.hasNext()) {
+                        Map.Entry<String, JsonNode> entry = iter.next();
+                        if (entry.getKey().equals("data")) {
+                            JsonNode arrayNode = entry.getValue();
+                            for (int i = 0; i < arrayNode.size(); i++) {
+                                Map<String, String> map = new HashMap<>();
+                                addKeys("", arrayNode.get(i), map);
+                                // hack in the extra stuff we want from order
 
-                return stringBuffer.toString();
+                                if (map.get("id") != null && !map.get("id").equals("null")) {
+                                    url = new URL("http://jbi.shopwaretest.de/api/v3/order/" + map.get("id") + "/addresses");
+
+                                    conn = (HttpURLConnection) url.openConnection();
+                                    conn.setRequestProperty("Accept", "application/json");
+                                    conn.setRequestProperty("Authorization", oauthResponse.access_token);
+                                    reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                                    StringBuilder addressinfo = new StringBuilder();
+                                    while ((line = reader.readLine()) != null) {
+                                        addressinfo.append(line);
+                                    }
+                                    reader.close();
+                                    JsonNode aJsonNode = new ObjectMapper().readTree(addressinfo.toString());
+                                    if (aJsonNode.isObject()) {
+                                        Iterator<Map.Entry<String, JsonNode>> iter1 = aJsonNode.fields();
+                                        while (iter1.hasNext()) {
+                                            Map.Entry<String, JsonNode> entry1 = iter1.next();
+                                            if (entry1.getKey().equals("data")) {
+                                                addKeys("address", entry1.getValue(), map);
+                                            }
+                                        }
+                                    }
+                                    url = new URL("http://jbi.shopwaretest.de/api/v3/order/" + map.get("id") + "/salesChannel");
+
+                                    conn = (HttpURLConnection) url.openConnection();
+                                    conn.setRequestProperty("Accept", "application/json");
+                                    conn.setRequestProperty("Authorization", oauthResponse.access_token);
+                                    reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                                    StringBuilder salesChannel = new StringBuilder();
+                                    while ((line = reader.readLine()) != null) {
+                                        salesChannel.append(line);
+                                    }
+                                    reader.close();
+                                    JsonNode sJsonNode = new ObjectMapper().readTree(salesChannel.toString());
+                                    if (sJsonNode.isObject()) {
+                                        Iterator<Map.Entry<String, JsonNode>> iter1 = sJsonNode.fields();
+                                        while (iter1.hasNext()) {
+                                            Map.Entry<String, JsonNode> entry1 = iter1.next();
+                                            if (entry1.getKey().equals("data")) {
+                                                addKeys("saleschannel", entry1.getValue(), map);
+                                            }
+                                        }
+                                    }
+                                    
+                                    // gonna put orderlines in their own file
+                                    url = new URL("http://jbi.shopwaretest.de/api/v3/order/" + map.get("id") + "/lineItems");
+                                    conn = (HttpURLConnection) url.openConnection();
+                                    conn.setRequestProperty("Accept", "application/json");
+                                    conn.setRequestProperty("Authorization", oauthResponse.access_token);
+                                    reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                                    StringBuilder orderLines = new StringBuilder();
+                                    while ((line = reader.readLine()) != null) {
+                                        orderLines.append(line);
+                                    }
+                                    reader.close();
+                                    
+                                    JsonNode orderLinesNode = new ObjectMapper().readTree(orderLines.toString());
+                                    if (orderLinesNode.isObject()) {
+                                        ObjectNode orderLinesNode1 = (ObjectNode) orderLinesNode;
+                                        Iterator<Map.Entry<String, JsonNode>> iter1 = orderLinesNode1.fields();
+                                        while (iter1.hasNext()) {
+                                            Map.Entry<String, JsonNode> entry1 = iter1.next();
+                                            if (entry1.getKey().equals("data")) {
+                                                JsonNode arrayNode1 = entry1.getValue();
+                                                for (int j = 0; j < arrayNode1.size(); j++) {
+                                                    Map<String, String> olMap = new HashMap<>();
+                                                    addKeys("", arrayNode1.get(j), olMap);
+                                                    orderlinesmaplist.add(olMap);
+                                                    orderlinesheadings.addAll(olMap.keySet());
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                ordersmaplist.add(map);
+                                ordersheadings.addAll(map.keySet());
+                            }
+                        }
+                    }
+                }
+                
+                // product- pretty simple hopefully
+
+                // gonna put orderlines in their own file
+                url = new URL("http://jbi.shopwaretest.de/api/v3/product/");
+                conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestProperty("Accept", "application/json");
+                conn.setRequestProperty("Authorization", oauthResponse.access_token);
+                reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                StringBuilder productLines = new StringBuilder();
+                while ((line = reader.readLine()) != null) {
+                    productLines.append(line);
+                }
+                reader.close();
+
+                JsonNode productLinesNode = new ObjectMapper().readTree(productLines.toString());
+                if (productLinesNode.isObject()) {
+                    ObjectNode productLinesNode1 = (ObjectNode) productLinesNode;
+                    Iterator<Map.Entry<String, JsonNode>> iter1 = productLinesNode1.fields();
+                    while (iter1.hasNext()) {
+                        Map.Entry<String, JsonNode> entry1 = iter1.next();
+                        if (entry1.getKey().equals("data")) {
+                            JsonNode arrayNode1 = entry1.getValue();
+                            for (int j = 0; j < arrayNode1.size(); j++) {
+                                Map<String, String> map = new HashMap<>();
+                                addKeys("", arrayNode1.get(j), map);
+                                productsmaplist.add(map);
+                                productheadings.addAll(map.keySet());
+                            }
+                        }
+                    }
+                }
 
 
+                // knock off empty headings
+                Iterator<String> headingsIterator = ordersheadings.iterator();
+                while (headingsIterator.hasNext()){
+                    String heading = headingsIterator.next();
+                    boolean hasData = false;
+                    for (Map<String, String> map : ordersmaplist) {
+                        String test = map.get(heading);
+                        if (test != null && !test.isEmpty() && !test.equals("null")){
+                            hasData = true;
+                            break;
+                        }
+                    }
+                    if (!hasData){
+                        headingsIterator.remove();
+                    }
+                }
 
+                headingsIterator = orderlinesheadings.iterator();
+                while (headingsIterator.hasNext()){
+                    String heading = headingsIterator.next();
+                    boolean hasData = false;
+                    for (Map<String, String> map : orderlinesmaplist) {
+                        String test = map.get(heading);
+                        if (test != null && !test.isEmpty() && !test.equals("null")){
+                            hasData = true;
+                            break;
+                        }
+                    }
+                    if (!hasData){
+                        headingsIterator.remove();
+                    }
+                }
+
+                headingsIterator = productheadings.iterator();
+                while (headingsIterator.hasNext()){
+                    String heading = headingsIterator.next();
+                    boolean hasData = false;
+                    for (Map<String, String> map : productsmaplist) {
+                        String test = map.get(heading);
+                        if (test != null && !test.isEmpty() && !test.equals("null")){
+                            hasData = true;
+                            break;
+                        }
+                    }
+                    if (!hasData){
+                        headingsIterator.remove();
+                    }
+                }
+
+                //Map<String, String> map = new HashMap<>();
+                //addKeys("", new ObjectMapper().readTree(json), map);
+                //maplist.add(map);
+                //headings.addAll(map.keySet());
+
+
+                CsvWriter csvW = new CsvWriter("/home/edward/Downloads/orders.tsv", '\t', StandardCharsets.UTF_8);
+                csvW.setUseTextQualifier(false);
+                writeCSV("/home/edward/Downloads/orders.tsv", new ArrayList<>(ordersheadings), ordersmaplist);
+                writeCSV("/home/edward/Downloads/orderlines.tsv", new ArrayList<>(orderlinesheadings), orderlinesmaplist);
+                writeCSV("/home/edward/Downloads/products.tsv", new ArrayList<>(productheadings), productsmaplist);
+
+                return "done";
 
                 /*
 
@@ -233,6 +429,56 @@ customer
 
         }
         return "done";
+    }
+
+    public static void writeCSV(String fileLocation, List<String> headings, List<Map<String, String>> data) throws IOException {
+        CsvWriter csvW = new CsvWriter(fileLocation, '\t', StandardCharsets.UTF_8);
+        csvW.setUseTextQualifier(false);
+        for (String heading : headings) {
+            csvW.write(heading);
+        }
+        csvW.endRecord();
+
+        for (Map<String, String> map : data) {
+            for (String heading : headings) {
+                String val = map.get(heading) != null ? map.get(heading) : "";
+                if (val.length() > 512){
+                    val = val.substring(0, 512);
+                }
+
+
+                csvW.write(val.replace("\n", "\\\\n").replace("\r", "\\\\r").replace("\t", "\\\\t"));
+            }
+            csvW.endRecord();
+        }
+        csvW.close();
+
+    }
+
+    // yoinked from stack overflow what are the odds. Will need modifying thouh for the arrays. Need to think . . .
+    private void addKeys(String currentPath, JsonNode jsonNode, Map<String, String> map) {
+        if (jsonNode.isObject()) {
+            ObjectNode objectNode = (ObjectNode) jsonNode;
+            Iterator<Map.Entry<String, JsonNode>> iter = objectNode.fields();
+            String pathPrefix = currentPath.isEmpty() ? "" : currentPath + ".";
+
+            while (iter.hasNext()) {
+                Map.Entry<String, JsonNode> entry = iter.next();
+                addKeys(pathPrefix + entry.getKey(), entry.getValue(), map);
+            }
+        } else if (jsonNode.isArray()) {
+            ArrayNode arrayNode = (ArrayNode) jsonNode;
+            for (int i = 0; i < arrayNode.size(); i++) {
+                if (i == 0) {
+                    addKeys(currentPath, arrayNode.get(i), map);
+                } else {
+                    addKeys(currentPath + "[" + i + "]", arrayNode.get(i), map);
+                }
+            }
+        } else if (jsonNode.isValueNode()) {
+            ValueNode valueNode = (ValueNode) jsonNode;
+            map.put(currentPath, valueNode.asText());
+        }
     }
 
 

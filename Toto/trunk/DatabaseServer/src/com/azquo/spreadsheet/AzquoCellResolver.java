@@ -68,6 +68,7 @@ public class AzquoCellResolver {
         boolean selected = false;
         String stringValue = "";
         double doubleValue = 0;
+        // todo - locked feedback to user
         MutableBoolean locked = new MutableBoolean(); // we use a mutable boolean as the functions that resolve the cell value may want to set it
         boolean hasData = false;
         for (DataRegionHeading heading : rowHeadings) {

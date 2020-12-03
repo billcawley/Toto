@@ -1,8 +1,9 @@
 <zk>
+    <!-- now we are trying to have Ed Broking licensed properly we can no longer do this - need to use environment variables
     <library-property>
         <name>io.keikaiex.rt.Runtime.directory</name>
         <value>/usr/share/zklicense/</value>
-    </library-property>
+    </library-property>-->
     <library-property>
         <name>org.zkoss.zul.progressbox.position</name>
         <value>center</value>
