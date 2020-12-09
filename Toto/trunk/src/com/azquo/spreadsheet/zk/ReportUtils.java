@@ -73,7 +73,7 @@ class ReportUtils {
         String lastColHeading = colHeadingsSource.get(colHeadingRow - 1).get(0);
         int repeatCount = 1;
         if (!lastColHeading.startsWith(".")) {
-            if (lastColHeading.toLowerCase().startsWith("permute")) {
+            if (lastColHeading.toLowerCase().startsWith("permute") || lastColHeading.toLowerCase().startsWith("scale")) { // added scale as another option - this is not very satisfactory if more functions are added . . . todo factor the function names here??
                 return 1;//permutes are unpredictable unless followed by a set
             }
             // so what we're saying is how big is the set at the bottom of the col definitions?

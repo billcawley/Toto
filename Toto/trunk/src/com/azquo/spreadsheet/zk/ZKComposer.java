@@ -50,7 +50,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         filterPopup.setVisible(false);
         filterPopup.setId("filterPopup");
         //ZKContextMenu.setPopupStyle(filterPopup);
-         // much hacking went into getting an appropriate object to hook into to make our extra contextual menu
+        // much hacking went into getting an appropriate object to hook into to make our extra contextual menu
         if (myzss.getFirstChild() != null) {
             myzss.getFirstChild().appendChild(filterPopup);
         } else { // it took some considerable time to work out this hack
@@ -82,7 +82,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                 }
             }
         }
-        for (int i = 0; i < myzss.getBook().getNumberOfSheets(); i++){
+        for (int i = 0; i < myzss.getBook().getNumberOfSheets(); i++) {
             Ranges.range(myzss.getBook().getSheetAt(i)).notifyChange(); // try to update the lot - sometimes it seems it does not!
         }
     }
@@ -123,7 +123,7 @@ public class ZKComposer extends SelectorComposer<Component> {
             showMultiSelectionList(loggedInUser, selectionName, selectionList, event.getPageX(), event.getPageY());
         } else { // if not a multi check for a clickable report name
             SName allowableReports = myzss.getBook().getInternalBook().getNameByName(ReportService.ALLOWABLE_REPORTS, myzss.getSelectedSheetName());//try local
-            if (allowableReports==null){
+            if (allowableReports == null) {
                 allowableReports = myzss.getBook().getInternalBook().getNameByName(ReportService.ALLOWABLE_REPORTS);//try global
 
             }
@@ -154,7 +154,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                     && event.getRow() <= saveName.getRefersToCellRegion().getLastRow()
                     && event.getColumn() >= saveName.getRefersToCellRegion().getColumn()
                     && event.getColumn() <= saveName.getRefersToCellRegion().getLastColumn()
-                    ) {
+            ) {
                 try {
                     String saveResult = ReportService.save(myzss, loggedInUser);
                     if (saveResult.startsWith("Success")) {
@@ -178,11 +178,13 @@ public class ZKComposer extends SelectorComposer<Component> {
     @Listen("onStopEditing = #myzss")
     public void onStopEditing(StopEditingEvent event) {
         String chosen = (String) event.getEditingValue();
-        LocalDate date = ReportUtils.isADate(chosen);
-        if (date!=null){
-            DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-            chosen = dateTimeFormatter.format(date);
-
+        // so the following bit of code was parsing a date on, for example 2020-11-24 policies which we wouldn't want it to. For the mo will check for spaces and not do the parse then
+        if (!chosen.trim().contains(" ")) {
+            LocalDate date = ReportUtils.isADate(chosen);
+            if (date != null) {
+                DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+                chosen = dateTimeFormatter.format(date);
+            }
         }
         final Book book = event.getSheet().getBook();
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
@@ -253,7 +255,7 @@ public class ZKComposer extends SelectorComposer<Component> {
             }
         }
         if (reload) {
-            Clients.showBusy(myzss,"Reloading . . .");
+            Clients.showBusy(myzss, "Reloading . . .");
             org.zkoss.zk.ui.event.Events.echoEvent("onReloadWhileClientProcessing", myzss, null);
         }
     }
@@ -389,7 +391,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                 String region = name.getName().substring(ReportRenderer.AZDISPLAYROWHEADINGS.length());
                 int size = name.getRefersToCellRegion().getRowCount();
                 CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(reportId, sheet.getSheetName(), region); // maybe jam this object against the book? Otherwise multiple books could cause problems
-                if (cellsAndHeadingsForDisplay != null && cellsAndHeadingsForDisplay.getRowHeadings() != null){ // apparently it can be??
+                if (cellsAndHeadingsForDisplay != null && cellsAndHeadingsForDisplay.getRowHeadings() != null) { // apparently it can be??
                     int oldSize = cellsAndHeadingsForDisplay.getRowHeadings().size();
                     CellRegion newHeadings = name.getRefersToCellRegion();
                     List<List<String>> oldHeadings = cellsAndHeadingsForDisplay.getRowHeadings();
@@ -433,7 +435,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                                     rowNo += oldSize - size;
                                     deleted = true;
                                     // EFC note - I do not fully understand the code here but I do know it was causing an index out of bounds exception by pushing rowNo >= oldData size so breakif that's the case
-                                    if (rowNo >= oldSize){
+                                    if (rowNo >= oldSize) {
                                         break;
                                     }
                                 }
@@ -574,7 +576,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                     params.put(selectionName, selectedForLog.toString());
                     loggedInUser.userLog("Multi select", params);
                     // new logic - set the first as the vanilla choice
-                    if (!selectedItems.isEmpty()){
+                    if (!selectedItems.isEmpty()) {
                         Listitem first = selectedItems.iterator().next();
                         SpreadsheetService.setUserChoice(loggedInUser, selectionName, first.getLabel());
                     }
@@ -598,14 +600,14 @@ public class ZKComposer extends SelectorComposer<Component> {
                     params.put(selectionName, selectedForLog.toString());
                     loggedInUser.userLog("Multi select", params);
                     // new logic - set the first as the vanilla choice
-                    if (!selectedItems.isEmpty()){
+                    if (!selectedItems.isEmpty()) {
                         Listitem first = selectedItems.iterator().next();
                         SpreadsheetService.setUserChoice(loggedInUser, selectionName, first.getLabel());
                     }
                     RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).createFilterSet(loggedInUser.getDataAccessToken(), selectionName, loggedInUser.getUser().getEmail(), childIds);
                     filterPopup.setVisible(false);
                     try {
-                        Clients.showBusy(myzss,"Reloading . . .");
+                        Clients.showBusy(myzss, "Reloading . . .");
                         org.zkoss.zk.ui.event.Events.echoEvent("onReloadWhileClientProcessing", myzss, null);
 //                        ZKComposerUtils.reloadBook(myzss, book);
                     } catch (Exception e) {
@@ -615,7 +617,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         Button cancel = new Button();
         cancel.setWidth("80px");
         cancel.setLabel("Cancel");
-        cancel.addEventListener("onClick",event1 -> filterPopup.setVisible(false));
+        cancel.addEventListener("onClick", event1 -> filterPopup.setVisible(false));
         filterPopup.appendChild(new Separator());
         filterPopup.appendChild(save);
         filterPopup.appendChild(new Space());
@@ -624,8 +626,8 @@ public class ZKComposer extends SelectorComposer<Component> {
         filterPopup.appendChild(saveAndReload);
         // "after_start" is the position we'd want
         filterPopup.setLeft(pageX + "px");
-        pageY-=300;
-        if (pageY < 0){
+        pageY -= 300;
+        if (pageY < 0) {
             pageY = 0;
         }
         filterPopup.setTop(pageY + "px");
