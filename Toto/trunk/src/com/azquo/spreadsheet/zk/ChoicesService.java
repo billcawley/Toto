@@ -442,7 +442,7 @@ public class ChoicesService {
                 // then set it to all
                 chosenOptions = allOptions;
                 // and create the set server side, it will no doubt be referenced
-                RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).createFilterSetWithQuery(loggedInUser.getDataAccessToken(), filterName, loggedInUser.getUser().getEmail(), sourceSet);
+                RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).createFilterSetWithQuery(loggedInUser.getDataAccessToken(), filterName, loggedInUser.getUser().getEmail(), CommonReportUtils.replaceUserChoicesInQuery(loggedInUser,sourceSet));
 
             }
             if (allOptions.size() < 2)
@@ -483,7 +483,7 @@ public class ChoicesService {
         Map<String, String> map = new HashMap<>();
         int equalsPos = context.indexOf(" = ");
         while (equalsPos > 0) {
-            int endParam = context.indexOf(";");
+            int endParam = context.indexOf(";");//todo - maybe consider using comma here as alternative
             if (endParam < 0) endParam = context.length();
             String paramName = context.substring(0, equalsPos).trim();
             String paramValue = context.substring(equalsPos + 3, endParam).trim();
