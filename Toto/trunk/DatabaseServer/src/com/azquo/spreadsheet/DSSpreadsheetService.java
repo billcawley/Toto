@@ -742,7 +742,7 @@ public class DSSpreadsheetService {
         final List<List<List<DataRegionHeading>>> rowHeadingLists = DataRegionHeadingService.createHeadingArraysFromSpreadsheetRegion(
                 azquoMemoryDBCOnnection, rowHeadingsSource, languages, contextSuffix, true); // [don't] surpress errors, will this be a problem? YES - couldn't audit cells further down the region
         languages = defaultLanguages;
-        final List<List<DataRegionHeading>> rowHeadings = DataRegionHeadingService.expandHeadings(rowHeadingLists, sharedNames, regionOptionsForTransport.noPermuteTotals);
+        final List<List<DataRegionHeading>> rowHeadings = DataRegionHeadingService.expandHeadings(rowHeadingLists, sharedNames, regionOptionsForTransport.permuteTotalCount);
         if (regionOptionsForTransport.columnLanguage != null && regionOptionsForTransport.columnLanguage.length() > 0) {
             languages = new ArrayList<>();
             languages.add(regionOptionsForTransport.columnLanguage);
@@ -750,7 +750,7 @@ public class DSSpreadsheetService {
         final List<List<List<DataRegionHeading>>> columnHeadingLists = DataRegionHeadingService.createHeadingArraysFromSpreadsheetRegion(
                 azquoMemoryDBCOnnection, colHeadingsSource, languages, AzquoCellService.COL_HEADINGS_NAME_QUERY_LIMIT, contextSuffix, false); // same as standard limit for col headings
         languages = defaultLanguages;
-        final List<List<DataRegionHeading>> columnHeadings = DataRegionHeadingService.expandHeadings(MultidimensionalListUtils.transpose2DList(columnHeadingLists), sharedNames, regionOptionsForTransport.noPermuteTotals);
+        final List<List<DataRegionHeading>> columnHeadings = DataRegionHeadingService.expandHeadings(MultidimensionalListUtils.transpose2DList(columnHeadingLists), sharedNames, regionOptionsForTransport.permuteTotalCount);
         if (columnHeadings.size() == 0 || rowHeadings.size() == 0) {
             return null;
         }
