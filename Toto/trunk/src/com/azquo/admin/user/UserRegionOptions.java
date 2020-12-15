@@ -31,7 +31,7 @@ public class UserRegionOptions extends StandardEntity {
     private boolean noSave;
     private String databaseName;
     private boolean userLocked;
-    private boolean noPermuteTotals;
+    private int permuteTotalCount;
 
     private String rowLanguage;
     private String columnLanguage;
@@ -41,7 +41,7 @@ public class UserRegionOptions extends StandardEntity {
 
     UserRegionOptions(int id, int userId, int reportId, String region, int hideRows, int hideRowValues, int hideCols, boolean sortable
             , int rowLimit, int columnLimit, String sortRow, boolean sortRowAsc, String sortColumn
-            , boolean sortColumnAsc, int highlightDays, boolean noSave, String databaseName, String rowLanguage, String columnLanguage, boolean userLocked, boolean noPermuteTotals, boolean ignoreHeadingErrors, boolean preSave) {
+            , boolean sortColumnAsc, int highlightDays, boolean noSave, String databaseName, String rowLanguage, String columnLanguage, boolean userLocked, int permuteTotalCount, boolean ignoreHeadingErrors, boolean preSave) {
         this.id = id;
         this.userId = userId;
         this.reportId = reportId;
@@ -61,7 +61,7 @@ public class UserRegionOptions extends StandardEntity {
         this.databaseName = databaseName;
         this.rowLanguage = rowLanguage;
         this.columnLanguage = columnLanguage;
-        this.noPermuteTotals = noPermuteTotals;
+        this.permuteTotalCount = permuteTotalCount;
         this.userLocked = userLocked;
         this.ignoreHeadingErrors = ignoreHeadingErrors;
         this.preSave = preSave;
@@ -101,7 +101,16 @@ public class UserRegionOptions extends StandardEntity {
             this.rowLanguage = getOptionFromSpreadsheetOptions("row language", spreadsheetSource);
             this.columnLanguage = getOptionFromSpreadsheetOptions("column language", spreadsheetSource);
             this.userLocked = spreadsheetSource.toLowerCase().contains("userlocked"); // the get option thing is no good for just an "exists with no value" check, this is the same
-            this.noPermuteTotals = spreadsheetSource.toLowerCase().contains("nopermutetotals");
+            String PERMUTETOTALCOUNT = "permutetotalcount";
+            if (spreadsheetSource.toLowerCase().contains("nopermutetotals")){
+                permuteTotalCount = 0;
+            }else{
+                if (spreadsheetSource.toLowerCase().contains(PERMUTETOTALCOUNT)){
+                    permuteTotalCount = asNumber(getOptionFromSpreadsheetOptions(PERMUTETOTALCOUNT, spreadsheetSource));
+                }else{
+                    permuteTotalCount = 100;
+                }
+            };
             this.ignoreHeadingErrors = spreadsheetSource.contains("ignoreheadingerrors");
             this.preSave = spreadsheetSource.contains("presave");
         } else {
@@ -269,7 +278,7 @@ public class UserRegionOptions extends StandardEntity {
 
     // As mentioned in RegionOptions,
     public RegionOptions getRegionOptionsForTransport() {
-        return new RegionOptions(hideRows, hideRowValues, hideCols, sortable, rowLimit, columnLimit, sortRow, sortRowAsc, sortColumn, sortColumnAsc, highlightDays, rowLanguage, columnLanguage, noSave, databaseName, userLocked, noPermuteTotals, ignoreHeadingErrors, preSave);
+        return new RegionOptions(hideRows, hideRowValues, hideCols, sortable, rowLimit, columnLimit, sortRow, sortRowAsc, sortColumn, sortColumnAsc, highlightDays, rowLanguage, columnLanguage, noSave, databaseName, userLocked, permuteTotalCount, ignoreHeadingErrors, preSave);
     }
 
     public String getRowLanguage() {
@@ -304,8 +313,8 @@ public class UserRegionOptions extends StandardEntity {
         this.userLocked = userLocked;
     }
 
-    public boolean getNoPermuteTotals() {
-        return noPermuteTotals;
+    public int getPermuteTotalCount() {
+        return permuteTotalCount;
     }
 
     public boolean getIgnoreHeadingErrors() {

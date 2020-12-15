@@ -40,12 +40,17 @@ class RegionFillerService {
         for (List<String> rowHeading : cellsAndHeadingsForDisplay.getRowHeadings()) {
             int col = displayRowHeadings.getColumn();
             int startCol = col;
+            int rowHeadingCount = cellsAndHeadingsForDisplay.getRowHeadings().get(0).size();
+            int permuteTotalCount = userRegionOptions.getPermuteTotalCount();
+            if (permuteTotalCount>= rowHeadingCount){
+                permuteTotalCount = rowHeadingCount - 1;
+            }
             // this is, I believe, simply code to stop duplicates on multi level headings. E.g. 2019 and months you don't want to say 2019 12 times just once
             for (String heading : rowHeading) {
                 if (heading != null && !heading.equals(".") && (sheet.getInternalSheet().getCell(row, col).getType() != SCell.CellType.STRING || sheet.getInternalSheet().getCell(row, col).getStringValue().isEmpty())) { // as with AzquoBook don't overwrite existing cells when it comes to headings
                     SCell cell = sheet.getInternalSheet().getCell(row, col);
                     cell.setValue(heading);
-                    if (!userRegionOptions.getNoPermuteTotals()) {
+                    if (permuteTotalCount> 0) {
                         if (lineNo > 0 && lastRowHeadings.size() > col - startCol && lastRowHeadings.get(col - startCol) != null && lastRowHeadings.get(col - startCol).equals(heading)) {
                             //disguise the heading by making foreground colour = background colour
                             Range selection = Ranges.range(sheet, row, col, row, col);
@@ -56,7 +61,7 @@ class RegionFillerService {
                 col++;
             }
             lineNo++;
-            if (isHierarchy && lineNo > 1 && !userRegionOptions.getNoPermuteTotals()) {
+            if (isHierarchy && lineNo > 1 && permuteTotalCount > 0) {
                 int sameValues;
                 for (sameValues = 0; sameValues < lastRowHeadings.size(); sameValues++) {
                     if (!rowHeading.get(sameValues).equals(lastRowHeadings.get(sameValues))) {
@@ -65,7 +70,7 @@ class RegionFillerService {
                 }
                 //format the row headings for hierarchy.  Each total level has sa different format.   clear visible names in all but on heading
                 // as in is there more than one difference between these headings and the one above? If so it's a total - highlight bold or a more complex option if the AZTOTALFORMAT named region is there
-                if (sameValues < rowHeading.size() - 1) {
+                if (sameValues < rowHeadingCount - 1) {
                     int totalCount = rowHeading.size() - sameValues - 1;
                     //this is a total line
                     int selStart = displayRowHeadings.getColumn();
@@ -126,6 +131,9 @@ class RegionFillerService {
                             }
                         } catch (Exception ignored) {
                         }
+                    }
+                    if (sameValues >= permuteTotalCount){
+                        sheet.getInternalSheet().getRow(row-1).setHidden(true);
                     }
                     if (row > displayRowHeadings.getRow()) {
                         Ranges.range(sheet, row - 1, selStart + sameValues + 1, row - 1, selStart + displayRowHeadings.getColumnCount() - 1).clearContents();

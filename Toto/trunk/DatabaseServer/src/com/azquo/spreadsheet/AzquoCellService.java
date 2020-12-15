@@ -145,7 +145,7 @@ public class AzquoCellService {
         if (time > threshold) System.out.println("Row headings parsed in " + time + "ms");
         track = System.currentTimeMillis();
         Collection<Name> sharedNames = getSharedNames(contextHeadings);//sharedNames only required for permutations
-        final List<List<DataRegionHeading>> rowHeadings = DataRegionHeadingService.expandHeadings(rowHeadingLists, sharedNames, regionOptions.noPermuteTotals);
+        final List<List<DataRegionHeading>> rowHeadings = DataRegionHeadingService.expandHeadings(rowHeadingLists, sharedNames, regionOptions.permuteTotalCount);
         time = (System.currentTimeMillis() - track);
         if (time > threshold) System.out.println("Row headings expanded in " + time + "ms");
         track = System.currentTimeMillis();
@@ -168,7 +168,7 @@ public class AzquoCellService {
         time = (System.currentTimeMillis() - track);
         if (time > threshold) System.out.println("Column headings parsed in " + time + "ms");
         track = System.currentTimeMillis();
-        final List<List<DataRegionHeading>> columnHeadings = DataRegionHeadingService.expandHeadings(MultidimensionalListUtils.transpose2DList(columnHeadingLists), sharedNames, regionOptions.noPermuteTotals);
+        final List<List<DataRegionHeading>> columnHeadings = DataRegionHeadingService.expandHeadings(MultidimensionalListUtils.transpose2DList(columnHeadingLists), sharedNames, regionOptions.permuteTotalCount);
         if (calcExpression!=null) {
             //add another column for the calcExpression
             List<DataRegionHeading> calcItem = new ArrayList<>();
@@ -484,7 +484,7 @@ public class AzquoCellService {
             }
             List<Integer> sortedRows = new ArrayList<>();
             if (!sortOnColIndexes.isEmpty() || sortOnRowTotals) { // then we need to sort the rows
-                if (permute&& !regionOptions.noPermuteTotals) {
+                if (permute&& regionOptions.permuteTotalCount > 0) {
                     // ok we need this to work on multiple levels. Start on the right and sort everything except totals
                     boolean first = true;
                     for (int sortingHeadingIndex = rowHeadings.get(0).size() - 1; sortingHeadingIndex >= 0; sortingHeadingIndex--){

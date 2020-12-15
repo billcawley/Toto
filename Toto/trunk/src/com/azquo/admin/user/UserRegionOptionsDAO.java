@@ -74,7 +74,7 @@ public final class UserRegionOptionsDAO {
                         , ""
                         , ""
                         , false
-                        , false
+                        , 100
                         , false
                         ,false
                 );
