@@ -91,6 +91,7 @@ class CellRangeAddressWrapper implements Comparable<CellRangeAddressWrapper> {
             mapCellStyles();
             copySheetSettings();
             int maxColumnNum = 0;
+            copyRangeNames();
             for (int i = srcSheet_.getFirstRowNum(); i <= srcSheet_.getLastRowNum(); i++)
             {
                 Row srcRow = srcSheet_.getRow(i);
@@ -104,7 +105,6 @@ class CellRangeAddressWrapper implements Comparable<CellRangeAddressWrapper> {
                     }
                 }
             }
-            copyRangeNames();
             for (int i = 0; i <= maxColumnNum; i++)
             {
                 dstSheet_.setColumnWidth(i, srcSheet_.getColumnWidth(i));
