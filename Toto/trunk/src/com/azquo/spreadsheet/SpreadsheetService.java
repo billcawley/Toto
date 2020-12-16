@@ -16,15 +16,9 @@ import com.azquo.spreadsheet.controller.OnlineController;
 import com.azquo.spreadsheet.transport.CellForDisplay;
 import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
 import com.azquo.spreadsheet.transport.ProvenanceDetailsForDisplay;
-import com.azquo.spreadsheet.zk.BookUtils;
-import com.azquo.spreadsheet.zk.ChoicesService;
 import com.azquo.spreadsheet.zk.ReportExecutor;
 import com.azquo.spreadsheet.zk.ReportRenderer;
 import com.azquo.util.AzquoMailer;
-import io.keikai.api.Ranges;
-import io.keikai.api.model.Sheet;
-import io.keikai.model.SName;
-import io.keikai.model.SSheet;
 import org.apache.commons.lang.math.NumberUtils;
 import io.keikai.api.Exporter;
 import io.keikai.api.Exporters;
@@ -35,6 +29,7 @@ import java.io.*;
 import java.net.InetAddress;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -507,13 +502,15 @@ public class SpreadsheetService {
                                 chosen = df.format(new Date());
                             }
                             if (chosen.equalsIgnoreCase("yesterday")){
-                                chosen = df.format(LocalDateTime.now().minusDays(1));
+                                chosen = DateTimeFormatter.ofPattern("yyyy-MM-dd").format(LocalDateTime.now().minusDays(1));
                             }
                             setUserChoice(loggedInUser, choice, chosen);
                         }
                     }
                 }
-
+                if ("PDF".equals(reportSchedule.getType())) {
+                    book.getInternalBook().setAttribute("novalidations", "true");
+                }
                 ReportRenderer.populateBook(book, 0);
                 // execute ignores the email unless it should send
                 if ("Execute".equalsIgnoreCase(reportSchedule.getType())){
@@ -521,13 +518,6 @@ public class SpreadsheetService {
                     ReportExecutor.runExecuteCommandForBook(book, ReportRenderer.EXECUTE); // standard, there's the option to execute the contents of a different names
                     // so, can I have my PDF or XLS? Very similar to other the download code in the spreadsheet command controller
                 } else if ("PDF".equals(reportSchedule.getType())) {
-
-                    for (SSheet sheet : book.getInternalBook().getSheets()) {
-                        if (sheet.getSheetName().endsWith(ChoicesService.VALIDATION_SHEET)) {
-                            book.getInternalBook().deleteSheet(sheet);// hacky, for PDF, hopefully won't affect how the choices look
-                        }
-                    }
-
                     Exporter exporter = Exporters.getExporter("pdf");
                     File file = File.createTempFile(onlineReport.getReportName(), ".pdf");
                     exporter.export(book, file);
