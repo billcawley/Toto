@@ -190,6 +190,7 @@ public class LoginController {
                         }
                     }
                 } else {// feedback to users about incorrect details
+                    Thread.sleep(1000); // a second delay protects against *some* types of brute force attack
                     if (connectionid != null && connectionid.equals("javascript")) {
                         String jsonFunction = "azquojsonresponse";
                         model.addAttribute("content", jsonFunction + "({\"usertype\":\"failed\"})");
