@@ -229,7 +229,9 @@ public class ExcelController {
                     if (loggedInUser!= null) {
                        ImportTemplate importTemplate = ImportTemplateDAO.findForName(fileName);
                        String directory = "test";//loggedInUser.getBusinessDirectory;
-                       File file = new File(SpreadsheetService.getHomeDir() + ImportService.dbPath + directory + ImportService.importTemplatesDir + importTemplate.getFilenameForDisk());
+                       String filePath = SpreadsheetService.getHomeDir() + ImportService.dbPath + directory + ImportService.importTemplatesDir + importTemplate.getFilenameForDisk();
+                       System.out.println("template download:" + filePath);
+                       File file = new File(filePath);
                        encodedBytes = Base64.getEncoder().encode(IOUtils.toByteArray(Files.newInputStream(file.toPath())));
                     }else{
                         return null;
