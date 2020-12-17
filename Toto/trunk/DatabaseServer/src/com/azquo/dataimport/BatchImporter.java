@@ -40,6 +40,7 @@ public class BatchImporter implements Callable<Void> {
 
     private static final int CHECKTRUE = 1;
     private static final int CHECKFALSE = 0;
+    private static final int CHECKINSUFFICIENT = 2;
     private static final String DEBUGMARKER = "--DEBUG--";
 
     private final AzquoMemoryDBConnection azquoMemoryDBConnection;
@@ -881,6 +882,9 @@ public class BatchImporter implements Callable<Void> {
                 condition = toTest.getAttribute(conditionAttribute);
             }
             int checkResult = checkCondition(lineToLoad, condition, compositeIndexResolver, toTest, nearestList);
+            if (checkResult == CHECKINSUFFICIENT){
+                return false;
+            }
             if (checkResult == CHECKTRUE) {
                 cell.addToLineNames(toTest);
                 cell.setLineValue(toTest.getDefaultDisplayName(), azquoMemoryDBConnection, attributeNames);
@@ -952,7 +956,7 @@ public class BatchImporter implements Callable<Void> {
                     conditionValue = cell.getLineValue();
                 }
                 if (conditionValue == null) {
-                    return CHECKFALSE;
+                    return CHECKINSUFFICIENT;
                 }
             }
             constants.add(conditionValue);//note that a null here means that the field does not exist, so the result may be 'maybe'
