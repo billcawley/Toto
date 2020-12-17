@@ -208,15 +208,39 @@ public class ExcelController {
         }
 
         try {
-            if (op.equals("download64") && fileName != null){ // this means an xlsx file from WEB-INF, public anyway so no security but we still need to base 64 encode it
+            if (op.equals("download64") && fileName != null){ // if no sessionId this means an xlsx file from WEB-INF, public anyway so no security but we still need to base 64 encode it
                 // basic hack protection though I'm not sure whether anyone could get anything that worrying
+                byte[] encodedBytes;
                 while (fileName.contains("\\") || fileName.contains("/")){
                     fileName = fileName.replace("\\","");
                     fileName = fileName.replace("/","");
                 }
                 // similar to below but less going on
-                byte[] encodedBytes = Base64.getEncoder().encode(IOUtils.toByteArray(servletContext.getResourceAsStream("/WEB-INF/" + fileName)));
-                String string64 = new String(encodedBytes);
+                if (sessionId!=null){
+                    LoggedInUser loggedInUser = null;
+                    if (excelMultiUserConnections.get(sessionId) != null){
+                        for (LoggedInUser check : excelMultiUserConnections.get(sessionId)) {
+                            if (check.getUser().getId() == Integer.parseInt(userId)) {
+                                loggedInUser = check;
+                            }
+                        }
+                    }
+                    //TODO should there be any security encoding??
+                    if (loggedInUser!= null) {
+                       ImportTemplate importTemplate = ImportTemplateDAO.findForName(fileName);
+                       String directory = "test";//loggedInUser.getBusinessDirectory;
+                       File file = new File(SpreadsheetService.getHomeDir() + ImportService.dbPath + directory + ImportService.importTemplatesDir + importTemplate.getFilenameForDisk());
+                       encodedBytes = Base64.getEncoder().encode(IOUtils.toByteArray(Files.newInputStream(file.toPath())));
+                    }else{
+                        return null;
+                    }
+                 }else{
+                    String filePath = "/WEB-INF/" + fileName;
+                    encodedBytes = Base64.getEncoder().encode(IOUtils.toByteArray(servletContext.getResourceAsStream(filePath)));
+
+                }
+                  // similar to below but less going on
+                 String string64 = new String(encodedBytes);
                 int sliceSize = 8000;
                 Base64Return base64Return = new Base64Return();
                 int startPos = 0;
@@ -235,7 +259,7 @@ public class ExcelController {
             LoggedInUser loggedInUser = null;
             // todo - try to tidy up the login ogic if possible. Hacked to support users that cross businesses
             if (op.equals("logon")) {
-                if (NumberUtils.isNumber(userId) && sessionId != null){ // then try to select from a multi usr session
+                 if (NumberUtils.isNumber(userId) && sessionId != null){ // then try to select from a multi usr session
                     if (excelMultiUserConnections.get(sessionId) != null){
                         for (LoggedInUser check : excelMultiUserConnections.get(sessionId)) {
                             if (check.getUser().getId() == Integer.parseInt(userId)) {
@@ -467,8 +491,10 @@ public class ExcelController {
                             }
                             if (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()) {
                                 onlineReport = OnlineReportDAO.findForNameAndBusinessId(reportName, loggedInUser.getUser().getBusinessId());
-                                onlineReport.setDatabase(database);
-                                loggedInUser.getUser().setReportId(onlineReport.getId());
+                                if (onlineReport!=null) {
+                                    onlineReport.setDatabase(database);
+                                    loggedInUser.getUser().setReportId(onlineReport.getId());
+                                }
                             } else {
                                 Database db = DatabaseDAO.findForNameAndBusinessId(database, loggedInUser.getUser().getBusinessId());
                                 onlineReport = OnlineReportDAO.findForDatabaseIdAndName(db.getId(), reportName);
