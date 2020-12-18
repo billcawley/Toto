@@ -28,6 +28,7 @@ import java.nio.file.attribute.FileTime;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
@@ -339,11 +340,20 @@ public class DBCron {
         return true;
     }
 
+    AtomicBoolean reportsRunning = new AtomicBoolean(false);
+
     @Scheduled(cron = "0 * * * * *")
     public void runScheduledReports() throws Exception {
-        synchronized (this) { // one at a time
-            SpreadsheetService.runScheduledReports();
+        // was going synchronised but this may trip up due to a slight delay in mysql updating. Instead go atomic boolean, if one is running just don't try. Wait another minute.
+        if (reportsRunning.compareAndSet(false, true)){
+            try {
+                SpreadsheetService.runScheduledReports();
+            } catch (Exception e){
+                e.printStackTrace();
+            }
+            reportsRunning.set(false);
         }
+
     }
 
     // r154 - claims from tracking db
