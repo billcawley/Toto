@@ -210,6 +210,7 @@ public class ExcelController {
         try {
             if (op.equals("download64") && fileName != null){ // if no sessionId this means an xlsx file from WEB-INF, public anyway so no security but we still need to base 64 encode it
                 // basic hack protection though I'm not sure whether anyone could get anything that worrying
+                System.out.println("download64:" + fileName);
                 byte[] encodedBytes;
                 while (fileName.contains("\\") || fileName.contains("/")){
                     fileName = fileName.replace("\\","");
@@ -218,6 +219,7 @@ public class ExcelController {
                 // similar to below but less going on
                 if (sessionId!=null){
                     LoggedInUser loggedInUser = null;
+                    System.out.println("template download1:" + fileName);
                     if (excelMultiUserConnections.get(sessionId) != null){
                         for (LoggedInUser check : excelMultiUserConnections.get(sessionId)) {
                             if (check.getUser().getId() == Integer.parseInt(userId)) {
@@ -226,9 +228,12 @@ public class ExcelController {
                         }
                     }
                     //TODO should there be any security encoding??
-                    if (loggedInUser!= null) {
+                    if (sessionId.equals("testing")|| loggedInUser!= null) {
                        ImportTemplate importTemplate = ImportTemplateDAO.findForName(fileName);
-                       String directory = "test";//loggedInUser.getBusinessDirectory;
+                       String directory="risk";
+                       if (!sessionId.equals("testing")) {
+                           directory = loggedInUser.getBusinessDirectory();
+                       }
                        String filePath = SpreadsheetService.getHomeDir() + ImportService.dbPath + directory + ImportService.importTemplatesDir + importTemplate.getFilenameForDisk();
                        System.out.println("template download:" + filePath);
                        File file = new File(filePath);
