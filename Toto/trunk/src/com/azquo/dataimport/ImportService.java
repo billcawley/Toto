@@ -102,6 +102,7 @@ public final class ImportService {
     public static final String IMPORTVERSION = "importversion";
     public static final String IMPORTMODEL = "Import Model";
     public static final String SHEETNAME = "sheet name";
+    public static final String FILEENCODING = "fileencoding";
 
 
     /* external entry point, moves the file to a temp directory in case pre processing is required
@@ -1111,7 +1112,7 @@ public final class ImportService {
                 }
                 ImportTemplate preProcess = ImportTemplateDAO.findForNameAndBusinessId(preProcessor, loggedInUser.getUser().getBusinessId());
                 if (preProcess==null){
-                    throw new Error("Preprocessor not found");
+                    throw new Error("Preprocessor: " + preProcessor + " not found");
                 }
                 try {
                     preProcessUsingPoi(loggedInUser,uploadedFile, SpreadsheetService.getHomeDir() + dbPath + loggedInUser.getBusinessDirectory() + importTemplatesDir + preProcess.getFilenameForDisk()); //
@@ -2099,8 +2100,16 @@ fr.close();
                     .withColumnSeparator('\t')
                     .withLineSeparator("\n")
                     .withoutQuoteChar();
+            MappingIterator<String[]> lineIterator = null;
+            if (uploadedFile.getParameter(FILEENCODING) != null) {
+                // so override file encoding.
+                lineIterator = csvMapper.readerFor(String[].class).with(schema).readValues(new InputStreamReader(new FileInputStream(filePath), uploadedFile.getParameter(FILEENCODING)));
+                uploadedFile.clearParameter(FILEENCODING);//the converted file is in UTF-8
+            } else {
+                lineIterator = (csvMapper.readerFor(String[].class).with(schema).readValues(new File(filePath)));
+            }
 
-            MappingIterator<String[]> lineIterator = (csvMapper.readerFor(String[].class).with(schema).readValues(new File(filePath)));
+
             Map<List<String>, Integer> inputColumns = new HashMap<>();
             int inputHeadingCount = 0;
             String heading = getCellValue(inputSheet.getRow(headingStartRow + existingHeadingRows - 1).getCell(inputHeadingCount));
