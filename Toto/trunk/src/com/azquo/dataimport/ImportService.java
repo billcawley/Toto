@@ -2096,10 +2096,30 @@ fr.close();
             BufferedWriter fileWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(outFile), StandardCharsets.UTF_8));
             CsvMapper csvMapper = new CsvMapper();
             csvMapper.enable(CsvParser.Feature.WRAP_AS_ARRAY);
+             char delimiter = ',';
+//        System.out.println("get lines with values and column, col index : " + columnIndex);
+//        System.out.println("get lines with values and column, values to check : " + valuesToCheck);
+            if (uploadedFile.isConvertedFromWorksheet()){
+                 delimiter = '\t';
+            } else {
+                try (BufferedReader br = Files.newBufferedReader(Paths.get(uploadedFile.getPath()), StandardCharsets.UTF_8)) {
+                    // grab the first line to check on delimiters
+                    String firstLine = br.readLine();
+                    if (firstLine.contains("|")) {
+                        delimiter = '|';
+                    }
+                    if (firstLine.contains("\t")) {
+                        delimiter = '\t';
+                    }
+                }
+            }
             CsvSchema schema = csvMapper.schemaFor(String[].class)
-                    .withColumnSeparator('\t')
-                    .withLineSeparator("\n")
-                    .withoutQuoteChar();
+                    .withColumnSeparator(delimiter)
+                    .withLineSeparator("\n");
+            if (delimiter == '\t') {
+                schema = schema.withoutQuoteChar();
+            }
+
             MappingIterator<String[]> lineIterator = null;
             if (uploadedFile.getParameter(FILEENCODING) != null) {
                 // so override file encoding.
@@ -2197,7 +2217,7 @@ fr.close();
                            }
                         }
                     }
-                    //handle the data
+                   //handle the data
                     for (int datacount = 0; datacount < inputColumnMap.size(); datacount++) {
                         if (inputColumnMap.get(colNo) != null) {
                             String cellVal = "";
@@ -2252,6 +2272,9 @@ fr.close();
                     }
                 }
                 lineNo++;
+                if (lineNo % 1000 == 0){
+                    System.out.println("preprocessing lines: " + lineNo);
+                }
             }
             fileWriter.flush();
             fileWriter.close();
