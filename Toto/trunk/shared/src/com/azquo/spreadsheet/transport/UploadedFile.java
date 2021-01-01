@@ -188,7 +188,7 @@ public class UploadedFile implements Serializable {
         this.path = path;
         // keeping immutable should avoid some nasty bugs
         this.fileNames = Collections.unmodifiableList(names);
-        this.parameters = parameters != null ? Collections.unmodifiableMap(parameters) : Collections.emptyMap();
+        this.parameters = parameters != null ? parameters : Collections.emptyMap();
         this.templateParameters = null;
         this.postProcessingResult = null;
         this.convertedFromWorksheet = convertedFromWorksheet;
@@ -410,6 +410,9 @@ public class UploadedFile implements Serializable {
             return parameters.get(key.toLowerCase());
         }
         return null;
+    }
+    public void clearParameter(String key) {
+        parameters.remove(key);
     }
 
     public List<String> getSimpleHeadings() {
