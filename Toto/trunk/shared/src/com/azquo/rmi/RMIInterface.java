@@ -142,4 +142,5 @@ public interface RMIInterface extends Remote {
     void sendBatchOfProvenanceFromBackup(DatabaseAccessToken dataAccessToken, List<ProvenanceForBackup> provenanceForBackup) throws RemoteException;
 
     String getMostRecentProvenance(String persistenceName) throws RemoteException;
+
 }

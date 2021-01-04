@@ -2272,8 +2272,8 @@ fr.close();
                     }
                 }
                 lineNo++;
-                if (lineNo % 1000 == 0){
-                    System.out.println("preprocessing lines: " + lineNo);
+                if (lineNo % 200 == 0){
+                    RMIClient.getServerInterface(loggedInUser.getDatabaseServer().getIp()).addToLog(loggedInUser.getDataAccessToken(), "Preprocessing line: " + lineNo);
                 }
             }
             fileWriter.flush();
