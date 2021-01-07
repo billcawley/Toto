@@ -74,8 +74,8 @@ public class DownloadFileController {
                 if (byId != null && byId.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
                     if (!loggedInUser.getUser().isAdministrator()) {
                         Set<Integer> nonAdminDBids = new HashSet<>();
-                        for (TypedPair<Integer, Integer> securityPair : loggedInUser.getReportIdDatabaseIdPermissions().values()) {
-                            nonAdminDBids.add(securityPair.getSecond());
+                        for (LoggedInUser.ReportIdDatabaseId securityPair : loggedInUser.getReportIdDatabaseIdPermissions().values()) {
+                            nonAdminDBids.add(securityPair.getDatabaseId());
                         }
                         if (!nonAdminDBids.contains(byId.getDatabaseId())) {
                             return;

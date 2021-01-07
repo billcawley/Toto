@@ -439,8 +439,8 @@ this may now not work at all, perhaps delete?
         // new logic - since all users can access this I'll now constrain the list if the user isn't admin
         if (!loggedInUser.getUser().isAdministrator()){
             List<Integer> okDatabaseIds = new ArrayList<>();
-            for (TypedPair<Integer, Integer> securityPair : loggedInUser.getReportIdDatabaseIdPermissions().values()){
-                okDatabaseIds.add(securityPair.getSecond()); // second is database but this is dangerous - needs to be properly typed really todo
+            for (LoggedInUser.ReportIdDatabaseId securityPair : loggedInUser.getReportIdDatabaseIdPermissions().values()){
+                okDatabaseIds.add(securityPair.getDatabaseId());
             }
             pendingUploads.removeIf(next -> !okDatabaseIds.contains(next.getDatabaseId()));
         }

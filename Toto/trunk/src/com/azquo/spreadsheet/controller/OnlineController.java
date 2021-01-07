@@ -192,12 +192,12 @@ public class OnlineController {
                     //new logic for permissions ad hoc on a report
 //                    System.out.println("Checking permission : " + permissionId);
                     if (loggedInUser.getPermission(permissionId.toLowerCase()) != null) { // then we have a permission as set by a report
-                        TypedPair<OnlineReport, Database> permission = loggedInUser.getPermission(permissionId.toLowerCase());
+                        LoggedInUser.ReportDatabase permission = loggedInUser.getPermission(permissionId.toLowerCase());
 //                        System.out.println("found permission : " + permission);
-                        onlineReport = permission.getFirst();
+                        onlineReport = permission.getReport();
                         if (onlineReport != null) {
                             reportId = onlineReport.getId() + ""; // hack for permissions
-                            LoginService.switchDatabase(loggedInUser, permission.getSecond());
+                            LoginService.switchDatabase(loggedInUser, permission.getDatabase());
                         }
                     }else{
                        result = "error: user has no permission for this report";

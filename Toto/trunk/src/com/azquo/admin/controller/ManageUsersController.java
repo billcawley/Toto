@@ -472,9 +472,9 @@ public class ManageUsersController {
                                 if (!loggedInUser.getUser().isAdministrator()) { // then I need to check against the session for allowable reports and databases
                                     boolean stored = false;
                                     if (d != null && or != null) {
-                                        final Map<String, TypedPair<Integer, Integer>> reportIdDatabaseIdPermissionsFromReport = loggedInUser.getReportIdDatabaseIdPermissions();
-                                        for (TypedPair<Integer, Integer> allowedCombo : reportIdDatabaseIdPermissionsFromReport.values()) {
-                                            if (allowedCombo.getFirst() == or.getId() && allowedCombo.getSecond() == d.getId()) { // then we can add the user with this info
+                                        final Map<String, LoggedInUser.ReportIdDatabaseId> reportIdDatabaseIdPermissionsFromReport = loggedInUser.getReportIdDatabaseIdPermissions();
+                                        for (LoggedInUser.ReportIdDatabaseId allowedCombo : reportIdDatabaseIdPermissionsFromReport.values()) {
+                                            if (allowedCombo.getReportId() == or.getId() && allowedCombo.getDatabaseId() == d.getId()) { // then we can add the user with this info
                                                 User user1 = new User(0, end.atStartOfDay(), loggedInUser.getUser().getBusinessId(), email, user, status, password, salt, loggedInUser.getUser().getEmail(), d.getId(), or.getId(), selections, team);
                                                 UserDAO.store(user1);
                                                 stored = true;

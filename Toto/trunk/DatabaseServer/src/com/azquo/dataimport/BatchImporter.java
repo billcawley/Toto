@@ -1031,6 +1031,8 @@ public class BatchImporter implements Callable<Void> {
                 if (!m.find()) return CHECKFALSE;
                 String LHS = interpretTerm(constants, element.substring(0, m.start()).trim());
                 String RHS = interpretTerm(constants, element.substring(m.end()).trim());
+                System.out.println("condition LHS : " + LHS);
+                System.out.println("condition RHS : " + RHS);
                 if (LHS == null || RHS == null) {
                     break;
                 } else {

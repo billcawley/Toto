@@ -74,11 +74,11 @@ public class UserUploadController {
 
             List<Database> databaseList = new ArrayList<>();
             Set<Integer> integerSet = new HashSet<>();
-            for (TypedPair<Integer, Integer> securityPair : loggedInUser.getReportIdDatabaseIdPermissions().values()) {
-                if (!integerSet.contains(securityPair.getSecond())) {
-                    databaseList.add(DatabaseDAO.findById(securityPair.getSecond()));
+            for (LoggedInUser.ReportIdDatabaseId securityPair : loggedInUser.getReportIdDatabaseIdPermissions().values()) {
+                if (!integerSet.contains(securityPair.getDatabaseId())) {
+                    databaseList.add(DatabaseDAO.findById(securityPair.getDatabaseId()));
                 }
-                integerSet.add(securityPair.getSecond());
+                integerSet.add(securityPair.getDatabaseId());
             }
 
             if (error.length() > 0) {
@@ -153,11 +153,11 @@ public class UserUploadController {
         if (loggedInUser != null) {
             Set<Integer> integerSet = new HashSet<>();
             ArrayList<Database> databaseList = new ArrayList<>();
-            for (TypedPair<Integer, Integer> securityPair : loggedInUser.getReportIdDatabaseIdPermissions().values()) {
-                if (!integerSet.contains(securityPair.getSecond())) {
-                    databaseList.add(DatabaseDAO.findById(securityPair.getSecond()));
+            for (LoggedInUser.ReportIdDatabaseId securityPair : loggedInUser.getReportIdDatabaseIdPermissions().values()) {
+                if (!integerSet.contains(securityPair.getDatabaseId())) {
+                    databaseList.add(DatabaseDAO.findById(securityPair.getDatabaseId()));
                 }
-                integerSet.add(securityPair.getSecond());
+                integerSet.add(securityPair.getDatabaseId());
             }
             if (uploadFile != null && !uploadFile.isEmpty()) {
                 try {

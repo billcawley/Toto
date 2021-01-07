@@ -29,7 +29,7 @@ public class TypedPair<F,S> implements Serializable {
     // these two are hacky
     @Override
     public int hashCode() {
-        return (first.toString() + second.toString()).hashCode();
+        return (first.toString() + " " + second.toString()).hashCode();
     }
 
     @Override

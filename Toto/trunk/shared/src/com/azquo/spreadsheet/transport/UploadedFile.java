@@ -43,7 +43,7 @@ public class UploadedFile implements Serializable {
     // as it says - server side this can change how headings are looked up. Legacy logic that could be clarified.
     private final boolean convertedFromWorksheet;
 
-    // how ling it took to process - I said duration as "time" is ambiguous in this context
+    // how long it took to process - I said duration as "time" is ambiguous in this context
     private long processingDuration;
 
     private int noLinesImported;
@@ -71,7 +71,7 @@ public class UploadedFile implements Serializable {
     // we need to have the option to set heading depth here, how high the custom headings region is, rather then trying to derive it
     private int headingDepth;
 
-    // heading definitions. At its most simple it would be a list of strings but it can be a lookup based on file headings and there could be multiple headingss so
+    // heading definitions. At its most simple it would be a list of strings but it can be a lookup based on file headings and there could be multiple headings so
     private List<String> simpleHeadings;
 
     // not required for importing to work but a copy of the headings we found on the file can dramatically improve feedback to the user
@@ -95,15 +95,16 @@ public class UploadedFile implements Serializable {
     // the latter signified by quotes
     // row + col starting index 0. Need to think a little about what to do if they're not found
     private Map<RowColumn, String> topHeadings;
-    // languages now set in the template or perhaps overriden by parameters - not sure how necessary this will be
+    // languages now set in the template or perhaps overridden by parameters - not sure how necessary this will be
     private List<String> languages;
     // the provenanceId attached to the data in the file
     private int provenanceId;
     // for validation support - this file goes into a temporary copy of the database
     private final boolean isValidationTest;
     // tells the upload to ignore certain lines (probably due to warnings about the lines) - I'm jamming the identifier against here too as it will be required to get comments later. Hence Map not Set
+    // so the line number and the value used to find that line numebr (if it was just line number then a moot point but if it was e.g. a certificate ref o something then relevant for the comment)
     private Map<Integer, String> ignoreLines;
-    // what the ignored lines actually were - for user feedback
+    // what the ignored lines actually were - for user feedback - so what's in these two will refer to the same lines. Whether there should be a double string in the ignore lines value above I don't know. Not a biggy aither way
     private Map<Integer, String> ignoreLinesValues;
 
     private String fileType; // has the user given the file a type? should the file move with backups and be available to non admin users?
@@ -145,6 +146,7 @@ public class UploadedFile implements Serializable {
     }
 
     // this has distinct errors - maybe I should use it for both? Todo
+    // as in rejected is straight error, there may be multiple warnings for a given line based on validation logic
 
     public static class WarningLine implements Serializable{
         final int lineNo;
@@ -345,6 +347,7 @@ public class UploadedFile implements Serializable {
     public String getError() {
         return trimError(error);
     }
+
     private static String trimError(String error){
         if (error == null){
             return error;

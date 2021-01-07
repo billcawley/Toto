@@ -200,11 +200,11 @@ public class ReportExecutor {
                     // so, first try to get the report based off permissions, if so it might override the current database
                     // note this is a BAD idea e.g. for temporary databases, todo, stop it then
                     if (loggedInUser.getPermission(reportToRun.toLowerCase()) != null) {
-                        TypedPair<OnlineReport, Database> permission = loggedInUser.getPermission(reportToRun.toLowerCase());
-                        onlineReport = permission.getFirst();
-                        if (permission.getSecond() != null) {
+                        LoggedInUser.ReportDatabase permission = loggedInUser.getPermission(reportToRun.toLowerCase());
+                        onlineReport = permission.getReport();
+                        if (permission.getDatabase() != null) {
                             oldDatabase = loggedInUser.getDatabase();
-                            loggedInUser.setDatabaseWithServer(loggedInUser.getDatabaseServer(), permission.getSecond());
+                            loggedInUser.setDatabaseWithServer(loggedInUser.getDatabaseServer(), permission.getDatabase());
                         }
                     } else { // otherwise try a straight lookup - stick on whatever db we're currently on
                         onlineReport = OnlineReportDAO.findForDatabaseIdAndName(loggedInUser.getDatabase().getId(), reportToRun);
@@ -813,11 +813,11 @@ public class ReportExecutor {
                                 OnlineReport onlineReport;
                                 Database oldDatabase = null;
                                 if (loggedInUser.getPermission(reportName.toLowerCase()) != null) {
-                                    TypedPair<OnlineReport, Database> permission = loggedInUser.getPermission(reportName.toLowerCase());
-                                    onlineReport = permission.getFirst();
-                                    if (permission.getSecond() != null) {
+                                    LoggedInUser.ReportDatabase permission = loggedInUser.getPermission(reportName.toLowerCase());
+                                    onlineReport = permission.getReport();
+                                    if (permission.getDatabase() != null) {
                                         oldDatabase = loggedInUser.getDatabase();
-                                        loggedInUser.setDatabaseWithServer(loggedInUser.getDatabaseServer(), permission.getSecond());
+                                        loggedInUser.setDatabaseWithServer(loggedInUser.getDatabaseServer(), permission.getDatabase());
                                     }
                                 } else { // otherwise try a straight lookup - stick on whatever db we're currently on
                                     onlineReport = OnlineReportDAO.findForDatabaseIdAndName(loggedInUser.getDatabase().getId(), reportName);

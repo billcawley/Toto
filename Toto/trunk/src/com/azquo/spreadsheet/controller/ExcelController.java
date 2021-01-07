@@ -507,8 +507,8 @@ public class ExcelController {
                                 onlineReport = OnlineReportDAO.findForDatabaseIdAndName(db.getId(), reportName);
                                 boolean allowed = false;
                                 for (String key : loggedInUser.getReportIdDatabaseIdPermissions().keySet()) {
-                                    TypedPair<OnlineReport, Database> permission = loggedInUser.getPermission(key);
-                                    if (permission.getFirst().getId() == onlineReport.getId() && permission.getSecond().getId() == db.getId()) {
+                                    LoggedInUser.ReportDatabase permission = loggedInUser.getPermission(key);
+                                    if (permission.getReport().getId() == onlineReport.getId() && permission.getDatabase().getId() == db.getId()) {
                                         allowed = true;
                                         onlineReport.setDatabase(db.getName());
                                         break;
@@ -616,12 +616,11 @@ public class ExcelController {
                     //book.getInternalBook().setAttribute(LOGGED_IN_USER, loggedInUser);
                     //book.getInternalBook().setAttribute(REPORT_ID, or.getId());
                     //ReportRenderer.populateBook(book, 0);
-                    Map<String, TypedPair<Integer, Integer>> reports = loggedInUser.getReportIdDatabaseIdPermissions();
+                    Map<String, LoggedInUser.ReportIdDatabaseId> reports = loggedInUser.getReportIdDatabaseIdPermissions();
                     if (!reports.isEmpty()){
-                        for (String reportName2 : reports.keySet()) {
-                            TypedPair<Integer, Integer> tp = reports.get(reportName2);
-                            OnlineReport or = OnlineReportDAO.findById(tp.getFirst());
-                            Database db = DatabaseDAO.findById(tp.getSecond());
+                        for (LoggedInUser.ReportIdDatabaseId reportIdDatabaseId : reports.values()) {
+                            OnlineReport or = OnlineReportDAO.findById(reportIdDatabaseId.getReportId());
+                            Database db = DatabaseDAO.findById(reportIdDatabaseId.getDatabaseId());
                             databaseReports.add(new DatabaseReport(or.getFilename(), or.getAuthor(), or.getUntaggedReportName(), db.getName(), or.getCategory()));
                             databaseReports.sort(Comparator.comparing(o -> (o.getCategory() + o.getSheetName())));
                         }
@@ -644,9 +643,9 @@ public class ExcelController {
                 databases = AdminService.getDatabaseListForBusinessWithBasicSecurity(loggedInUser);
             } else {
                 databases = new ArrayList<>();
-                Map<String, TypedPair<Integer, Integer>> reports = loggedInUser.getReportIdDatabaseIdPermissions();
-                for (TypedPair<Integer, Integer> tp : reports.values()) {
-                    databases.add(DatabaseDAO.findById(tp.getSecond()));
+                Map<String, LoggedInUser.ReportIdDatabaseId> reports = loggedInUser.getReportIdDatabaseIdPermissions();
+                for (LoggedInUser.ReportIdDatabaseId reportIdDatabaseId : reports.values()) {
+                    databases.add(DatabaseDAO.findById(reportIdDatabaseId.getDatabaseId()));
                 }
             }
             if (op.equals("allowedforms")) {

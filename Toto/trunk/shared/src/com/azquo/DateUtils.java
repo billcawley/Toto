@@ -54,7 +54,7 @@ public class DateUtils {
     }
 
     // how many years in the future will we allow on two digit dates before we take 100 years off the date
-    private static long towDigitYearFutureThreshold = 10;
+    private static final long towDigitYearFutureThreshold = 10;
 
     public static LocalDate isADate(String maybeDate) {
         String dateToTest = maybeDate.replace("/", "-").replace(" ", "-");

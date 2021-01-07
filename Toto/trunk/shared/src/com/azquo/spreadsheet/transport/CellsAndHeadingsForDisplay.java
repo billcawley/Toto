@@ -30,6 +30,7 @@ public class CellsAndHeadingsForDisplay implements Serializable {
     private final List<List<String>> contextSource;
     private final long timeStamp;
     private RegionOptions options;
+    // I believe locks are more a question of user editing than he cell being e.g. made from the result of a server side function
     private final String lockResult;
 
     public CellsAndHeadingsForDisplay(String region, List<List<String>> columnHeadings, List<List<String>> rowHeadings, Set<Integer> zeroSavedColumnIndexes, Set<Integer> zeroSavedRowIndexes, List<List<CellForDisplay>> data

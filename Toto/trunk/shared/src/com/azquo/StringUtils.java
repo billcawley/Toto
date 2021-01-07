@@ -78,7 +78,7 @@ Essentially prepares a statement for functions like interpretSetTerm and shuntin
 
      */
 
-    private static DecimalFormat twoDigit = new DecimalFormat("00");
+    private static final DecimalFormat twoDigit = new DecimalFormat("00");
 
     public static String prepareStatement(String statement, List<String> nameNames, List<String> attributeStrings, List<String> stringLiterals) throws Exception {
         // sort the name quotes - will be replaces with !01 !02 etc.
@@ -151,27 +151,33 @@ Essentially prepares a statement for functions like interpretSetTerm and shuntin
         statement = statement.replace(";", " "); // legacy from when this was required
         // now, we want to run validation on what's left really. One problem is that operators might not have spaces
         // ok this is hacky, I don't really care for the moment
-        statement = statement.replace("*", " * ").replace("  ", " ");
-        statement = statement.replace("+", " + ").replace("  ", " ");
-        statement = statement.replace("-", " - ").replace("  ", " ");
-        statement = statement.replace("/", " / ").replace("  ", " ");
-        statement = statement.replace("/", " / ").replace("  ", " ");
-        statement = statement.replace("<", " < ").replace("  ", " ");
-        statement = statement.replace(">", " > ").replace("  ", " ");
-        statement = statement.replace("=", " = ").replace("  ", " ");
-        statement = statement.replace("(", " ( ").replace("  ", " ");
-        statement = statement.replace(")", " ) ").replace("  ", " ");
+        statement = statement.replace("*", " * ");
+        statement = statement.replace("+", " + ");
+        statement = statement.replace("-", " - ");
+        statement = statement.replace("/", " / ");
+        statement = statement.replace("/", " / ");
+        statement = statement.replace("<", " < ");
+        statement = statement.replace(">", " > ");
+        statement = statement.replace("=", " = ");
+        statement = statement.replace("(", " ( ");
+        statement = statement.replace(")", " ) ");
         statement = statement.replace(" AND ", " & ").replace(" OR ", " | ");
         statement = statement.replace(" and ", " & ").replace(" or ", " | ");
         // this assumes that the , will be taken care of after the parsing
         statement = statement.replace(",", " , ").replace("  ", " ").replace("  ", " ");//remove up to two spaces
         statement = statement.replace("> =", StringLiterals.GREATEROREQUAL + "").replace("< =", StringLiterals.LESSOREQUAL + "");
+        // ?i just means case insensitive
+        // worth noting that if someon did do level 100 intentionally it would break . . .
         statement = statement.replaceAll("(?i)level lowest", "level 100");
         statement = statement.replaceAll("(?i)level highest", "level -100");
         statement = statement.replaceAll("(?i)level all", "level 101");
         // can be used by the new "exclude" syntax
-        statement = statement.replace("[", " [ ").replace("  ", " ");
-        statement = statement.replace("]", " ] ").replace("  ", " ");
+        statement = statement.replace("[", " [ ");
+        statement = statement.replace("]", " ] ");
+        // I was doing this after every one of the "add spaces around operators" statements above, pointless. Since string literals will have been extracted by now this should be safe
+        while (statement.contains("  ")){
+            statement = statement.replace("  ", " ");
+        }
 
 
  /* so now we have things like this, should be ready for a basic test
@@ -202,6 +208,8 @@ I should be ok for StringTokenizer at this point
                  Now used in the returned string and the names strings are chucked into an array to be resolved in name spreadsheet
                 we also need attribute names in array so attribute names don't trip the shunting yard algorithm etc.
                 I'm not completely clear this is the best way but it the resultant statement is "safe" for the shunting yard algorithm
+
+                quoted name was just for stuff in quotes, now we populate the attribute strings and name names regardless of quotes
                 */
                 if (term.startsWith(".")) {
                     // I was using name marker, no good as it would be caught by a later conditional parser

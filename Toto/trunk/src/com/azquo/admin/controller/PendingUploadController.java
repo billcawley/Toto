@@ -111,11 +111,11 @@ public class PendingUploadController {
                     model.put("cancelUrl", "UserUpload#tab2");
                     nonAdminDBids = new HashSet<>();
                     databaseList = new ArrayList<>();
-                    for (TypedPair<Integer, Integer> securityPair : loggedInUser.getReportIdDatabaseIdPermissions().values()) {
-                        if (!nonAdminDBids.contains(securityPair.getSecond())) {
-                            databaseList.add(DatabaseDAO.findById(securityPair.getSecond()));
+                    for (LoggedInUser.ReportIdDatabaseId securityPair : loggedInUser.getReportIdDatabaseIdPermissions().values()) {
+                        if (!nonAdminDBids.contains(securityPair.getDatabaseId())) {
+                            databaseList.add(DatabaseDAO.findById(securityPair.getDatabaseId()));
                         }
-                        nonAdminDBids.add(securityPair.getSecond());
+                        nonAdminDBids.add(securityPair.getDatabaseId());
                     }
                     if (!nonAdminDBids.contains(pu.getDatabaseId())) {
                         return "redirect:/api/Login";

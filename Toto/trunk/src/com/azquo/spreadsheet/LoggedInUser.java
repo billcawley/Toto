@@ -18,13 +18,9 @@ import io.keikai.api.model.Book;
 
 import java.io.IOException;
 import java.io.Serializable;
-import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -39,6 +35,43 @@ import java.util.concurrent.atomic.AtomicInteger;
  * <p>
  */
 public class LoggedInUser implements Serializable {
+
+    // I don't care about equals and hashcode on these two currently
+    public static class ReportIdDatabaseId {
+        final int reportId;
+        final int databaseId;
+
+        public ReportIdDatabaseId(int reportId, int databaseId) {
+            this.reportId = reportId;
+            this.databaseId = databaseId;
+        }
+
+        public int getReportId() {
+            return reportId;
+        }
+
+        public int getDatabaseId() {
+            return databaseId;
+        }
+    }
+
+    public static class ReportDatabase {
+        final OnlineReport report;
+        final Database database;
+
+        public ReportDatabase(OnlineReport report, Database database) {
+            this.report = report;
+            this.database = database;
+        }
+
+        public OnlineReport getReport() {
+            return report;
+        }
+
+        public Database getDatabase() {
+            return database;
+        }
+    }
 
     private static final String userLogsPath = "User Logs/"; // with a space
 
@@ -65,7 +98,7 @@ public class LoggedInUser implements Serializable {
 
     // now uses ids given the problems of leaving full objects in the session (going out of sync with the database)
     // report, database, generally set from a home user menu
-    private Map<String, TypedPair<Integer, Integer>> reportIdDatabaseIdPermissions; // hold them here after they're set by a "home page" report for linking
+    private final Map<String, ReportIdDatabaseId> reportIdDatabaseIdPermissions; // hold them here after they're set by a "home page" report for linking
 
     private Set<String> formPermissions; // form permissions, more simple than above
 
@@ -74,12 +107,9 @@ public class LoggedInUser implements Serializable {
 
     // moved back in here now (was on the db server for a bit)
 
-    private AtomicInteger lastJSTreeNodeId;
+    private final AtomicInteger lastJSTreeNodeId;
 
     private final Map<Integer, JsonChildren.Node> jsTreeLookupMap;
-
-    private static final DateTimeFormatter df = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-    private static final DateTimeFormatter df2 = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"); // 24 hour
 
     // a bit hacky, I just want a place to put the last converted file. For Modus, won't support more than one file etc. Just make it work for the mo
     private String lastFile = null;
@@ -231,13 +261,13 @@ public class LoggedInUser implements Serializable {
     }
 
     // deliberately look up the permissions each time - we want to be up to date with master_db
-    public TypedPair<OnlineReport, Database> getPermission(String reportName){
-        TypedPair<Integer, Integer> idPair = reportIdDatabaseIdPermissions.get(reportName.toLowerCase());
+    public ReportDatabase getPermission(String reportName){
+        ReportIdDatabaseId idPair = reportIdDatabaseIdPermissions.get(reportName.toLowerCase());
         if (idPair != null){
-            Database byId = DatabaseDAO.findById(idPair.getSecond());
-            OnlineReport onlineReport = OnlineReportDAO.findById(idPair.getFirst());
+            Database byId = DatabaseDAO.findById(idPair.getDatabaseId());
+            OnlineReport onlineReport = OnlineReportDAO.findById(idPair.getReportId());
             if (byId != null && onlineReport != null){
-                return new TypedPair<>(onlineReport,byId);
+                return new ReportDatabase(onlineReport,byId);
             } else { // zap reference to records which don't exist!
                 reportIdDatabaseIdPermissions.remove(reportName.toLowerCase());
             }
@@ -246,10 +276,10 @@ public class LoggedInUser implements Serializable {
     }
 
     public void setReportDatabasePermission(String key, OnlineReport onlineReport, Database database){
-        reportIdDatabaseIdPermissions.put(key != null ? key.toLowerCase() : onlineReport.getReportName().toLowerCase(), new TypedPair<>(onlineReport.getId(), database.getId()));
+        reportIdDatabaseIdPermissions.put(key != null ? key.toLowerCase() : onlineReport.getReportName().toLowerCase(), new ReportIdDatabaseId(onlineReport.getId(), database.getId()));
     }
 
-    public Map<String, TypedPair<Integer, Integer>> getReportIdDatabaseIdPermissions() {
+    public Map<String, ReportIdDatabaseId> getReportIdDatabaseIdPermissions() {
         return reportIdDatabaseIdPermissions;
     }
 
