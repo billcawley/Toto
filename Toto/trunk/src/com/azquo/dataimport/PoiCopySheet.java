@@ -1,15 +1,14 @@
 package com.azquo.dataimport;
 
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 import org.apache.poi.ss.usermodel.*;
-import org.apache.poi.ss.util.*;
+import java.lang.reflect.Method;
 
 import org.apache.poi.ss.util.CellRangeAddress;
+import org.apache.poi.xssf.usermodel.XSSFName;
+import org.openxmlformats.schemas.spreadsheetml.x2006.main.CTDefinedName;
 
 class CellRangeAddressWrapper implements Comparable<CellRangeAddressWrapper> {
 
@@ -46,7 +45,6 @@ class CellRangeAddressWrapper implements Comparable<CellRangeAddressWrapper> {
 
 
 
-
     public class PoiCopySheet
     {
         private Set<CellRangeAddressWrapper> mergedRegions_ = new TreeSet<CellRangeAddressWrapper>();
@@ -78,14 +76,27 @@ class CellRangeAddressWrapper implements Comparable<CellRangeAddressWrapper> {
         private void copyRangeNames(){
             int destSheetIndex = dstWorkbook_.getSheetIndex(dstSheet_);
             for (org.apache.poi.ss.usermodel.Name name :srcSheet_.getWorkbook().getAllNames()){
-                Name newName = dstWorkbook_.createName();
-                newName.setSheetIndex(destSheetIndex);
-                newName.setNameName(name.getNameName());
-                newName.setRefersToFormula(name.getRefersToFormula());
+                if (!name.isDeleted() && !isHidden((XSSFName) name)) {
+                    Name newName = dstWorkbook_.createName();
+                    newName.setSheetIndex(destSheetIndex);
+                    newName.setNameName(name.getNameName());
+                    newName.setRefersToFormula(name.getRefersToFormula());
+                }
 
             }
         }
 
+        boolean isHidden(XSSFName name){
+            try {
+                Method getCTName = XSSFName.class.getDeclaredMethod("getCTName");
+                getCTName.setAccessible(true);
+                CTDefinedName ctName = (CTDefinedName) getCTName.invoke(name);
+                return ctName.getHidden();
+            }catch (Exception e){
+                return true;
+            }
+
+        }
         private void copySheetInst()
         {
             mapCellStyles();
