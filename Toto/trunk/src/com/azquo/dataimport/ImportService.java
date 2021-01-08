@@ -445,7 +445,7 @@ public final class ImportService {
             org.apache.poi.ss.usermodel.Name importName = BookUtils.getName(book, ReportRenderer.AZIMPORTNAME);
             // also just do a simple check on the file name
             String lcName = uploadedFile.getFileName().toLowerCase();
-            if ((importName != null || lcName.contains("import templates") || lcName.contains("preprocessor") || lcName.contains("lookups")) && !lcName.contains("preprocessor=")) {
+            if ((importName != null || lcName.contains("import templates") || lcName.contains("preprocessor")) && !lcName.contains("preprocessor=")) {
                 if ((loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
                     if (opcPackage != null) opcPackage.revert();
                     //preprocessors are not assigned to the file, import templates are assigned
@@ -1708,7 +1708,7 @@ public final class ImportService {
         }
         ImportTemplateDAO.store(importTemplate);
         // right here is a problem - what about other users currently logged in with that database? todo
-        if (assignToLoggedInUserDB) {
+        if (assignToLoggedInUserDB && !uploadedFile.getFileName().toLowerCase().contains("preprocessor")) {
             Database database = loggedInUser.getDatabase();
             database.setImportTemplateId(importTemplate.getId());
             DatabaseDAO.store(database);
