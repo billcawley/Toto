@@ -1607,9 +1607,12 @@ public final class ImportService {
             for (int i = 0; i < cell.getSheet().getNumMergedRegions(); i++) {
                 org.apache.poi.ss.util.CellRangeAddress region = cell.getSheet().getMergedRegion(i); //Region of merged cells
                 //check first cell of the region
-                if (rowIndex == region.getFirstRow() && // logic change - only do the merge thing on the first column
-                        cellIndex > region.getFirstColumn() // greater than, we're only interested if not the first column
+                //LOGIC CHANGE AGAIN! get all cells except the top left.
+                if (rowIndex >= region.getFirstRow()
+                        && rowIndex <= region.getLastRow()
+                        && cellIndex >= region.getFirstColumn()
                         && cellIndex <= region.getLastColumn()
+                        && (rowIndex > region.getFirstRow()||cellIndex > region.getFirstColumn())
                         /*&& rowIndex >= region.getFirstRow()
                         && rowIndex <= region.getLastRow()*/
                 ) {
@@ -2050,7 +2053,17 @@ fr.close();
                                         for (int rowNo = firstRow; rowNo <=lastRow; rowNo++){
                                             String source = getCellValue(newSheet.getRow(rowNo).getCell(firstCol));
                                             String target = getCellValue(newSheet.getRow(rowNo).getCell(firstCol + 1));
-                                            headingsLookups.put(source,target);
+                                            if (headingsLookups.get(source)!=null){
+                                                headingsLookups.put(target, headingsLookups.get(source));
+                                            }else{
+                                                if (headingsLookups.get(target)!=null){
+                                                    headingsLookups.put(source, headingsLookups.get(target));
+                                                }else{
+                                                    String targetRow = source + "," + target;
+                                                    headingsLookups.put(source, targetRow);
+                                                    headingsLookups.put(target, targetRow);
+                                                }
+                                            }
                                         }
 
                                     }
@@ -2211,7 +2224,7 @@ fr.close();
                         for (int col = 0;col<newHeadings.size();col++){
                            Integer targetCol = inputColumns.get(newHeadings.get(col));
                            //check that the last row of headings is not blank, then look it up
-                           if (newHeadings.get(col).get(existingHeadingRows - 1).length() > 0 && targetCol != null&& inputColumnMap.get(col)==null) {
+                           if (newHeadings.get(col).get(existingHeadingRows - 1).length() > 0 && targetCol != null) {
                                //note - ignores heading if no map found
                                inputColumnMap.put(col, targetCol);
                            }
@@ -2247,9 +2260,9 @@ fr.close();
                         for (colNo = outputCol; colNo <= lastOutputCol; colNo++) {
                             String cellVal = getCellValue(outputSheet.getRow(outputRow).getCell(colNo));
                             if (colNo > 0) {
-                                fileWriter.write("\t" + normalise(cellVal));
+                                fileWriter.write("\t" + cellVal);
                             } else {
-                                fileWriter.write(normalise(cellVal));
+                                fileWriter.write(cellVal);
                             }
                         }
                         fileWriter.write("\r\n");
