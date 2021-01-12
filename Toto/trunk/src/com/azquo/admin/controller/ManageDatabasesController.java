@@ -388,7 +388,7 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
                             }
                             //detect from workbook name
                             String lcName = uploadedFile.getFileName().toLowerCase();
-                            if (!lcName.contains("=") && (lcName.contains("import templates") || lcName.contains("preprocessor") || lcName.contains("lookups"))) {
+                            if (!lcName.contains("=") && (lcName.contains("import templates") || lcName.contains("preprocessor") || lcName.contains("headings")|| lcName.contains("lookups"))) {
                                 isImportTemplate = true;
                             }
                             // detect Ben Jones contract style template
