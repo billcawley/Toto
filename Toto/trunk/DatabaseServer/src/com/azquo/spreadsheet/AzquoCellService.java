@@ -36,19 +36,19 @@ public class AzquoCellService {
 
     static final int COL_HEADINGS_NAME_QUERY_LIMIT = 500;
 
-    private static List<Integer> sortOnMultipleValues(Map<Integer, List<TypedPair<Double, String>>> sortListsMap, final boolean sortRowsUp) {
+    private static List<Integer> sortOnMultipleValues(Map<Integer, List<DoubleOrString>> sortListsMap, final boolean sortRowsUp) {
         int sortCount = sortListsMap.values().iterator().next().size();
         List<Boolean> doubleSort = new ArrayList<>();
         for (int i = 0; i < sortCount; i++) doubleSort.add(true);
         // ok I can't see a way around this, I'm going to have to check all doubles for a null and if I find one abandon the doublesort
         int doubleSorts = sortCount;
-        for (List<TypedPair<Double, String>> check : sortListsMap.values()) {
+        for (List<DoubleOrString> check : sortListsMap.values()) {
             for (int i = 0; i < sortCount; i++) {
-                TypedPair<Double, String> value = check.get(i);
+                DoubleOrString value = check.get(i);
                 // hack for gaps, make them 0, lets see how it goes (of course one non blank will mean string sorting which is correct)
-                if ("".equals(value.getSecond()) && value.getFirst() == null) {
-                    check.set(i, new TypedPair<>(0.0, null));
-                } else if (value.getFirst() == null) {
+                if ("".equals(value.getString()) && value.getDouble() == null) {
+                    check.set(i, new DoubleOrString(0.0, null));
+                } else if (value.getDouble() == null) {
                     if (doubleSort.get(i)) {
                         doubleSort.set(i, false);
                         if (--doubleSorts == 0) {
@@ -60,7 +60,7 @@ public class AzquoCellService {
         }
 
         final List<Integer> sortedValues = new ArrayList<>(sortListsMap.size());
-        List<Map.Entry<Integer, List<TypedPair<Double, String>>>> list = new ArrayList<>(sortListsMap.entrySet());
+        List<Map.Entry<Integer, List<DoubleOrString>>> list = new ArrayList<>(sortListsMap.entrySet());
         // sort list based on the list of values in each entry
         try {
             list.sort((o1, o2) -> {
@@ -69,14 +69,14 @@ public class AzquoCellService {
                     return 0;
                 }
                 for (int index = 0; index < sortCount; index++) {
-                    String v1 = o1.getValue().get(index).getSecond();
-                    String v2 = o2.getValue().get(index).getSecond();
+                    String v1 = o1.getValue().get(index).getString();
+                    String v2 = o2.getValue().get(index).getString();
                     if (v2 == null && v1 != null) return -1;
                     if (v1 == null && v2 != null) return 1;
                     if (doubleSort.get(index)) {
-                        result = o1.getValue().get(index).getFirst().compareTo(o2.getValue().get(index).getFirst());
+                        result = o1.getValue().get(index).getDouble().compareTo(o2.getValue().get(index).getDouble());
                     } else {
-                        result = o1.getValue().get(index).getSecond().compareTo(o2.getValue().get(index).getSecond());
+                        result = o1.getValue().get(index).getString().compareTo(o2.getValue().get(index).getString());
                     }
                     if (result != 0) { // we found a difference
                         break;
@@ -88,10 +88,7 @@ public class AzquoCellService {
         } catch (Exception e) {
             //not sure what to do if there are null values in the list that needs to be sorted
         }
-        for (Map.Entry<Integer, List<TypedPair<Double, String>>> entry : list) {
-            for (int i = 0; i < sortCount; i++) {
-                TypedPair<Double, String> value = entry.getValue().get(i);
-            }
+        for (Map.Entry<Integer, List<DoubleOrString>> entry : list) {
             sortedValues.add(entry.getKey());
         }
         return sortedValues;
@@ -419,7 +416,7 @@ public class AzquoCellService {
         maxCols = Math.abs(maxCols);
         if (!sortOnColIndexes.isEmpty() || sortOnRowIndex != -1 || sortOnColTotals || sortOnRowTotals) { // then there's sorting to do
             // for up/down sorting we now support mor than one column, it might bee a mix of strings and doubles, hence lists of typed pairs
-            final Map<Integer, List<TypedPair<Double, String>>> sortRowValuesMap = HashIntObjMaps.newMutableMap(sourceData.size());
+            final Map<Integer, List<DoubleOrString>> sortRowValuesMap = HashIntObjMaps.newMutableMap(sourceData.size());
             // for left/right sorting, only supports numbers and one row to sort on or the column totals
             final Map<Integer, Double> sortColumnDoubles = HashIntDoubleMaps.newMutableMap(totalCols);
             // blank the map to stop npes later
@@ -429,7 +426,7 @@ public class AzquoCellService {
             int rowNo = 0;
             // populate the maps that will be sorted
             for (List<AzquoCell> rowCells : sourceData) {
-                List<TypedPair<Double, String>> sortRowValues = new ArrayList<>();// what, in order, are the relevant sort values for this row? Can be numbers of strings . .
+                List<DoubleOrString> sortRowValues = new ArrayList<>();// what, in order, are the relevant sort values for this row? Can be numbers of strings . .
                 double sortRowTotal = 0.0;
                 int colNo = 0;
                 // initial pass through the row
@@ -445,7 +442,7 @@ public class AzquoCellService {
                     colNo++;
                 }
                 if (sortOnRowTotals) { // a simple sort on one number
-                    sortRowValues.add(new TypedPair<>(sortRowTotal, null));
+                    sortRowValues.add(new DoubleOrString(sortRowTotal, null));
                 } else { // ok here we go, need to support multiple sort columns
                     // try to make number sorting work where possible by saying that blank is 0
                     for (Integer index : sortOnColIndexes) {
@@ -454,7 +451,7 @@ public class AzquoCellService {
                             cell = rowCells.get(index);
                         }
                         if (cell == null) { // blank, be flexible to the sorting later
-                            sortRowValues.add(new TypedPair<>(0d, ""));
+                            sortRowValues.add(new DoubleOrString(0d, ""));
                         } else {
                             Double d = null;
                             try {
@@ -475,7 +472,7 @@ public class AzquoCellService {
                                 //ignore.  If every val produces a double, then the double will be sorted.
                             }
 
-                            sortRowValues.add(new TypedPair<>(d, cell.getStringValue()));
+                            sortRowValues.add(new DoubleOrString(d, cell.getStringValue()));
                         }
                     }
                 }
@@ -491,7 +488,7 @@ public class AzquoCellService {
                         if (first){
                             // the right column, quite simple - batch up each little section in subTotalSortRowValues,
                             // when you hit a total (permute) sort the lines and jam them and the total into sorted rows
-                            Map<Integer, List<TypedPair<Double, String>>> subTotalSortRowValues = new HashMap<>();
+                            Map<Integer, List<DoubleOrString>> subTotalSortRowValues = new HashMap<>();
                             for (int row = 0; row < sortRowValuesMap.size(); row++) {
                                 if (rowHeadings.get(row).get(sortingHeadingIndex).getFunction() == DataRegionHeading.FUNCTION.PERMUTE) { // means it's a total line
                                     if (!subTotalSortRowValues.isEmpty()){
@@ -509,7 +506,7 @@ public class AzquoCellService {
                             // stores the chunks of rows associated with each total that we're sorting, the key for this map and the next is the row the total is on
                             Map<Integer, List<Integer>> rowsForTotal = new HashMap<>();
                             // the totals themselves that we want to sort
-                            Map<Integer, List<TypedPair<Double, String>>> totalsToSort = new HashMap<>();
+                            Map<Integer, List<DoubleOrString>> totalsToSort = new HashMap<>();
                             List<Integer> newSortedRows = new ArrayList<>();
                             // lastId and thisId are simply used to tell when the name at this level changes
                             int lastId = rowHeadings.get(sortedRows.get(0)).get(sortingHeadingIndex).getName().getId();

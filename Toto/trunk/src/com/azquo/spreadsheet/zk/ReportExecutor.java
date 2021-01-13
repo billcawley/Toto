@@ -1,6 +1,6 @@
 package com.azquo.spreadsheet.zk;
 
-import com.azquo.TypedPair;
+import com.azquo.DoubleOrString;
 import com.azquo.admin.AdminService;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.onlinereport.OnlineReport;
@@ -141,10 +141,10 @@ public class ReportExecutor {
 
     // we assume cleansed of blank lines
     // now can return the outcome if there's an az_Outcome cell. Assuming a loop or list of "do"s then the String returned is the last.
-    private static TypedPair<String, Double> executeCommands(LoggedInUser loggedInUser, List<String> commands, String exportPath, StringBuilder loopsLog, List<List<List<String>>> systemData2DArrays, AtomicInteger count, int provenanceId) throws Exception {
+    private static DoubleOrString executeCommands(LoggedInUser loggedInUser, List<String> commands, String exportPath, StringBuilder loopsLog, List<List<List<String>>> systemData2DArrays, AtomicInteger count, int provenanceId) throws Exception {
         String filterContext = null;
         String filterItems = null;
-        TypedPair<String, Double> toReturn = null;
+        DoubleOrString toReturn = null;
         if (commands.size() > 0 && commands.get(0) != null) {
             String firstLine = commands.get(0);
             int startingIndent = getIndent(firstLine);
@@ -237,10 +237,9 @@ public class ReportExecutor {
                                     // possibly the nosave check could be factored, in report service around line 230
                                     // this is a bit annoying given that I should be able to get the options from the sent cells but there may be no sent cells. Need to investigate this - nosave is currently being used for different databases, that's the problem
                                     SName optionsRegion = BookUtils.getNameByName(ReportRenderer.AZOPTIONS + region, book.getSheet(name.getRefersToSheetName()));
-                                    String optionsSource = "";
                                     boolean noSave = false;
                                     if (optionsRegion != null) {
-                                        optionsSource = BookUtils.getSnameCell(optionsRegion).getStringValue();
+                                        String optionsSource = BookUtils.getSnameCell(optionsRegion).getStringValue();
                                         UserRegionOptions userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), onlineReport.getId(), region, optionsSource);
                                         noSave = userRegionOptions.getNoSave();
                                     }
@@ -259,9 +258,9 @@ public class ReportExecutor {
                             SCell outcomeCell = book.getInternalBook().getSheetByName(outcomeName.getRefersToSheetName()).getCell(refersToCellRegion.getRow(), refersToCellRegion.getColumn());
                             // ok now I think I need to be careful of the cell type
                             if ((outcomeCell.getType() == SCell.CellType.FORMULA && outcomeCell.getFormulaResultType() == SCell.CellType.NUMBER) || outcomeCell.getType() == SCell.CellType.NUMBER) { // I think a decent enough way to number detect?
-                                toReturn = new TypedPair<>(null, outcomeCell.getNumberValue());
+                                toReturn = new DoubleOrString(outcomeCell.getNumberValue(), null);
                             } else {
-                                toReturn = new TypedPair<>(outcomeCell.getStringValue(), null);
+                                toReturn = new DoubleOrString(null, outcomeCell.getStringValue());
                             }
                         }
                         // revert database if it was changed
@@ -365,41 +364,41 @@ public class ReportExecutor {
                             boolean stop = true; // make the default be to stop e.g. in the case of bad syntax or whatever . . .
                             do {
                                 counter++;
-                                final TypedPair<String, Double> stringDoubleTypedPair = executeCommands(loggedInUser, subCommands, exportPath, loopsLog, systemData2DArrays, count, provenanceId);
-                                if (stringDoubleTypedPair != null) {
+                                final DoubleOrString stringDouble = executeCommands(loggedInUser, subCommands, exportPath, loopsLog, systemData2DArrays, count, provenanceId);
+                                if (stringDouble != null) {
                                     // ok I'm going to assume type matching - if the types don't match then forget the comparison
-                                    if ((stringDoubleTypedPair.getFirst() != null && constant != null)) { // string, equals not equals comparison
+                                    if ((stringDouble.getString() != null && constant != null)) { // string, equals not equals comparison
                                         switch (operator) {
                                             case "=":
-                                                stop = stringDoubleTypedPair.getFirst().equalsIgnoreCase(constant);
+                                                stop = stringDouble.getString().equalsIgnoreCase(constant);
                                                 break;
                                             case "!=":
-                                                stop = !stringDoubleTypedPair.getFirst().equalsIgnoreCase(constant);
+                                                stop = !stringDouble.getString().equalsIgnoreCase(constant);
                                                 break;
                                             default:  // error for dodgy operator??
                                                 loopsLog.append("Unknown operator for repeat until outcome string : ").append(operator);
                                                 break;
                                         }
-                                    } else if (stringDoubleTypedPair.getFirst() == null && constant == null) { // assume numbers are set
+                                    } else if (stringDouble.getString() == null && constant == null) { // assume numbers are set
                                         // '=', '>'. '<'. '<=' '>=' '!='
                                         switch (operator) {
                                             case "=":
-                                                stop = stringDoubleTypedPair.getSecond() == constantDouble;
+                                                stop = stringDouble.getDouble() == constantDouble;
                                                 break;
                                             case ">":
-                                                stop = stringDoubleTypedPair.getSecond() > constantDouble;
+                                                stop = stringDouble.getDouble() > constantDouble;
                                                 break;
                                             case "<":
-                                                stop = stringDoubleTypedPair.getSecond() < constantDouble;
+                                                stop = stringDouble.getDouble() < constantDouble;
                                                 break;
                                             case ">=":
-                                                stop = stringDoubleTypedPair.getSecond() >= constantDouble;
+                                                stop = stringDouble.getDouble() >= constantDouble;
                                                 break;
                                             case "<=":
-                                                stop = stringDoubleTypedPair.getSecond() <= constantDouble;
+                                                stop = stringDouble.getDouble() <= constantDouble;
                                                 break;
                                             case "!=":
-                                                stop = stringDoubleTypedPair.getSecond() != constantDouble;
+                                                stop = stringDouble.getDouble() != constantDouble;
                                                 break;
                                             default:
                                                 loopsLog.append("Unknown operator for repeat until outcome number : ").append(operator);
@@ -489,7 +488,7 @@ public class ReportExecutor {
                         try {
                             result = CommonReportUtils.resolveQuery(loggedInUser, trimmedLine.substring(4), null);
                         } catch (Exception e) {
-                            return new TypedPair<String, Double>(result + "Not found:" + trimmedLine.substring(4), 0.0);
+                            return new DoubleOrString(0.0,result + "Not found:" + trimmedLine.substring(4));
                         }
 
                         RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).addToLog(loggedInUser.getDataAccessToken(), result);
@@ -878,9 +877,7 @@ public class ReportExecutor {
                                                         , sName.getRefersToCellRegion().getRow(), sName.getRefersToCellRegion().getColumn()
                                                         , sName.getRefersToCellRegion().getRow(), sName.getRefersToCellRegion().getColumn()
                                                 );
-                                                if (chosenRange != null) {
-                                                    chosenRange.deleteValidation();
-                                                }
+                                                chosenRange.deleteValidation();
                                             }
                                         }
                                     } catch (Exception e) { // I don't think it will exception but this is cosmetic, on the off chance it NPEs for example then carry on

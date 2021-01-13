@@ -1,5 +1,6 @@
 package com.azquo.dataimport;
 
+import com.azquo.LineIdentifierLineValue;
 import com.azquo.RowColumn;
 import com.azquo.TypedPair;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
@@ -507,7 +508,7 @@ public class DSImportService {
 
     // return line number, the thing we were looking for and the line
     // for the pending upload warnings I believe - need to look up lines by values as we won't at this point have a line number to use
-    public static Map<Integer, TypedPair<String, String>> getLinesWithValuesInColumn(UploadedFile uploadedFile, int columnIndex, Set<String> valuesToCheck) throws IOException {
+    public static Map<Integer, LineIdentifierLineValue> getLinesWithValuesInColumn(UploadedFile uploadedFile, int columnIndex, Set<String> valuesToCheck) throws IOException {
         char delimiter = ',';
 //        System.out.println("get lines with values and column, col index : " + columnIndex);
 //        System.out.println("get lines with values and column, values to check : " + valuesToCheck);
@@ -541,7 +542,7 @@ public class DSImportService {
         } else {
             lineIterator = (csvMapper.readerFor(String[].class).with(schema).readValues(new File(uploadedFile.getPath())));
         }
-        Map<Integer, TypedPair<String, String>> toReturn = new HashMap<>();
+        Map<Integer, LineIdentifierLineValue> toReturn = new HashMap<>();
         // ok, run the check
         while (lineIterator.hasNext()) {
             String[] row = lineIterator.next();
@@ -556,7 +557,7 @@ public class DSImportService {
                     }
                     sb.append(s);
                 }
-                toReturn.put(lineIterator.getCurrentLocation().getLineNr() - 1, new TypedPair<>(columnIndex == -1 ? (lineIterator.getCurrentLocation().getLineNr() - 1) + "" : row[columnIndex], sb.toString()));
+                toReturn.put(lineIterator.getCurrentLocation().getLineNr() - 1, new LineIdentifierLineValue(columnIndex == -1 ? (lineIterator.getCurrentLocation().getLineNr() - 1) + "" : row[columnIndex], sb.toString()));
             }
         }
         return toReturn;

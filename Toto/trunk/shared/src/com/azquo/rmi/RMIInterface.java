@@ -1,6 +1,6 @@
 package com.azquo.rmi;
 
-import com.azquo.TypedPair;
+import com.azquo.LineIdentifierLineValue;
 import com.azquo.memorydb.*;
 import com.azquo.spreadsheet.transport.*;
 import com.azquo.spreadsheet.transport.json.JsonChildStructure;
@@ -42,7 +42,7 @@ public interface RMIInterface extends Remote {
 
     void checkTemporaryCopyExists(DatabaseAccessToken databaseAccessToken) throws RemoteException;
 
-    Map<Integer, TypedPair<String, String>> getLinesWithValuesInColumn(UploadedFile uploadedFile, int columnIndex, Set<String> valuesToCheck) throws RemoteException;
+    Map<Integer, LineIdentifierLineValue> getLinesWithValuesInColumn(UploadedFile uploadedFile, int columnIndex, Set<String> valuesToCheck) throws RemoteException;
 
     CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(DatabaseAccessToken databaseAccessToken, String user, String regionName, int valueId, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource, RegionOptions regionOptions, boolean quiet, String filterTargetName) throws RemoteException;

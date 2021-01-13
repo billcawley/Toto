@@ -1,7 +1,6 @@
 package com.azquo.dataimport;
 
-import com.azquo.DateUtils;
-import com.azquo.RowColumn;
+import com.azquo.*;
 import com.azquo.spreadsheet.transport.HeadingWithInterimLookup;
 import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.dataformat.csv.CsvMapper;
@@ -26,8 +25,6 @@ import org.xml.sax.helpers.DefaultHandler;
 import org.zkoss.poi.poifs.crypt.EncryptionInfo;
 import org.zkoss.poi.poifs.filesystem.POIFSFileSystem;*/
 import org.zeroturnaround.zip.ZipException;
-import com.azquo.StringLiterals;
-import com.azquo.TypedPair;
 import com.azquo.admin.AdminService;
 import com.azquo.admin.controller.ManageDatabasesController;
 import com.azquo.admin.database.*;
@@ -1290,11 +1287,11 @@ public final class ImportService {
                             }
                             if (index < uploadedFile.getFileHeadings().size()) { // then we found the relevant column
                                 // I'm going to go to the server code to look this up
-                                Map<Integer, TypedPair<String, String>> linesWithValuesInColumn = RMIClient.getServerInterface(databaseServer.getIp()).getLinesWithValuesInColumn(uploadedFile, index, new HashSet<>(errorLines.keySet()));// new hash set to be serializable . . .
+                                Map<Integer, LineIdentifierLineValue> linesWithValuesInColumn = RMIClient.getServerInterface(databaseServer.getIp()).getLinesWithValuesInColumn(uploadedFile, index, new HashSet<>(errorLines.keySet()));// new hash set to be serializable . . .
                                 // ok so we should now finally have the information we need across the two maps (linesWithValuesInColumn and errorLines)
                                 // What needs to go into a table is the line number, the line itself and error(s) for that line, there could be multiple errors for the line
                                 for (Integer key : linesWithValuesInColumn.keySet()) {
-                                    warningLineMap.computeIfAbsent(key, t -> new UploadedFile.WarningLine(key, keyColumn + ":" + linesWithValuesInColumn.get(key).getFirst(), linesWithValuesInColumn.get(key).getSecond())).addErrors(errorLines.get(linesWithValuesInColumn.get(key).getFirst().toLowerCase()));
+                                    warningLineMap.computeIfAbsent(key, t -> new UploadedFile.WarningLine(key, keyColumn + ":" + linesWithValuesInColumn.get(key).getLineIdentifier(), linesWithValuesInColumn.get(key).getLineValue())).addErrors(errorLines.get(linesWithValuesInColumn.get(key).getLineIdentifier().toLowerCase()));
                                 }
                             } else {
                                 throw new Exception("unable to find " + keyColumn + " from validation in uploaded file");
