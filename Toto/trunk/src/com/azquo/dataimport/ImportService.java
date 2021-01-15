@@ -1622,7 +1622,7 @@ public final class ImportService {
 
     // ZK version of the above - still used by the "download a report, edit and upload it" functionality. Hopefully removed later.
 
-    public static TypedPair<Double, String> getCellValue(io.keikai.api.model.Sheet sheet, int r, int c) {
+    public static DoubleAndOrString getCellValue(io.keikai.api.model.Sheet sheet, int r, int c) {
         Double returnNumber = null;
         String returnString = null;
         Range range = Ranges.range(sheet, r, c);
@@ -1682,7 +1682,7 @@ public final class ImportService {
         }
         if (returnString.startsWith("'") && returnString.indexOf("'", 1) < 0)
             returnString = returnString.substring(1);//in Excel some cells are preceded by a ' to indicate that they should be handled as strings
-        return new TypedPair<>(returnNumber, returnString.trim());
+        return new DoubleAndOrString(returnNumber, returnString.trim());
     }
 
     // similar to uploading a report

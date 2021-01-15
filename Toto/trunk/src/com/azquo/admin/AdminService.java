@@ -1,6 +1,5 @@
 package com.azquo.admin;
 
-import com.azquo.TypedPair;
 import com.azquo.admin.business.Business;
 import com.azquo.admin.business.BusinessDAO;
 import com.azquo.admin.database.*;

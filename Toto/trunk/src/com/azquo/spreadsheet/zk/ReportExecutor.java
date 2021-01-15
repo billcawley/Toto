@@ -1,6 +1,6 @@
 package com.azquo.spreadsheet.zk;
 
-import com.azquo.DoubleOrString;
+import com.azquo.DoubleAndOrString;
 import com.azquo.admin.AdminService;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.onlinereport.OnlineReport;
@@ -141,10 +141,10 @@ public class ReportExecutor {
 
     // we assume cleansed of blank lines
     // now can return the outcome if there's an az_Outcome cell. Assuming a loop or list of "do"s then the String returned is the last.
-    private static DoubleOrString executeCommands(LoggedInUser loggedInUser, List<String> commands, String exportPath, StringBuilder loopsLog, List<List<List<String>>> systemData2DArrays, AtomicInteger count, int provenanceId) throws Exception {
+    private static DoubleAndOrString executeCommands(LoggedInUser loggedInUser, List<String> commands, String exportPath, StringBuilder loopsLog, List<List<List<String>>> systemData2DArrays, AtomicInteger count, int provenanceId) throws Exception {
         String filterContext = null;
         String filterItems = null;
-        DoubleOrString toReturn = null;
+        DoubleAndOrString toReturn = null;
         if (commands.size() > 0 && commands.get(0) != null) {
             String firstLine = commands.get(0);
             int startingIndent = getIndent(firstLine);
@@ -258,9 +258,9 @@ public class ReportExecutor {
                             SCell outcomeCell = book.getInternalBook().getSheetByName(outcomeName.getRefersToSheetName()).getCell(refersToCellRegion.getRow(), refersToCellRegion.getColumn());
                             // ok now I think I need to be careful of the cell type
                             if ((outcomeCell.getType() == SCell.CellType.FORMULA && outcomeCell.getFormulaResultType() == SCell.CellType.NUMBER) || outcomeCell.getType() == SCell.CellType.NUMBER) { // I think a decent enough way to number detect?
-                                toReturn = new DoubleOrString(outcomeCell.getNumberValue(), null);
+                                toReturn = new DoubleAndOrString(outcomeCell.getNumberValue(), null);
                             } else {
-                                toReturn = new DoubleOrString(null, outcomeCell.getStringValue());
+                                toReturn = new DoubleAndOrString(null, outcomeCell.getStringValue());
                             }
                         }
                         // revert database if it was changed
@@ -309,7 +309,7 @@ public class ReportExecutor {
                                             for (int cNo = refersToCellRegion.column; cNo <= refersToCellRegion.lastColumn; cNo++) {
                                                 String val = "";
                                                 if (sheet.getInternalSheet().getRow(rNo) != null) {
-                                                    val = ImportService.getCellValue(sheet, rNo, cNo).getSecond();
+                                                    val = ImportService.getCellValue(sheet, rNo, cNo).getString();
                                                 }
                                                 test.append(val).append("\t");
                                             }
@@ -324,7 +324,7 @@ public class ReportExecutor {
                                         for (int cNo = refersToCellRegion.column; cNo <= refersToCellRegion.lastColumn; cNo++) {
                                             String val = "";
                                             if (sheet.getInternalSheet().getRow(rNo) != null) {
-                                                val = ImportService.getCellValue(sheet, rNo, cNo).getSecond();
+                                                val = ImportService.getCellValue(sheet, rNo, cNo).getString();
                                             }
                                             bufferedWriter.write(val + "\t");
                                         }
@@ -364,7 +364,7 @@ public class ReportExecutor {
                             boolean stop = true; // make the default be to stop e.g. in the case of bad syntax or whatever . . .
                             do {
                                 counter++;
-                                final DoubleOrString stringDouble = executeCommands(loggedInUser, subCommands, exportPath, loopsLog, systemData2DArrays, count, provenanceId);
+                                final DoubleAndOrString stringDouble = executeCommands(loggedInUser, subCommands, exportPath, loopsLog, systemData2DArrays, count, provenanceId);
                                 if (stringDouble != null) {
                                     // ok I'm going to assume type matching - if the types don't match then forget the comparison
                                     if ((stringDouble.getString() != null && constant != null)) { // string, equals not equals comparison
@@ -488,7 +488,7 @@ public class ReportExecutor {
                         try {
                             result = CommonReportUtils.resolveQuery(loggedInUser, trimmedLine.substring(4), null);
                         } catch (Exception e) {
-                            return new DoubleOrString(0.0,result + "Not found:" + trimmedLine.substring(4));
+                            return new DoubleAndOrString(0.0,result + "Not found:" + trimmedLine.substring(4));
                         }
 
                         RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).addToLog(loggedInUser.getDataAccessToken(), result);
@@ -567,7 +567,7 @@ public class ReportExecutor {
                         List<List<CellForDisplay>> data = cellsAndHeadingsForDisplay.getData();
                         for (int rowNo = 0; rowNo < data.size(); rowNo++) {
                             for (int colNo = 0; colNo < data.get(0).size(); colNo++) {
-                                String cellVal = ImportService.getCellValue(sheet, top + rowNo, left + colNo).getSecond();
+                                String cellVal = ImportService.getCellValue(sheet, top + rowNo, left + colNo).getString();
                                 if (cellVal.length() > 0) {
                                     data.get(rowNo).get(colNo).setNewStringValue(cellVal);
                                 }

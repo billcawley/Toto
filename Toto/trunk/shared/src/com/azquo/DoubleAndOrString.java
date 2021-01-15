@@ -1,11 +1,11 @@
 package com.azquo;
 
 // currently not implementing equals or hash . . .
-public class DoubleOrString {
+public class DoubleAndOrString {
     private final Double d;
     private final String s;
 
-    public DoubleOrString(Double d, String s) {
+    public DoubleAndOrString(Double d, String s) {
         this.s = s;
         this.d = d;
     }

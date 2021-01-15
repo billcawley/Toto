@@ -1,6 +1,5 @@
 package com.azquo.admin.controller;
 
-import com.azquo.TypedPair;
 import com.azquo.dataimport.PendingUpload;
 import com.azquo.dataimport.PendingUploadDAO;
 import com.azquo.dataimport.UploadRecord;

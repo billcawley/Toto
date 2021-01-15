@@ -2,7 +2,6 @@ package com.azquo.dataimport;
 
 import com.azquo.LineIdentifierLineValue;
 import com.azquo.RowColumn;
-import com.azquo.TypedPair;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.core.AzquoMemoryDB;

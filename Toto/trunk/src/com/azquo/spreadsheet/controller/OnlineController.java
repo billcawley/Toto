@@ -1,6 +1,6 @@
 package com.azquo.spreadsheet.controller;
 
-import com.azquo.TypedPair;
+import com.azquo.DoubleAndOrString;
 import com.azquo.admin.AdminService;
 import com.azquo.admin.business.Business;
 import com.azquo.admin.business.BusinessDAO;
@@ -477,7 +477,7 @@ public class OnlineController {
             String rangeName = sName.getName().toLowerCase();
             if (rangeName.endsWith("chosen")) {
                 //there is probably a more elegant solution than this....
-                choices.put(rangeName.substring(0, rangeName.length() - 6), ImportService.getCellValue(book.getSheet(sName.getRefersToSheetName()), sName.getRefersToCellRegion().getRow(), sName.getRefersToCellRegion().getColumn()).getSecond());
+                choices.put(rangeName.substring(0, rangeName.length() - 6), ImportService.getCellValue(book.getSheet(sName.getRefersToSheetName()), sName.getRefersToCellRegion().getRow(), sName.getRefersToCellRegion().getColumn()).getString());
             }
         }
         return choices;
@@ -488,7 +488,7 @@ public class OnlineController {
             if (sName.getName().toLowerCase().startsWith(ReportRenderer.AZROWHEADINGS)) {
                 String region = sName.getName().substring(ReportRenderer.AZROWHEADINGS.length());
                 io.keikai.api.model.Sheet sheet = book.getSheet(sName.getRefersToSheetName());
-                String rowHeading = ImportService.getCellValue(sheet, sName.getRefersToCellRegion().getRow(), sName.getRefersToCellRegion().getColumn()).getSecond();
+                String rowHeading = ImportService.getCellValue(sheet, sName.getRefersToCellRegion().getRow(), sName.getRefersToCellRegion().getColumn()).getString();
                 if (rowHeading.toLowerCase().endsWith(" children editable")) {
                     String setName = rowHeading.substring(0, rowHeading.length() - " children editable".length()).replace("`", "");
                     SName displayName = getNameByName(ReportRenderer.AZDISPLAYROWHEADINGS + region, sheet);
@@ -498,7 +498,7 @@ public class OnlineController {
                         editLine.append("`").append(setName).append("` ");
                         CellRegion dispRegion = displayName.getRefersToCellRegion();
                         for (int rowNo = 0; rowNo < dispRegion.getRowCount(); rowNo++) {
-                            editLine.append("`").append(ImportService.getCellValue(sheet, dispRegion.getRow() + rowNo, dispRegion.getColumn()).getSecond()).append("`,");
+                            editLine.append("`").append(ImportService.getCellValue(sheet, dispRegion.getRow() + rowNo, dispRegion.getColumn()).getString()).append("`,");
                         }
                         CommonReportUtils.getDropdownListForQuery(loggedInUser, editLine.toString());
                     }
@@ -544,11 +544,11 @@ public class OnlineController {
                                         && rowInRegion <= dataStartRow + dataHeight
                                         && cellsAndHeadingsForDisplay != null) {
                                     final List<List<CellForDisplay>> data = cellsAndHeadingsForDisplay.getData();
-                                    final TypedPair<Double, String> cellValue = ImportService.getCellValue(sheet, sourceRegion.getRow() + row, sourceRegion.getColumn() + col);
-                                    data.get(rowInRegion - dataStartRow).get(colInRegion - dataStartCol).setNewStringValue(cellValue.getSecond());
+                                    final DoubleAndOrString cellValue = ImportService.getCellValue(sheet, sourceRegion.getRow() + row, sourceRegion.getColumn() + col);
+                                    data.get(rowInRegion - dataStartRow).get(colInRegion - dataStartCol).setNewStringValue(cellValue.getString());
                                     // added by Edd, should sort some numbers being ignored!
-                                    if (cellValue.getFirst() != null) {
-                                        data.get(rowInRegion - dataStartRow).get(colInRegion - dataStartCol).setNewDoubleValue(cellValue.getFirst());
+                                    if (cellValue.getDouble() != null) {
+                                        data.get(rowInRegion - dataStartRow).get(colInRegion - dataStartCol).setNewDoubleValue(cellValue.getDouble());
                                     } else { // I think defaulting to zero is correct here?
                                         data.get(rowInRegion - dataStartRow).get(colInRegion - dataStartCol).setNewDoubleValue(0.0);
                                     }
@@ -569,11 +569,11 @@ public class OnlineController {
                             for (int row = 0; row < data.size(); row++) {
                                 for (int col = 0; col < data.get(0).size(); col++) {
                                     // note that this function might return a null double but no null string. Perhaps could be mroe consistent? THis area is a bit hacky . . .
-                                    final TypedPair<Double, String> cellValue = ImportService.getCellValue(sheet, sourceRegion.getRow() + row, sourceRegion.getColumn() + col);
-                                    data.get(row).get(col).setNewStringValue(cellValue.getSecond());
+                                    final DoubleAndOrString cellValue = ImportService.getCellValue(sheet, sourceRegion.getRow() + row, sourceRegion.getColumn() + col);
+                                    data.get(row).get(col).setNewStringValue(cellValue.getString());
                                     // added by Edd, should sort some numbers being ignored!
-                                    if (cellValue.getFirst() != null) {
-                                        data.get(row).get(col).setNewDoubleValue(cellValue.getFirst());
+                                    if (cellValue.getDouble() != null) {
+                                        data.get(row).get(col).setNewDoubleValue(cellValue.getDouble());
                                     } else { // I think defaulting to zero is correct here?
                                         data.get(row).get(col).setNewDoubleValue(0.0);
                                     }

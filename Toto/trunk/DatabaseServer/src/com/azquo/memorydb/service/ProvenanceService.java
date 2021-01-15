@@ -1,6 +1,5 @@
 package com.azquo.memorydb.service;
 
-import com.azquo.TypedPair;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.TreeNode;
@@ -232,9 +231,9 @@ public class ProvenanceService {
             }
             // now search for value history
             final List<ValueHistory> historyForValue = ValueDAO.getHistoryForValue(azquoMemoryDBConnection.getAzquoMemoryDB(), v);
-            List<TypedPair<String, String>> historicValuesAndProvenance = new ArrayList<>();
+            List<ValueDetailsForProvenance.HistoricValueAndProvenance> historicValuesAndProvenance = new ArrayList<>();
             for (ValueHistory valueHistory : historyForValue) {
-                historicValuesAndProvenance.add(new TypedPair<>(checkNumberFormat(valueHistory.getText()), valueHistory.getProvenance().getProvenanceForDisplay().toString()));
+                historicValuesAndProvenance.add(new ValueDetailsForProvenance.HistoricValueAndProvenance(checkNumberFormat(valueHistory.getText()), valueHistory.getProvenance().getProvenanceForDisplay().toString()));
             }
             toReturn.add(new ValueDetailsForProvenance(v.getId(), checkNumberFormat(v.getText()), nameStrings, historicValuesAndProvenance));
         }

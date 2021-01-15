@@ -1,6 +1,5 @@
 package com.azquo.spreadsheet.zk;
 
-import com.azquo.TypedPair;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseServer;
 import com.azquo.admin.onlinereport.OnlineReport;
@@ -394,9 +393,9 @@ class ZKContextMenu {
                     // I can't format within a label, need different labels for
                     provenancePopup.appendChild(geLabelForProvenanceMenu("333333", names.toString() + "\n"));
                     if (valueDetailsForProvenance.getHistoricValuesAndProvenance() != null){
-                        for (TypedPair<String, String> historicValue : valueDetailsForProvenance.getHistoricValuesAndProvenance()){
-                            provenancePopup.appendChild(geLabelForProvenanceMenu("ff0000", "        " + historicValue.getFirst()));
-                            provenancePopup.appendChild(geLabelForProvenanceMenu("0000ff", "  " + historicValue.getSecond() + "\n"));
+                        for (ValueDetailsForProvenance.HistoricValueAndProvenance historicValue : valueDetailsForProvenance.getHistoricValuesAndProvenance()){
+                            provenancePopup.appendChild(geLabelForProvenanceMenu("ff0000", "        " + historicValue.getValue()));
+                            provenancePopup.appendChild(geLabelForProvenanceMenu("0000ff", "  " + historicValue.getProvenance() + "\n"));
                         }
                     }
                     count++;
@@ -466,10 +465,10 @@ class ZKContextMenu {
                                             yOffset++;
                                             if (valueDetailsForProvenance.getHistoricValuesAndProvenance() != null){
                                                 xOffset = 2;
-                                                for(TypedPair<String, String> historicValue : valueDetailsForProvenance.getHistoricValuesAndProvenance()){
-                                                    sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn() + xOffset).setStringValue(historicValue.getFirst());
+                                                for(ValueDetailsForProvenance.HistoricValueAndProvenance historicValue : valueDetailsForProvenance.getHistoricValuesAndProvenance()){
+                                                    sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn() + xOffset).setStringValue(historicValue.getValue());
                                                     CellOperationUtil.applyFontColor(Ranges.range(sheet, sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn() + xOffset), "#FF0000");
-                                                    sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn() + xOffset + 1).setStringValue(historicValue.getSecond());
+                                                    sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn() + xOffset + 1).setStringValue(historicValue.getProvenance());
                                                     yOffset++;
                                                 }
                                             }

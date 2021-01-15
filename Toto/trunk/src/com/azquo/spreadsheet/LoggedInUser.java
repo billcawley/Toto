@@ -1,7 +1,6 @@
 package com.azquo.spreadsheet;
 
 import com.azquo.StringLiterals;
-import com.azquo.TypedPair;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseDAO;
 import com.azquo.admin.database.DatabaseServer;
