@@ -6,6 +6,7 @@ import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.Value;
 import com.azquo.spreadsheet.AzquoCellResolver;
 import com.azquo.spreadsheet.DataRegionHeading;
+import net.openhft.koloboke.collect.set.hash.HashObjSets;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
 
@@ -255,9 +256,20 @@ public class ValueCalculationService {
 
     static double resolveValues(final List<Value> values
             , AzquoCellResolver.ValuesHook valuesHook, AzquoCellResolver.ValuesHook scaleValuesHook, Set<Name>scaleHeadingNames, DataRegionHeading.FUNCTION function, MutableBoolean locked) {
+        return resolveValues(values,valuesHook,scaleValuesHook,scaleHeadingNames,function,locked,false);
+    }
+
+    static double resolveValues(final List<Value> values
+            , AzquoCellResolver.ValuesHook valuesHook, AzquoCellResolver.ValuesHook scaleValuesHook, Set<Name>scaleHeadingNames, DataRegionHeading.FUNCTION function, MutableBoolean locked, boolean edddebug) {
         resolveValuesForNamesIncludeChildrenCount.incrementAndGet();
         //System.out.println("resolveValuesForNamesIncludeChildren");
         long start = System.nanoTime();
+        long startms = System.currentTimeMillis();
+        long time= startms;
+        StringBuilder eddDebugInfo = null;
+        if (edddebug){
+            eddDebugInfo  = new StringBuilder();
+        }
 
         double max = 0;
         double min = 0;
@@ -275,6 +287,10 @@ public class ValueCalculationService {
             }
         }
         boolean first = true;
+        if (edddebug){
+            eddDebugInfo.append("to right before values loop : " + (System.currentTimeMillis() - time));
+            time = System.currentTimeMillis();
+        }
         for (Value value : values) {
             if (value.getText() != null && !value.getText().equals("NULL") && value.getText().length() > 0) {
                 if (!stringMode) {
@@ -313,6 +329,11 @@ public class ValueCalculationService {
                 first = false;
             }
         }
+        if (edddebug){
+            eddDebugInfo.append("values loop time : " + (System.currentTimeMillis() - time));
+            time = System.currentTimeMillis();
+        }
+
         // ok the hack here is that it was just values. add all but this often involved copying into an empty list which is silly if the list is here and won't be used after,
         // hence most of the time use the ready made list unless there's already one there in which case we're part of calc and will need to add
         // I'm trying to minimise garbage
@@ -327,6 +348,15 @@ public class ValueCalculationService {
         if (values.size() > 1) {
             locked.isTrue = true;
         }
+        if (edddebug){
+            eddDebugInfo.append("right before return time : " + (System.currentTimeMillis() - time));
+
+            if ((System.currentTimeMillis() - startms) > 500){
+                System.out.println(eddDebugInfo);
+            }
+
+        }
+
         if (function == DataRegionHeading.FUNCTION.COUNT) {
             return values.size();
         }
@@ -363,9 +393,8 @@ public class ValueCalculationService {
     }
 
     private static double scaleValue(Value value, AzquoCellResolver.ValuesHook valuesHook, AzquoCellResolver.ValuesHook scaleValuesHook, Set<Name>scaleHeadingNames) {
-        double scaleDouble = 0;
-        Set<Name> valueParents = new HashSet<>();
-        Set<Name> allValueParents = new HashSet<>();
+        Set<Name> valueParents = HashObjSets.newUpdatableSet();
+        Set<Name> allValueParents = HashObjSets.newUpdatableSet();
         for (Name name : value.getNames()) {
             valueParents.addAll(name.getParents());
             valueParents.add(name);

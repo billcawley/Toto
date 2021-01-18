@@ -328,6 +328,12 @@ public final class ValueService {
 
     public static double findValueForNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, final List<Name> names, final List<String> calcs, final MutableBoolean locked
             , AzquoCellResolver.ValuesHook valuesHook,  AzquoCellResolver.ValuesHook scaleValuesHook, Set<Name>scaleHeadingNames, List<String> attributeNames, DataRegionHeading.FUNCTION function, Name exactName, Map<List<Name>, Set<Value>> nameComboValueCache, StringBuilder debugInfo) throws Exception {
+        return findValueForNames(azquoMemoryDBConnection,names,calcs,locked,valuesHook,scaleValuesHook,scaleHeadingNames,attributeNames,function,exactName,nameComboValueCache,debugInfo, false);
+    }
+
+
+        public static double findValueForNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, final List<Name> names, final List<String> calcs, final MutableBoolean locked
+            , AzquoCellResolver.ValuesHook valuesHook,  AzquoCellResolver.ValuesHook scaleValuesHook, Set<Name>scaleHeadingNames, List<String> attributeNames, DataRegionHeading.FUNCTION function, Name exactName, Map<List<Name>, Set<Value>> nameComboValueCache, StringBuilder debugInfo, boolean edddebug) throws Exception {
         findValueForNamesCount.incrementAndGet();
         //there are faster methods of discovering whether a calculation applies - maybe have a set of calced names for reference.
         List<Name> calcnames = new ArrayList<>();
@@ -472,7 +478,7 @@ public final class ValueService {
                     //forNames.removeIf(value -> value.getNames().size() > names.size()); // new syntax! Dunno about efficiency but this will be very rarely used
                     return ValueCalculationService.resolveValues(forNames, valuesHook, scaleValuesHook, scaleHeadingNames, function, locked);
                 } else {
-                    return ValueCalculationService.resolveValues(findForNamesIncludeChildren(names, nameComboValueCache, exactName), valuesHook,  scaleValuesHook, scaleHeadingNames, function, locked);
+                    return ValueCalculationService.resolveValues(findForNamesIncludeChildren(names, nameComboValueCache, exactName), valuesHook, scaleValuesHook, scaleHeadingNames, function, locked, edddebug);
                 }
             } else {
                 if (outerLoopNames.isEmpty()) { // will be most of the time, put the first in the outer loop

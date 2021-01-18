@@ -462,8 +462,14 @@ public class AzquoCellResolver {
                             //using only the scaleValuesHook
                         }
                         if (headingsForThisCell.size()>1){
+                            boolean edddebug = false;
+/*                            if (rowHeadings.get(0).getName() != null && rowHeadings.get(0).getName().getDefaultDisplayName() != null && rowHeadings.get(0).getName().getDefaultDisplayName().equals("BB304140M BB302040 Section 2")
+                                    && rowHeadings.size() > 1 && rowHeadings.get(1).getName() != null && rowHeadings.get(1).getName().getDefaultDisplayName() != null && rowHeadings.get(1).getName().getDefaultDisplayName().equalsIgnoreCase("no pcs code")
+                            ){
+                                edddebug = true;
+                            }*/
                             doubleValue = ValueService.findValueForNames(connection, DataRegionHeadingService.namesFromDataRegionHeadings(headingsForThisCell),
-                                    DataRegionHeadingService.calcsFromDataRegionHeadings(headingsForThisCell),  locked, valuesHook, scaleValuesHook, scaleHeadingNames, languages, function, exactName, nameComboValueCache, debugInfo);
+                                    DataRegionHeadingService.calcsFromDataRegionHeadings(headingsForThisCell),  locked, valuesHook, scaleValuesHook, scaleHeadingNames, languages, function, exactName, nameComboValueCache, debugInfo, edddebug);
                         }
                         /*
                         if (doubleValue!=0 && scaleHeadings.size() > 0){
@@ -685,7 +691,7 @@ But can use a library?
                             Value value = valuesHook.values.get(0);
                             selected = valueToTestFor == value; // I think this is the right logic - is the value the one drilled down from?
                             stringValue = value.getText();
-                            // edd commenting, what was this for?? It's been there for ages and messes up formatting in zk sheet for Ed broking
+                            // edd commenting, whareturnRow.get(1).getStringValue()t was this for?? It's been there for ages and messes up formatting in zk sheet for Ed broking
 /*                            if (stringValue.contains("\n")) {
                                 stringValue = stringValue.replaceAll("\n", "<br/>");//this is unsatisfactory, but a quick fix.
                             }*/
@@ -818,6 +824,7 @@ But can use a library?
                 }
             }
         }
+
                 /* something to note : in the old model there was a map of headings used for each cell. I could add headingsForThisCell to the cell which would be a unique set for each cell
                  but instead I'll just add the headings and row and context, I think it would be less memory. 3 object references vs a set*/
         return new AzquoCell(locked.isTrue, listOfValuesOrNamesAndAttributeName, rowHeadings, columnHeadings, contextHeadings, rowNo, colNo, stringValue, doubleValue, false, selected);
