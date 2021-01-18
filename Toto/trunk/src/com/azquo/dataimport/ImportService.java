@@ -2008,7 +2008,7 @@ fr.close();
                     }
                     String ppSheetName = ppBook.getSheetAt(0).getSheetName();
                     if (sourceName.length() > 0) {
-                        ImportTemplate includeFile = ImportTemplateDAO.findForName(sourceName);
+                        ImportTemplate includeFile = ImportTemplateDAO.findForNameAndBusinessId(sourceName,loggedInUser.getUser().getBusinessId());
                         OPCPackage opcPackageInclude;
                         org.apache.poi.xssf.usermodel.XSSFWorkbook includeBook;
                         try {
@@ -2140,21 +2140,23 @@ fr.close();
             }
 
 
-            Map<List<String>, Integer> inputColumns = new HashMap<>();
+            Map<Integer,String> inputColumns = new HashMap();
             int inputHeadingCount = 0;
             String heading = getCellValue(inputSheet.getRow(headingStartRow + existingHeadingRows - 1).getCell(inputHeadingCount));
             int lastCellNum = inputSheet.getRow(headingStartRow).getLastCellNum();
             while (inputHeadingCount <= lastCellNum) {
                 if (heading.length() > 0){
-                    List<String> headings = new ArrayList<>();
+                    heading = "";
                     for (int row = 0;row < existingHeadingRows;row++){
-                        //remove CRs and look up in the table
-                        headings.add(headingFrom(getCellValue(inputSheet.getRow(headingStartRow + row).getCell(inputHeadingCount)), headingsLookups));
+                         heading +=getCellValue(inputSheet.getRow(headingStartRow).getCell(inputHeadingCount));
 
                     }
-                    inputColumns.put(headings, inputHeadingCount++);
+                    heading = headingFrom(heading, headingsLookups);
+
+                    inputColumns.put(inputHeadingCount, heading);
 
                 }
+                heading = getCellValue(inputSheet.getRow(headingStartRow + existingHeadingRows - 1).getCell(++inputHeadingCount));
             }
             int lastOutputCol = outputSheet.getRow(outputRow).getLastCellNum();
             //Map <Integer,Integer> colOnInputRange = new HashMap<>();
@@ -2178,22 +2180,29 @@ fr.close();
                 else {
                     line = lineIterator.next();
                 }
-                 int colNo = 0;
+                int colNo = 0;
                 //boolean validLine = true;
                 if (lineNo < headingStartRow) {
-
                     for (String cellVal:line){
+                        //INTERIM CHECK FOR HEADINGS ON THE WRONG LINE  - THIS DOES NOT WORK FOR HEADINGS BELOW WHERE EXPECTED
+                        //ALSO SHOULD PROBABLY CHECK MORE THAN ONE CELL.
+                        if (colNo==0 && cellVal.length() > 0 &&  findFirst(inputColumns,headingFrom(cellVal, headingsLookups))>=0){
+                          headingStartRow = lineNo;
+                          break;
+                        }
                         setCellValue(inputSheet,lineNo, colNo, cellVal);
+
                         colNo++;
                     }
                 }else{
                     if (isNewHeadings) {
                         //read off all the headings.  If there is more than one line of headings, then all but the last
                         // line inherit headings from the columns to the left.
+                        //first build an array of strings, then concatenate each column and look up in the headingslookups
                         List<List<String>> newHeadings = new ArrayList<>();
                         for (int col = 0;col < line.length; col++){
                             List<String> newHeading = new ArrayList<>();
-                            String cellVal = headingFrom(line[col], headingsLookups);
+                            String cellVal = line[col];
                             if (existingHeadingRows> 1 && cellVal=="" && col > 0){
                                 cellVal = newHeadings.get(col - 1).get(0);
                             }
@@ -2206,9 +2215,10 @@ fr.close();
                             }
                             line = lineIterator.next();
                             for (int col = 0;col < line.length;col++){
-                                String cellVal = headingFrom(line[col], headingsLookups);
-                                if (existingHeadingRows> 1 && cellVal=="" && col > 0){
-                                    cellVal = newHeadings.get(col - 1).get(0);
+                                String cellVal = line[col];
+                                //carry through values except on the last row
+                                if (existingHeadingRows> 1 && headingRow < existingHeadingRows - 1 && cellVal=="" && col > 0){
+                                    cellVal = newHeadings.get(col - 1).get(headingRow);
                                 }
                                 if (col>= newHeadings.size()){//if the next line is longer, copy the last cell
                                     newHeadings.add(newHeadings.get(col - 1));
@@ -2218,16 +2228,34 @@ fr.close();
                                 }
                             }
                         }
-                        for (int col = 0;col<newHeadings.size();col++){
-                           Integer targetCol = inputColumns.get(newHeadings.get(col));
-                           //check that the last row of headings is not blank, then look it up
-                           if (newHeadings.get(col).get(existingHeadingRows - 1).length() > 0 && targetCol != null) {
-                               //note - ignores heading if no map found
-                               inputColumnMap.put(col, targetCol);
-                           }
+                        List<String> newMappedHeadings = new ArrayList<>();
+                        for (int col=0;col<newHeadings.size();col++){
+                            String lastheadingLine = newHeadings.get(col).get(existingHeadingRows - 1);
+                            String newHeading = "";
+                            if (lastheadingLine.length()>0){
+                                 for (int row = 0;row < existingHeadingRows ; row ++){
+                                    newHeading += newHeadings.get(col).get(row);
+                                }
+                                newHeading = headingFrom(newHeading, headingsLookups);
+                            }
+                            newMappedHeadings.add(newHeading);
+
+
                         }
+                        for (int col = 0;col<newHeadings.size();col++){
+                            Integer targetCol = findFirst(inputColumns,newMappedHeadings.get(col));
+                            //check that the last row of headings is not blank, then look it up
+                            if (newHeadings.get(col).get(existingHeadingRows - 1).length() > 0 && targetCol >=0) {
+                                //note - ignores heading if no map found
+                                inputColumnMap.put(col, targetCol);
+                            }
+                        }
+                        if (!lineIterator.hasNext()){
+                            break;
+                        }
+                        line = lineIterator.next();
                     }
-                   //handle the data
+                    //handle the data
                     for (int datacount = 0; datacount < inputColumnMap.size(); datacount++) {
                         if (inputColumnMap.get(colNo) != null) {
                             String cellVal = "";
@@ -2237,6 +2265,13 @@ fr.close();
                             setCellValue(inputSheet, inputRow, inputColumnMap.get(colNo), cellVal);
                         }
                         colNo++;
+                    }
+                    for (String param : uploadedFile.getParameters().keySet()){
+                        Name name = getNameInSheet(ppBook,inputSheet.getSheetName(),param);
+                        if (name!=null){
+                            setRangeValue(ppBook, name, uploadedFile.getParameter(param));
+                            System.out.println("setting parameter in sheet" + name.getNameName());
+                        }
                     }
 
                     XSSFFormulaEvaluator.evaluateAllFormulaCells(ppBook);
@@ -2264,22 +2299,22 @@ fr.close();
                         }
                         fileWriter.write("\r\n");
                         isNewHeadings = false;
-                    }  else {
-                        if (!ignore) {
-                            int oRow = outputRow + 1;
-                            for (colNo = outputCol; colNo < lastOutputCol; colNo++) {
-                                String cellVal = getCellValue(outputSheet.getRow(oRow).getCell(colNo));
-                                if (colNo > 0) {
-                                    fileWriter.write("\t" + normalise(cellVal));
-                                } else {
-                                    if (normalise(cellVal).length() > 0) {
-                                        fileWriter.write(normalise(cellVal));
-                                    }
+                    }
+                    if (!ignore) {
+                        int oRow = outputRow + 1;
+                        for (colNo = outputCol; colNo < lastOutputCol; colNo++) {
+                            String cellVal = getCellValue(outputSheet.getRow(oRow).getCell(colNo));
+                            if (colNo > 0) {
+                                fileWriter.write("\t" + normalise(cellVal));
+                            } else {
+                                if (normalise(cellVal).length() > 0) {
+                                    fileWriter.write(normalise(cellVal));
                                 }
                             }
-                            fileWriter.write("\r\n");
                         }
+                        fileWriter.write("\r\n");
                     }
+
                 }
                 lineNo++;
                 if (lineNo % 200 == 0){
@@ -2290,6 +2325,17 @@ fr.close();
             fileWriter.close();
             uploadedFile.setPath(outFile);
             opcPackage.revert();
+            /*debug lines below
+            outFile = "c:\\users\\billc\\Downloads\\Corrupt.xlsx";
+            writeFile = new File(outFile);
+            writeFile.delete(); // to avoid confusion
+
+            OutputStream outputStream = new FileOutputStream(writeFile) ;
+            ppBook.write(outputStream);
+
+            opcPackage.revert();
+
+             */
         } catch (Exception e){
             String outFile = "c:\\users\\billc\\Downloads\\Corrupt.xlsx";
             File writeFile = new File(outFile);
@@ -2332,9 +2378,27 @@ fr.close();
             ppBook.removeName(name);
         }
     }
+
+    private static int findFirst(Map<Integer, String> map, String toFind){
+        for (int i: map.keySet()){
+            if (map.get(i).equals(toFind)){
+                return i;
+            }
+        }
+        return -1;
+    }
+
     private static void setRangeValue(Workbook book, Name name, String value){
         AreaReference areaRef = new AreaReference(name.getRefersToFormula(), null);
-        book.getSheet(name.getSheetName()).getRow(areaRef.getFirstCell().getRow()).getCell(areaRef.getFirstCell().getCol()).setCellFormula(value);
+         Row row =  book.getSheet(name.getSheetName()).getRow(areaRef.getFirstCell().getRow());
+         if (row==null){
+             row = book.getSheet(name.getSheetName()).createRow(areaRef.getFirstCell().getRow());
+         }
+        Cell cell =  row.getCell(areaRef.getFirstCell().getCol());
+        if (cell==null){
+           cell = row.createCell(areaRef.getFirstCell().getCol());
+        }
+        cell.setCellFormula(value);
 
     }
 
@@ -2398,7 +2462,7 @@ fr.close();
     }
 
     private static String headingFrom(String value, Map<String, String> lookup){
-        value = normalise(value);
+        value = normalise(value).replace(" ","");
         String map = lookup.get(value);
         if (map!= null){
             return map;
