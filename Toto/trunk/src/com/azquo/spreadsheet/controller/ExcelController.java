@@ -1,6 +1,7 @@
 package com.azquo.spreadsheet.controller;
 
 import com.azquo.admin.AdminService;
+import com.azquo.admin.business.BusinessDAO;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseDAO;
 import com.azquo.admin.onlinereport.OnlineReport;
@@ -209,7 +210,7 @@ public class ExcelController {
         try {
             if (op.equals("download64") && fileName != null){ // if no sessionId this means an xlsx file from WEB-INF, public anyway so no security but we still need to base 64 encode it
                 // basic hack protection though I'm not sure whether anyone could get anything that worrying
-                System.out.println("download64:" + fileName);
+                //System.out.println("download64:" + fileName);
                 byte[] encodedBytes;
                 while (fileName.contains("\\") || fileName.contains("/")){
                     fileName = fileName.replace("\\","");
@@ -218,23 +219,27 @@ public class ExcelController {
                 // similar to below but less going on
                 if (sessionId!=null){
                     LoggedInUser loggedInUser = null;
-                    System.out.println("template download1:" + fileName);
+                    //System.out.println("template download1:" + fileName);
                     if (excelMultiUserConnections.get(sessionId) != null){
                         for (LoggedInUser check : excelMultiUserConnections.get(sessionId)) {
-                            if (check.getUser().getId() == Integer.parseInt(userId)) {
-                                loggedInUser = check;
-                            }
+                            loggedInUser = check;
+                        //    if (check.getUser().getId() == Integer.parseInt(userId)) {
+                        //        loggedInUser = check;
+                        //    }
                         }
+                    }else{
+                        loggedInUser = excelConnections.get(sessionId);
                     }
                     //TODO should there be any security encoding??
                     if (sessionId.equals("testing")|| loggedInUser!= null) {
-                       ImportTemplate importTemplate = ImportTemplateDAO.findForNameAndBusinessId(fileName, loggedInUser.getUser().getBusinessId());
+                        //System.out.println("business id = " + loggedInUser.getBusiness().getId());
+                       ImportTemplate importTemplate = ImportTemplateDAO.findForNameAndBusinessId(fileName, loggedInUser.getBusiness().getId());
                        String directory="risk";
-                       if (!sessionId.equals("testing")) {
-                           directory = loggedInUser.getBusinessDirectory();
+                         if (!sessionId.equals("testing")) {
+                             directory = loggedInUser.getBusinessDirectory() ;
                        }
                        String filePath = SpreadsheetService.getHomeDir() + ImportService.dbPath + directory + ImportService.importTemplatesDir + importTemplate.getFilenameForDisk();
-                       System.out.println("template download:" + filePath);
+                       //System.out.println("template download:" + filePath);
                        File file = new File(filePath);
                        encodedBytes = Base64.getEncoder().encode(IOUtils.toByteArray(Files.newInputStream(file.toPath())));
                     }else{
@@ -268,9 +273,10 @@ public class ExcelController {
                  if (NumberUtils.isNumber(userId) && sessionId != null){ // then try to select from a multi usr session
                     if (excelMultiUserConnections.get(sessionId) != null){
                         for (LoggedInUser check : excelMultiUserConnections.get(sessionId)) {
-                            if (check.getUser().getId() == Integer.parseInt(userId)) {
-                                loggedInUser = check;
-                            }
+                            loggedInUser = check;
+                            //if (check.getUser().getId() == Integer.parseInt(userId)) {
+                           //     loggedInUser = check;
+                          //  }
                         }
                     }
                 } else {
@@ -288,7 +294,7 @@ public class ExcelController {
                             return jacksonMapper.writeValueAsString(new LoginInfo(request.getSession().getId(), userIds, userDescriptions));
                         }
                         loggedInUser = loggedInUsers.get(0);
-                    }
+                     }
                 }
                 if (loggedInUser == null) {
                     System.out.println("login attempt by " + logon + " with incorrect details");

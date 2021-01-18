@@ -483,7 +483,7 @@ public class SpreadsheetService {
                 DatabaseServer databaseServer = DatabaseServerDAO.findById(database.getDatabaseServerId());
                 // assuming no read permissions?
                 // I should factor these few lines really
-                LoggedInUser loggedInUser = new LoggedInUser("", user, databaseServer, database, null, b.getBusinessDirectory());
+                LoggedInUser loggedInUser = new LoggedInUser("", user, databaseServer, database, null, b);
                 book.getInternalBook().setAttribute(OnlineController.LOGGED_IN_USER, loggedInUser);
                 // todo, address allowing multiple books open for one user. I think this could be possible. Might mean passing a DB connection not a logged in one
                 book.getInternalBook().setAttribute(OnlineController.REPORT_ID, reportSchedule.getReportId());

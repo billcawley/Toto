@@ -248,7 +248,7 @@ public class DBCron {
                                     Business b = BusinessDAO.findById(db.getBusinessId());
                                     LoggedInUser loggedInUser = new LoggedInUser(""
                                             , new User(0, LocalDateTime.now(), b.getId(), "brokasure", "", "", "", "", "", 0, 0, "", "")
-                                            , DatabaseServerDAO.findById(db.getDatabaseServerId()), db, null, b.getBusinessDirectory());
+                                            , DatabaseServerDAO.findById(db.getDatabaseServerId()), db, null, b);
                                     final Map<String, String> fileNameParams = new HashMap<>();
                                     String fileName = newScannedDir.resolve(csvFileName).getFileName().toString();
                                     ImportService.addFileNameParametersToMap(fileName, fileNameParams);
@@ -292,7 +292,7 @@ public class DBCron {
                                                     // now . . .we need a user to upload it. Initially copying broaksure code above, this may need to be changed in time
                                                     LoggedInUser loggedInUser = new LoggedInUser(""
                                                             , new User(0, LocalDateTime.now(), b.getId(), "brokasure", "", "", "", "", "", 0, 0, "", "")
-                                                            , DatabaseServerDAO.findById(matchingDBdir.getDatabaseServerId()), matchingDBdir, null, b.getBusinessDirectory());
+                                                            , DatabaseServerDAO.findById(matchingDBdir.getDatabaseServerId()), matchingDBdir, null, b);
                                                     final Map<String, String> fileNameParams = new HashMap<>();
                                                     ImportService.addFileNameParametersToMap(fileName, fileNameParams);
                                                     ImportService.importTheFile(loggedInUser, new UploadedFile(moved.toString()
@@ -510,7 +510,7 @@ public class DBCron {
                                 if (database.getImportTemplateId() != 0) {
                                     LoggedInUser loggedInUser = new LoggedInUser(""
                                             , new User(0, LocalDateTime.now(), business.getId(), "tracking", "", "", "", "", "", 0, 0, "", "")
-                                            , DatabaseServerDAO.findById(database.getDatabaseServerId()), database, null, business.getBusinessDirectory());
+                                            , DatabaseServerDAO.findById(database.getDatabaseServerId()), database, null, business);
                                     ImportTemplateData importTemplateForUploadedFile = ImportService.getImportTemplateForUploadedFile(loggedInUser, null, templateCache);
                                     if (importTemplateForUploadedFile != null && importTemplateForUploadedFile.getSheets().get("ClaimsTracking") != null) { // then here we go . . .
                                         final Map<String, String> fileNameParams = new HashMap<>();

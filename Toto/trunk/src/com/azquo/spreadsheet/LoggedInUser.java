@@ -1,6 +1,7 @@
 package com.azquo.spreadsheet;
 
 import com.azquo.StringLiterals;
+import com.azquo.admin.business.Business;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseDAO;
 import com.azquo.admin.database.DatabaseServer;
@@ -93,7 +94,7 @@ public class LoggedInUser implements Serializable {
     // context is not the same as context per region and in fact this needs to be like sent cells in that it needs to be per report and perhaps stored as pairs? Or a map. Choices for report TODO
     private String context;
 
-    private final String businessDirectory;
+    private final Business business;
 
     // now uses ids given the problems of leaving full objects in the session (going out of sync with the database)
     // report, database, generally set from a home user menu
@@ -115,10 +116,10 @@ public class LoggedInUser implements Serializable {
     private String lastFileName = null;
 
     // public allowing hack for xml scanning - need to sort - todo
-    public LoggedInUser(String sessionId, final User user, DatabaseServer databaseServer, Database database, String imageStoreName, String businessDirectory) {
+    public LoggedInUser(String sessionId, final User user, DatabaseServer databaseServer, Database database, String imageStoreName, Business business) {
         this.sessionId = sessionId;
         this.user = user;
-        this.businessDirectory = businessDirectory;
+        this.business = business;
         sentCellsMaps = new HashMap<>();
         this.database = database;
         this.onlineReport = null;
@@ -254,9 +255,12 @@ public class LoggedInUser implements Serializable {
         return new DatabaseAccessToken(sessionId, user.getEmail(), databaseServer.getIp(), (copyMode ? StringLiterals.copyPrefix + user.getEmail(): "") + database.getPersistenceName());
     }
 
+    public Business getBusiness(){
+        return business;
+    }
 
     public String getBusinessDirectory() {
-        return businessDirectory;
+        return business.getBusinessDirectory();
     }
 
     // deliberately look up the permissions each time - we want to be up to date with master_db
@@ -324,7 +328,7 @@ public class LoggedInUser implements Serializable {
                 ", databaseServer=" + databaseServer +
                 ", imageStoreName='" + imageStoreName + '\'' +
                 ", context='" + context + '\'' +
-                ", businessDirectory='" + businessDirectory + '\'' +
+                ", businessDirectory='" + business.getBusinessDirectory() + '\'' +
                 ", reportIdDatabaseIdPermissions=" + reportIdDatabaseIdPermissions +
                 ", lastJSTreeNodeId=" + lastJSTreeNodeId +
                 ", jsTreeLookupMap=" + jsTreeLookupMap +
