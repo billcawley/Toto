@@ -75,7 +75,7 @@ public class LoginService {
                 if (b == null) {
                     throw new Exception("Business not found for user! Business id : " + user.getBusinessId());
                 }
-                toReturn.add(new LoggedInUser(sessionId, user, databaseServer, database, null, b.getBusinessDirectory()));
+                toReturn.add(new LoggedInUser(sessionId, user, databaseServer, database, null, b));
             }
         }
         return toReturn;
