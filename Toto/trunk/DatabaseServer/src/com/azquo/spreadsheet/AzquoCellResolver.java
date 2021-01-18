@@ -432,7 +432,6 @@ public class AzquoCellResolver {
                                 }
                             }
                         }
-                        List<Value> scaleValues = new ArrayList<>();
                         ValuesHook scaleValuesHook = null;
                         for (DataRegionHeading heading : headingsForThisCell) {
                             if (heading.getFunction() == DataRegionHeading.FUNCTION.SCALE) {
@@ -462,14 +461,8 @@ public class AzquoCellResolver {
                             //using only the scaleValuesHook
                         }
                         if (headingsForThisCell.size()>1){
-                            boolean edddebug = false;
-/*                            if (rowHeadings.get(0).getName() != null && rowHeadings.get(0).getName().getDefaultDisplayName() != null && rowHeadings.get(0).getName().getDefaultDisplayName().equals("BB304140M BB302040 Section 2")
-                                    && rowHeadings.size() > 1 && rowHeadings.get(1).getName() != null && rowHeadings.get(1).getName().getDefaultDisplayName() != null && rowHeadings.get(1).getName().getDefaultDisplayName().equalsIgnoreCase("no pcs code")
-                            ){
-                                edddebug = true;
-                            }*/
                             doubleValue = ValueService.findValueForNames(connection, DataRegionHeadingService.namesFromDataRegionHeadings(headingsForThisCell),
-                                    DataRegionHeadingService.calcsFromDataRegionHeadings(headingsForThisCell),  locked, valuesHook, scaleValuesHook, scaleHeadingNames, languages, function, exactName, nameComboValueCache, debugInfo, edddebug);
+                                    DataRegionHeadingService.calcsFromDataRegionHeadings(headingsForThisCell),  locked, valuesHook, scaleValuesHook, scaleHeadingNames, languages, function, exactName, nameComboValueCache, debugInfo);
                         }
                         /*
                         if (doubleValue!=0 && scaleHeadings.size() > 0){

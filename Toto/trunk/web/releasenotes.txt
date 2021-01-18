@@ -1,3 +1,17 @@
+18-01-21 2
+
+Scale function optimisation
+
+18-01-21
+
+Some AQL syntax updates
+
+Report scheduler updates
+
+preprocessor upgrades e.g. progress logs
+
+Small optimisation to scale, more to be done
+
 09-12-20
 
 Bug fixes for new risk agg

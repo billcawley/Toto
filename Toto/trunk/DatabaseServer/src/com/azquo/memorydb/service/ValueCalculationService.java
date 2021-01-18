@@ -256,21 +256,9 @@ public class ValueCalculationService {
 
     static double resolveValues(final List<Value> values
             , AzquoCellResolver.ValuesHook valuesHook, AzquoCellResolver.ValuesHook scaleValuesHook, Set<Name>scaleHeadingNames, DataRegionHeading.FUNCTION function, MutableBoolean locked) {
-        return resolveValues(values,valuesHook,scaleValuesHook,scaleHeadingNames,function,locked,false);
-    }
-
-    static double resolveValues(final List<Value> values
-            , AzquoCellResolver.ValuesHook valuesHook, AzquoCellResolver.ValuesHook scaleValuesHook, Set<Name>scaleHeadingNames, DataRegionHeading.FUNCTION function, MutableBoolean locked, boolean edddebug) {
         resolveValuesForNamesIncludeChildrenCount.incrementAndGet();
         //System.out.println("resolveValuesForNamesIncludeChildren");
         long start = System.nanoTime();
-        long startms = System.currentTimeMillis();
-        long time= startms;
-        StringBuilder eddDebugInfo = null;
-        if (edddebug){
-            eddDebugInfo  = new StringBuilder();
-        }
-
         double max = 0;
         double min = 0;
         Value maxVal = null;
@@ -279,7 +267,8 @@ public class ValueCalculationService {
         // there might be numbers at the beginning then strings later, hence scan the lot first to decide if we're dealing with strings or numbers
         boolean stringMode = false;
         for (Value value : values) {
-            if (value.getText() != null && !value.getText().equals("NULL") && value.getText().length() > 0) {
+            // EFC note - checking for not "0" as it can be common in big sets
+            if (value.getText() != null && !value.getText().equals("0") && !value.getText().equals("NULL") && value.getText().length() > 0) {
                 if (!NumberUtils.isNumber(value.getText())) {
                     stringMode = true;
                     break;
@@ -287,20 +276,22 @@ public class ValueCalculationService {
             }
         }
         boolean first = true;
-        if (edddebug){
-            eddDebugInfo.append("to right before values loop : " + (System.currentTimeMillis() - time));
-            time = System.currentTimeMillis();
-        }
         for (Value value : values) {
             if (value.getText() != null && !value.getText().equals("NULL") && value.getText().length() > 0) {
                 if (!stringMode) {
                     double doubleValue;
-                    if (scaleValuesHook!=null ){
-                        double scale = scaleValue(value, valuesHook, scaleValuesHook, scaleHeadingNames);
-                        doubleValue = scale * Double.parseDouble(value.getText());
-                    }else{
-                        doubleValue = Double.parseDouble(value.getText());
+                    // EFC optimisation : often value is 0, if so just say it's zero and, crucially, don't check for scale as 0 * whatever is still 0! Helped the claims feed to Brokasure a lot.
+                    if ("0".equals(value.getText())){
+                        doubleValue = 0;
+                    } else {
+                        if (scaleValuesHook!=null ){
+                            double scale = scaleValue(value, valuesHook, scaleValuesHook, scaleHeadingNames);
+                            doubleValue = scale * Double.parseDouble(value.getText());
+                        }else{
+                            doubleValue = Double.parseDouble(value.getText());
+                        }
                     }
+
                     if (first) {
                         max = doubleValue;
                         min = doubleValue;
@@ -329,11 +320,6 @@ public class ValueCalculationService {
                 first = false;
             }
         }
-        if (edddebug){
-            eddDebugInfo.append("values loop time : " + (System.currentTimeMillis() - time));
-            time = System.currentTimeMillis();
-        }
-
         // ok the hack here is that it was just values. add all but this often involved copying into an empty list which is silly if the list is here and won't be used after,
         // hence most of the time use the ready made list unless there's already one there in which case we're part of calc and will need to add
         // I'm trying to minimise garbage
@@ -347,14 +333,6 @@ public class ValueCalculationService {
         resolveValuesNumberOfTimesCalled.incrementAndGet();
         if (values.size() > 1) {
             locked.isTrue = true;
-        }
-        if (edddebug){
-            eddDebugInfo.append("right before return time : " + (System.currentTimeMillis() - time));
-
-            if ((System.currentTimeMillis() - startms) > 500){
-                System.out.println(eddDebugInfo);
-            }
-
         }
 
         if (function == DataRegionHeading.FUNCTION.COUNT) {
@@ -393,6 +371,7 @@ public class ValueCalculationService {
     }
 
     private static double scaleValue(Value value, AzquoCellResolver.ValuesHook valuesHook, AzquoCellResolver.ValuesHook scaleValuesHook, Set<Name>scaleHeadingNames) {
+        // Koloboke faster and lighter, this can be hammered. Though much less when it is not applied to 0 . . .
         Set<Name> valueParents = HashObjSets.newUpdatableSet();
         Set<Name> allValueParents = HashObjSets.newUpdatableSet();
         for (Name name : value.getNames()) {
