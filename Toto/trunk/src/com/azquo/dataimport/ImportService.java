@@ -2248,6 +2248,7 @@ fr.close();
                             if (newHeadings.get(col).get(existingHeadingRows - 1).length() > 0 && targetCol >=0) {
                                 //note - ignores heading if no map found
                                 inputColumnMap.put(col, targetCol);
+                                inputColumns.put(targetCol,"---found---");
                             }
                         }
                         if (!lineIterator.hasNext()){
