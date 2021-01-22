@@ -257,6 +257,8 @@ public class ManageDatabasesController {
             model.put("databaseServers", allServers);
             if (allServers.size() == 1) {
                 model.put("serverList", false);
+            } else {
+                model.put("serverList", true);
             }
             List<UploadRecord.UploadRecordForDisplay> uploadRecordsForDisplayForBusiness = AdminService.getUploadRecordsForDisplayForBusinessWithBasicSecurity(loggedInUser, fileSearch, "true".equalsIgnoreCase(withautos));
             if (uploadRecordsForDisplayForBusiness != null) {
@@ -479,6 +481,7 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
             final List<DatabaseServer> allServers = DatabaseServerDAO.findAll();
             if (allServers.size() > 1) {
                 model.put("databaseServers", allServers);
+                model.put("serverList", true);
             } else {
                 model.put("serverList", false);
             }

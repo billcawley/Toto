@@ -40,6 +40,7 @@ public final class AzquoMemoryDB {
     private static Properties azquoProperties = new Properties();
     private static final String host;
     private static final String GROOVYDIR = "groovydir";
+    private static final String RMIIP = "rmiip";
 
     // no point doing this on every constructor!
     static {
@@ -69,6 +70,18 @@ public final class AzquoMemoryDB {
             }
         }
         return groovyDir;
+    }
+
+    private static String rmiip = null;
+
+    public static String getRMIIP() {
+        if (rmiip == null) {
+            rmiip = azquoProperties.getProperty(host + "." + RMIIP);
+            if (rmiip == null) {
+                rmiip = azquoProperties.getProperty(RMIIP);
+            }
+        }
+        return rmiip;
     }
 
 //    private static final Logger logger = Logger.getLogger(AzquoMemoryDB.class);

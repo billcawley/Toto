@@ -165,8 +165,7 @@ Created by IntelliJ IDEA.
                                     <label for="databaseServerId">Select Server:</label>
                                     <select name="databaseServerId" id="databaseServerId">
                                         <c:forEach items="${databaseServers}" var="databaseServer">
-                                            <option value="${databaseServer.id}">${databaseServer.name}
-                                                - ${databaseServer.ip}</option>
+                                            <option value="${databaseServer.id}">${databaseServer.name}</option>
                                         </c:forEach>
                                     </select>
                                 </c:if>

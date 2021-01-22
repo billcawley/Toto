@@ -1,3 +1,7 @@
+18-01-21 3
+
+More development of preprocessor - principally on handling of mapped headings, finding the heading line
+
 18-01-21 2
 
 Scale function optimisation

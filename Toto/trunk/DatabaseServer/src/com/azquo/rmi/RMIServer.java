@@ -1,5 +1,7 @@
 package com.azquo.rmi;
 
+import com.azquo.memorydb.core.AzquoMemoryDB;
+
 import javax.annotation.PreDestroy;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
@@ -22,6 +24,9 @@ public class RMIServer {
     private Registry registry;
     public RMIServer() {
         try {
+            if (AzquoMemoryDB.getRMIIP() != null){
+                System.setProperty("java.rmi.server.hostname",AzquoMemoryDB.getRMIIP());
+            }
             rmiImplementation = new RMIImplementation();
             RMIInterface stub = (RMIInterface) UnicastRemoteObject.exportObject(rmiImplementation, 0); // makes constructor not thread safe, dunno if we care
             registry = LocateRegistry.createRegistry(12345); // I'm not fording a registry port, do we care?
