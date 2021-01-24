@@ -45,9 +45,16 @@ public class DateUtils {
         return Date.from(date.atZone(ZoneId.systemDefault()).toInstant());
     }
 
-    private static LocalDate tryDate(String maybeDate, DateTimeFormatter dateTimeFormatter) {
-        try {
-            return LocalDate.parse(maybeDate, dateTimeFormatter);
+    private static LocalDate tryDate(int dateLen, String maybeDate, DateTimeFormatter dateTimeFormatter) {
+         try {
+             if (maybeDate.length() > dateLen){
+                 if (maybeDate.charAt(dateLen)!= ':' ) {
+                      return null;
+                 }
+                 //ignore rest (hours etc...)
+                 maybeDate = maybeDate.substring(0,dateLen);
+             }
+             return LocalDate.parse(maybeDate, dateTimeFormatter);
         } catch (DateTimeParseException e) {
             return null;
         }
@@ -61,21 +68,21 @@ public class DateUtils {
         if (dateToTest.length() > 5 && dateToTest.charAt(1) == '-') dateToTest = "0" + dateToTest;
         if (dateToTest.length() > 5 && dateToTest.charAt(2) == '-' && dateToTest.charAt(4) == '-')
             dateToTest = dateToTest.substring(0, 3) + "0" + dateToTest.substring(3);
-        LocalDate date = tryDate(dateToTest.length() > 10 ? dateToTest.substring(0, 10) : dateToTest, dateTimeFormatter);
+        LocalDate date = tryDate(10,dateToTest, dateTimeFormatter);
         if (date != null) return date;
-        date = tryDate(dateToTest.length() > 10 ? dateToTest.substring(0, 10) : dateToTest, ukdf4);
+        date = tryDate(10,dateToTest, ukdf4);
         if (date != null) return date;
-        date = tryDate(dateToTest.length() > 11 ? dateToTest.substring(0, 11) : dateToTest, ukdf3);
+        date = tryDate(11, dateToTest, ukdf3);
         if (date != null) return date;
         /* these two last ones use two digit years - Java will assume for example that 16/08/93 is 16/08/2093.
         I shall manually compensate - if the date is more than 10 years in the future then take 100 off it. This might need to be adjusted.
          */
 
-        date = tryDate(dateToTest.length() > 8 ? dateToTest.substring(0, 8) : dateToTest, ukdf2);
+        date = tryDate(8,dateToTest, ukdf2);
         if (date != null) {
             return date.isAfter(LocalDate.now().plusYears(towDigitYearFutureThreshold)) ? date.minusYears(100) : date;
         }
-        date = tryDate(dateToTest, ukdf3a);
+        date = tryDate(100,dateToTest, ukdf3a);
         if (date != null) {
             return date.isAfter(LocalDate.now().plusYears(towDigitYearFutureThreshold)) ? date.minusYears(100) : date;
         }
@@ -95,20 +102,20 @@ public class DateUtils {
         if (dateToTest.length() > 5 && dateToTest.charAt(1) == '-') dateToTest = "0" + dateToTest;
         if (dateToTest.length() > 5 && dateToTest.charAt(2) == '-' && dateToTest.charAt(4) == '-')
             dateToTest = dateToTest.substring(0, 3) + "0" + dateToTest.substring(3);
-        LocalDate date = tryDate(dateToTest.length() > 10 ? dateToTest.substring(0, 10) : dateToTest, dateTimeFormatter);
+        LocalDate date = tryDate(10, dateToTest, dateTimeFormatter);
         if (date != null) return date;
-        date = tryDate(dateToTest.length() > 10 ? dateToTest.substring(0, 10) : dateToTest, usdf4);
+        date = tryDate(10, dateToTest, usdf4);
         if (date != null) return date;
-        date = tryDate(dateToTest.length() > 11 ? dateToTest.substring(0, 11) : dateToTest, usdf3);
+        date = tryDate(11, dateToTest, usdf3);
         if (date != null) return date;
 
         /* as above compensate for formates with two digit years*/
 
-        date = tryDate(dateToTest.length() > 11 ? dateToTest.substring(0, 11) : dateToTest, usdf3a);
+        date = tryDate(11, dateToTest, usdf3a);
         if (date != null) {
             return date.isAfter(LocalDate.now().plusYears(towDigitYearFutureThreshold)) ? date.minusYears(100) : date;
         }
-        date = tryDate(dateToTest.length() > 8 ? dateToTest.substring(0, 8) : dateToTest, usdf2);
+        date = tryDate(8 ,dateToTest, usdf2);
         if (date != null) {
             return date.isAfter(LocalDate.now().plusYears(towDigitYearFutureThreshold)) ? date.minusYears(100) : date;
         }
