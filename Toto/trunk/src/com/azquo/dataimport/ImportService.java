@@ -1688,6 +1688,8 @@ public final class ImportService {
     // similar to uploading a report
     public static UploadedFile uploadImportTemplate(UploadedFile uploadedFile, LoggedInUser loggedInUser, boolean assignToLoggedInUserDB) throws
             IOException {
+        //rule put in by WFC Jan-21
+        assignToLoggedInUserDB =uploadedFile.getFileName().toLowerCase().contains("import templates");
         long time = System.currentTimeMillis();
         uploadedFile.setDataModified(true); // ok so it's not technically data modified but the file has been processed correctly.
         int businessId = loggedInUser.getUser().getBusinessId();
@@ -1708,7 +1710,7 @@ public final class ImportService {
         }
         ImportTemplateDAO.store(importTemplate);
         // right here is a problem - what about other users currently logged in with that database? todo
-        if (assignToLoggedInUserDB && !uploadedFile.getFileName().toLowerCase().contains("preprocessor")) {
+        if (assignToLoggedInUserDB) {
             Database database = loggedInUser.getDatabase();
             database.setImportTemplateId(importTemplate.getId());
             DatabaseDAO.store(database);
@@ -2048,8 +2050,8 @@ fr.close();
                                             firstRow = 0;
                                         }
                                         for (int rowNo = firstRow; rowNo <=lastRow; rowNo++){
-                                            String source = getCellValue(newSheet.getRow(rowNo).getCell(firstCol));
-                                            String target = getCellValue(newSheet.getRow(rowNo).getCell(firstCol + 1));
+                                            String source = standardise(getCellValue(newSheet.getRow(rowNo).getCell(firstCol)));
+                                            String target = standardise(getCellValue(newSheet.getRow(rowNo).getCell(firstCol + 1)));
                                             if (headingsLookups.get(source)!=null){
                                                 headingsLookups.put(target, headingsLookups.get(source));
                                             }else{
@@ -2182,15 +2184,15 @@ fr.close();
                 }
                 int colNo = 0;
                 //boolean validLine = true;
+                //INTERIM CHECK FOR HEADINGS ON THE WRONG LINE  - THIS DOES NOT WORK FOR HEADINGS BELOW WHERE EXPECTED
+                //ALSO SHOULD PROBABLY CHECK MORE THAN ONE CELL.
+                if (colNo==0 && line[0].length() > 0 && line.length > 10 && findFirst(inputColumns,headingFrom(line[0], headingsLookups))>=0){
+                    headingStartRow = lineNo;
+
+                }
                 if (lineNo < headingStartRow) {
                     for (String cellVal:line){
-                        //INTERIM CHECK FOR HEADINGS ON THE WRONG LINE  - THIS DOES NOT WORK FOR HEADINGS BELOW WHERE EXPECTED
-                        //ALSO SHOULD PROBABLY CHECK MORE THAN ONE CELL.
-                        if (colNo==0 && cellVal.length() > 0 &&  findFirst(inputColumns,headingFrom(cellVal, headingsLookups))>=0){
-                          headingStartRow = lineNo;
-                          break;
-                        }
-                        setCellValue(inputSheet,lineNo, colNo, cellVal);
+                         setCellValue(inputSheet,lineNo, colNo, cellVal);
 
                         colNo++;
                     }
@@ -2463,13 +2465,20 @@ fr.close();
     }
 
     private static String headingFrom(String value, Map<String, String> lookup){
-        value = normalise(value).replace(" ","");
+        value = standardise(value);
         String map = lookup.get(value);
         if (map!= null){
             return map;
         }
         return value;
     }
+
+    private static String standardise(String value) {
+        //not sure how the system read the cr as \\n
+        return normalise(value).toLowerCase(Locale.ROOT).replace(" ","");
+    }
+
+
     private static String normalise(String value) {
         //not sure how the system read the cr as \\n
         return value.replace("\\\\n", " ").replace("\n", " ").replace("  ", " ");
