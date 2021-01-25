@@ -7,6 +7,8 @@
         <element id="directory" name="classes">
           <element id="module-output" name="DatabaseServer" />
           <element id="module-output" name="shared" />
+          <element id="module-output" name="poi" />
+          <element id="module-output" name="poi-ooxml" />
         </element>
         <element id="directory" name="lib">
           <element id="library" level="project" name="org.springframework:spring-jdbc:4.1.6.RELEASE" />
@@ -22,8 +24,10 @@
           <element id="library" level="project" name="org.mariadb.jdbc:mariadb-java-client:2.4.0" />
           <element id="library" level="project" name="com.fasterxml.jackson.dataformat:jackson-dataformat-csv:2.9.2" />
           <element id="library" level="project" name="net.objecthunter:exp4j:0.4.8" />
-          <element id="library" level="project" name="org.apache.poi:poi-ooxml:4.1.0" />
-          <element id="library" level="project" name="org.apache.xmlbeans:xmlbeans:3.1.0" />
+          <element id="library" level="project" name="org.apache.poi:poi-ooxml:5.0.0" />
+          <element id="library" level="project" name="poi-ooxml-full-5.0.0" />
+          <element id="library" level="project" name="Simple Logging Facade for Java:1.7.30" />
+          <element id="library" level="project" name="org.apache.xmlbeans:xmlbeans:4.0.0" />
         </element>
       </element>
     </root>

@@ -6,14 +6,12 @@ import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.dataformat.csv.CsvMapper;
 import com.fasterxml.jackson.dataformat.csv.CsvParser;
 import com.fasterxml.jackson.dataformat.csv.CsvSchema;
-import io.keikai.model.SCell;
 import net.lingala.zip4j.core.ZipFile;
 import org.apache.log4j.Logger;
 import org.apache.poi.poifs.crypt.Decryptor;
 import org.apache.poi.poifs.crypt.EncryptionInfo;
 import org.apache.poi.poifs.filesystem.POIFSFileSystem;
 import org.apache.poi.ss.usermodel.CellType;
-import org.apache.poi.xssf.usermodel.XSSFCell;
 import org.apache.poi.xssf.usermodel.XSSFFormulaEvaluator;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.multipart.MultipartFile;
@@ -63,7 +61,6 @@ import io.keikai.api.model.CellData;
 
 import javax.servlet.http.HttpSession;
 import javax.xml.parsers.*;
-import java.awt.geom.Area;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
@@ -2351,12 +2348,10 @@ fr.close();
             throw e;
         }
     }
-    //todo using getNameAt is depreciated.  building up a list of mapping regions from xxx_persist to xxx (for values that only occur sporadically)
+    //building up a list of mapping regions from xxx_persist to xxx (for values that only occur sporadically)
     public static Map<AreaReference,AreaReference> getPersistNames(org.apache.poi.ss.usermodel.Workbook book) {
         Map<AreaReference, AreaReference> toReturn = new HashMap<>();
-        int nameCount = book.getNumberOfNames();
-        for (int i = 0; i < nameCount; i++) {
-            org.apache.poi.ss.usermodel.Name name = book.getNameAt(i);
+        for (org.apache.poi.ss.usermodel.Name name  : book.getAllNames()) {
             if (name.getNameName().toLowerCase().endsWith("_persist")) {
                 AreaReference source = new AreaReference(name.getRefersToFormula(),null);
                 String targetName=name.getNameName().substring(0, name.getNameName().length() - 8);

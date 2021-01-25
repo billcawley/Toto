@@ -13,8 +13,6 @@
       <root url="jar://$PROJECT_DIR$/lib/lang-tag-1.4.4.jar!/" />
       <root url="jar://$PROJECT_DIR$/lib/nimbus-jose-jwt-8.4.jar!/" />
       <root url="jar://$PROJECT_DIR$/lib/gson-2.8.0.jar!/" />
-      <root url="jar://$PROJECT_DIR$/lib/slf4j-api-1.7.21.jar!/" />
-      <root url="jar://$PROJECT_DIR$/lib/commons-codec-1.11.jar!/" />
       <root url="jar://$PROJECT_DIR$/lib/commons-lang3-3.5.jar!/" />
     </CLASSES>
     <JAVADOC />

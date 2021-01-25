@@ -1,0 +1,62 @@
+<component name="libraryTable">
+  <library name="org.apache.poi:poi-ooxml:5.0.0" type="repository">
+    <properties maven-id="org.apache.poi:poi-ooxml:5.0.0" />
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/lib/slf4j-api-1.7.30.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/jcl-over-slf4j-1.7.30.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/commons-codec-1.15.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/commons-collections4-4.4.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/commons-math3-3.6.1.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/SparseBitSet-1.2.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/xml-apis-1.4.01.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/commons-compress-1.20.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/curvesapi-1.06.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/bcpkix-jdk15on-1.68.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/bcprov-jdk15on-1.68.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/xmlsec-2.2.1.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/woodstox-core-5.2.1.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/stax2-api-4.2.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/batik-all-1.13.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/batik-anim-1.13.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/batik-shared-resources-1.13.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/xml-apis-ext-1.3.04.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/batik-awt-util-1.13.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/xmlgraphics-commons-2.4.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/commons-io-1.3.1.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/batik-bridge-1.13.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/batik-codec-1.13.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/batik-constants-1.13.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/batik-css-1.13.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/batik-dom-1.13.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/xalan-2.7.2.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/serializer-2.7.2.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/batik-ext-1.13.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/batik-extension-1.13.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/batik-gui-util-1.13.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/batik-gvt-1.13.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/batik-i18n-1.13.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/batik-parser-1.13.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/batik-rasterizer-ext-1.13.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/batik-rasterizer-1.13.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/batik-script-1.13.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/batik-slideshow-1.13.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/batik-squiggle-ext-1.13.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/batik-squiggle-1.13.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/batik-svg-dom-1.13.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/batik-svgbrowser-1.13.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/batik-svggen-1.13.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/batik-svgpp-1.13.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/batik-svgrasterizer-1.13.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/batik-swing-1.13.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/batik-transcoder-1.13.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/batik-util-1.13.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/batik-ttf2svg-1.13.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/batik-xml-1.13.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/graphics2d-0.30.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/pdfbox-2.0.22.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/fontbox-2.0.22.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

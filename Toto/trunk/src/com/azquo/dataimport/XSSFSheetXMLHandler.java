@@ -24,6 +24,7 @@ import java.util.Map;
 
 // various quirks about how to deal with white space are to match previous POI Workbook behavior
 // note : now we're on poi4.0 proper is this still required? Todo : investigate
+// the way to get around this is to try to implement SheetContentsHandler but this won't bw good enough for us. Given the niche place this is used maybe it's just fine as it is?
 public class XSSFSheetXMLHandler extends DefaultHandler {
     private StylesTable stylesTable;
     private ReadOnlySharedStringsTable sharedStringsTable;
@@ -174,8 +175,10 @@ public class XSSFSheetXMLHandler extends DefaultHandler {
 
                     try {
                         int idx = Integer.parseInt(sstIndex);
-                        XSSFRichTextString rtss = new XSSFRichTextString(this.sharedStringsTable.getEntryAt(idx));
-                        thisStr = rtss.toString();
+                        //XSSFRichTextString rtss = new XSSFRichTextString(this.sharedStringsTable.getEntryAt(idx));
+                        //thisStr = rtss.toString();
+                        // EFC hack, I don't like this and need to sort the situation so to speak
+                        thisStr = this.sharedStringsTable.getItemAt(idx).getString();
                     } catch (NumberFormatException var10) {
                         System.err.println("Failed to parse SST index '" + sstIndex + "': " + var10.toString());
                     }

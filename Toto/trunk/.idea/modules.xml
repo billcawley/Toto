@@ -4,6 +4,8 @@
     <modules>
       <module fileurl="file://$PROJECT_DIR$/DatabaseServer/DatabaseServer.iml" filepath="$PROJECT_DIR$/DatabaseServer/DatabaseServer.iml" />
       <module fileurl="file://$PROJECT_DIR$/Toto.iml" filepath="$PROJECT_DIR$/Toto.iml" />
+      <module fileurl="file://$PROJECT_DIR$/poi/poi.iml" filepath="$PROJECT_DIR$/poi/poi.iml" />
+      <module fileurl="file://$PROJECT_DIR$/poi-ooxml/poi-ooxml.iml" filepath="$PROJECT_DIR$/poi-ooxml/poi-ooxml.iml" />
       <module fileurl="file://$PROJECT_DIR$/shared/shared.iml" filepath="$PROJECT_DIR$/shared/shared.iml" />
     </modules>
   </component>
