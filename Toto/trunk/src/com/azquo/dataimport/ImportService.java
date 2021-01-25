@@ -2421,7 +2421,7 @@ fr.close();
         } else {
             //isNumber returns 'true' for cellVal = "16L", then parseDouble exceptions
             try {
-                targetCell.setCellValue(Double.parseDouble(cellVal));
+                targetCell.setCellValue(Double.parseDouble(cellVal.replace(",","")));
             } catch (Exception e) {
                 targetCell.setCellValue(cellVal);
             }
