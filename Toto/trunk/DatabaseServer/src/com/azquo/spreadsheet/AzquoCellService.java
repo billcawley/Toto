@@ -134,7 +134,8 @@ public class AzquoCellService {
         List<String> defaultLanguages = languages;
         if (regionOptions.rowLanguage != null && regionOptions.rowLanguage.length() > 0) {
             languages = new ArrayList<>();
-            languages.add(regionOptions.rowLanguage);
+
+            languages.addAll(new ArrayList<String>(Arrays.asList(regionOptions.rowLanguage.split(","))));
         }
         final List<List<List<DataRegionHeading>>> rowHeadingLists = DataRegionHeadingService.createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBConnection, rowHeadingsSource, languages, contextSuffix, regionOptions.ignoreHeadingErrors);
         languages = defaultLanguages;

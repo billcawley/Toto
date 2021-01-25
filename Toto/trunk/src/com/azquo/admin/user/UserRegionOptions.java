@@ -164,7 +164,10 @@ public class UserRegionOptions extends StandardEntity {
                         //ignore '=' or a space
                         optionsForRegion = optionsForRegion.substring(1);
                     }
-                    foundPos = optionsForRegion.indexOf(",");
+                    foundPos = optionsForRegion.indexOf(";");
+                    if (foundPos < 0){
+                        foundPos = optionsForRegion.indexOf(",");
+                    }
                     if (foundPos > 0) {
                         optionsForRegion = optionsForRegion.substring(0, foundPos);
                     }

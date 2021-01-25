@@ -536,7 +536,7 @@ class ZKContextMenu {
     private void buildContextMenuDebug(String sheetName, String region, UserRegionOptions userRegionOptions, int regionRow, int regionColumn) {
         // ok, adding new debug info here, it doesn't require values in the cell unlike provenance
         try {
-            String debugString = SpreadsheetService.getDebugForCell(loggedInUser, reportId, sheetName, region, userRegionOptions, regionRow, regionColumn);
+            String debugString = "\nRegion : "+ region + "\n\n" + SpreadsheetService.getDebugForCell(loggedInUser, reportId, sheetName, region, userRegionOptions, regionRow, regionColumn);
             Label debugLabel = new Label();
             debugLabel.setMultiline(true);
             debugLabel.setValue("Derivation\n");
