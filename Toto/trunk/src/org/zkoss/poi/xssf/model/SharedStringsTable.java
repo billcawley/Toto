@@ -4,8 +4,6 @@
 //
 
 package org.zkoss.poi.xssf.model;
-//java.lang.NoSuchMethodError: 'void org.openxmlformats.schemas.drawingml.x2006.spreadsheetDrawing.CTMarker.setColOff(long)'
-// while exporting a chart for the easylife daily report I think, ok . . .
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;

@@ -1,3 +1,7 @@
+26-01-21
+
+Fixes to POI build
+
 25-01-21
 
 POI upgrade and source added. Libraries need checking.

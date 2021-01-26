@@ -83,7 +83,8 @@ public class LoggedInUser implements Serializable {
 
     private Database database;
     private OnlineReport onlineReport;
-    private Book book;
+    // todo - this should not really be in here but transient will do for the mo to stop people being booted on tomcat restart
+    private transient Book book;
 
     // I'm a little unsure about this being separate but it will work for the moment
     private DatabaseServer databaseServer;
