@@ -1,3 +1,15 @@
+25-01-21
+
+POI upgrade and source added. Libraries need checking.
+
+allows for two headings of the same name (---found---)
+
+Fixed separate DB server code
+
+Will only ignore last part of date fields if the next character is ':' (e.g. do not treat 01/01/2020 - 01/01/2021 as a date)
+
+Allows for multiple items in options (items separated by ',' end with ';') particularly for row languages (more than one column of row headings). Also reformating of 'derivation' to include the region name
+
 18-01-21 3
 
 More development of preprocessor - principally on handling of mapped headings, finding the heading line
