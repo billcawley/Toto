@@ -45,6 +45,7 @@ public class AzquoCellResolver {
     // Now deals with name functions which evaluate a name expression for each cell as opposed to value functions which work off names already resolved in the DataRegionHeadings
     static AzquoCell getAzquoCellForHeadings(AzquoMemoryDBConnection connection, List<DataRegionHeading> rowHeadings, List<DataRegionHeading> columnHeadings
             , List<DataRegionHeading> contextHeadings, int rowNo, int colNo, List<String> languages, int valueId, Map<List<Name>, Set<Value>> nameComboValueCache, StringBuilder debugInfo) throws Exception {
+        boolean isString = false;
         if (debugInfo != null) {
             debugInfo.append("Row Headings\n");
             for (DataRegionHeading rowHeading : rowHeadings) {
@@ -293,10 +294,12 @@ public class AzquoCellResolver {
                     first = false;
                 }
                 stringValue = sb.toString();
+                isString = true;
             } else if (expressionFunctionHeadings.get(0).getFunction() == DataRegionHeading.FUNCTION.FIRST) { // we may have to pass a hint about ordering to the query parser, let's see how it goes without it
                 final Collection<Name> set = NameQueryParser.parseQuery(connection, expressions.get(0), languages, true);
                 doubleValue = 0;
                 stringValue = set.isEmpty() ? "" : set.iterator().next().getDefaultDisplayName();
+                isString = true;
             } else if (expressionFunctionHeadings.get(0).getFunction() == DataRegionHeading.FUNCTION.LAST) {
                 final Collection<Name> set = NameQueryParser.parseQuery(connection, expressions.get(0), languages, true);
                 doubleValue = 0;
@@ -304,6 +307,7 @@ public class AzquoCellResolver {
                 for (Name name : set) { //a bit of a lazy way of doing things but it should be fine, plus with only a collection interface not sure of how to get the last!
                     stringValue = name.getDefaultDisplayName();
                 }
+                isString = true;
             }else if (expressionFunctionHeadings.get(0).getFunction() == DataRegionHeading.FUNCTION.BESTNAMEMATCH) {
                 String[] matchTerms = expressions.get(0).split(",");
 
@@ -319,6 +323,7 @@ public class AzquoCellResolver {
                     if (toTry.compareTo(bestFit) >= 0 && (toTry.compareTo(description) <= 0)) {
                         bestFit = toTry;
                         stringValue = toTry;
+                        isString = true;
                     }
                 }
             }
@@ -504,15 +509,24 @@ public class AzquoCellResolver {
                                 || function == DataRegionHeading.FUNCTION.BESTNAMEVALUEMATCH)&& valueFunctionSet != null && stringParameter!=null) { // last lookup: we're going to override the double value just set
                             // now, find all the parents and cross them with the valueParentCountHeading set
                             String bestFit = "";
+                            Collection<Name> possibles = new HashSet<>();
+                            for (Name n:valueFunctionSet){
+                                possibles.addAll(n.findAllChildren());
+                            }
                             for (Value v : valuesHook.values) {
                                  for (Name n : v.getNames()) {
-                                    if (valueFunctionSet.contains(n)){
+                                    if (possibles.contains(n)){
+                                        Collection<Name> names = n.findAllParents();
+                                        names.retainAll(valueFunctionSet);
+                                        n = names.iterator().next();//there should be only one
+
                                         String toTry = n.getDefaultDisplayName();
                                         if (toTry.compareTo(bestFit)>0 && (toTry.compareTo(stringParameter)<=0)){
                                             bestFit = toTry;
+                                            isString = true;
                                             if (function == DataRegionHeading.FUNCTION.BESTNAMEVALUEMATCH){
                                                 stringValue = toTry;
-                                            }else{
+                                             }else{
                                                 stringValue = v.getText();
                                             }
                                         }
@@ -667,6 +681,7 @@ But can use a library?
                             }
                             if (latest != null){
                                 stringValue = df.format(latest);
+                                isString = true;
                             }
                         } else if (function == DataRegionHeading.FUNCTION.AUDITCHANGEDBY){
                             LocalDateTime latest = null;
@@ -674,6 +689,7 @@ But can use a library?
                                 if (latest == null || v.getProvenance().getTimeStamp().isAfter(latest)){
                                     latest = v.getProvenance().getTimeStamp();
                                     stringValue = v.getProvenance().getUser();
+                                    isString = true;
                                 }
                             }
 
@@ -689,7 +705,7 @@ But can use a library?
                                 stringValue = stringValue.replaceAll("\n", "<br/>");//this is unsatisfactory, but a quick fix.
                             }*/
                             // was isnumber test here to add a double to the
-                        } else if (valuesHook.values != null && valuesHook.values.size() > 0) {
+                        } else if (!isString && valuesHook.values != null && valuesHook.values.size() > 0) {
                             stringValue = doubleValue + "";
                         }
                         if (stringValue.equals("") && function == DataRegionHeading.FUNCTION.DEFAULT){
