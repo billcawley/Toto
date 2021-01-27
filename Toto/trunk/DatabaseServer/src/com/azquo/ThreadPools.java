@@ -1,5 +1,8 @@
 package com.azquo;
 
+import com.azquo.memorydb.core.AzquoMemoryDB;
+import org.apache.commons.lang.math.NumberUtils;
+
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -29,12 +32,16 @@ public class ThreadPools {
 
     private static ExecutorService initMainThreadPool() {
         int availableProcessors = Runtime.getRuntime().availableProcessors();
+        int maxThreads = 15;
+        if (AzquoMemoryDB.getMaxthreads() != null && NumberUtils.isDigits(AzquoMemoryDB.getMaxthreads())){
+            maxThreads = Integer.parseInt(AzquoMemoryDB.getMaxthreads());
+        }
         if (availableProcessors == 1) {
             return Executors.newFixedThreadPool(availableProcessors);
         } else {
-            if (availableProcessors > 15) {
-                System.out.println("reportFillerThreads : " + 15);
-                return Executors.newFixedThreadPool(15);
+            if (availableProcessors > maxThreads) {
+                System.out.println("reportFillerThreads : " + maxThreads);
+                return Executors.newFixedThreadPool(maxThreads);
             } else {
                 System.out.println("reportFillerThreads : " + (availableProcessors - 1));
                 return Executors.newFixedThreadPool(availableProcessors - 1);

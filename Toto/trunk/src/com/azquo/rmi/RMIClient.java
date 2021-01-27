@@ -15,6 +15,10 @@ import java.util.concurrent.ConcurrentHashMap;
  * Accessing the database server. Need to make this work for multiple DBs, going for a simple map initially
  * <p>
  * Moving to static, as with the daos I see little advantage in a singleton.
+ *
+ * Note : 27/01/2021 now this is being used in anger on a different machine I need to add exception catching code if the database server restarted
+ *
+ * funnily enough this may take some cues from Feefo v1 code!
  */
 public class RMIClient {
 
@@ -35,5 +39,31 @@ public class RMIClient {
             }
             return toReturn;
         });
+
+        // test and try to reconnect? Not as efficient as it might be but otherwise I have a serious mess of error catching.
     }
+
+    /*
+
+        public static void setUp() throws Exception {
+            // this will be the same as
+        }
+
+        public static void remoteResetVendorsCheckedByCron() {
+            try {
+                checkSetup();
+                serv.remoteResetVendorsCheckedByCron();
+            } catch (Exception e) {
+                System.err.println("Remoteservice exception:" + e.getMessage());
+                try {
+                    // try again in case something dodgy happened
+                    setUp();
+                    serv.remoteResetVendorsCheckedByCron();
+                } catch (Exception e2) {
+                    System.err.println("Remoteservice exception after seetting up again:" + e2.getMessage());
+                }
+                //e.printStackTrace();
+            }
+        }*/
+
 }

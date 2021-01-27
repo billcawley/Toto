@@ -29,6 +29,38 @@ public class SFTPUtilities {
         Session session = null;
         Channel channel = null;
         ChannelSftp channelSftp = null;
+
+/*
+        template path : /home/azquo/databases/JoeBrowns/importtemplates/512-JB Import Templates 2020-10-20b.xlsx
+        4: java.lang.StringIndexOutOfBoundsException: String index out of range: 0
+        at com.jcraft.jsch.ChannelSftp.put(ChannelSftp.java:551)
+        at com.jcraft.jsch.ChannelSftp.put(ChannelSftp.java:492)
+        at com.azquo.dataimport.SFTPUtilities.copyFileToDatabaseServer(SFTPUtilities.java:48)
+        at com.azquo.dataimport.ImportService.readPreparedFile(ImportService.java:1157)
+        at com.azquo.dataimport.ImportService.checkForCompressionAndImport(ImportService.java:344)
+        at com.azquo.dataimport.ImportService.importTheFile(ImportService.java:163)
+        at com.azquo.dataimport.ImportService.importTheFile(ImportService.java:110)
+        at com.azquo.dataimport.DBCron.directoryScan(DBCron.java:298)
+        at jdk.internal.reflect.GeneratedMethodAccessor85.invoke(Unknown Source)
+        at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+        at java.base/java.lang.reflect.Method.invoke(Method.java:567)
+        at org.springframework.scheduling.support.ScheduledMethodRunnable.run(ScheduledMethodRunnable.java:65)
+        at org.springframework.scheduling.support.DelegatingErrorHandlingRunnable.run(DelegatingErrorHandlingRunnable.java:54)
+        at org.springframework.scheduling.concurrent.ReschedulingRunnable.run(ReschedulingRunnable.java:81)
+        at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:515)
+        at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+        at java.base/java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.run(ScheduledThreadPoolExecutor.java:304)
+        at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1128)
+        at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:628)
+        at java.base/java.lang.Thread.run(Thread.java:830)
+        Caused by: java.lang.StringIndexOutOfBoundsException: String index out of range: 0
+        at java.base/java.lang.StringLatin1.charAt(StringLatin1.java:48)
+        at java.base/java.lang.String.charAt(String.java:709)
+        at com.jcraft.jsch.ChannelSftp.remoteAbsolutePath(ChannelSftp.java:2903)
+        at com.jcraft.jsch.ChannelSftp.put(ChannelSftp.java:517)
+        ... 19 more
+  */
+
 //        System.out.println("preparing the host information for sftp.");
         String destinationFile = "copied file not set";
         try {
@@ -45,6 +77,7 @@ public class SFTPUtilities {
 //            System.out.println("sftp channel opened and connected.");
             channelSftp = (ChannelSftp) channel;
             sftpCd(channelSftp, SFTPWORKINGDIR);
+            System.out.println("sftp put file name : " + fileName);
             channelSftp.put(inputStream, fileName);
             destinationFile = channelSftp.pwd() + "/" + fileName;
             //log.info("File transferred successfully to host.");

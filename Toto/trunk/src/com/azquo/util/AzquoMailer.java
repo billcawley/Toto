@@ -23,7 +23,7 @@ import java.util.Properties;
  * Configuration like SpreadsheetService, not ideal but I want mail server details out of here
  */
 public class AzquoMailer {
-
+    // todo the trustAnchors parameter must be non-empty
     private static final Properties azquoProperties = new Properties();
 
     static {

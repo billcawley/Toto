@@ -41,6 +41,7 @@ public final class AzquoMemoryDB {
     private static final String host;
     private static final String GROOVYDIR = "groovydir";
     private static final String RMIIP = "rmiip";
+    private static final String MAXTHREADS = "maxthreads";
 
     // no point doing this on every constructor!
     static {
@@ -82,6 +83,18 @@ public final class AzquoMemoryDB {
             }
         }
         return rmiip;
+    }
+
+    private static String maxthreads = null;
+
+    public static String getMaxthreads() {
+        if (maxthreads == null) {
+            maxthreads = azquoProperties.getProperty(host + "." + MAXTHREADS);
+            if (maxthreads == null) {
+                maxthreads = azquoProperties.getProperty(MAXTHREADS);
+            }
+        }
+        return maxthreads;
     }
 
 //    private static final Logger logger = Logger.getLogger(AzquoMemoryDB.class);
