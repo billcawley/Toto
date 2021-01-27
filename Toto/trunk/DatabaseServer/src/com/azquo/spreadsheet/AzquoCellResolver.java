@@ -374,6 +374,7 @@ public class AzquoCellResolver {
                 DataRegionHeading functionHeading = null;
                 DataRegionHeading.FUNCTION function = null;
                 Collection<Name> valueFunctionSet = null;
+                Collection<Name> valueFunctionChildren = null;
                 String stringParameter = null;
                 double functionDoubleParameter = 0;
                 DataRegionHeading redundantHeading = null;
@@ -392,6 +393,7 @@ public class AzquoCellResolver {
                             functionDoubleParameter = heading.getDoubleParameter();
                         }
                         valueFunctionSet = heading.getValueFunctionSet(); // value function e.g. value parent count can allow a name set to be defined
+                        valueFunctionChildren =heading.getValueFunctionChildren();
                         if (heading.getStringParameter()!=null){
                             stringParameter = heading.getStringParameter().replace("\"","").replace("`","");//USED ONLY IN LASTLOOKUP - EFC note, and default now . . .
                         }
@@ -509,13 +511,9 @@ public class AzquoCellResolver {
                                 || function == DataRegionHeading.FUNCTION.BESTNAMEVALUEMATCH)&& valueFunctionSet != null && stringParameter!=null) { // last lookup: we're going to override the double value just set
                             // now, find all the parents and cross them with the valueParentCountHeading set
                             String bestFit = "";
-                            Collection<Name> possibles = new HashSet<>();
-                            for (Name n:valueFunctionSet){
-                                possibles.addAll(n.findAllChildren());
-                            }
                             for (Value v : valuesHook.values) {
                                  for (Name n : v.getNames()) {
-                                    if (possibles.contains(n)){
+                                    if (valueFunctionChildren.contains(n)){
                                         Collection<Name> names = n.findAllParents();
                                         names.retainAll(valueFunctionSet);
                                         n = names.iterator().next();//there should be only one

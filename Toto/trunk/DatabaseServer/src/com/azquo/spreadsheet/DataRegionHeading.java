@@ -3,6 +3,7 @@ package com.azquo.spreadsheet;
 import com.azquo.memorydb.core.Name;
 
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -64,6 +65,7 @@ public class DataRegionHeading {
     private String stringParameter;
     private final List<DataRegionHeading> offsetHeadings; // used when formatting hierarchy
     private Collection<Name> valueFunctionSet; // just used for valueparentcount and valueset
+    private Collection<Name> valueFunctionChildren; // just used for valueparentcount and valueset
     private final double doubleParameter; // initially used for percentile, could be others. I think this needs to be rearranged at some point but for the moment make percentile work.
     private final Collection<Name> attributeSet;
     private final String calculation; //will later be used as a calculation - coming in from the heading rather than the name, see value service 334
@@ -89,6 +91,13 @@ public class DataRegionHeading {
         this.doubleParameter = doubleParameter;
         this.attributeSet = null;
         this.calculation = calculation;
+        Collection<Name> valueFunctionChildren = new HashSet<>();
+        if (valueFunctionSet!=null) {
+            for (Name n : valueFunctionSet) {
+                valueFunctionChildren.addAll(n.findAllChildren());
+            }
+        }
+        this.valueFunctionChildren = valueFunctionChildren;
      }
 
     DataRegionHeading(String attribute, boolean writeAllowed, Collection<Name> attributeSet) {
@@ -187,6 +196,9 @@ public class DataRegionHeading {
 
     Collection<Name> getValueFunctionSet() {
         return valueFunctionSet;
+    }
+    Collection<Name> getValueFunctionChildren() {
+        return valueFunctionChildren;
     }
 
     public boolean isExpressionFunction(){
