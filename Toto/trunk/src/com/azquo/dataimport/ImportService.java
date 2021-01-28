@@ -1154,7 +1154,8 @@ public final class ImportService {
         DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
         // right - here we're going to have to move the file if the DB server is not local.
         if (!databaseServer.getIp().equals(LOCALIP)) {// the call via RMI is the same the question is whether the path refers to this machine or another
-            uploadedFile.setPath(SFTPUtilities.copyFileToDatabaseServer(new FileInputStream(uploadedFile.getPath()), databaseServer.getSftpUrl()));
+            // efc the final file name path wasn't being added, I don't know how it was lots, code *was* working. Somehow the change got lost, a pain! basically copy the tmp file name from the report server, should be fine
+            uploadedFile.setPath(SFTPUtilities.copyFileToDatabaseServer(new FileInputStream(uploadedFile.getPath()), databaseServer.getSftpUrl() + (uploadedFile.getPath().substring(uploadedFile.getPath().lastIndexOf("/") + 1))));
         }
         if (uploadedFile.getTemplateParameter("debug") != null) {
             List<String> notice = new ArrayList<>();
