@@ -371,8 +371,8 @@ Attributes of the names in other cells can be referenced also
                     } catch (Exception ignored) {
                     }
                 }
-                heading.compositionPattern = result.replace("FILENAME", fileNames.get(fileNames.size() - 1));
-                heading.compositionPattern = result.replace("PARENTFILENAME", fileNames.size() > 1 ? fileNames.get(fileNames.size() - 2) : fileNames.get(fileNames.size() - 1));
+                heading.compositionPattern = result.replace("FILENAME", fileNames.get(fileNames.size() - 1))
+                        .replace("PARENTFILENAME", fileNames.size() > 1 ? fileNames.get(fileNames.size() - 2) : fileNames.get(fileNames.size() - 1));
                 break;
             case IGNORE:
                 heading.ignoreList = new ArrayList<>();
