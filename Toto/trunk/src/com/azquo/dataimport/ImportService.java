@@ -1968,6 +1968,20 @@ fr.close();
             org.apache.poi.ss.usermodel.Name outputLineRegion = BookUtils.getName(ppBook, "az_output");
             AreaReference outputAreaRef = new AreaReference(outputLineRegion.getRefersToFormula(), null);
             org.apache.poi.ss.usermodel.Name ignoreRegion = BookUtils.getName(ppBook, "az_ignore");
+            org.apache.poi.ss.usermodel.Name fileNameRegion = BookUtils.getName(ppBook, "az_filename");
+            AreaReference fileNameAreaRef = null;
+            String fileName = null;
+            if (fileNameRegion != null){
+                fileNameAreaRef = new AreaReference(fileNameRegion.getRefersToFormula(), null);
+                List<String>fileNames = uploadedFile.getFileNames();
+                for (int i = fileNames.size() - 1;i >=0;i--){
+                    //do not use the sheet name.
+                    fileName = fileNames.get(i);
+                    if (fileName.contains(".")){
+                        break;
+                    }
+                }
+            }
             AreaReference ignoreRef = null;
             if (ignoreRegion!=null){
                 ignoreRef = new AreaReference(ignoreRegion.getRefersToFormula(), null);
@@ -2273,6 +2287,9 @@ fr.close();
                             setRangeValue(ppBook, name, uploadedFile.getParameter(param));
                             System.out.println("setting parameter in sheet" + name.getNameName());
                         }
+                    }
+                    if (fileNameAreaRef != null){
+                        setCellValue(inputSheet, fileNameAreaRef.getFirstCell().getRow(), fileNameAreaRef.getFirstCell().getCol(),fileName);
                     }
 
                     XSSFFormulaEvaluator.evaluateAllFormulaCells(ppBook);
