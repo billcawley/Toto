@@ -2293,9 +2293,9 @@ fr.close();
                         for (colNo = outputCol; colNo <= lastOutputCol; colNo++) {
                             String cellVal = getCellValue(outputSheet.getRow(outputRow).getCell(colNo));
                             if (colNo > 0) {
-                                fileWriter.write("\t" + cellVal);
+                                fileWriter.write("\t" + normalise(cellVal));
                             } else {
-                                fileWriter.write(cellVal);
+                                fileWriter.write(normalise(cellVal));
                             }
                         }
                         fileWriter.write("\r\n");
