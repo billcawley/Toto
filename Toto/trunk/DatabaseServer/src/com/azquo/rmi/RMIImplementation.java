@@ -35,6 +35,9 @@ import java.util.Set;
  */
 class RMIImplementation implements RMIInterface {
 
+    public void testConnection(){
+    }
+
     //Admin stuff
     @Override
     public void emptyDatabase(String persistenceName) throws RemoteException {

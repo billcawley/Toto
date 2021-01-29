@@ -22,6 +22,8 @@ import java.util.Set;
 public interface RMIInterface extends Remote {
     String serviceName = "AzquoRMI";
 
+    void testConnection() throws RemoteException;
+
     void emptyDatabase(String persistenceName) throws RemoteException;
 
     void checkDatabase(String persistenceName) throws RemoteException;

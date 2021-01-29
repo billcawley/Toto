@@ -79,7 +79,7 @@ public class DBCron {
         Business b = BusinessDAO.findById(toBackUp.getBusinessId());
         String businessDir;
         // put in switch to use config on the backup dir
-        if (SpreadsheetService.getDBBackupDir() != null){
+        if (SpreadsheetService.getDBBackupDir() != null) {
             businessDir = SpreadsheetService.getDBBackupDir() + b.getBusinessDirectory();
         } else {
             businessDir = SpreadsheetService.getHomeDir() + ImportService.dbPath + b.getBusinessDirectory();
@@ -345,10 +345,10 @@ public class DBCron {
     @Scheduled(cron = "0 * * * * *")
     public void runScheduledReports() throws Exception {
         // was going synchronised but this may trip up due to a slight delay in mysql updating. Instead go atomic boolean, if one is running just don't try. Wait another minute.
-        if (reportsRunning.compareAndSet(false, true)){
+        if (reportsRunning.compareAndSet(false, true)) {
             try {
                 SpreadsheetService.runScheduledReports();
-            } catch (Exception e){
+            } catch (Exception e) {
                 e.printStackTrace();
             }
             reportsRunning.set(false);
@@ -436,7 +436,7 @@ public class DBCron {
                                                                 } else {
                                                                     thisFileValues.get(node.getNodeName() + "-" + node1.getNodeName() + "-" + node2.getNodeName()).append("\n").append(node2.getFirstChild().getNodeValue());
                                                                 }
-                                                                     }
+                                                            }
 
                                                         }
                                                     } else {
@@ -513,11 +513,17 @@ public class DBCron {
                                             , DatabaseServerDAO.findById(database.getDatabaseServerId()), database, null, business);
                                     ImportTemplateData importTemplateForUploadedFile = ImportService.getImportTemplateForUploadedFile(loggedInUser, null, templateCache);
                                     if (importTemplateForUploadedFile != null && importTemplateForUploadedFile.getSheets().get("ClaimsTracking") != null) { // then here we go . . .
-                                        final Map<String, String> fileNameParams = new HashMap<>();
-                                        String fileName = tracking.resolve(csvFileName).getFileName().toString();
-                                        ImportService.addFileNameParametersToMap(fileName, fileNameParams);
-                                        ImportService.importTheFile(loggedInUser, new UploadedFile(tracking.resolve(csvFileName).toString()
-                                                , new ArrayList<>(Collections.singletonList(fileName)), fileNameParams, true, false), null, null);
+                                        try {
+                                            final Map<String, String> fileNameParams = new HashMap<>();
+                                            String fileName = tracking.resolve(csvFileName).getFileName().toString();
+                                            ImportService.addFileNameParametersToMap(fileName, fileNameParams);
+                                            ImportService.importTheFile(loggedInUser, new UploadedFile(tracking.resolve(csvFileName).toString()
+                                                    , new ArrayList<>(Collections.singletonList(fileName)), fileNameParams, true, false), null, null);
+
+                                        } catch (Exception e) {
+                                            System.out.println("Claims tracking fail for database : " + database.getName());
+                                            e.printStackTrace();
+                                        }
                                     }
                                 }
                             }

@@ -145,13 +145,13 @@ Attributes of the names in other cells can be referenced also
                     // if the heading ends with | the context heading will be blank, ignore it. A way to clear context if you just put a single | at the end of a heading
                     if (contextHeadingString.length() > 0) {
                         // context headings may not use many features but using the standard heading objects and interpreter is fine
-                        contextHeadings.add(interpretHeading(azquoMemoryDBConnection, contextHeadingString, attributeNames, uploadedFile.getFileName()));
+                        contextHeadings.add(interpretHeading(azquoMemoryDBConnection, contextHeadingString, attributeNames, uploadedFile.getFileNames()));
                     }
                     headingString = headingString.substring(0, dividerPos);
                     dividerPos = headingString.lastIndexOf(headingDivider);
                 }
 
-                final MutableImportHeading heading = interpretHeading(azquoMemoryDBConnection, headingString, attributeNames, uploadedFile.getFileName());
+                final MutableImportHeading heading = interpretHeading(azquoMemoryDBConnection, headingString, attributeNames, uploadedFile.getFileNames());
                 heading.contextHeadings = contextHeadings;
                 headings.add(heading);
             } else {// add an empty one, the headings ArrayList should match the number of headings even if that heading is empty
@@ -226,7 +226,7 @@ Attributes of the names in other cells can be referenced also
 
     //headings are clauses separated by semicolons, first is the heading name then onto the extra stuff
     //essentially parsing through all the relevant things in a heading to populate a MutableImportHeading
-    private static MutableImportHeading interpretHeading(AzquoMemoryDBConnection azquoMemoryDBConnection, String headingString, List<String> attributeNames, String fileName) throws Exception {
+    private static MutableImportHeading interpretHeading(AzquoMemoryDBConnection azquoMemoryDBConnection, String headingString, List<String> attributeNames, List<String> fileNames) throws Exception {
         MutableImportHeading heading = new MutableImportHeading();
         List<String> clauses = new ArrayList<>(Arrays.asList(headingString.split(";")));
         Iterator<String> clauseIt = clauses.iterator();
@@ -244,12 +244,12 @@ Attributes of the names in other cells can be referenced also
             // classification just being shorthand. According to this code it needs to be the first of the clauses
             // should classification go inside interpretClause?
             if (clause.toLowerCase().startsWith(CLASSIFICATION)) {
-                interpretClause(azquoMemoryDBConnection, heading, "parent of " + clause.substring(CLASSIFICATION.length()), fileName);
-                interpretClause(azquoMemoryDBConnection, heading, "child of " + heading.heading, fileName);
-                interpretClause(azquoMemoryDBConnection, heading, "exclusive", fileName);
+                interpretClause(azquoMemoryDBConnection, heading, "parent of " + clause.substring(CLASSIFICATION.length()), fileNames);
+                interpretClause(azquoMemoryDBConnection, heading, "child of " + heading.heading, fileNames);
+                interpretClause(azquoMemoryDBConnection, heading, "exclusive", fileNames);
             } else {
                 if (clause.length() > 0) {
-                    interpretClause(azquoMemoryDBConnection, heading, clause, fileName);
+                    interpretClause(azquoMemoryDBConnection, heading, clause, fileNames);
                 }
             }
         }
@@ -269,7 +269,7 @@ Attributes of the names in other cells can be referenced also
     /* This is called for all the ; separated clauses in a heading e.g. Gender; parent of Customer; child of Genders
     Called multiple times per heading. I assume clause is trimmed!  Simple initial parsing, greater resolution happens
     in resolvePeersAttributesAndParentOf where relationships between headings are handled*/
-    private static void interpretClause(final AzquoMemoryDBConnection azquoMemoryDBConnection, final MutableImportHeading heading, final String clause, String fileName) throws Exception {
+    private static void interpretClause(final AzquoMemoryDBConnection azquoMemoryDBConnection, final MutableImportHeading heading, final String clause, List<String> fileNames) throws Exception {
         String firstWord = clause.toLowerCase(); // default, what it could legitimately be in the case of blank clauses (local, exclusive, non zero)
         // I have to add special cases for parent of and child of as they have spaces in them. A bit boring
         if (firstWord.startsWith(PARENTOF)) { // a blank won't match here as its trailing space would be trimmed but no matter, blank not allowed anyway
@@ -371,7 +371,8 @@ Attributes of the names in other cells can be referenced also
                     } catch (Exception ignored) {
                     }
                 }
-                heading.compositionPattern = result.replace("FILENAME", fileName);
+                heading.compositionPattern = result.replace("FILENAME", fileNames.get(fileNames.size() - 1));
+                heading.compositionPattern = result.replace("PARENTFILENAME", fileNames.size() > 1 ? fileNames.get(fileNames.size() - 2) : fileNames.get(fileNames.size() - 1));
                 break;
             case IGNORE:
                 heading.ignoreList = new ArrayList<>();

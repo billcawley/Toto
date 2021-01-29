@@ -31,7 +31,6 @@ import io.keikai.model.SName;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.*;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
@@ -610,7 +609,7 @@ public class ReportExecutor {
     }
 
     // a inclined not to let two users run at the same time. I have fixed a bug relating to checking existing files but still this has little harm and should be safer
-    public static synchronized int generateXMLFilesAndSupportingReports(LoggedInUser loggedInUser, Sheet selectedSheet, Path destdir) throws ParserConfigurationException, TransformerException, IOException, Exception {
+    public static synchronized int generateXMLFilesAndSupportingReports(LoggedInUser loggedInUser, Sheet selectedSheet, Path destdir) throws Exception {
         int fileCount = 0;
         // ok try to find the relevant regions
         List<SName> namesForSheet = BookUtils.getNamesForSheet(selectedSheet);
@@ -630,6 +629,8 @@ public class ReportExecutor {
                     //todo - use azxmlflag . . .
                     SName xmlFlagName = BookUtils.getNameByName(ReportRenderer.AZXMLFLAG + region, selectedSheet);
                     SName filePrefixName = BookUtils.getNameByName(ReportRenderer.AZXMLFILENAME + region, selectedSheet);
+                    // Ed B require the option to override the file name of the supporting report
+                    SName supportReportPrefixName = BookUtils.getNameByName(ReportRenderer.AZSUPPORTREPORTFILENAME + region, selectedSheet);
                     String filePrefix = null;
                     boolean multiRowPrefix = false; // a multi row prefix means the prefix will be different for each line
                     if (filePrefixName != null) {
@@ -758,6 +759,8 @@ public class ReportExecutor {
                         if (go) {
                             //String fileName = base64int(filePointer) + ".xml";
                             // if multi row try and find a prefix value in the range
+                            // also multi row will support overriding the prefixes for the support report name if applicable
+                            String supportReportPrefix = null; // will be most of the time
                             if (multiRowPrefix) {
                                 CellRegion refersToCellRegion = filePrefixName.getRefersToCellRegion();
                                 if (row >= refersToCellRegion.row && row <= refersToCellRegion.getLastRow()) {
@@ -765,6 +768,16 @@ public class ReportExecutor {
                                     if (cell != null) {
                                         // dash not allowed
                                         filePrefix = cell.getStringValue().replace("-", "");
+                                    }
+                                }
+                                // check for a support report prefix, basically an override on the xlsx name. Same logic as the one used for the XML filename prefix
+                                if (supportReportPrefixName != null){
+                                    refersToCellRegion = supportReportPrefixName.getRefersToCellRegion();
+                                    if (row >= refersToCellRegion.row && row <= refersToCellRegion.getLastRow()) {
+                                        SCell cell = selectedSheet.getInternalSheet().getCell(row, refersToCellRegion.column);
+                                        if (cell != null) {
+                                            supportReportPrefix = cell.getStringValue().replace("-", "");
+                                        }
                                     }
                                 }
                             }
@@ -781,20 +794,19 @@ public class ReportExecutor {
 //                                            fileName = base64int(filePointer) + ".xml";
                                 fileName = (filePrefix != null ? filePrefix : "") + eightCharInt(filePointer) + ".xml";
                             }
-                            // will be similar to file prefix lookup
+                            // report name is not the file name, it's the name of the report in Azquo . .
                             if (multipleReports) {
                                 CellRegion refersToCellRegion = supportReportName.getRefersToCellRegion();
                                 if (row >= refersToCellRegion.row && row <= refersToCellRegion.getLastRow()) {
                                     SCell cell = selectedSheet.getInternalSheet().getCell(row, refersToCellRegion.column);
                                     if (cell != null) {
-                                        // dash not allowed
                                         reportName = cell.getStringValue();
                                     }
                                 }
                             }
 
                             String reportFileName = "";
-                            // we now do reports first as if a file is produced then the path to that file might be used by the XML
+                            // we now do reports first as if a file is produced then the path to that file might be referenced by the XML
                             if (reportName != null && !reportSelectionsColMap.isEmpty()) { // I can't see how the reportSelectionsColMap could be empty and valid
                                 for (String choiceName : reportSelectionsColMap.keySet()) {
                                     // dammit I forgot that! Had annoying consequences. Oh well . . .
@@ -825,12 +837,13 @@ public class ReportExecutor {
                                     }
                                 }
                                 if (onlineReport != null) { // need to prepare it as in the controller todo - factor?
-                                    reportFileName = (filePrefix != null ? filePrefix : "") + eightCharInt(filePointer) + ".xlsx";
+                                    // now add in the support report prefix as the preference
+                                    reportFileName = (supportReportPrefix != null ? supportReportPrefix : (filePrefix != null ? filePrefix : "")) + eightCharInt(filePointer) + ".xlsx";
                                     reportFileName = reportFileName.toLowerCase();
                                     // check that the xlsx doesn't already exist - if it does then bump the pointer, also need to check xml for existing files at this point
                                     while (azquoTempDir.resolve(reportFileName).toFile().exists() || azquoTempDir.resolve(fileName).toFile().exists()) {
                                         filePointer++;
-                                        reportFileName = (filePrefix != null ? filePrefix : "") + eightCharInt(filePointer) + ".xlsx";
+                                        reportFileName = (supportReportPrefix != null ? supportReportPrefix : (filePrefix != null ? filePrefix : "")) + eightCharInt(filePointer) + ".xlsx";
                                         reportFileName = reportFileName.toLowerCase();
                                         fileName = (filePrefix != null ? filePrefix : "") + eightCharInt(filePointer) + ".xml";
                                     }
@@ -930,7 +943,6 @@ public class ReportExecutor {
                                 int col = xmlToColMap.get(xmlName);
                                 String value = "";
                                 if (col == reportFileXMLTagIndex) {
-                                    // the path seems hacky but i can't see a way around that at the mo
                                     value = reportFileName;
                                 } else {
                                     Ranges.range(selectedSheet, row, col).notifyChange();

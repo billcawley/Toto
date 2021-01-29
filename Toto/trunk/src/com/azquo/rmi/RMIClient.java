@@ -28,42 +28,28 @@ public class RMIClient {
     // is it really a big problem? Computeifabsent swallows the exceptions, I'd rather they were chucked up . . .
 
     public static RMIInterface getServerInterface(String ip) {
-        return rmiInterfaceMap.computeIfAbsent(ip, s -> {
-            RMIInterface toReturn = null;
-            try {
-                Registry registry = LocateRegistry.getRegistry(ip, 12345);
-                toReturn = (RMIInterface) registry.lookup(RMIInterface.serviceName);
-                System.out.println("Rmi client set up for " + ip);
-            } catch (RemoteException | NotBoundException e) {
-                e.printStackTrace();
-            }
-            return toReturn;
-        });
-
+        RMIInterface rmiInterface = rmiInterfaceMap.computeIfAbsent(ip, s -> getInterface(ip));
+        // JB actually using a different server, if it resets while this server is still running it will exception, try to reconnect
         // test and try to reconnect? Not as efficient as it might be but otherwise I have a serious mess of error catching.
+        try {
+            rmiInterface.testConnection();
+        } catch (RemoteException e) {
+            System.out.println("trying to reconnect RMI interface to " + ip);
+            rmiInterface = getInterface(ip);
+            rmiInterfaceMap.put(ip, rmiInterface);// try to reconnect, hopefully this will be rare
+        }
+        return rmiInterface;
     }
 
-    /*
-
-        public static void setUp() throws Exception {
-            // this will be the same as
+    private static RMIInterface getInterface(String ip){
+        RMIInterface toReturn = null;
+        try {
+            Registry registry = LocateRegistry.getRegistry(ip, 12345);
+            toReturn = (RMIInterface) registry.lookup(RMIInterface.serviceName);
+            System.out.println("Rmi client set up for " + ip);
+        } catch (RemoteException | NotBoundException e) {
+            e.printStackTrace();
         }
-
-        public static void remoteResetVendorsCheckedByCron() {
-            try {
-                checkSetup();
-                serv.remoteResetVendorsCheckedByCron();
-            } catch (Exception e) {
-                System.err.println("Remoteservice exception:" + e.getMessage());
-                try {
-                    // try again in case something dodgy happened
-                    setUp();
-                    serv.remoteResetVendorsCheckedByCron();
-                } catch (Exception e2) {
-                    System.err.println("Remoteservice exception after seetting up again:" + e2.getMessage());
-                }
-                //e.printStackTrace();
-            }
-        }*/
-
+        return toReturn;
+    }
 }

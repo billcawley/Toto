@@ -56,6 +56,7 @@ public class ReportRenderer {
     static final String AZSUPPORTREPORTNAME = "az_supportreportname";
     static final String AZSUPPORTREPORTFILEXMLTAG = "az_supportreportfilexmltag";
     static final String AZSUPPORTREPORTSELECTIONS = "az_supportreportselections";
+    static final String AZSUPPORTREPORTFILENAME = "az_supportreportfilename";
      static final String AZCONTEXT = "az_context";
     static final String AZPIVOTFILTERS = "az_pivotfilters";//old version - not to be continued
     static final String AZCONTEXTFILTERS = "az_contextfilters";
