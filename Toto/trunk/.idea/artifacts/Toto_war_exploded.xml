@@ -33,7 +33,6 @@
           <element id="library" level="project" name="org.codehaus.groovy:groovy-all:2.4.3" />
           <element id="library" level="project" name="org.mariadb.jdbc:mariadb-java-client:2.4.0" />
           <element id="library" level="project" name="com.fasterxml.jackson.dataformat:jackson-dataformat-csv:2.9.2" />
-          <element id="library" level="project" name="com.microsoft.azure:adal4j:1.6.4" />
           <element id="library" level="project" name="org.json:json:20190722" />
           <element id="library" level="project" name="net.lingala.zip4j:zip4j:2.3.1" />
           <element id="library" level="project" name="com.github.jbytecode:RCaller:3.0" />

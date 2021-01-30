@@ -1,3 +1,21 @@
+29-01-21
+
+PARENTFILENAME as an import option
+
+RMI checks the connection is ok before use
+
+Business object serializable which was tipping up session persistence
+
+a duff tracking import template will no longer crash the tracking cron function
+
+az_supportreportfilename to allow changes on some of the ECF file names
+
+storing 'valueFunctinChildren' as the lowest level of 'valueFunctionSet' in the data heading so as to speed up 'bestmatch' functions
+
+Improvements to 'bestnamevaluematch' to catch descendants of the named set
+
+normalises output headings
+
 26-01-21 - 2
 
 Fixes to POI build

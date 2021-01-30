@@ -45,71 +45,10 @@
         <url-pattern>/api/*</url-pattern>
     </servlet-mapping>
 
-
     <context-param>
         <param-name>contextConfigLocation</param-name>
         <param-value>/WEB-INF/rootcontext.xml</param-value>
     </context-param>
-
-<!-- azure stuff, may zap, we'll see . . . -->
-    <!-- ms authentication test -->
-<!--
-    <filter>
-        <filter-name>BasicFilter</filter-name>
-        <filter-class>com.microsoft.aad.adal4jsample.BasicFilter</filter-class>
-    </filter>
-
-    <filter-mapping>
-        <filter-name>BasicFilter</filter-name>
-        <url-pattern>/secure/*</url-pattern>
-    </filter-mapping>
-
-
-    <context-param>
-        <param-name>authority</param-name>
-        <param-value>https://login.microsoftonline.com/</param-value>
-    </context-param>
-    <context-param>
-        <param-name>tenant</param-name>
-        <param-value>tenant</param-value>
-    </context-param>
-
-    <context-param>
-        <param-name>client_id</param-name>
-        <param-value>client_id</param-value>
-    </context-param>
-    <context-param>
-        <param-name>secret_key</param-name>
-        <param-value>secret_key</param-value>
-    </context-param>
-    <context-param>
-        <param-name>redirect_uri</param-name>
-        <param-value>http://localhost:8080/secure/aad.jsp</param-value>
-    </context-param>
-
-    <context-param>
-        <param-name>obo_client_id</param-name>
-        <param-value>obo_client_id</param-value>
-    </context-param>
-    <context-param>
-        <param-name>obo_secret_key</param-name>
-        <param-value>obo_secret_key</param-value>
-    </context-param>
-    <context-param>
-        <param-name>obo_application_id_uri</param-name>
-        <param-value>obo_application_id_uri</param-value>
-    </context-param>
-
-    <context-param>
-        <param-name>ca_protected_api_id_uri</param-name>
-        <param-value>ca_protected_api_id_uri</param-value>
-    </context-param>-->
-<!-- end azure stuff -->
-
-
-
-
-
 
     <listener>
         <listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
