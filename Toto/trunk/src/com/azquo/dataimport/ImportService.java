@@ -2429,6 +2429,9 @@ fr.close();
         if (targetCell == null) {
             targetCell = sheet.getRow(row).createCell(col);
         }
+        if (cellVal!=null && cellVal.length()==0){
+            cellVal = null;
+        }
         if (DateUtils.isADate(cellVal) != null) {
             targetCell.setCellValue((double) DateUtils.excelDate(DateUtils.isADate(cellVal)));
         } else {
