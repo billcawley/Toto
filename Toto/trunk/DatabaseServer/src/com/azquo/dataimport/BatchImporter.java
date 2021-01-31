@@ -50,6 +50,7 @@ public class BatchImporter implements Callable<Void> {
     private final Map<Integer, List<String>> linesRejected;
     private final AtomicInteger noLinesRejected;
     private final boolean clearData;
+    private final boolean replace;
     private final boolean debug;
     private final CompositeIndexResolver compositeIndexResolver;
 
@@ -73,6 +74,7 @@ public class BatchImporter implements Callable<Void> {
         this.linesRejected = linesRejected;
         this.noLinesRejected = noLinesRejected;
         this.clearData = uploadedFile.getParameter("cleardata") != null; // todo - string literals tidy
+        this.replace = uploadedFile.getParameter("replace")!=null;
         this.debug = uploadedFile.getTemplateParameter("debug") != null;
         this.compositeIndexResolver = compositeIndexResolver;
 
@@ -141,7 +143,7 @@ public class BatchImporter implements Callable<Void> {
                         // composite is interdependent but so are name relations so one function needs to deal with both
                         resolveCellInterdependence(lineToLoad, lineNumber);
                         try {
-                            interpretLine(lineToLoad, lineNumber, clearData);
+                            interpretLine(lineToLoad, lineNumber, clearData, replace);
                         } catch (Exception e) {
                             azquoMemoryDBConnection.addToUserLogNoException(e.getMessage(), true);
                             e.printStackTrace();
@@ -1093,7 +1095,7 @@ public class BatchImporter implements Callable<Void> {
         return term;
     }
 
-    private void interpretLine(List<ImportCellWithHeading> cells, int importLine, boolean clearData) throws Exception {
+    private void interpretLine(List<ImportCellWithHeading> cells, int importLine, boolean clearData, boolean replace) throws Exception {
         long tooLong = 2; // now ms
         long time = System.currentTimeMillis();
         for (ImportCellWithHeading cell : cells) {
@@ -1126,9 +1128,9 @@ public class BatchImporter implements Callable<Void> {
                 if (!(cell.getImmutableImportHeading().blankZeroes && isZero(value)) && value.trim().length() > 0) { // don't store if blank or zero and blank zeroes
                     // finally store our value and names for it - only increment the value count if something actually changed in the DB
                     if (debug) {
-                        ValueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, value + DEBUGMARKER + cell.getDebugInfo(), namesForValue, cell.getImmutableImportHeading().replace);
+                        ValueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, value + DEBUGMARKER + cell.getDebugInfo(), namesForValue, replace || cell.getImmutableImportHeading().replace);
                     } else {
-                        ValueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, value, namesForValue, cell.getImmutableImportHeading().replace);
+                        ValueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, value, namesForValue, replace || cell.getImmutableImportHeading().replace);
                     }
                 } else if (clearData || cell.getImmutableImportHeading().clearData) { // only kicks in if the cell is blank
                     // EFC extracted out of value service, cleaner out here
