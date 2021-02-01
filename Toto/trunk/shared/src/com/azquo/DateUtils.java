@@ -47,8 +47,8 @@ public class DateUtils {
 
     private static LocalDate tryDate(int dateLen, String maybeDate, DateTimeFormatter dateTimeFormatter) {
          try {
-             if (maybeDate.length() > dateLen){
-                 if (maybeDate.charAt(dateLen)!= ':' ) {
+             if (maybeDate.length() > dateLen + 1){
+                 if (maybeDate.charAt(dateLen) == '-' || maybeDate.charAt(dateLen + 1) == '-') {
                       return null;
                  }
                  //ignore rest (hours etc...)
@@ -67,7 +67,10 @@ public class DateUtils {
         if(maybeDate==null){
             return null;
         }
-        String dateToTest = maybeDate.replace("/", "-").replace(" ", "-");
+        String dateToTest = maybeDate.replace("/", "-");
+        if (dateToTest.length()> 6){
+            dateToTest = dateToTest.substring(0,6).replace(" ", "-") + dateToTest.substring(6);
+        }
         if (dateToTest.length() > 5 && dateToTest.charAt(1) == '-') dateToTest = "0" + dateToTest;
         if (dateToTest.length() > 5 && dateToTest.charAt(2) == '-' && dateToTest.charAt(4) == '-')
             dateToTest = dateToTest.substring(0, 3) + "0" + dateToTest.substring(3);
