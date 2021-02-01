@@ -363,7 +363,7 @@ public final class ImportService {
                 try {
                     opcPackage = org.apache.poi.openxml4j.opc.OPCPackage.open(new FileInputStream(new File(uploadedFile.getPath())));
                     book = new org.apache.poi.xssf.usermodel.XSSFWorkbook(opcPackage);
-                } catch (org.apache.poi.openxml4j.exceptions.InvalidFormatException ife) {
+                } catch (org.apache.poi.openxml4j.exceptions.OLE2NotOfficeXmlFileException ife) {
                     // Hanover may send 'em encrypted
                     POIFSFileSystem fileSystem = new POIFSFileSystem(new FileInputStream(uploadedFile.getPath()));
                     EncryptionInfo info = new EncryptionInfo(fileSystem);
