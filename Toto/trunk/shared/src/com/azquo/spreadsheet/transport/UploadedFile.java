@@ -414,6 +414,13 @@ public class UploadedFile implements Serializable {
         }
         return null;
     }
+    public void setParameter(String key, String value) {
+        if (parameters != null && key != null) {
+            parameters.put(key, value);
+        }
+    }
+
+
     public void clearParameter(String key) {
         parameters.remove(key);
     }
