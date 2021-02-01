@@ -1102,10 +1102,12 @@ public final class ImportService {
         if (preProcessor != null) {
             if (uploadedFile.getParameter(IMPORTVERSION)==null){
                 try{
-                    //maybe import version is second word (as in `thistype claims preprocessor')
-                    int word2Start = preProcessor.indexOf(" ");
-                    int word2End = preProcessor.indexOf(" ", word2Start + 1);
-                    uploadedFile.setParameter(IMPORTVERSION, preProcessor.substring(word2Start + 1, word2End));
+                    //maybe import version is second last word (as in `thistype otherword claims preprocessor')
+                    int word2End = preProcessor.lastIndexOf(" ");
+                    int word2Start = preProcessor.lastIndexOf(" ", word2End);
+                    Map<String,String>parameters = uploadedFile.getParameters();
+                    parameters.put(IMPORTVERSION, preProcessor.substring(word2Start + 1, word2End));
+                    uploadedFile.setParameters(parameters);
                 }catch(Exception e){
                     //cannot guess importversion
                 }
