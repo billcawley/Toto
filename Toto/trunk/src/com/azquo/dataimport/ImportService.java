@@ -437,9 +437,9 @@ public final class ImportService {
             }
             // is it the type of import template as required by Ben Jones
             org.apache.poi.ss.usermodel.Name importName = BookUtils.getName(book, ReportRenderer.AZIMPORTNAME);
-            // also just do a simple check on the file name
+            // also just do a simple check on the file name.  Allow templates to be included in a setup bundle then directed correctly
             String lcName = uploadedFile.getFileName().toLowerCase();
-            if ((importName != null || lcName.contains("import templates") || lcName.contains("preprocessor")) && !lcName.contains("preprocessor=")) {
+            if ((importName != null || lcName.contains("import templates") || lcName.contains("preprocessor") || lcName.contains("headings")) && !lcName.contains("preprocessor=")) {
                 if ((loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
                     if (opcPackage != null) opcPackage.revert();
                     //preprocessors are not assigned to the file, import templates are assigned
@@ -1100,6 +1100,18 @@ public final class ImportService {
             preProcessor = uploadedFile.getTemplateParameter(PREPROCESSOR);
         }
         if (preProcessor != null) {
+            if (uploadedFile.getParameter(IMPORTVERSION)==null){
+                try{
+                    //maybe import version is second word (as in `thistype claims preprocessor')
+                    int word2Start = preProcessor.indexOf(" ");
+                    int word2End = preProcessor.indexOf(" ", word2Start + 1);
+                    uploadedFile.setParameter(IMPORTVERSION, preProcessor.substring(word2Start + 1, word2End));
+                }catch(Exception e){
+                    //cannot guess importversion
+                }
+
+            }
+
             if (!preProcessor.toLowerCase().endsWith(".groovy")) {
                 if (!preProcessor.toLowerCase().endsWith(".xlsx")) {
                     preProcessor += ".xlsx";
