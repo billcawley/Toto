@@ -111,7 +111,7 @@ public final class ImportService {
     }
 
 
-        public static List<UploadedFile> importTheFile(final LoggedInUser loggedInUser, final UploadedFile uploadedFile, HttpSession session, PendingUploadConfig pendingUploadConfig, String userComment) throws Exception { // setup just to flag it
+    public static List<UploadedFile> importTheFile(final LoggedInUser loggedInUser, final UploadedFile uploadedFile, HttpSession session, PendingUploadConfig pendingUploadConfig, String userComment) throws Exception { // setup just to flag it
         if (session != null) {
             session.removeAttribute(ManageDatabasesController.IMPORTSTATUS);
         }
@@ -1100,15 +1100,15 @@ public final class ImportService {
             preProcessor = uploadedFile.getTemplateParameter(PREPROCESSOR);
         }
         if (preProcessor != null) {
-            if (uploadedFile.getParameter(IMPORTVERSION)==null){
-                try{
+            if (uploadedFile.getParameter(IMPORTVERSION) == null) {
+                try {
                     //maybe import version is second last word (as in `thistype otherword claims preprocessor')
                     int word2End = preProcessor.lastIndexOf(" ");
                     int word2Start = preProcessor.lastIndexOf(" ", word2End);
-                    Map<String,String>parameters = uploadedFile.getParameters();
+                    Map<String, String> parameters = uploadedFile.getParameters();
                     parameters.put(IMPORTVERSION, preProcessor.substring(word2Start + 1, word2End));
                     uploadedFile.setParameters(parameters);
-                }catch(Exception e){
+                } catch (Exception e) {
                     //cannot guess importversion
                 }
 
@@ -1119,13 +1119,13 @@ public final class ImportService {
                     preProcessor += ".xlsx";
                 }
                 ImportTemplate preProcess = ImportTemplateDAO.findForNameAndBusinessId(preProcessor, loggedInUser.getUser().getBusinessId());
-                if (preProcess==null){
+                if (preProcess == null) {
                     throw new Error("Preprocessor: " + preProcessor + " not found");
                 }
                 try {
-                    preProcessUsingPoi(loggedInUser,uploadedFile, SpreadsheetService.getHomeDir() + dbPath + loggedInUser.getBusinessDirectory() + importTemplatesDir + preProcess.getFilenameForDisk()); //
+                    preProcessUsingPoi(loggedInUser, uploadedFile, SpreadsheetService.getHomeDir() + dbPath + loggedInUser.getBusinessDirectory() + importTemplatesDir + preProcess.getFilenameForDisk()); //
                 } catch (Exception e) {
-                          uploadedFile.setError("Preprocessor error in " + uploadedFile.getTemplateParameter(PREPROCESSOR) + " : " + e.getMessage());
+                    uploadedFile.setError("Preprocessor error in " + uploadedFile.getTemplateParameter(PREPROCESSOR) + " : " + e.getMessage());
                     return uploadedFile;
                 }
             } else {
@@ -1529,7 +1529,7 @@ public final class ImportService {
     // POI 4.0 version EFC pasted, I really don't like doing this but it's required at the moment
     private static org.apache.poi.ss.usermodel.DataFormatter df2 = new org.apache.poi.ss.usermodel.DataFormatter();
 
-    public static String getCellValue(Sheet sheet, AreaReference areaRef){
+    public static String getCellValue(Sheet sheet, AreaReference areaRef) {
         return getCellValue(sheet.getRow(areaRef.getFirstCell().getRow()).getCell(areaRef.getFirstCell().getCol()));
     }
 
@@ -1621,7 +1621,7 @@ public final class ImportService {
                         && rowIndex <= region.getLastRow()
                         && cellIndex >= region.getFirstColumn()
                         && cellIndex <= region.getLastColumn()
-                        && (rowIndex > region.getFirstRow()||cellIndex > region.getFirstColumn())
+                        && (rowIndex > region.getFirstRow() || cellIndex > region.getFirstColumn())
                         /*&& rowIndex >= region.getFirstRow()
                         && rowIndex <= region.getLastRow()*/
                 ) {
@@ -1701,7 +1701,7 @@ public final class ImportService {
     public static UploadedFile uploadImportTemplate(UploadedFile uploadedFile, LoggedInUser loggedInUser, boolean assignToLoggedInUserDB) throws
             IOException {
         //rule put in by WFC Jan-21
-        assignToLoggedInUserDB =uploadedFile.getFileName().toLowerCase().contains("import templates");
+        assignToLoggedInUserDB = uploadedFile.getFileName().toLowerCase().contains("import templates");
         long time = System.currentTimeMillis();
         uploadedFile.setDataModified(true); // ok so it's not technically data modified but the file has been processed correctly.
         int businessId = loggedInUser.getUser().getBusinessId();
@@ -1968,8 +1968,8 @@ fr.close();
         String filePath = uploadedFile.getPath();
         OPCPackage opcPackage;
         try {
-           opcPackage = OPCPackage.open(preprocessor);
-      } catch (Exception e) {
+            opcPackage = OPCPackage.open(preprocessor);
+        } catch (Exception e) {
             e.printStackTrace();
             throw new Exception("Cannot load preprocessor template from " + preprocessor);
         }
@@ -1985,43 +1985,43 @@ fr.close();
             org.apache.poi.ss.usermodel.Name fileNameRegion = BookUtils.getName(ppBook, "az_filename");
             AreaReference fileNameAreaRef = null;
             String fileName = null;
-            if (fileNameRegion != null){
+            if (fileNameRegion != null) {
                 fileNameAreaRef = new AreaReference(fileNameRegion.getRefersToFormula(), null);
-                List<String>fileNames = uploadedFile.getFileNames();
-                for (int i = fileNames.size() - 1;i >=0;i--){
+                List<String> fileNames = uploadedFile.getFileNames();
+                for (int i = fileNames.size() - 1; i >= 0; i--) {
                     //do not use the sheet name.
                     fileName = fileNames.get(i);
-                    if (fileName.contains(".")){
+                    if (fileName.contains(".")) {
                         break;
                     }
                 }
             }
             AreaReference ignoreRef = null;
-            if (ignoreRegion!=null){
+            if (ignoreRegion != null) {
                 ignoreRef = new AreaReference(ignoreRegion.getRefersToFormula(), null);
             }
             org.apache.poi.ss.usermodel.Name optionsRegion = BookUtils.getName(ppBook, "az_options");
             String options = null;
             boolean backwards = false;
             Sheet inputSheet = ppBook.getSheet(inputLineRegion.getSheetName());
-            if (optionsRegion!=null){
-                options = getCellValue(inputSheet,new AreaReference(optionsRegion.getRefersToFormula(), null));
-                if (options.toLowerCase().contains("backward")){
+            if (optionsRegion != null) {
+                options = getCellValue(inputSheet, new AreaReference(optionsRegion.getRefersToFormula(), null));
+                if (options.toLowerCase().contains("backward")) {
                     backwards = true;
                 }
             }
-            Map<AreaReference, AreaReference>persistNames = getPersistNames(ppBook);
+            Map<AreaReference, AreaReference> persistNames = getPersistNames(ppBook);
 
 
             org.apache.poi.ss.usermodel.Name includesLineRegion = BookUtils.getName(ppBook, "az_includes");
 
             AreaReference includesAreaRef = null;
-            Map<String, String>headingsLookups = new HashMap<>();
-            if(includesLineRegion!=null){
-                  includesAreaRef = new AreaReference(includesLineRegion.getRefersToFormula(), null);
+            Map<String, String> headingsLookups = new HashMap<>();
+            if (includesLineRegion != null) {
+                includesAreaRef = new AreaReference(includesLineRegion.getRefersToFormula(), null);
                 Sheet includesSheet = ppBook.getSheet(includesLineRegion.getSheetName());
 
-                for (int inRow=includesAreaRef.getFirstCell().getRow(); inRow <= includesAreaRef.getLastCell().getRow(); inRow++) {
+                for (int inRow = includesAreaRef.getFirstCell().getRow(); inRow <= includesAreaRef.getLastCell().getRow(); inRow++) {
                     String sourceName = getCellValue(includesSheet.getRow(inRow).getCell(0));
                     String existingSheetName = getCellValue(includesSheet.getRow(inRow).getCell(1));
                     if (existingSheetName.length() > 0) {
@@ -2036,15 +2036,15 @@ fr.close();
                     }
                     String ppSheetName = ppBook.getSheetAt(0).getSheetName();
                     if (sourceName.length() > 0) {
-                        ImportTemplate includeFile = ImportTemplateDAO.findForNameAndBusinessId(sourceName,loggedInUser.getUser().getBusinessId());
+                        ImportTemplate includeFile = ImportTemplateDAO.findForNameAndBusinessId(sourceName, loggedInUser.getUser().getBusinessId());
                         OPCPackage opcPackageInclude;
                         org.apache.poi.xssf.usermodel.XSSFWorkbook includeBook;
                         try {
-                            String includeFilePath =SpreadsheetService.getHomeDir() + dbPath + loggedInUser.getBusinessDirectory() + importTemplatesDir + includeFile.getFilenameForDisk();
+                            String includeFilePath = SpreadsheetService.getHomeDir() + dbPath + loggedInUser.getBusinessDirectory() + importTemplatesDir + includeFile.getFilenameForDisk();
                             opcPackageInclude = OPCPackage.open(includeFilePath);
                             includeBook = new XSSFWorkbook(opcPackageInclude);
 
-                            } catch (Exception e) {
+                        } catch (Exception e) {
                             e.printStackTrace();
                             throw new Exception("Cannot load include book: " + sourceName);
                         }
@@ -2059,31 +2059,31 @@ fr.close();
                         String newSheetName = newSheet.getSheetName();
                         includesSheet.getRow(inRow).getCell(1).setCellValue(newSheetName);
                         List<org.apache.poi.ss.usermodel.Name> toBeDeleted = new ArrayList<>();
-                        for (Name name: ppBook.getAllNames()) {
+                        for (Name name : ppBook.getAllNames()) {
                             try {
                                 if (name.getSheetName().equals(newSheetName) && name.getNameName().startsWith("az_") && !name.getRefersToFormula().startsWith("#")) {
-                                    if (name.getNameName().equalsIgnoreCase("az_Headingslookups")){
+                                    if (name.getNameName().equalsIgnoreCase("az_Headingslookups")) {
                                         AreaReference nameArea = new AreaReference(name.getRefersToFormula(), null);
                                         CellReference cellRef = nameArea.getFirstCell();
                                         int firstCol = cellRef.getCol();
                                         int lastRow = nameArea.getLastCell().getRow();
                                         int maxRow = newSheet.getLastRowNum();
-                                        if (lastRow < 0){
+                                        if (lastRow < 0) {
                                             lastRow = maxRow;
                                         }
                                         int firstRow = cellRef.getRow();
-                                        if (firstRow < 0){
+                                        if (firstRow < 0) {
                                             firstRow = 0;
                                         }
-                                        for (int rowNo = firstRow; rowNo <=lastRow; rowNo++){
+                                        for (int rowNo = firstRow; rowNo <= lastRow; rowNo++) {
                                             String source = standardise(getCellValue(newSheet.getRow(rowNo).getCell(firstCol)));
                                             String target = standardise(getCellValue(newSheet.getRow(rowNo).getCell(firstCol + 1)));
-                                            if (headingsLookups.get(source)!=null){
+                                            if (headingsLookups.get(source) != null) {
                                                 headingsLookups.put(target, headingsLookups.get(source));
-                                            }else{
-                                                if (headingsLookups.get(target)!=null){
+                                            } else {
+                                                if (headingsLookups.get(target) != null) {
                                                     headingsLookups.put(source, headingsLookups.get(target));
-                                                }else{
+                                                } else {
                                                     String targetRow = source + "," + target;
                                                     headingsLookups.put(source, targetRow);
                                                     headingsLookups.put(target, targetRow);
@@ -2098,9 +2098,9 @@ fr.close();
                                         CellReference cellRef = nameArea.getFirstCell();
                                         Cell nameCell = ppBook.getSheet(cellRef.getSheetName()).getRow(cellRef.getRow()).getCell(cellRef.getCol());
                                         if (nameCell.getCellType() == CellType.FORMULA) {
-                                            setRangeValue(ppBook, ppName,name.getRefersToFormula());
+                                            setRangeValue(ppBook, ppName, name.getRefersToFormula());
                                         } else {
-                                           setRangeValue(ppBook, name,ppName.getRefersToFormula());
+                                            setRangeValue(ppBook, name, ppName.getRefersToFormula());
                                         }
 
                                     }
@@ -2109,13 +2109,14 @@ fr.close();
                                 toBeDeleted.add(name);
                             }
                         }
-                        for (Name name:toBeDeleted){
+                        for (Name name : toBeDeleted) {
                             ppBook.removeName(name);
                         }
-                     }
-                    try{
+                    }
+                    try {
                         XSSFFormulaEvaluator.evaluateAllFormulaCells(ppBook);
-                    }catch(Exception e){
+                    } catch (Exception e) {
+                        //e.printStackTrace(); // efc note - would we want to know this? Does stopping on a cell mean the rest arne't sorted?
                         //seems to get hung up on some #refs which make little sense
                     }
 
@@ -2134,11 +2135,11 @@ fr.close();
             BufferedWriter fileWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(outFile), StandardCharsets.UTF_8));
             CsvMapper csvMapper = new CsvMapper();
             csvMapper.enable(CsvParser.Feature.WRAP_AS_ARRAY);
-             char delimiter = ',';
+            char delimiter = ',';
 //        System.out.println("get lines with values and column, col index : " + columnIndex);
 //        System.out.println("get lines with values and column, values to check : " + valuesToCheck);
-            if (uploadedFile.isConvertedFromWorksheet()){
-                 delimiter = '\t';
+            if (uploadedFile.isConvertedFromWorksheet()) {
+                delimiter = '\t';
             } else {
                 try (BufferedReader br = Files.newBufferedReader(Paths.get(uploadedFile.getPath()), StandardCharsets.UTF_8)) {
                     // grab the first line to check on delimiters
@@ -2168,15 +2169,15 @@ fr.close();
             }
 
 
-            Map<Integer,String> inputColumns = new HashMap();
+            Map<Integer, String> inputColumns = new HashMap();
             int inputHeadingCount = 0;
             String heading = getCellValue(inputSheet.getRow(headingStartRow + existingHeadingRows - 1).getCell(inputHeadingCount));
             int lastCellNum = inputSheet.getRow(headingStartRow).getLastCellNum();
             while (inputHeadingCount <= lastCellNum) {
-                if (heading.length() > 0){
+                if (heading.length() > 0) {
                     heading = "";
-                    for (int row = 0;row < existingHeadingRows;row++){
-                         heading +=getCellValue(inputSheet.getRow(headingStartRow).getCell(inputHeadingCount));
+                    for (int row = 0; row < existingHeadingRows; row++) {
+                        heading += getCellValue(inputSheet.getRow(headingStartRow).getCell(inputHeadingCount));
 
                     }
                     heading = headingFrom(heading, headingsLookups);
@@ -2189,14 +2190,14 @@ fr.close();
             int lastOutputCol = outputSheet.getRow(outputRow).getLastCellNum();
             //Map <Integer,Integer> colOnInputRange = new HashMap<>();
             boolean isNewHeadings = true;
-            Map <Integer, Integer> inputColumnMap = new HashMap<>();
+            Map<Integer, Integer> inputColumnMap = new HashMap<>();
             int lineNo = 0;
             int headingsFound = 0;
             int backwardCount = 0;
             List<String[]> backwardLines = new ArrayList<>();
             while (lineIterator.hasNext() || backwardCount > 0) {
-                if (backwards && !isNewHeadings && backwardCount == 0){
-                    while (lineIterator.hasNext()){
+                if (backwards && !isNewHeadings && backwardCount == 0) {
+                    while (lineIterator.hasNext()) {
                         backwardLines.add(lineIterator.next());
                     }
                     backwardCount = backwardLines.size();
@@ -2212,56 +2213,56 @@ fr.close();
                 //boolean validLine = true;
                 //INTERIM CHECK FOR HEADINGS ON THE WRONG LINE  - THIS DOES NOT WORK FOR HEADINGS BELOW WHERE EXPECTED
                 //ALSO SHOULD PROBABLY CHECK MORE THAN ONE CELL.
-                if (colNo==0 && line[0].length() > 0 && line.length > 10 && findFirst(inputColumns,headingFrom(line[0], headingsLookups))>=0){
+                if (colNo == 0 && line[0].length() > 0 && line.length > 10 && findFirst(inputColumns, headingFrom(line[0], headingsLookups)) >= 0) {
                     headingStartRow = lineNo;
 
                 }
                 if (lineNo < headingStartRow) {
-                    for (String cellVal:line){
-                         setCellValue(inputSheet,lineNo, colNo, cellVal);
+                    for (String cellVal : line) {
+                        setCellValue(inputSheet, lineNo, colNo, cellVal);
 
                         colNo++;
                     }
-                }else{
+                } else {
                     if (isNewHeadings) {
                         //read off all the headings.  If there is more than one line of headings, then all but the last
                         // line inherit headings from the columns to the left.
                         //first build an array of strings, then concatenate each column and look up in the headingslookups
                         List<List<String>> newHeadings = new ArrayList<>();
-                        for (int col = 0;col < line.length; col++){
+                        for (int col = 0; col < line.length; col++) {
                             List<String> newHeading = new ArrayList<>();
                             String cellVal = line[col];
-                            if (existingHeadingRows> 1 && cellVal=="" && col > 0){
+                            if (existingHeadingRows > 1 && cellVal == "" && col > 0) {
                                 cellVal = newHeadings.get(col - 1).get(0);
                             }
                             newHeading.add(cellVal);
                             newHeadings.add(newHeading);
                         }
-                        for (int headingRow = 1; headingRow < existingHeadingRows;headingRow++){
-                            if (!lineIterator.hasNext()){
+                        for (int headingRow = 1; headingRow < existingHeadingRows; headingRow++) {
+                            if (!lineIterator.hasNext()) {
                                 break;
                             }
                             line = lineIterator.next();
-                            for (int col = 0;col < line.length;col++){
+                            for (int col = 0; col < line.length; col++) {
                                 String cellVal = line[col];
                                 //carry through values except on the last row
-                                if (existingHeadingRows> 1 && headingRow < existingHeadingRows - 1 && cellVal=="" && col > 0){
+                                if (existingHeadingRows > 1 && headingRow < existingHeadingRows - 1 && cellVal == "" && col > 0) {
                                     cellVal = newHeadings.get(col - 1).get(headingRow);
                                 }
-                                if (col>= newHeadings.size()){//if the next line is longer, copy the last cell
+                                if (col >= newHeadings.size()) {//if the next line is longer, copy the last cell
                                     newHeadings.add(newHeadings.get(col - 1));
                                     newHeadings.get(col).set(headingRow, cellVal);
-                                }else{
+                                } else {
                                     newHeadings.get(col).add(cellVal);
                                 }
                             }
                         }
                         List<String> newMappedHeadings = new ArrayList<>();
-                        for (int col=0;col<newHeadings.size();col++){
+                        for (int col = 0; col < newHeadings.size(); col++) {
                             String lastheadingLine = newHeadings.get(col).get(existingHeadingRows - 1);
                             String newHeading = "";
-                            if (lastheadingLine.length()>0){
-                                 for (int row = 0;row < existingHeadingRows ; row ++){
+                            if (lastheadingLine.length() > 0) {
+                                for (int row = 0; row < existingHeadingRows; row++) {
                                     newHeading += newHeadings.get(col).get(row);
                                 }
                                 newHeading = headingFrom(newHeading, headingsLookups);
@@ -2270,16 +2271,16 @@ fr.close();
 
 
                         }
-                        for (int col = 0;col<newHeadings.size();col++){
-                            Integer targetCol = findFirst(inputColumns,newMappedHeadings.get(col));
+                        for (int col = 0; col < newHeadings.size(); col++) {
+                            Integer targetCol = findFirst(inputColumns, newMappedHeadings.get(col));
                             //check that the last row of headings is not blank, then look it up
-                            if (newHeadings.get(col).get(existingHeadingRows - 1).length() > 0 && targetCol >=0) {
+                            if (newHeadings.get(col).get(existingHeadingRows - 1).length() > 0 && targetCol >= 0) {
                                 //note - ignores heading if no map found
                                 inputColumnMap.put(col, targetCol);
-                                inputColumns.put(targetCol,"---found---");
+                                inputColumns.put(targetCol, "---found---");
                             }
                         }
-                        if (!lineIterator.hasNext()){
+                        if (!lineIterator.hasNext()) {
                             break;
                         }
                         line = lineIterator.next();
@@ -2295,25 +2296,33 @@ fr.close();
                         }
                         colNo++;
                     }
-                    for (String param : uploadedFile.getParameters().keySet()){
-                        Name name = getNameInSheet(ppBook,inputSheet.getSheetName(),param);
-                        if (name!=null){
+                    for (String param : uploadedFile.getParameters().keySet()) {
+                        Name name = getNameInSheet(ppBook, inputSheet.getSheetName(), param);
+                        if (name != null) {
                             setRangeValue(ppBook, name, uploadedFile.getParameter(param));
                             System.out.println("setting parameter in sheet" + name.getNameName());
                         }
                     }
-                    if (fileNameAreaRef != null){
-                        setCellValue(inputSheet, fileNameAreaRef.getFirstCell().getRow(), fileNameAreaRef.getFirstCell().getCol(),fileName);
+                    if (fileNameAreaRef != null) {
+                        setCellValue(inputSheet, fileNameAreaRef.getFirstCell().getRow(), fileNameAreaRef.getFirstCell().getCol(), fileName);
                     }
 
                     XSSFFormulaEvaluator.evaluateAllFormulaCells(ppBook);
+
+                    // EFC note - if you wan't full formula resolve on a bug switch on the poi logging options in
+                    // SpreadsheetService and do something like this on the relevant cell
+                    //FormulaEvaluator evaluator = ppBook.getCreationHelper().createFormulaEvaluator();
+                    //evaluator.setDebugEvaluationOutputForNextEval(true);
+                    //evaluator.evaluateFormulaCell(cell);
+
+
                     boolean ignore = false;
-                    if (ignoreRef!=null && getCellValue(inputSheet, ignoreRef).equals("true")){
+                    if (ignoreRef != null && getCellValue(inputSheet, ignoreRef).equals("true")) {
                         ignore = true;
                     }
-                    for (AreaReference persistSource : persistNames.keySet()){
+                    for (AreaReference persistSource : persistNames.keySet()) {
                         String persistString = getCellValue(inputSheet, persistSource);
-                        if (persistString!=null && persistString.length() > 0){
+                        if (persistString != null && persistString.length() > 0) {
                             AreaReference target = persistNames.get(persistSource);
                             setCellValue(inputSheet, target.getFirstCell().getRow(), target.getFirstCell().getCol(), persistString);
                         }
@@ -2349,7 +2358,7 @@ fr.close();
 
                 }
                 lineNo++;
-                if (lineNo % 200 == 0){
+                if (lineNo % 200 == 0) {
                     RMIClient.getServerInterface(loggedInUser.getDatabaseServer().getIp()).addToLog(loggedInUser.getDataAccessToken(), "Preprocessing line: " + lineNo);
                 }
             }
@@ -2368,82 +2377,82 @@ fr.close();
             opcPackage.revert();
 
              */
-        } catch (Exception e){
+        } catch (Exception e) {
             String outFile = "c:\\users\\billc\\Downloads\\Corrupt.xlsx";
             File writeFile = new File(outFile);
             writeFile.delete(); // to avoid confusion
 
-            OutputStream outputStream = new FileOutputStream(writeFile) ;
+            OutputStream outputStream = new FileOutputStream(writeFile);
             ppBook.write(outputStream);
 
             opcPackage.revert();
             throw e;
         }
     }
+
     //building up a list of mapping regions from xxx_persist to xxx (for values that only occur sporadically)
-    public static Map<AreaReference,AreaReference> getPersistNames(org.apache.poi.ss.usermodel.Workbook book) {
+    public static Map<AreaReference, AreaReference> getPersistNames(org.apache.poi.ss.usermodel.Workbook book) {
         Map<AreaReference, AreaReference> toReturn = new HashMap<>();
-        for (org.apache.poi.ss.usermodel.Name name  : book.getAllNames()) {
+        for (org.apache.poi.ss.usermodel.Name name : book.getAllNames()) {
             if (name.getNameName().toLowerCase().endsWith("_persist")) {
-                AreaReference source = new AreaReference(name.getRefersToFormula(),null);
-                String targetName=name.getNameName().substring(0, name.getNameName().length() - 8);
+                AreaReference source = new AreaReference(name.getRefersToFormula(), null);
+                String targetName = name.getNameName().substring(0, name.getNameName().length() - 8);
                 org.apache.poi.ss.usermodel.Name targetRegion = BookUtils.getName(book, targetName);
-                AreaReference target = new AreaReference(targetRegion.getRefersToFormula(),null);
-                toReturn.put(source,target);
+                AreaReference target = new AreaReference(targetRegion.getRefersToFormula(), null);
+                toReturn.put(source, target);
             }
         }
         return toReturn;
     }
 
-    private static void cleanNames(Workbook ppBook){
+    private static void cleanNames(Workbook ppBook) {
         List<Name> toBeDeleted = new ArrayList<>();
-        for (Name name: ppBook.getAllNames()) {
+        for (Name name : ppBook.getAllNames()) {
             try {
                 String ar = name.getRefersToFormula();
             } catch (Exception e) {
                 toBeDeleted.add(name);
             }
         }
-        for (Name name:toBeDeleted){
+        for (Name name : toBeDeleted) {
             ppBook.removeName(name);
         }
     }
 
-    private static int findFirst(Map<Integer, String> map, String toFind){
-        for (int i: map.keySet()){
-            if (map.get(i).equals(toFind)){
+    private static int findFirst(Map<Integer, String> map, String toFind) {
+        for (int i : map.keySet()) {
+            if (map.get(i).equals(toFind)) {
                 return i;
             }
         }
         return -1;
     }
 
-    private static void setRangeValue(Workbook book, Name name, String value){
+    private static void setRangeValue(Workbook book, Name name, String value) {
         AreaReference areaRef = new AreaReference(name.getRefersToFormula(), null);
-         Row row =  book.getSheet(name.getSheetName()).getRow(areaRef.getFirstCell().getRow());
-         if (row==null){
-             row = book.getSheet(name.getSheetName()).createRow(areaRef.getFirstCell().getRow());
-         }
-        Cell cell =  row.getCell(areaRef.getFirstCell().getCol());
-        if (cell==null){
-           cell = row.createCell(areaRef.getFirstCell().getCol());
+        Row row = book.getSheet(name.getSheetName()).getRow(areaRef.getFirstCell().getRow());
+        if (row == null) {
+            row = book.getSheet(name.getSheetName()).createRow(areaRef.getFirstCell().getRow());
+        }
+        Cell cell = row.getCell(areaRef.getFirstCell().getCol());
+        if (cell == null) {
+            cell = row.createCell(areaRef.getFirstCell().getCol());
         }
         cell.setCellFormula(value);
 
     }
 
 
-
     private static void setCellValue(Sheet sheet, int row, int col, String cellVal) {
         Row targetRow = sheet.getRow(row);
-        if (targetRow==null){
+        if (targetRow == null) {
             targetRow = sheet.createRow(row);
         }
         Cell targetCell = sheet.getRow(row).getCell(col);
         if (targetCell == null) {
             targetCell = sheet.getRow(row).createCell(col);
         }
-        if (cellVal!=null && cellVal.length()==0){
+        if (cellVal != null && cellVal.length() == 0) {
             cellVal = null;
         }
         if (DateUtils.isADate(cellVal) != null) {
@@ -2451,7 +2460,7 @@ fr.close();
         } else {
             //isNumber returns 'true' for cellVal = "16L", then parseDouble exceptions
             try {
-                targetCell.setCellValue(Double.parseDouble(cellVal.replace(",","")));
+                targetCell.setCellValue(Double.parseDouble(cellVal.replace(",", "")));
             } catch (Exception e) {
                 targetCell.setCellValue(cellVal);
             }
@@ -2467,10 +2476,10 @@ fr.close();
 
     }
 
-    private static Name getNameInSheet(Workbook book, String sheetName, String nameGiven){
-        for (Name name:book.getAllNames()){
-            if (name.getNameName().equalsIgnoreCase(nameGiven) && name.getSheetName().equals(sheetName)){
-                if(name.getRefersToFormula().startsWith("#")){
+    private static Name getNameInSheet(Workbook book, String sheetName, String nameGiven) {
+        for (Name name : book.getAllNames()) {
+            if (name.getNameName().equalsIgnoreCase(nameGiven) && name.getSheetName().equals(sheetName)) {
+                if (name.getRefersToFormula().startsWith("#")) {
                     return null;
                 }
                 return name;
@@ -2494,10 +2503,10 @@ fr.close();
         }
     }
 
-    private static String headingFrom(String value, Map<String, String> lookup){
+    private static String headingFrom(String value, Map<String, String> lookup) {
         value = standardise(value);
         String map = lookup.get(value);
-        if (map!= null){
+        if (map != null) {
             return map;
         }
         return value;
@@ -2505,7 +2514,7 @@ fr.close();
 
     private static String standardise(String value) {
         //not sure how the system read the cr as \\n
-        return normalise(value).toLowerCase(Locale.ROOT).replace(" ","");
+        return normalise(value).toLowerCase(Locale.ROOT).replace(" ", "");
     }
 
 

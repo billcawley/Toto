@@ -24,6 +24,7 @@ import io.keikai.api.Exporter;
 import io.keikai.api.Exporters;
 import io.keikai.api.Importers;
 import io.keikai.api.model.Book;
+import org.apache.poi.util.POILogger;
 
 import java.io.*;
 import java.net.InetAddress;
@@ -51,6 +52,9 @@ public class SpreadsheetService {
     public static final String host;
 
     static {
+        //System.setProperty("org.apache.poi.util.POILogger", "org.apache.poi.util.SystemOutLogger");
+        //System.setProperty("poi.log.level", POILogger.INFO + "");
+
         System.out.println("Setting JVM locale to UK");
         Locale.setDefault(Locale.UK);
         System.out.println("attempting properties load from classpath");

@@ -1,3 +1,9 @@
+01-02-21
+
+Encrypted file new POI fix
+
+More pre processor work
+
 29-01-21
 
 PARENTFILENAME as an import option
