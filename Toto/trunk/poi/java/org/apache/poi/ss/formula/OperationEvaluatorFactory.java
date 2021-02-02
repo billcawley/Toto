@@ -20,16 +20,7 @@ package org.apache.poi.ss.formula;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.poi.ss.formula.eval.ConcatEval;
-import org.apache.poi.ss.formula.eval.FunctionEval;
-import org.apache.poi.ss.formula.eval.IntersectionEval;
-import org.apache.poi.ss.formula.eval.PercentEval;
-import org.apache.poi.ss.formula.eval.RangeEval;
-import org.apache.poi.ss.formula.eval.RelationalOperationEval;
-import org.apache.poi.ss.formula.eval.TwoOperandNumericOperation;
-import org.apache.poi.ss.formula.eval.UnaryMinusEval;
-import org.apache.poi.ss.formula.eval.UnaryPlusEval;
-import org.apache.poi.ss.formula.eval.ValueEval;
+import org.apache.poi.ss.formula.eval.*;
 import org.apache.poi.ss.formula.function.FunctionMetadataRegistry;
 import org.apache.poi.ss.formula.functions.ArrayFunction;
 import org.apache.poi.ss.formula.functions.FreeRefFunction;
@@ -128,13 +119,24 @@ final class OperationEvaluatorFactory {
 
 		    if (evalCell != null && result instanceof ArrayFunction) {
 				ArrayFunction func = (ArrayFunction) result;
-				if(evalCell.isPartOfArrayFormulaGroup()){
-					// array arguments must be evaluated relative to the function defining range
-					CellRangeAddress ca = evalCell.getArrayFormulaRange();
-					return func.evaluateArray(args, ca.getFirstRow(), ca.getFirstColumn());
-				} else if (ec.isArraymode()){
-					return func.evaluateArray(args, ec.getRowIndex(), ec.getColumnIndex());
+				// start azquo hack!
+				boolean allBooleans = args.length > 0;
+				for (ValueEval arg : args) {
+					if (!(arg instanceof BoolEval)) {
+						allBooleans = false;
+						break;
+					}
 				}
+				if (!allBooleans){
+					if(evalCell.isPartOfArrayFormulaGroup()){
+						// array arguments must be evaluated relative to the function defining range
+						CellRangeAddress ca = evalCell.getArrayFormulaRange();
+						return func.evaluateArray(args, ca.getFirstRow(), ca.getFirstColumn());
+					} else if (ec.isArraymode()){
+						return func.evaluateArray(args, ec.getRowIndex(), ec.getColumnIndex());
+					}
+				}
+				// end azquo hack
 			}
 
 			return  result.evaluate(args, ec.getRowIndex(), ec.getColumnIndex());
