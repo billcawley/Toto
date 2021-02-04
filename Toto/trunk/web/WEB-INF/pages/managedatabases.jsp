@@ -267,6 +267,11 @@ Created by IntelliJ IDEA.
                        class="button report">${databaseServer.name}</a>
                 </c:forEach>
             </div>
+            <div class="well">
+                    <a href="/api/UserLog"
+                       class="button" target="new">User Log</a>
+            </div>
+
         </div>
         <!-- END Maintenance -->
         <!-- Pending Uploads -->

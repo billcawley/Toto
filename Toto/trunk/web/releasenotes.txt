@@ -1,3 +1,7 @@
+02-02-21
+
+POI patch relating to bad handling of functions that mix array index lookups in ands
+
 01-02-21
 
 Encrypted file new POI fix
