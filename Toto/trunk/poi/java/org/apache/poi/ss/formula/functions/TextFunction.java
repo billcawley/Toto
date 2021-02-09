@@ -315,12 +315,19 @@ public abstract class TextFunction implements Function {
 			double s0;
 			String s1;
 			try {
-				s0 = evaluateDoubleArg(arg0, srcRowIndex, srcColumnIndex);
+				// begin azquo hack
+				try {
+					s0 = evaluateDoubleArg(arg0, srcRowIndex, srcColumnIndex);
+				} catch (EvaluationException e) {
+					// excel behavior is to simply return the first argument if it's a string
+					// so instead of exceptioning in here try to get it as a string to return first
+					return new StringEval(evaluateStringArg(arg0, srcRowIndex, srcColumnIndex));
+				}
+				// end azquo hack
 				s1 = evaluateStringArg(arg1, srcRowIndex, srcColumnIndex);
 			} catch (EvaluationException e) {
 				return e.getErrorEval();
 			}
-
 			try {
             // Ask DataFormatter to handle the String for us
 			   String formattedStr = formatter.formatRawCellContents(s0, -1, s1);
