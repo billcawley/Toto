@@ -847,7 +847,24 @@ public final class ImportService {
                 if (preProcessor != null) {
                     templateParameters.put(PREPROCESSOR, preProcessor);
                 }
+                if (uploadedFile.getParameter(PREPROCESSOR) != null && uploadedFile.getParameter(IMPORTVERSION) == null) {
+                    try {
+                        preProcessor = uploadedFile.getParameter(PREPROCESSOR);
+                        //maybe import version is second last word (as in `thistype otherword claims preprocessor')
+                        int word2End = preProcessor.lastIndexOf(" ");
+                        int word2Start = preProcessor.lastIndexOf(" ", word2End-1);
+                        Map<String, String> parameters = uploadedFile.getParameters();
+                        parameters.put(IMPORTVERSION, preProcessor.substring(word2Start + 1, word2End));
+                        importVersion = preProcessor.substring((word2Start + 1), word2End);
+                        uploadedFile.setParameters(parameters);
+                    } catch (Exception e) {
+                        //cannot guess importversion
+                    }
+
+                }
+
                 List<List<String>> standardHeadings = new ArrayList<>();
+                // scan first for the main model
                 // scan first for the main model
                 List<List<String>> template;
                 boolean hasImportModel = false;
@@ -1100,21 +1117,7 @@ public final class ImportService {
             preProcessor = uploadedFile.getTemplateParameter(PREPROCESSOR);
         }
         if (preProcessor != null) {
-            if (uploadedFile.getParameter(IMPORTVERSION) == null) {
-                try {
-                    //maybe import version is second last word (as in `thistype otherword claims preprocessor')
-                    int word2End = preProcessor.lastIndexOf(" ");
-                    int word2Start = preProcessor.lastIndexOf(" ", word2End);
-                    Map<String, String> parameters = uploadedFile.getParameters();
-                    parameters.put(IMPORTVERSION, preProcessor.substring(word2Start + 1, word2End));
-                    uploadedFile.setParameters(parameters);
-                } catch (Exception e) {
-                    //cannot guess importversion
-                }
-
-            }
-
-            if (!preProcessor.toLowerCase().endsWith(".groovy")) {
+              if (!preProcessor.toLowerCase().endsWith(".groovy")) {
                 if (!preProcessor.toLowerCase().endsWith(".xlsx")) {
                     preProcessor += ".xlsx";
                 }
@@ -2299,8 +2302,9 @@ fr.close();
                     for (String param : uploadedFile.getParameters().keySet()) {
                         Name name = getNameInSheet(ppBook, inputSheet.getSheetName(), param);
                         if (name != null) {
-                            setRangeValue(ppBook, name, uploadedFile.getParameter(param));
-                            System.out.println("setting parameter in sheet" + name.getNameName());
+                            AreaReference areaRef = new AreaReference(name.getRefersToFormula(), null);
+                            setCellValue(inputSheet, areaRef.getFirstCell().getRow(), areaRef.getFirstCell().getCol(),uploadedFile.getParameter(param));
+                            //System.out.println("setting parameter in sheet" + name.getNameName());
                         }
                     }
                     if (fileNameAreaRef != null) {
