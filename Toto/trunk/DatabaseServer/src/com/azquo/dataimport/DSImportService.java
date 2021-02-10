@@ -434,7 +434,9 @@ public class DSImportService {
                     boolean inComposition = false;
                     StringBuilder replacedHeading = new StringBuilder();
                     boolean hasAttribute = false;
+                    int charPos = 0;
                     for (char c : heading.toCharArray()) {
+                        charPos++;
                         if (replacedHeading.toString().toLowerCase().endsWith("composition")) {
                             inComposition = true;
                         }
@@ -444,7 +446,7 @@ public class DSImportService {
                         if (c == '`') {
                             inStringLiteral = !inStringLiteral;
                         }
-                        if (c == '.' && !inStringLiteral && !inComposition && !hasAttribute) {
+                        if (charPos < heading.length() && c == '.' && !inStringLiteral && !inComposition && !hasAttribute) {
                             replacedHeading.append(";attribute ");
                             //in case attributes contain '.'
                             hasAttribute = true;
