@@ -14,7 +14,7 @@ public class ValueDetailsForProvenance implements Serializable {
     private final List<String> names;
     private final List<HistoricValueAndProvenance> historicValuesAndProvenance;
 
-    public static class HistoricValueAndProvenance{
+    public static class HistoricValueAndProvenance implements Serializable{
         private final String value;
         private final String provenance;
 
