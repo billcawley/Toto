@@ -1,7 +1,6 @@
 package com.azquo.spreadsheet.controller;
 
 import com.azquo.admin.AdminService;
-import com.azquo.admin.business.BusinessDAO;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseDAO;
 import com.azquo.admin.onlinereport.OnlineReport;
@@ -222,21 +221,17 @@ public class ExcelController {
                     //System.out.println("template download1:" + fileName);
                     if (excelMultiUserConnections.get(sessionId) != null){
                         for (LoggedInUser check : excelMultiUserConnections.get(sessionId)) {
-                            loggedInUser = check;
-                        //    if (check.getUser().getId() == Integer.parseInt(userId)) {
-                        //        loggedInUser = check;
-                        //    }
+                            if (check.getUser().getId() == Integer.parseInt(userId)) {
+                                loggedInUser = check;
+                            }
                         }
-                    }else{
-                        loggedInUser = excelConnections.get(sessionId);
                     }
                     //TODO should there be any security encoding??
                     if (sessionId.equals("testing")|| loggedInUser!= null) {
-                        //System.out.println("business id = " + loggedInUser.getBusiness().getId());
-                       ImportTemplate importTemplate = ImportTemplateDAO.findForNameAndBusinessId(fileName, loggedInUser.getBusiness().getId());
+                       ImportTemplate importTemplate = ImportTemplateDAO.findForNameAndBusinessId(fileName, loggedInUser.getUser().getBusinessId());
                        String directory="risk";
-                         if (!sessionId.equals("testing")) {
-                             directory = loggedInUser.getBusinessDirectory() ;
+                       if (!sessionId.equals("testing")) {
+                           directory = loggedInUser.getBusinessDirectory();
                        }
                        String filePath = SpreadsheetService.getHomeDir() + ImportService.dbPath + directory + ImportService.importTemplatesDir + importTemplate.getFilenameForDisk();
                        //System.out.println("template download:" + filePath);
@@ -273,10 +268,9 @@ public class ExcelController {
                  if (NumberUtils.isNumber(userId) && sessionId != null){ // then try to select from a multi usr session
                     if (excelMultiUserConnections.get(sessionId) != null){
                         for (LoggedInUser check : excelMultiUserConnections.get(sessionId)) {
-                            loggedInUser = check;
-                            //if (check.getUser().getId() == Integer.parseInt(userId)) {
-                           //     loggedInUser = check;
-                          //  }
+                            if (check.getUser().getId() == Integer.parseInt(userId)) {
+                                loggedInUser = check;
+                            }
                         }
                     }
                 } else {
@@ -294,7 +288,7 @@ public class ExcelController {
                             return jacksonMapper.writeValueAsString(new LoginInfo(request.getSession().getId(), userIds, userDescriptions));
                         }
                         loggedInUser = loggedInUsers.get(0);
-                     }
+                    }
                 }
                 if (loggedInUser == null) {
                     System.out.println("login attempt by " + logon + " with incorrect details");
