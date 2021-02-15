@@ -2019,7 +2019,6 @@ fr.close();
             org.apache.poi.ss.usermodel.Name includesLineRegion = BookUtils.getName(ppBook, "az_includes");
 
             AreaReference includesAreaRef = null;
-            Map<String, String> headingsLookups = new HashMap<>();
             if (includesLineRegion != null) {
                 includesAreaRef = new AreaReference(includesLineRegion.getRefersToFormula(), null);
                 Sheet includesSheet = ppBook.getSheet(includesLineRegion.getSheetName());
@@ -2065,37 +2064,7 @@ fr.close();
                         for (Name name : ppBook.getAllNames()) {
                             try {
                                 if (name.getSheetName().equals(newSheetName) && name.getNameName().startsWith("az_") && !name.getRefersToFormula().startsWith("#")) {
-                                    if (name.getNameName().equalsIgnoreCase("az_Headingslookups")) {
-                                        AreaReference nameArea = new AreaReference(name.getRefersToFormula(), null);
-                                        CellReference cellRef = nameArea.getFirstCell();
-                                        int firstCol = cellRef.getCol();
-                                        int lastRow = nameArea.getLastCell().getRow();
-                                        int maxRow = newSheet.getLastRowNum();
-                                        if (lastRow < 0) {
-                                            lastRow = maxRow;
-                                        }
-                                        int firstRow = cellRef.getRow();
-                                        if (firstRow < 0) {
-                                            firstRow = 0;
-                                        }
-                                        for (int rowNo = firstRow; rowNo <= lastRow; rowNo++) {
-                                            String source = standardise(getCellValue(newSheet.getRow(rowNo).getCell(firstCol)));
-                                            String target = standardise(getCellValue(newSheet.getRow(rowNo).getCell(firstCol + 1)));
-                                            if (headingsLookups.get(source) != null) {
-                                                headingsLookups.put(target, headingsLookups.get(source));
-                                            } else {
-                                                if (headingsLookups.get(target) != null) {
-                                                    headingsLookups.put(source, headingsLookups.get(target));
-                                                } else {
-                                                    String targetRow = source + "," + target;
-                                                    headingsLookups.put(source, targetRow);
-                                                    headingsLookups.put(target, targetRow);
-                                                }
-                                            }
-                                        }
-
-                                    }
-                                    Name ppName = getNameInSheet(ppBook, ppBook.getSheetAt(0).getSheetName(), name.getNameName());
+                                     Name ppName = getNameInSheet(ppBook, ppBook.getSheetAt(0).getSheetName(), name.getNameName());
                                     if (ppName != null) {
                                         AreaReference nameArea = new AreaReference(name.getRefersToFormula(), null);
                                         CellReference cellRef = nameArea.getFirstCell();
@@ -2126,6 +2095,7 @@ fr.close();
                 }
 
             }
+            Map<String, String> headingsLookups = setupHeadingsMappings(ppBook);
             //Sheet inputSheet = ppBook.getSheet(inputLineRegion.getSheetName());
             Sheet outputSheet = ppBook.getSheet(outputLineRegion.getSheetName());
             int headingStartRow = inputAreaRef.getFirstCell().getRow();
@@ -2392,6 +2362,37 @@ fr.close();
             opcPackage.revert();
             throw e;
         }
+    }
+
+    private static Map<String, String> setupHeadingsMappings(Workbook ppBook){
+        Map<String, String> headingsLookups = new HashMap<>();
+        org.apache.poi.ss.usermodel.Name headingsLookupsRegion = BookUtils.getName(ppBook, "az_HeadingsLookups");
+        if (headingsLookupsRegion == null){
+            return headingsLookups;
+        }
+        Sheet hSheet = ppBook.getSheet(headingsLookupsRegion.getSheetName());
+        AreaReference nameArea = new AreaReference(headingsLookupsRegion.getRefersToFormula(), null);
+             CellReference cellRef = nameArea.getFirstCell();
+            int firstCol = nameArea.getFirstCell().getCol();
+            int lastRow = nameArea.getLastCell().getRow();
+            for (int rowNo = nameArea.getFirstCell().getRow(); rowNo <= lastRow; rowNo++) {
+                String source = standardise(getCellValue(hSheet.getRow(rowNo).getCell(firstCol)));
+                String target = standardise(getCellValue(hSheet.getRow(rowNo).getCell(firstCol + 1)));
+                if (headingsLookups.get(source) != null) {
+                    headingsLookups.put(target, headingsLookups.get(source));
+                } else {
+                    if (headingsLookups.get(target) != null) {
+                        headingsLookups.put(source, headingsLookups.get(target));
+                    } else {
+                        String targetRow = source + "," + target;
+                        headingsLookups.put(source, targetRow);
+                        headingsLookups.put(target, targetRow);
+                    }
+                }
+            }
+
+         return headingsLookups;
+
     }
 
     //building up a list of mapping regions from xxx_persist to xxx (for values that only occur sporadically)
