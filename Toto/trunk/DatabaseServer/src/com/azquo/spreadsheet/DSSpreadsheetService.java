@@ -201,8 +201,35 @@ public class DSSpreadsheetService {
         if (cellsAndHeadingsForDisplay.getColumnHeadings().size()==0){
             transpose = true;
             colHeadings = cellsAndHeadingsForDisplay.getRowHeadings().get(0);
-        }else{
-            colHeadings = cellsAndHeadingsForDisplay.getColumnHeadings().get(0);
+        }else {
+            List<List<String>> colHeadingsMatrix = cellsAndHeadingsForDisplay.getColumnHeadings();
+            colHeadings = colHeadingsMatrix.get(0);
+            if (colHeadingsMatrix.size() > 1) {
+                //this routine copied off DSImportService.   Could perhaps combine the two.
+                for (int rowNo = 1; rowNo < colHeadingsMatrix.size(); rowNo++) {
+                    for (int colNo = 0; colNo < colHeadings.size(); colNo++) {
+                        String heading = colHeadingsMatrix.get(rowNo).get(colNo);
+                        if (heading != null && heading.length() > 0) {
+                            String allHeading = colHeadings.get(colNo);
+                            if (allHeading == null) {
+                                allHeading = "";
+                            }
+                            if (heading.startsWith(".") || allHeading.length() == 0) {
+                                allHeading += heading;
+                            } else {
+
+                                if (DSImportService.findReservedWord(heading)) {
+                                    allHeading += ";" + heading.trim();
+                                } else {
+                                    allHeading += "|" + heading.trim();
+                                }
+                            }
+
+                            colHeadings.set(colNo, allHeading);
+                        }
+                    }
+                }
+            }
         }
 
         boolean firstCol = true;

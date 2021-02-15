@@ -610,7 +610,7 @@ public class DSImportService {
         return headingCount != 11;
     }
 
-    private static boolean findReservedWord(String heading) {
+    public static boolean findReservedWord(String heading) {
         heading = heading.toLowerCase();
         return heading.startsWith(HeadingReader.CHILDOF)
                 || heading.startsWith(HeadingReader.PARENTOF)
