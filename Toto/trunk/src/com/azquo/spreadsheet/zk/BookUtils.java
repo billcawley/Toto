@@ -371,7 +371,7 @@ java.lang.IllegalStateException: is ERROR, not the one of [STRING, BLANK]
     // todo we need to move all of this to proper POI but I need to clarify the issues - the XMLbeans conflict I had to override. Of course Kekai might make this redindant
     public static org.apache.poi.ss.usermodel.Name getName(org.apache.poi.ss.usermodel.Workbook book, String stringName) {
         for (org.apache.poi.ss.usermodel.Name name : book.getAllNames()) {
-            if (name.getNameName().equalsIgnoreCase(stringName)) {
+            if (name.getNameName().equalsIgnoreCase(stringName) && !name.isHidden()) { // hidden names can interfere with things! We only care about what is visible
                 return name;
             }
         }
