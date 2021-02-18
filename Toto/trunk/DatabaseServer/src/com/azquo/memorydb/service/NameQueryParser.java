@@ -5,6 +5,7 @@ import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.core.Name;
 import com.azquo.StringUtils;
 import com.azquo.memorydb.core.StandardName;
+import net.openhft.koloboke.collect.map.hash.HashObjObjMaps;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 import org.apache.log4j.Logger;
 
@@ -177,7 +178,10 @@ public class NameQueryParser {
             throw new Exception("could not parse " + formulaCopy + "(error: " + e.getMessage() + ")");
         }
         setFormula = setFormula.replace(StringLiterals.ASGLOBAL, StringLiterals.ASGLOBALSYMBOL + "").replace(StringLiterals.FILTERBY, StringLiterals.FILTERBYSYMBOL + "");
-        setFormula = setFormula.replace(StringLiterals.AS, StringLiterals.ASSYMBOL + "").replace(StringLiterals.CONTAINS, StringLiterals.CONTAINSSYMBOL + "");
+        // replace on space before and after as to stop classification becoming cl@asification or the like
+        setFormula = setFormula.replace(" " + StringLiterals.AS, " " + StringLiterals.ASSYMBOL)
+                .replace(StringLiterals.AS + " ", StringLiterals.ASSYMBOL + " ")
+                .replace(StringLiterals.CONTAINS, StringLiterals.CONTAINSSYMBOL + "");
 
 
 
@@ -218,7 +222,7 @@ public class NameQueryParser {
                 stackCount++;
                 // now returns a custom little object that hods a list a set and whether it's immutable
                 nameStack.add(interpretSetTerm(null, setFormula.substring(pos, nextTerm - 1), formulaStrings, referencedNames, attributeStrings, azquoMemoryDBConnection, attributeNames, setFormula));
-            } else if (op == StringLiterals.FILTERBYSYMBOL) { // filter by is unique - it's not an operator which takes two name sets, it simply applies a condition to the set before sp the stack can be one for this operator
+            } else if (op == StringLiterals.FILTERBYSYMBOL) { // filter by is unique - it's not an operator which takes two name sets, it simply applies a condition to the set before so the stack can be one for this operator
                 NameStackOperators.filterBy(nameStack, filterByCriteria, azquoMemoryDBConnection, contextSource, languages);
             } else if (stackCount-- < 2) {
                 throw new Exception("not understood:  " + formulaCopy);
@@ -369,6 +373,7 @@ public class NameQueryParser {
         String selectString = StringUtils.getInstruction(setTerm, StringLiterals.SELECT);
         // now attribute set goes in here
         final String attributeSetString = StringUtils.getInstruction(setTerm, StringLiterals.ATTRIBUTESET);
+        final String classifyByString = StringUtils.getInstruction(setTerm, StringLiterals.CLASSIFYBY);
 
         int wherePos = setTerm.toLowerCase().indexOf(StringLiterals.WHERE.toLowerCase());
         String whereString = null;
@@ -379,6 +384,7 @@ public class NameQueryParser {
                 System.out.println("Dodgy where criteria : " + setTerm);
             }
         }
+
         if (levelString != null) {
             childrenString = "true";
         }
@@ -453,6 +459,11 @@ public class NameQueryParser {
         if (attributeSetString != null) {
             String resolvedString = strings.get(Integer.parseInt(attributeSetString.substring(1, 3))).toLowerCase();
             namesFound = attributeSet(azquoMemoryDBConnection, resolvedString, namesFound);
+        }
+
+        if (classifyByString != null) {
+            String resolvedString = strings.get(Integer.parseInt(classifyByString.substring(1, 3))).toLowerCase();
+            namesFound = classifyBy(azquoMemoryDBConnection, resolvedString, namesFound, languages);
         }
 
         if (sorted != null) { // I guess force list
@@ -593,6 +604,53 @@ public class NameQueryParser {
             result.addAll(azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNamesForAttribute(attributeName, source.getDefaultDisplayName()));
         }
         result.removeAll(toConvert.getAsCollection());
+        return new NameSetList(result, null, true);
+    }
+    /*
+
+    Example syntax : sourceset  Classifyby  “<attribute> in <classifyset>”
+
+    Comments Adapted from original email spec :
+
+    1)	Ensure that all member of ‘classifyset’ have no children.
+    2)	Check each member of ‘sourceset’ for the attribute given, and match it to a member of ‘classifyset’.  Include the sourceset member in the classifyset member as a child, and include the classifyset member in the output
+    3)	If no corresponding element of classifyset exists, include the sourceset member directly in the output
+
+<attribute> in <classifyset> is what will be passed in criteria
+
+Example   :  `recent sales` children classifyby "<POSTCODE AREA> in <All postcode areas>" as ‘recent sales by postcode area`
+
+The set ‘recent sales by postcode area` will contain a selection of the postcodes from `All postcode areas` each of which will contain a number of recent sales.    The set may also contain some sales with postcodes (or without postcodes) that were not found in the set of ‘All postcode areas’ children.
+
+
+     */
+    private static NameSetList classifyBy(AzquoMemoryDBConnection azquoMemoryDBConnection, String criteria, NameSetList sourceSet, List<String> languages) throws Exception {
+        criteria = criteria.trim();
+        Set<Name> result = HashObjSets.newMutableSet();
+            int attEnd = criteria.indexOf(">");
+            String attribute = criteria.substring(1, attEnd);
+            String setToCheckString = criteria.substring(criteria.indexOf("<", attEnd));
+            setToCheckString = setToCheckString.substring(1, setToCheckString.length() - 1); // get rid of brackets, setToCheckString should now be All postcode areas or equivalent
+            // so 1)	Ensure that all member of ‘classifyset’ have no children.
+            Name classifySet = NameService.findByName(azquoMemoryDBConnection, setToCheckString, languages);
+            Map<String, Name> classifySetLookup = HashObjObjMaps.newMutableMap();
+            if (classifySet != null){ // error if null?
+                for (Name member : classifySet.getChildren()){
+                    classifySetLookup.put(member.getDefaultDisplayName().toLowerCase(), member);
+                    member.setChildrenWillBePersisted(Collections.emptyList(), azquoMemoryDBConnection);
+                }
+            }
+            // 2)	Check each member of ‘sourceset’ for the attribute given, and match it to a member of ‘classifyset’.
+            // Include the sourceset member in the classifyset member as a child, and include the classifyset member in the output
+            for (Name sourceName : sourceSet.getAsCollection()) {
+                Name destination = sourceName.getAttribute(attribute) != null ? classifySetLookup.get(sourceName.getAttribute(attribute).toLowerCase()) : null;
+                if (destination != null) {
+                    destination.addChildWillBePersisted(sourceName, azquoMemoryDBConnection);
+                    result.add(destination); // may be added many times but it should be a fast set check
+                } else {
+                    result.add(sourceName);
+                }
+        }
         return new NameSetList(result, null, true);
     }
 

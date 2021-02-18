@@ -1,3 +1,19 @@
+16-02-21
+
+Plugin user selection bug fix
+
+Better headings parsing in the pre processor
+
+10-02-21
+
+Another POI patch to do with the text function
+
+Importer will try to guess import version and pre processor version if not passed
+
+option to open the user log and send stop commands
+
+No longer tracking XLSX changes here - many projects are changing e.g. Oilfield, the RLD Reports and new coverholders using the pre processor
+
 02-02-21
 
 POI patch relating to bad handling of functions that mix array index lookups in ands

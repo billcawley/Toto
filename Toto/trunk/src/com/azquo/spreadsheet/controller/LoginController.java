@@ -8,6 +8,10 @@ import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.util.AzquoMailer;
 import org.apache.commons.lang.math.NumberUtils;
+import org.apache.poi.openxml4j.opc.OPCPackage;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFFormulaEvaluator;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -19,9 +23,8 @@ import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.nio.file.*;
 import java.text.NumberFormat;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Stream;
 
 /**
  * Copyright (C) 2016 Azquo Ltd.
@@ -54,6 +57,53 @@ public class LoginController {
             , @RequestParam(value = "userid", required = false) String userid // if a user exists in more than one business then
             , @RequestParam(value = "select", required = false) String select
     ) throws Exception {
+
+        // edd temporary hack
+/*
+        Path p = Paths.get("/home/edward/Downloads/lukewfixwork");
+        Map<String, String> timestampToTransactionMap = new HashMap<>();
+        try (Stream<Path> list = Files.list(p)) {
+            list.forEach(path -> {
+                String filename = path.getFileName().toString();
+                if (filename.endsWith(".xml")){
+                    String excelNameTimestamp = filename.substring(13);
+                    excelNameTimestamp = excelNameTimestamp.substring(0, excelNameTimestamp.indexOf("-"));
+                    // now last 10
+                    excelNameTimestamp = excelNameTimestamp.substring(excelNameTimestamp.length() - 10);
+                    String transactionNo = filename.substring(filename.lastIndexOf("-") + 1);
+                    transactionNo = transactionNo.substring(0, transactionNo.indexOf("."));
+                    //System.out.println("excel name timestamp : " + excelNameTimestamp);
+                    //System.out.println("transaction no : " + transactionNo);
+                    timestampToTransactionMap.put(excelNameTimestamp, transactionNo);
+                }
+            });
+        }
+        try (Stream<Path> list = Files.list(p)) {
+            list.forEach(path -> {
+                String filename = path.getFileName().toString();
+                // this time xlsx
+                if (filename.endsWith(".xlsx")){
+                    String excelNameTimestamp = filename.substring(0, filename.indexOf("."));
+                    excelNameTimestamp = excelNameTimestamp.substring(excelNameTimestamp.length() - 10);
+                    System.out.println("current excel name  : " + filename);
+                    System.out.println("proposed excel name  : " + filename.substring(0, filename.indexOf(".")) + "-" + timestampToTransactionMap.get(excelNameTimestamp) + ".xlsx");
+                    try {
+                        Files.move(path, path.resolveSibling(filename.substring(0, filename.indexOf(".")) + "-" + timestampToTransactionMap.get(excelNameTimestamp) + ".xlsx"));
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            });
+        }
+*/
+
+/*        Workbook ppBook = new XSSFWorkbook("/home/edward/Downloads/poitest2.xlsx");
+        Cell cell = ppBook.getSheetAt(0).getRow(3).getCell(6);
+        FormulaEvaluator evaluator = ppBook.getCreationHelper().createFormulaEvaluator();
+        evaluator.setDebugEvaluationOutputForNextEval(true);
+        CellValue evaluate = evaluator.evaluate(cell);
+        ppBook.close();*/
+
         // stack overflow code, will be modified
         NumberFormat nf = NumberFormat.getNumberInstance();
         long percentUsable = 100; // if it cna't be worked out default to ok. Maybe change this . . .
@@ -85,7 +135,7 @@ public class LoginController {
             if (NumberUtils.isNumber(userid)) {
                 for (LoggedInUser loggedInUser : loggedInUsers) {
                     if (loggedInUser.getUser().getId() == Integer.parseInt(userid)) {
-                        if (session.getAttribute(LoginController.LOGGED_IN_USER_SESSION) != null){// then force a logout
+                        if (session.getAttribute(LoginController.LOGGED_IN_USER_SESSION) != null) {// then force a logout
                             ((LoggedInUser) session.getAttribute(LoginController.LOGGED_IN_USER_SESSION)).userLog("Logout due to user switch", new HashMap<>());
                         }
                         session.setAttribute(LOGGED_IN_USER_SESSION, loggedInUser);
@@ -105,7 +155,7 @@ public class LoginController {
                 loggedInUser.userLog("Logout", new HashMap<>());
                 if (SpreadsheetService.inProduction() && !request.getRemoteAddr().equals("82.68.244.254") && !request.getRemoteAddr().equals("127.0.0.1") && !request.getRemoteAddr().startsWith("0")) { // if it's from us don't email us :)
                     Business business = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
-                    new Thread(() ->{
+                    new Thread(() -> {
                         String title = SpreadsheetService.getAlias() + " Logout from " + loggedInUser.getUser().getEmail() + " - " + loggedInUser.getUser().getStatus() + " - " + (business != null ? business.getBusinessName() : "") + " from " + request.getRemoteAddr();
                         String userAgent = request.getHeader("User-Agent");
                         AzquoMailer.sendEMail("nic@azquo.com", "Nic", title, userAgent);
@@ -151,7 +201,7 @@ public class LoginController {
                     if (!"nic@azquo.com".equalsIgnoreCase(userEmail) && SpreadsheetService.inProduction() && !request.getRemoteAddr().equals("82.68.244.254") && !request.getRemoteAddr().equals("127.0.0.1") && !request.getRemoteAddr().startsWith("0")) { // if it's from us don't email us :)
                         Business business = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
                         String title = SpreadsheetService.getAlias() + " Login to the server " + userEmail + " - " + loggedInUser.getUser().getStatus() + " - " + (business != null ? business.getBusinessName() : "") + " from " + request.getRemoteAddr();
-                        new Thread(() ->{
+                        new Thread(() -> {
                             String userAgent = request.getHeader("User-Agent");
                             AzquoMailer.sendEMail("nic@azquo.com", "Nic", title, userAgent);
                             AzquoMailer.sendEMail("bruce.cooper@azquo.com", "Bruce", title, userAgent);
