@@ -625,18 +625,29 @@ The set ‘recent sales by postcode area` will contain a selection of the postco
 
      */
     private static NameSetList classifyBy(AzquoMemoryDBConnection azquoMemoryDBConnection, String criteria, NameSetList sourceSet, List<String> languages) throws Exception {
-        criteria = criteria.trim();
         Set<Name> result = HashObjSets.newMutableSet();
+        try{
+            criteria = criteria.trim();
             int attEnd = criteria.indexOf(">");
             String attribute = criteria.substring(1, attEnd);
-            String setToCheckString = criteria.substring(criteria.indexOf("<", attEnd));
-            setToCheckString = setToCheckString.substring(1, setToCheckString.length() - 1); // get rid of brackets, setToCheckString should now be All postcode areas or equivalent
+            String setToCheckString = criteria.substring(criteria.indexOf("<", attEnd) + 1);
+            int setEnd = setToCheckString.indexOf(">");
+            String language = setToCheckString.substring(setEnd + 1);
+            setToCheckString = setToCheckString.substring(0,setEnd);
+            if (language.length() > 0){
+                int langStart = language.indexOf("<");
+                int langEnd = language.indexOf(">", langStart);
+                language = language.substring(langStart + 1,langEnd);
+            }else{
+                language = StringLiterals.DEFAULT_DISPLAY_NAME;
+
+            }
             // so 1)	Ensure that all member of ‘classifyset’ have no children.
             Name classifySet = NameService.findByName(azquoMemoryDBConnection, setToCheckString, languages);
             Map<String, Name> classifySetLookup = HashObjObjMaps.newMutableMap();
             if (classifySet != null){ // error if null?
                 for (Name member : classifySet.getChildren()){
-                    classifySetLookup.put(member.getDefaultDisplayName().toLowerCase(), member);
+                    classifySetLookup.put(member.getAttribute(language).toLowerCase(), member);
                     member.setChildrenWillBePersisted(Collections.emptyList(), azquoMemoryDBConnection);
                 }
             }
@@ -650,6 +661,9 @@ The set ‘recent sales by postcode area` will contain a selection of the postco
                 } else {
                     result.add(sourceName);
                 }
+            }
+        }catch (Exception e){
+            throw new Exception("cannot understand classifyby " + criteria);
         }
         return new NameSetList(result, null, true);
     }
