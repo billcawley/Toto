@@ -94,6 +94,7 @@ public final class ImportService {
     public static String LOCALIP = "127.0.0.1";
     private static final String IMPORTTEMPLATE = "importtemplate";
     public static final String IMPORTVERSION = "importversion";
+    public static final String PREPROCESSOR = "preprocessor";
     public static final String IMPORTMODEL = "Import Model";
     public static final String SHEETNAME = "sheet name";
     public static final String FILEENCODING = "fileencoding";
@@ -439,7 +440,7 @@ public final class ImportService {
             org.apache.poi.ss.usermodel.Name importName = BookUtils.getName(book, ReportRenderer.AZIMPORTNAME);
             // also just do a simple check on the file name.  Allow templates to be included in a setup bundle then directed correctly
             String lcName = uploadedFile.getFileName().toLowerCase();
-            if ((importName != null || lcName.contains("import templates") || lcName.contains("preprocessor") || lcName.contains("headings")) && !lcName.contains("preprocessor=")) {
+            if ((importName != null || lcName.contains("import templates") || lcName.contains(PREPROCESSOR) || lcName.contains("headings")) && !lcName.contains(PREPROCESSOR+"=")) {
                 if ((loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
                     if (opcPackage != null) opcPackage.revert();
                     //preprocessors are not assigned to the file, import templates are assigned
@@ -746,7 +747,6 @@ public final class ImportService {
 
 
     // things that can be read from "Parameters" in an import template sheet
-    private static final String PREPROCESSOR = "preprocessor";
     public static final String POSTPROCESSOR = "postprocessor";
     public static final String PENDINGDATACLEAR = "pendingdataclear";
     private static final String VALIDATION = "validation";
@@ -2186,7 +2186,7 @@ fr.close();
                 //boolean validLine = true;
                 //INTERIM CHECK FOR HEADINGS ON THE WRONG LINE  - THIS DOES NOT WORK FOR HEADINGS BELOW WHERE EXPECTED
                 //ALSO SHOULD PROBABLY CHECK MORE THAN ONE CELL.
-                if (colNo == 0 && line[0].length() > 0 && line.length > 10 && findFirst(inputColumns, headingFrom(line[0], headingsLookups)) >= 0) {
+                if (checkHeadings(inputColumns, line)) {
                     headingStartRow = lineNo;
 
                 }
@@ -2198,7 +2198,18 @@ fr.close();
                     }
                 } else {
                     if (isNewHeadings) {
-                        //read off all the headings.  If there is more than one line of headings, then all but the last
+                        boolean hasHeadings = false;
+                        while (!hasHeadings){
+                            hasHeadings = checkHeadings(inputColumns, line);
+                            if (!hasHeadings) {
+                                if (lineIterator.hasNext()) {
+                                    line = lineIterator.next();
+                                } else {
+                                    return;
+                                }
+                            }
+                        }
+                     //read off all the headings.  If there is more than one line of headings, then all but the last
                         // line inherit headings from the columns to the left.
                         //first build an array of strings, then concatenate each column and look up in the headingslookups
                         List<List<String>> newHeadings = new ArrayList<>();
@@ -2259,15 +2270,10 @@ fr.close();
                         line = lineIterator.next();
                     }
                     //handle the data
-                    for (int datacount = 0; datacount < inputColumnMap.size(); datacount++) {
+                    for (colNo =0; colNo < line.length;colNo++) {
                         if (inputColumnMap.get(colNo) != null) {
-                            String cellVal = "";
-                            if (datacount < line.length) {
-                                cellVal = line[datacount];
-                            }
-                            setCellValue(inputSheet, inputRow, inputColumnMap.get(colNo), cellVal);
+                             setCellValue(inputSheet, inputRow, inputColumnMap.get(colNo), line[colNo]);
                         }
-                        colNo++;
                     }
                     for (String param : uploadedFile.getParameters().keySet()) {
                         Name name = getNameInSheet(ppBook, inputSheet.getSheetName(), param);
@@ -2364,7 +2370,19 @@ fr.close();
         }
     }
 
-    private static Map<String, String> setupHeadingsMappings(Workbook ppBook){
+    private static boolean checkHeadings(Map <Integer, String>headingsMap, String[] line) {
+
+        if (line.length < 3) return false;
+        for (int col = 0; col < line.length; col++) {
+            if (line[col].length() > 0 && findFirst(headingsMap, standardise(line[col])) >=0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+
+  private static Map<String, String> setupHeadingsMappings(Workbook ppBook){
         Map<String, String> headingsLookups = new HashMap<>();
         org.apache.poi.ss.usermodel.Name headingsLookupsRegion = BookUtils.getName(ppBook, "az_HeadingsLookups");
         if (headingsLookupsRegion == null){
