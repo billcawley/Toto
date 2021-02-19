@@ -15,6 +15,7 @@ import io.keikai.api.model.*;
 import io.keikai.model.*;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -86,35 +87,6 @@ class RegionFillerService {
                         if (totalCount == 1 && totalRow == -1) {
                             totalRow = lineFormat.getRowIndex();
                         }
-                        // EFC commenting the block below - it is breaking LSB and I can't see what it is for. Since it relates to formatting commenting it won't break any figures
-                        // the break was that a line below the data region was being pulled into the data region so do NOT just uncomment this code, it will break things
-                        // Svn 1892 the comment from WFC was Will accept formulae based on local totals in pivot tables
-                        /*if (totalCount == 1 && totalRow > displayRowHeadings.getRow()) {
-                            //copy the total row and the line above to the current position, then copy the line above into the intermediate rows
-                            int dataStart = displayDataRegion.getColumn();
-                            int copyRows = row - lastTotalRow - 2;
-                            if (copyRows > 2) {
-                                copyRows = 2;
-                            }
-                            Range copySource = Ranges.range(sheet, totalRow - 2, dataStart, totalRow, selEnd);
-                            Range destination = Ranges.range(sheet, row - copyRows - 1, dataStart, row - 1, selEnd);
-                            int tempStart = selEnd + 10;
-                            Range tempPos = Ranges.range(sheet, totalRow - 2, tempStart, totalRow, tempStart + selEnd - selStart);
-                            if (copyRows == 1) {
-                                //delete the middle line
-                                CellOperationUtil.delete(Ranges.range(sheet, totalRow - 1, tempStart, totalRow - 1, tempStart + selEnd - selStart), Range.DeleteShift.UP);
-                                tempPos = Ranges.range(sheet, totalRow - 2, tempStart, totalRow - 1, tempStart + selEnd - selStart);
-                            }
-                            CellOperationUtil.paste(copySource, tempPos);
-                            CellOperationUtil.cut(tempPos, destination);
-                            // is this dangerous? Could it corrupt another part of the sheet?
-                            if (row - lastTotalRow > 4) {
-                                //zap cells above, and fill in cells below
-                                CellOperationUtil.delete(Ranges.range(sheet, lastTotalRow + 1, dataStart, row - 4, selEnd), Range.DeleteShift.UP);
-                                CellOperationUtil.insert(Ranges.range(sheet, lastTotalRow + 2, dataStart, row - 3, selEnd), Range.InsertShift.DOWN, Range.InsertCopyOrigin.FORMAT_NONE);
-                                CellOperationUtil.paste(Ranges.range(sheet, lastTotalRow + 1, dataStart, lastTotalRow + 1, selEnd), Ranges.range(sheet, lastTotalRow + 2, dataStart, row - 3, selEnd));
-                            }
-                        }*/
                         CellOperationUtil.applyBackColor(selection, lineFormat.getCellStyle().getBackColor().getHtmlColor());
                         CellOperationUtil.applyFontColor(selection, lineFormat.getCellStyle().getFont().getColor().getHtmlColor());
                         Range formatRange = Ranges.range(sheet.getBook().getSheet(lineFormat.getSheet().getSheetName()), lineFormat.getRowIndex(), lineFormat.getColumnIndex());
@@ -169,7 +141,15 @@ class RegionFillerService {
                         }
                     }
                     rowHeading = rowHeading.replace(StringLiterals.QUOTE + "", "").trim();
-                    RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).createFilterSet(loggedInUser.getDataAccessToken(), "az_" + rowHeading, loggedInUser.getUser().getEmail(), null);
+                    // EFC logic modify - the behavior on the multi select headings could confuse users so only do it if there's a named region switching it on
+                    if (sheet.getBook().getInternalBook().getNameByName(ReportRenderer.AZMULTISELECTHEADINGS) != null) {
+                        RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).createFilterSet(loggedInUser.getDataAccessToken(), "az_" + rowHeading, loggedInUser.getUser().getEmail(), null); // create if necessary but leave what's in there
+                    } else { // clean set every time - I'm making it so that empty children ids resets the list. Can't see how having none selected is ever helpful
+                        RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).createFilterSet(loggedInUser.getDataAccessToken(), "az_" + rowHeading, loggedInUser.getUser().getEmail(), Collections.emptyList()); // reset regardless
+                    }
+
+
+
                     String colHeading = ChoicesService.multiList(loggedInUser, "az_" + rowHeading, "`" + rowHeading + "` children");
                     if (colHeading.equals("[all]")) colHeading = rowHeading;
                     BookUtils.setValue(sheet.getInternalSheet().getCell(hrow, hcol++), colHeading);

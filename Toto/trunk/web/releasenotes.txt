@@ -1,3 +1,9 @@
+18-02-21-2
+
+Initial version of classify by query function
+
+new 'checkHeadings' routine, and change of way in which the data lines are moved so as to include all the values
+
 16-02-21
 
 Plugin user selection bug fix

@@ -97,12 +97,16 @@ public class ZKComposer extends SelectorComposer<Component> {
     public void onCellClick(CellMouseEvent event) {
         final Book book = event.getSheet().getBook();
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
-        String selectionName = ReportUIUtils.pivotItem(event, ReportRenderer.AZPIVOTFILTERS, ReportRenderer.AZPIVOTHEADINGS, 3);//OLD STYLE
-        if (selectionName == null) {
-            selectionName = ReportUIUtils.pivotItem(event, ReportRenderer.AZCONTEXTFILTERS, ReportRenderer.AZCONTEXTHEADINGS, 3);
+        String selectionName = null;
+        if (book.getInternalBook().getNameByName(ReportRenderer.AZMULTISELECTHEADINGS) != null){
+            selectionName = ReportUIUtils.pivotItem(event, ReportRenderer.AZPIVOTFILTERS, ReportRenderer.AZPIVOTHEADINGS, 3);//OLD STYLE
+            if (selectionName == null) {
+                selectionName = ReportUIUtils.pivotItem(event, ReportRenderer.AZCONTEXTFILTERS, ReportRenderer.AZCONTEXTHEADINGS, 3);
+            }
         }
+
         String selectionList = null;
-        if (selectionName != null) { // we have a pivot menu for that cell. Either the dropdown at the top or a row heading - todo address the row heading having excel style dropdown as well as our pivot style box Edd 25/01/17 - not sure what I meant! Need to dig into the pivot again . . .
+        if (selectionName != null) {
             selectionList = "`" + selectionName + "` children sorted";
             selectionName = "az_" + selectionName.trim();
         } else {

@@ -36,15 +36,25 @@ public class UserChoiceService {
         set.setAttributeWillBePersisted(StringLiterals.DEFAULT_DISPLAY_NAME, null, connectionFromAccessToken);
         if (childrenIds != null) { // it may be if we're just confirming sets exist, in that case don't modify contents
             set.setChildrenWillBePersisted(Collections.emptyList(), connectionFromAccessToken); // easiest way to clear them
-            for (Integer childId : childrenIds) {
-                Name childName = NameService.findById(connectionFromAccessToken, childId);
-                if (childName != null) { // it really should not be!
-                    set.addChildWillBePersisted(childName, connectionFromAccessToken); // and that should be it!
+            if (childrenIds.isEmpty()){ // if empty then fill it. Used to reset sets and if the user selected none then they may as well have selected all
+                // like code below, populate the set
+                Name sourceSet = NameService.findByName(connectionFromAccessToken,setName.substring(3));
+                if (sourceSet!=null){
+                    for (Name child:sourceSet.getChildren()){
+                        set.addChildWillBePersisted(child, connectionFromAccessToken);
+                    }
+                }
+            } else {
+                for (Integer childId : childrenIds) {
+                    Name childName = NameService.findById(connectionFromAccessToken, childId);
+                    if (childName != null) { // it really should not be!
+                        set.addChildWillBePersisted(childName, connectionFromAccessToken); // and that should be it!
+                    }
                 }
             }
         }else{
             //the default for new temporary sets is to be full.
-            if (set.getChildren().size()==0 && setName.substring(0,3).equals("az_")){
+            if (set.getChildren().size()==0 && setName.startsWith("az_")){
                 Name sourceSet = NameService.findByName(connectionFromAccessToken,setName.substring(3));
                 if (sourceSet!=null){
                     for (Name child:sourceSet.getChildren()){
