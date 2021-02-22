@@ -226,8 +226,11 @@ public class ExcelController {
                             }
                         }
                     }
+                    if (loggedInUser==null){
+                        loggedInUser = excelConnections.get(sessionId);
+                    }
                     //TODO should there be any security encoding??
-                    if (sessionId.equals("testing")|| loggedInUser!= null) {
+                       if (sessionId.equals("testing")|| loggedInUser!= null) {
                        ImportTemplate importTemplate = ImportTemplateDAO.findForNameAndBusinessId(fileName, loggedInUser.getUser().getBusinessId());
                        String directory="risk";
                        if (!sessionId.equals("testing")) {
