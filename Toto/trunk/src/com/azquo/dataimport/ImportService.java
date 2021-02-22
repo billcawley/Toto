@@ -13,6 +13,7 @@ import org.apache.poi.poifs.crypt.EncryptionInfo;
 import org.apache.poi.poifs.filesystem.POIFSFileSystem;
 import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.xssf.usermodel.XSSFFormulaEvaluator;
+import org.bouncycastle.jce.provider.JDKKeyFactory;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.multipart.MultipartFile;
 import org.w3c.dom.*;
@@ -1127,6 +1128,9 @@ public final class ImportService {
                 }
                 try {
                     preProcessUsingPoi(loggedInUser, uploadedFile, SpreadsheetService.getHomeDir() + dbPath + loggedInUser.getBusinessDirectory() + importTemplatesDir + preProcess.getFilenameForDisk()); //
+                    if (uploadedFile.getPath()==null){
+                        return uploadedFile;
+                    }
                 } catch (Exception e) {
                     uploadedFile.setError("Preprocessor error in " + uploadedFile.getTemplateParameter(PREPROCESSOR) + " : " + e.getMessage());
                     return uploadedFile;
@@ -1562,9 +1566,13 @@ public final class ImportService {
                 returnString = String.format("%f", returnNumber);
             }
             if (returnNumber % 1 == 0) {
-                // specific condition - integer and format all 000, then actually use the format. For zip codes
+                 // specific condition - integer and format all 000, then actually use the format. For zip codes
+
                 if (dataFormat.length() > 1 && dataFormat.contains("0") && dataFormat.replace("0", "").isEmpty()) {
                     // easylife tripped up this "zipcode" conditional by having a formula in there, requires a formula evaluator be passed
+                    if (returnNumber ==0)  {
+                        return "";
+                    }
                     if (cell.getCellType() == CellType.FORMULA) {
                         returnString = df2.formatCellValue(cell, cell.getSheet().getWorkbook().getCreationHelper().createFormulaEvaluator()); // performance issues on the formula evaluator??
                     } else {
@@ -1579,6 +1587,9 @@ public final class ImportService {
                 returnString = "0" + returnString;
             } else {
                 if (dataFormat.toLowerCase().contains("m") || dataFormat.toLowerCase().contains("y")) {
+                    if (returnNumber ==0)  {
+                        return "";
+                    }
                     if ((dataFormat.indexOf("/") > 0 && dataFormat.indexOf("/", dataFormat.indexOf("/") + 1) > 0)
                             || (dataFormat.indexOf("-") > 0 && dataFormat.indexOf("-", dataFormat.indexOf("-") + 1) > 0)
                             || dataFormat.length() > 6) { // two dashes or two slashes or greater than 6. Used to be just greater than 6, now poi says things like d/m/yy so we need to be a bit more clever
@@ -1979,6 +1990,13 @@ fr.close();
         Workbook ppBook = null;
         try {
             ppBook = new XSSFWorkbook(opcPackage);
+            List<String> ignoreSheetList = getList(ppBook, "az_IgnoreSheets");
+            if (ignoreSheetList.size() > 0){
+                if (ignoreSheetList.contains(uploadedFile.getFileNames().get(uploadedFile.getFileNames().size()-1).toLowerCase(Locale.ROOT))){
+                    uploadedFile.setPath(null);
+                    return;
+                }
+            }
 
             org.apache.poi.ss.usermodel.Name inputLineRegion = BookUtils.getName(ppBook, "az_input");
             AreaReference inputAreaRef = new AreaReference(inputLineRegion.getRefersToFormula(), null);
@@ -2131,6 +2149,11 @@ fr.close();
             if (delimiter == '\t') {
                 schema = schema.withoutQuoteChar();
             }
+            int topRow = 0;
+            org.apache.poi.ss.usermodel.Name topRowRegion = BookUtils.getName(ppBook, "az_toprow");
+            if(topRowRegion != null){
+                topRow = Integer.parseInt(getCellValue(inputSheet, new AreaReference(topRowRegion.getRefersToFormula(), null))) - 1;
+            }
 
             MappingIterator<String[]> lineIterator = null;
             if (uploadedFile.getParameter(FILEENCODING) != null) {
@@ -2169,6 +2192,13 @@ fr.close();
             int backwardCount = 0;
             List<String[]> backwardLines = new ArrayList<>();
             while (lineIterator.hasNext() || backwardCount > 0) {
+                while (!isNewHeadings && lineNo < topRow && lineIterator.hasNext()){
+                    lineIterator.next();
+                    lineNo++;
+                }
+                if (!lineIterator.hasNext()){
+                    break;
+                }
                 if (backwards && !isNewHeadings && backwardCount == 0) {
                     while (lineIterator.hasNext()) {
                         backwardLines.add(lineIterator.next());
@@ -2370,6 +2400,26 @@ fr.close();
         }
     }
 
+    private static List<String>getList(Workbook ppBook, String rangeName){
+
+        List<String> toReturn = new ArrayList<>();
+        try {
+            org.apache.poi.ss.usermodel.Name region = BookUtils.getName(ppBook, rangeName);
+            if (region == null) return toReturn;
+
+            AreaReference area = new AreaReference(region.getRefersToFormula(), null);
+            for (int rowNo = area.getFirstCell().getRow(); rowNo < area.getLastCell().getRow();rowNo++){
+                String cellVal = getCellValue(ppBook.getSheet(region.getSheetName()).getRow(rowNo).getCell(area.getFirstCell().getCol()));
+                if (cellVal != null){
+                    toReturn.add(cellVal.toLowerCase(Locale.ROOT));
+                }
+            }
+        }catch (Exception e){
+            //ignore at present
+        }
+        return toReturn;
+    }
+
     private static boolean checkHeadings(Map <Integer, String>headingsMap, String[] line) {
 
         if (line.length < 3) return false;
@@ -2379,6 +2429,7 @@ fr.close();
             }
         }
         return false;
+
     }
 
 
@@ -2633,13 +2684,17 @@ fr.close();
                                 org.apache.poi.ss.usermodel.Cell cell = ri.next();
                                 if (++cellIndex != cell.getColumnIndex()) {
                                     while (cellIndex != cell.getColumnIndex()) {
-                                        csvW.write("");
+                                        if (!sheet.isColumnHidden(cellIndex)){
+                                            csvW.write("");
+                                        }
                                         cellIndex++;
                                     }
                                 }
                                 final String cellValue = ImportService.getCellValue(cell);
-                                csvW.write(cellValue.replace("\n", "\\\\n").replace("\r", "")
-                                        .replace("\t", "\\\\t"));
+                                if (!sheet.isColumnHidden(cellIndex)){
+                                    csvW.write(cellValue.replace("\n", "\\\\n").replace("\r", "")
+                                            .replace("\t", "\\\\t"));
+                                }
                             }
                             csvW.endRecord();
                         }
