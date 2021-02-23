@@ -2220,7 +2220,7 @@ fr.close();
                 //boolean validLine = true;
                 //INTERIM CHECK FOR HEADINGS ON THE WRONG LINE  - THIS DOES NOT WORK FOR HEADINGS BELOW WHERE EXPECTED
                 //ALSO SHOULD PROBABLY CHECK MORE THAN ONE CELL.
-                if (checkHeadings(inputColumns, line)) {
+                if (checkHeadings(inputColumns, line, headingsLookups)) {
                     headingStartRow = lineNo;
 
                 }
@@ -2234,7 +2234,7 @@ fr.close();
                     if (isNewHeadings) {
                         boolean hasHeadings = false;
                         while (!hasHeadings){
-                            hasHeadings = checkHeadings(inputColumns, line);
+                            hasHeadings = checkHeadings(inputColumns, line, headingsLookups);
                             if (!hasHeadings) {
                                 if (lineIterator.hasNext()) {
                                     line = lineIterator.next();
@@ -2424,12 +2424,12 @@ fr.close();
         return toReturn;
     }
 
-    private static boolean checkHeadings(Map <Integer, String>headingsMap, String[] line) {
+    private static boolean checkHeadings(Map <Integer, String>headingsMap, String[] line,Map<String,String>headingsLookups) {
 
         if (line.length < 5) return false;
         //only look in the first five headings...
         for (int col = 0; col < 5; col++) {
-            if (line[col].length() > 0 && findFirst(headingsMap, standardise(line[col])) >=0) {
+            if (line[col].length() > 0 && findFirst(headingsMap, headingFrom(line[col], headingsLookups)) >=0) {
                 return true;
             }
         }
