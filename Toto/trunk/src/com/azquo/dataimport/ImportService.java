@@ -1992,9 +1992,13 @@ fr.close();
             ppBook = new XSSFWorkbook(opcPackage);
             List<String> ignoreSheetList = getList(ppBook, "az_IgnoreSheets");
             if (ignoreSheetList.size() > 0){
-                if (ignoreSheetList.contains(uploadedFile.getFileNames().get(uploadedFile.getFileNames().size()-1).toLowerCase(Locale.ROOT))){
-                    uploadedFile.setPath(null);
-                    return;
+                String sheetName = uploadedFile.getFileNames().get(uploadedFile.getFileNames().size()-1).toLowerCase(Locale.ROOT);
+                for (String ignoreSheet:ignoreSheetList) {
+                    if (sheetName.contains(ignoreSheet)) {
+                        //using 'contains' - maybe should check wildcards
+                        uploadedFile.setPath(null);
+                        return;
+                    }
                 }
             }
 
@@ -2422,8 +2426,9 @@ fr.close();
 
     private static boolean checkHeadings(Map <Integer, String>headingsMap, String[] line) {
 
-        if (line.length < 3) return false;
-        for (int col = 0; col < line.length; col++) {
+        if (line.length < 5) return false;
+        //only look in the first five headings...
+        for (int col = 0; col < 5; col++) {
             if (line[col].length() > 0 && findFirst(headingsMap, standardise(line[col])) >=0) {
                 return true;
             }
