@@ -1,3 +1,11 @@
+23-02-21
+
+Bug fix for Arcana (ignoring certain sheets)
+
+22-02-21
+
+preprocessor date 0 fix
+
 18-02-21-2
 
 Initial version of classify by query function

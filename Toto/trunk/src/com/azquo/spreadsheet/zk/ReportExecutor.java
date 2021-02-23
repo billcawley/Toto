@@ -478,7 +478,8 @@ public class ReportExecutor {
 
                         System.out.println("saving for : " + region);
                         OnlineReport onlineReport = loggedInUser.getOnlineReport();
-                        SpreadsheetService.saveData(loggedInUser, onlineReport.getId(), onlineReport.getReportName(), region, region.toLowerCase(), true); // to not persist right now
+                        // EFC note 22/02/21 - this was persisting every time, why???
+                        SpreadsheetService.saveData(loggedInUser, onlineReport.getId(), onlineReport.getReportName(), region, region.toLowerCase(), false);
 
 
                     } else {
