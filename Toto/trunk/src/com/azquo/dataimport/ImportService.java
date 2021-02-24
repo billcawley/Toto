@@ -1994,7 +1994,7 @@ fr.close();
             if (ignoreSheetList.size() > 0){
                 String sheetName = uploadedFile.getFileNames().get(uploadedFile.getFileNames().size()-1).toLowerCase(Locale.ROOT);
                 for (String ignoreSheet:ignoreSheetList) {
-                    if (sheetName.contains(ignoreSheet)) {
+                     if (ignoreSheet.length() > 0 && sheetName.contains(ignoreSheet)) {
                         //using 'contains' - maybe should check wildcards
                         uploadedFile.setPath(null);
                         return;
@@ -2156,7 +2156,11 @@ fr.close();
             int topRow = 0;
             org.apache.poi.ss.usermodel.Name topRowRegion = BookUtils.getName(ppBook, "az_toprow");
             if(topRowRegion != null){
-                topRow = Integer.parseInt(getCellValue(inputSheet, new AreaReference(topRowRegion.getRefersToFormula(), null))) - 1;
+                try{
+                    topRow = Integer.parseInt(getCellValue(inputSheet, new AreaReference(topRowRegion.getRefersToFormula(), null))) - 1;
+                }catch(Exception e){
+                    // if they have not written a number, assume 0
+                }
             }
 
             MappingIterator<String[]> lineIterator = null;
