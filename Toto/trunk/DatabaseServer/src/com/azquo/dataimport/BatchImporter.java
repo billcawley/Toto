@@ -747,7 +747,11 @@ public class BatchImporter implements Callable<Void> {
             }
             // for Excel date is a number - on the way out standardise to our typically used date format
             if (cell.getImmutableImportHeading().datatype == StringLiterals.UKDATE || cell.getImmutableImportHeading().datatype == StringLiterals.USDATE) {
-                compositionPattern = DateUtils.toDate(compositionPattern);
+                try{
+                    compositionPattern = DateUtils.toDate(compositionPattern);
+                } catch (Exception e){
+                    throw new Exception("Cannot read : " + compositionPattern + " as date. Try surrounding with DATEVALUE()?");
+                }
             }
         }
         return compositionPattern;
