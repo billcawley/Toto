@@ -2021,7 +2021,7 @@ fr.close();
                     }
                 }
             }
-            AreaReference ignoreRef = null;
+             AreaReference ignoreRef = null;
             if (ignoreRegion != null) {
                 ignoreRef = new AreaReference(ignoreRegion.getRefersToFormula(), null);
             }
@@ -2035,6 +2035,14 @@ fr.close();
                     backwards = true;
                 }
             }
+            org.apache.poi.ss.usermodel.Name sheetNameRegion = BookUtils.getName(ppBook, "az_sheetname");
+            if (sheetNameRegion != null) {
+                AreaReference sheetNameAreaRef = new AreaReference(sheetNameRegion.getRefersToFormula(), null);
+                String sheetName = uploadedFile.getFileNames().get(uploadedFile.getFileNames().size() - 1);
+                setCellValue(inputSheet, sheetNameAreaRef.getFirstCell().getRow(), sheetNameAreaRef.getFirstCell().getCol(), sheetName);
+            }
+
+
             Map<AreaReference, AreaReference> persistNames = getPersistNames(ppBook);
 
 
