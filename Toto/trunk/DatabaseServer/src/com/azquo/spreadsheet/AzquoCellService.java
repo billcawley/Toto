@@ -73,6 +73,7 @@ public class AzquoCellService {
                     String v2 = o2.getValue().get(index).getString();
                     if (v2 == null && v1 != null) return -1;
                     if (v1 == null && v2 != null) return 1;
+                    if (v1 == null) return 0;
                     if (doubleSort.get(index)) {
                         result = o1.getValue().get(index).getDouble().compareTo(o2.getValue().get(index).getDouble());
                     } else {
