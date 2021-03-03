@@ -2,10 +2,12 @@ package com.azquo.dataimport;
 
 import com.azquo.LineIdentifierLineValue;
 import com.azquo.RowColumn;
+import com.azquo.StringLiterals;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.core.AzquoMemoryDB;
 import com.azquo.memorydb.core.Name;
+import com.azquo.memorydb.service.NameQueryParser;
 import com.azquo.memorydb.service.NameService;
 import com.azquo.spreadsheet.transport.HeadingWithInterimLookup;
 import com.azquo.spreadsheet.transport.UploadedFile;
@@ -363,7 +365,7 @@ public class DSImportService {
                         }
                         // option to stack the clauses vertically - we are allowing this on annotation, will be useful on set up files
                         // could inline or would it just be noise?
-                        if (!buildHeadingsFromVerticallyListedClauses(headings, lineIterator)) {
+                        if (!buildHeadingsFromVerticallyListedClauses(azquoMemoryDBConnection, headings, lineIterator)) {
                             uploadedFile.setError("Unable to find suitable stacked headings.");
                             return uploadedFile;
                         } else {
@@ -565,7 +567,7 @@ public class DSImportService {
     }
 
     // the idea is that a heading could be followed by successive clauses on cells below and this might be easier to read
-    private static boolean buildHeadingsFromVerticallyListedClauses(List<String> headings, Iterator<String[]> lineIterator) {
+    private static boolean buildHeadingsFromVerticallyListedClauses(AzquoMemoryDBConnection azquoMemoryDBConnection, List<String> headings, Iterator<String[]> lineIterator) {
         String[] nextLine = lineIterator.next();
         int headingCount = 1;
         boolean lastfilled;
@@ -573,9 +575,29 @@ public class DSImportService {
             int colNo = 0;
             lastfilled = false;
             // while you find known names, insert them in reverse order with separator |.  Then use ; in the usual order
+            String saveSetName = null;
+            String languagePrefix = null;
+            //new feature Feb 2021.   'MEMBEROF' and 'languageindicator' on an element of the top headings will apply to all subsequent fields in the headings
+            //so IDs or other attributes can be used in the column headings, and sets can be created from the column headings
             for (String heading : nextLine) {
                 if (!heading.equals("--")) { //ignore "--", can be used to give space below the headers
                     // logic had to be altered to account for gaps in the headers - blank columns which can be a problem if the top line is sparse
+                    if (heading.contains(StringLiterals.languageIndicator)){
+                        languagePrefix = heading.substring(0,heading.indexOf(StringLiterals.languageIndicator) + StringLiterals.languageIndicator.length());
+                        heading = heading.substring(languagePrefix.length());
+
+                    }
+                    if (heading.contains(StringLiterals.MEMBEROF)){
+                        saveSetName = heading.substring(0,heading.indexOf(StringLiterals.MEMBEROF));
+                        heading = heading.substring(saveSetName.length() + StringLiterals.MEMBEROF.length());
+                        saveSetName = "edit:saveset `" + saveSetName + "` ";
+                    }
+                    if (languagePrefix!=null){
+                        heading = languagePrefix + heading;
+                    }
+                     if (saveSetName!=null){
+                        saveSetName += " `" + heading + "`";
+                    }
                     if (colNo >= headings.size()) {
                         headings.add(heading);
                         // todo - clean up logic
@@ -600,6 +622,13 @@ public class DSImportService {
                     }
                 }
                 colNo++;
+            }
+            if (saveSetName!=null){
+                try{
+                    NameQueryParser.parseQuery(azquoMemoryDBConnection,saveSetName);
+                }catch (Exception e){
+                    //ignore exceptions???
+                }
             }
             if (lineIterator.hasNext() && lastfilled) {
                 nextLine = lineIterator.next();
