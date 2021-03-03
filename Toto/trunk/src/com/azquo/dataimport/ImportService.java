@@ -2200,6 +2200,9 @@ fr.close();
                 heading = getCellValue(inputSheet.getRow(headingStartRow + existingHeadingRows - 1).getCell(++inputHeadingCount));
             }
             int lastOutputCol = outputSheet.getRow(outputRow).getLastCellNum();
+            while (getCellValue(outputSheet.getRow(outputRow).getCell(lastOutputCol+1)).length() > 0){
+                lastOutputCol++;
+            }
             //Map <Integer,Integer> colOnInputRange = new HashMap<>();
             boolean isNewHeadings = true;
             Map<Integer, Integer> inputColumnMap = new HashMap<>();
@@ -2332,8 +2335,10 @@ fr.close();
                     if (fileNameAreaRef != null) {
                         setCellValue(inputSheet, fileNameAreaRef.getFirstCell().getRow(), fileNameAreaRef.getFirstCell().getCol(), fileName);
                     }
+                    long t = System.currentTimeMillis();
 
                     XSSFFormulaEvaluator.evaluateAllFormulaCells(ppBook);
+                    System.out.println("eval " + (System.currentTimeMillis()-t));
 
                     // EFC note - if you wan't full formula resolve on a bug switch on the poi logging options in
                     // SpreadsheetService and do something like this on the relevant cell
