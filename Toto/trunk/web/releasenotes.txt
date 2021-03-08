@@ -1,4 +1,10 @@
-23-02-21
+25-02-21
+
+fixed bugs where az_IgnoreSheets and az_topRow are blank
+
+recognises 'az_SheetName'
+
+23-02-21-2
 
 Bug fix for Arcana (ignoring certain sheets)
 

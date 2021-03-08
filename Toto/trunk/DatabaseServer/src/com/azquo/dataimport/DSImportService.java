@@ -48,6 +48,11 @@ public class DSImportService {
         AzquoMemoryDBConnection azquoMemoryDBConnection = uploadedFile.isValidationTest()
                 ? AzquoMemoryDBConnection.getTemporaryCopyConnectionFromAccessToken(databaseAccessToken)
                 : AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
+        return readPreparedFile(azquoMemoryDBConnection, uploadedFile, user);
+    }
+
+    // EFC - I have taken these lines out of the above function so this one can be called by DSSpreadsheet service and hence get the results of toReturn.setNoValuesAdjusted
+    public static UploadedFile readPreparedFile(final AzquoMemoryDBConnection azquoMemoryDBConnection, UploadedFile uploadedFile, final String user) throws Exception {
         azquoMemoryDBConnection.setProvenance(user, "imported", uploadedFile.getFileNamesAsString(), "");
         // if the provenance is unused I could perhaps zap it but it's not a big deal for the mo
         UploadedFile toReturn = readPreparedFile(azquoMemoryDBConnection, uploadedFile);

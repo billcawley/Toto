@@ -1,7 +1,6 @@
 package com.azquo.memorydb.core;
 
 import com.azquo.StringLiterals;
-import com.azquo.TypedPair;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 
 import java.text.NumberFormat;
@@ -422,6 +421,40 @@ public class AzquoMemoryDBIndex {
         setAttributeForNameInAttributeNameMapCount.set(0);
         removeAttributeFromNameInAttributeNameMapCount.set(0);
     }
+
+    public static class TypedPair<F,S> {
+        private final F first;
+        private final S second;
+
+        public TypedPair(F first, S second) {
+            this.first = first;
+            this.second = second;
+        }
+
+        public F getFirst() {
+            return first;
+        }
+
+        public S getSecond() {
+            return second;
+        }
+
+        // these two are hacky
+        @Override
+        public int hashCode() {
+            return (first.toString() + " " + second.toString()).hashCode();
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (o instanceof TypedPair){
+                TypedPair tp = (TypedPair)o;
+                return tp.first.equals(first) && tp.second.equals(second);
+            }
+            return super.equals(o);
+        }
+    }
+
 
     void printIndexStats() {
         NumberFormat nf = NumberFormat.getInstance();

@@ -278,7 +278,7 @@ public class DSSpreadsheetService {
         Map<String,String> parameters = new HashMap<>();
         parameters.put("cleardata","true");
         uploadedFile.setParameters(parameters);
-        DSImportService.readPreparedFile(azquoMemoryDBConnection, uploadedFile);
+        DSImportService.readPreparedFile(azquoMemoryDBConnection, uploadedFile, user);
         // persist no longer automatic on importing so just do it here
         /*
         if (!persist) {
@@ -333,12 +333,11 @@ public class DSSpreadsheetService {
         checkClear(azquoMemoryDBConnection, cellsAndHeadingsForDisplay.getColumnHeadings());
         checkClear(azquoMemoryDBConnection, cellsAndHeadingsForDisplay.getRowHeadings());
         synchronized (azquoMemoryDBConnection.getAzquoMemoryDB()) { // we don't want concurrent saves on a single database
-            azquoMemoryDBConnection.getAzquoMemoryDB().removeValuesLockForUser(databaseAccessToken.getUserId()); // todo - is this the palce to unlock? It's probably fair
+            azquoMemoryDBConnection.getAzquoMemoryDB().removeValuesLockForUser(databaseAccessToken.getUserId()); // todo - is this the place to unlock? It's probably fair
             boolean modifiedInTheMeanTime = azquoMemoryDBConnection.getDBLastModifiedTimeStamp() != cellsAndHeadingsForDisplay.getTimeStamp(); // if true we need to check if someone else changed the data
             // ad hoc saves regardless of changes in the mean time. Perhaps not the best plan . . .
             azquoMemoryDBConnection.setProvenance(userName, StringLiterals.IN_SPREADSHEET, reportName, context);
             if ((cellsAndHeadingsForDisplay.getRowHeadings().size()== 0 || cellsAndHeadingsForDisplay.getColumnHeadings().size() == 0) && cellsAndHeadingsForDisplay.getData().size() > 0) {
-                // todo - cen we get the number of values modified???
                 numberOfValuesModified = importDataFromSpreadsheet(azquoMemoryDBConnection, cellsAndHeadingsForDisplay, user);
                 if (persist) {
                     new Thread(azquoMemoryDBConnection::persist).start();
