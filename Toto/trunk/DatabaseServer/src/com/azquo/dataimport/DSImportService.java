@@ -575,7 +575,7 @@ public class DSImportService {
             int colNo = 0;
             lastfilled = false;
             // while you find known names, insert them in reverse order with separator |.  Then use ; in the usual order
-            String saveSetName = null;
+            Name saveSetName = null;
             String languagePrefix = null;
             //new feature Feb 2021.   'MEMBEROF' and 'languageindicator' on an element of the top headings will apply to all subsequent fields in the headings
             //so IDs or other attributes can be used in the column headings, and sets can be created from the column headings
@@ -587,17 +587,25 @@ public class DSImportService {
                         heading = heading.substring(languagePrefix.length());
 
                     }
-                    if (heading.contains(StringLiterals.MEMBEROF)){
-                        saveSetName = heading.substring(0,heading.indexOf(StringLiterals.MEMBEROF));
-                        heading = heading.substring(saveSetName.length() + StringLiterals.MEMBEROF.length());
-                        saveSetName = "edit:saveset `" + saveSetName + "` ";
-                    }
                     if (languagePrefix!=null){
                         heading = languagePrefix + heading;
                     }
+                    if (heading.contains(StringLiterals.MEMBEROF)){
+                        try{
+                            String setName = heading.substring(0,heading.indexOf(StringLiterals.MEMBEROF));
+                            saveSetName = NameService.findByName(azquoMemoryDBConnection,setName);
+                            heading = heading.substring(setName.length() + StringLiterals.MEMBEROF.length());
+                        }catch(Exception e){
+                            //may need handling
+                        }
+                     }
                      if (saveSetName!=null){
-                        saveSetName += " `" + heading + "`";
-                    }
+                         try{
+                             NameService.findOrCreateNameInParent(azquoMemoryDBConnection,heading,saveSetName, false);
+                         }  catch(Exception e){
+                             //may need handling
+                         }
+                     }
                     if (colNo >= headings.size()) {
                         headings.add(heading);
                         // todo - clean up logic
@@ -622,13 +630,6 @@ public class DSImportService {
                     }
                 }
                 colNo++;
-            }
-            if (saveSetName!=null){
-                try{
-                    NameQueryParser.parseQuery(azquoMemoryDBConnection,saveSetName);
-                }catch (Exception e){
-                    //ignore exceptions???
-                }
             }
             if (lineIterator.hasNext() && lastfilled) {
                 nextLine = lineIterator.next();
