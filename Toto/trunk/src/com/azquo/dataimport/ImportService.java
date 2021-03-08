@@ -2551,7 +2551,7 @@ fr.close();
         if (cellVal != null && cellVal.length() == 0) {
             cellVal = null;
         }
-        if (cellVal != null && DateUtils.isADate(cellVal) != null) {
+        if (cellVal != null && targetCell.getCellStyle().getDataFormatString()!="@" && DateUtils.isADate(cellVal) != null) {
             targetCell.setCellValue((double) DateUtils.excelDate(DateUtils.isADate(cellVal)));
         } else {
             //isNumber returns 'true' for cellVal = "16L", then parseDouble exceptions
