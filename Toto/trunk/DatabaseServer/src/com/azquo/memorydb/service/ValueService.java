@@ -468,8 +468,9 @@ public final class ValueService {
                 // I'll not debug in here for the moment. We should know names and function by now
                 if (function == DataRegionHeading.FUNCTION.ALLEXACT) { // match only the values that correspond to the names exactly
                     final List<Value> forNames = findForNames(names);
-                    // need to check we don't have values with extra names
-                    //forNames.removeIf(value -> value.getNames().size() > names.size()); // new syntax! Dunno about efficiency but this will be very rarely used
+                    // need to check we don't have values with extra names - THIS LINE WAS COMMENTED OUT BY BILL IN SVN 3096 - apparently while working on 'applies to'
+                    // using 'applies to' caused problems that have been solved by 'scale' - we should probably remove all code related to 'applies to'
+                    forNames.removeIf(value -> value.getNames().size() > names.size()); // new syntax! Dunno about efficiency but this will be very rarely used
                     return ValueCalculationService.resolveValues(forNames, valuesHook, scaleValuesHook, scaleHeadingNames, function, locked);
                 } else {
                     return ValueCalculationService.resolveValues(findForNamesIncludeChildren(names, nameComboValueCache, exactName), valuesHook, scaleValuesHook, scaleHeadingNames, function, locked);
