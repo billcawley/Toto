@@ -726,7 +726,7 @@ But can use a library?
                         }
                     }
                     listOfValuesOrNamesAndAttributeName = new ListOfValuesOrNamesAndAttributeName(names, attributes);
-                    String attributeResult = findValueForHeadings(rowAndColumnHeadingsForThisCell, locked);
+                    String attributeResult = findValueForHeadings(connection, rowAndColumnHeadingsForThisCell, locked);
                     if (locked.isTrue) { // check there' wasn't unlocked, this overrides the rule in findValueForHeadings
                         for (DataRegionHeading lockCheck : headingsForThisCell) {
                             if (lockCheck.getSuffix() == DataRegionHeading.SUFFIX.UNLOCKED) {
@@ -863,7 +863,7 @@ But can use a library?
     // Simple attribute summing (assuming attributes are numeric), doesn't use set intersection or name children or anything like that
     // For the moment on the initial version don't use set intersection, just look at the headings as handed to the function - will it ever need to do this?
 
-    private static String findValueForHeadings(final List<DataRegionHeading> headings, final MutableBoolean locked) {
+    private static String findValueForHeadings(AzquoMemoryDBConnection connection, final List<DataRegionHeading> headings, final MutableBoolean locked) {
         List<Name> names = DataRegionHeadingService.namesFromDataRegionHeadings(headings);
         if (names.size() != 1) {
             locked.isTrue = true;
@@ -905,9 +905,22 @@ But can use a library?
                          }
                     }
                 }
+                Name hName = n;
+                if (attribute.contains("`.`")) {// it is an attribute of an attribute
+                    int joinPos = attribute.indexOf("`.`");
+                    String strippedAttribute = attribute.substring(0,joinPos).replace("`", "").toUpperCase();
+                    attValue= hName.getAttribute(strippedAttribute);
+                    try{
+                        hName = NameService.findByName(connection, attValue);
+                        attValue = null;
+                        attribute = attribute.substring(joinPos + 3);
+                    }catch(Exception e){
+                        attValue="no name:" + strippedAttribute;
+                    }
+                }
                 String strippedAttribute = attribute.replace("`", "").toUpperCase().replace(" EXCLUSIVE","");
                 if (attValue == null) {
-                    attValue = n.getAttribute(strippedAttribute);
+                    attValue = hName.getAttribute(strippedAttribute);
                 }
                 if (attValue != null) {
                     count++;
