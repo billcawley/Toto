@@ -54,7 +54,7 @@ public class MagentoController {
             System.out.println("==================== logon : " + logon +  "db sent  : " + db + " op= " + op);
             //for testing only
             LoggedInUser loggedInUser = null;
-            List<LoggedInUser> loggedInUsers = LoginService.loginLoggedInUser("", db, logon, password);
+            List<LoggedInUser> loggedInUsers = LoginService.loginLoggedInUser(db, logon, password);
             // not doing a multi business login for Magento
             if (!loggedInUsers.isEmpty()){
                 loggedInUser = loggedInUsers.get(0);

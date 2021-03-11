@@ -8,10 +8,6 @@ import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.util.AzquoMailer;
 import org.apache.commons.lang.math.NumberUtils;
-import org.apache.poi.openxml4j.opc.OPCPackage;
-import org.apache.poi.ss.usermodel.*;
-import org.apache.poi.xssf.usermodel.XSSFFormulaEvaluator;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -24,7 +20,6 @@ import java.io.IOException;
 import java.nio.file.*;
 import java.text.NumberFormat;
 import java.util.*;
-import java.util.stream.Stream;
 
 /**
  * Copyright (C) 2016 Azquo Ltd.
@@ -105,7 +100,6 @@ public class LoginController {
         ppBook.close();*/
 
         // stack overflow code, will be modified
-        NumberFormat nf = NumberFormat.getNumberInstance();
         long percentUsable = 100; // if it cna't be worked out default to ok. Maybe change this . . .
         try {
             FileStore store = Files.getFileStore(Paths.get(SpreadsheetService.getHomeDir()));
@@ -182,7 +176,7 @@ public class LoginController {
             if (userEmail != null && userEmail.length() > 0 && password != null && password.length() > 0) {
                 model.put("userEmail", userEmail);
                 LoggedInUser loggedInUser = null;
-                List<LoggedInUser> loggedInUsers = LoginService.loginLoggedInUser(session.getId(), null, userEmail, password);
+                List<LoggedInUser> loggedInUsers = LoginService.loginLoggedInUser(null, userEmail, password);
                 if (!loggedInUsers.isEmpty()) {
                     if (loggedInUsers.size() > 1) { // new criteria, need to pick the user! todo . . .
                         session.setAttribute(LOGGED_IN_USERS_SESSION, loggedInUsers);

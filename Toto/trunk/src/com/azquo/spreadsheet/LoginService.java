@@ -25,7 +25,7 @@ public class LoginService {
 
     // newer logic based off requirements from Ed Broking - can have users with the same login for different businesses. Hence a login attempt can return more than one Logged in user.
     // The user then must pick one
-    public static List<LoggedInUser> loginLoggedInUser(final String sessionId, String databaseName, final String userEmail, final String password) throws Exception {
+    public static List<LoggedInUser> loginLoggedInUser(String databaseName, final String userEmail, final String password) throws Exception {
         List<User> users = UserDAO.findByEmail(userEmail);
         List<LoggedInUser> toReturn = new ArrayList<>();
         for (User user : users){
@@ -75,7 +75,7 @@ public class LoginService {
                 if (b == null) {
                     throw new Exception("Business not found for user! Business id : " + user.getBusinessId());
                 }
-                toReturn.add(new LoggedInUser(sessionId, user, databaseServer, database, null, b));
+                toReturn.add(new LoggedInUser(user, databaseServer, database, null, b));
             }
         }
         return toReturn;

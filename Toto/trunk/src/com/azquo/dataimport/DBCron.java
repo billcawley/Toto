@@ -26,7 +26,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.FileTime;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -246,8 +245,7 @@ public class DBCron {
                                 Database db = DatabaseDAO.findForPersistenceName(databasePersistenceName);
                                 if (Files.exists(newScannedDir.resolve(csvFileName)) && db != null) { // it should exist and a database should be set also
                                     Business b = BusinessDAO.findById(db.getBusinessId());
-                                    LoggedInUser loggedInUser = new LoggedInUser(""
-                                            , new User(0, LocalDateTime.now(), b.getId(), "brokasure", "", "", "", "", "", 0, 0, "", "")
+                                    LoggedInUser loggedInUser = new LoggedInUser(new User(0, LocalDateTime.now(), b.getId(), "brokasure", "", "", "", "", "", 0, 0, "", "")
                                             , DatabaseServerDAO.findById(db.getDatabaseServerId()), db, null, b);
                                     final Map<String, String> fileNameParams = new HashMap<>();
                                     String fileName = newScannedDir.resolve(csvFileName).getFileName().toString();
@@ -290,8 +288,7 @@ public class DBCron {
                                                     String fileName = fileToUpload.toFile().getName();
                                                     Files.move(fileToUpload, moved);
                                                     // now . . .we need a user to upload it. Initially copying broaksure code above, this may need to be changed in time
-                                                    LoggedInUser loggedInUser = new LoggedInUser(""
-                                                            , new User(0, LocalDateTime.now(), b.getId(), "brokasure", "", "", "", "", "", 0, 0, "", "")
+                                                    LoggedInUser loggedInUser = new LoggedInUser(new User(0, LocalDateTime.now(), b.getId(), "brokasure", "", "", "", "", "", 0, 0, "", "")
                                                             , DatabaseServerDAO.findById(matchingDBdir.getDatabaseServerId()), matchingDBdir, null, b);
                                                     final Map<String, String> fileNameParams = new HashMap<>();
                                                     ImportService.addFileNameParametersToMap(fileName, fileNameParams);
@@ -343,7 +340,7 @@ public class DBCron {
     AtomicBoolean reportsRunning = new AtomicBoolean(false);
 
     @Scheduled(cron = "0 * * * * *")
-    public void runScheduledReports() throws Exception {
+    public void runScheduledReports() {
         // was going synchronised but this may trip up due to a slight delay in mysql updating. Instead go atomic boolean, if one is running just don't try. Wait another minute.
         if (reportsRunning.compareAndSet(false, true)) {
             try {
@@ -508,8 +505,7 @@ public class DBCron {
                             List<Database> databases = DatabaseDAO.findForBusinessId(business.getId());
                             for (Database database : databases) {
                                 if (database.getImportTemplateId() != 0) {
-                                    LoggedInUser loggedInUser = new LoggedInUser(""
-                                            , new User(0, LocalDateTime.now(), business.getId(), "tracking", "", "", "", "", "", 0, 0, "", "")
+                                    LoggedInUser loggedInUser = new LoggedInUser(new User(0, LocalDateTime.now(), business.getId(), "tracking", "", "", "", "", "", 0, 0, "", "")
                                             , DatabaseServerDAO.findById(database.getDatabaseServerId()), database, null, business);
                                     ImportTemplateData importTemplateForUploadedFile = ImportService.getImportTemplateForUploadedFile(loggedInUser, null, templateCache);
                                     if (importTemplateForUploadedFile != null && importTemplateForUploadedFile.getSheets().get("ClaimsTracking") != null) { // then here we go . . .

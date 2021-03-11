@@ -1,3 +1,13 @@
+08-03-21
+
+A few minor bug fixes
+
+Importer capable of recognising -> and <- (memberof and languageindicator) in column headings
+
+On the preprocessor, will look for filled cells at the end of az_Output in case az_Output has not been expanded with additional output cells.
+
+Will not save a value as a date if the cell is formatted as text
+
 25-02-21
 
 fixed bugs where az_IgnoreSheets and az_topRow are blank

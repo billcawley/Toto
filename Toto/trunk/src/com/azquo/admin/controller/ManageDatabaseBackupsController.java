@@ -16,10 +16,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import javax.servlet.http.HttpServletRequest;
 import java.io.File;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 
 /**
  * Copyright (C) 2016 Azquo Ltd.
@@ -36,7 +33,7 @@ public class ManageDatabaseBackupsController {
 
 //    private static final Logger logger = Logger.getLogger(ManageDatabasesController.class);
 
-    private SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+    private final SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
 
     // to play nice with velocity or JSP - so I don't want it to be private as Intellij suggests
     public static class DisplayBackup {
@@ -81,13 +78,13 @@ public class ManageDatabaseBackupsController {
                     List<DisplayBackup> displayBackupList = new ArrayList<>();
                     File finalDir = new File(dbBackupsDirectory);
                     boolean restoreBackupOk = false;
-                    for (File file : finalDir.listFiles()) {
+                    for (File file : Objects.requireNonNull(finalDir.listFiles())) {
                         if (file.getName().equals(restoreBackup)){
                             restoreBackupOk = true;
                         }
                         displayBackupList.add(new DisplayBackup(file.getName(), df.format(file.lastModified())));
                     }
-                    Collections.sort(displayBackupList, Comparator.comparing(displayBackup -> displayBackup.date));
+                    displayBackupList.sort(Comparator.comparing(displayBackup -> displayBackup.date));
                     Collections.reverse(displayBackupList);
 
                     // todo - factor, this could cause problems!

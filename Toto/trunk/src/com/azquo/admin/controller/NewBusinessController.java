@@ -65,7 +65,7 @@ public class NewBusinessController {
                 if (error.length() == 0) {
                     Business b = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
                     Business newBusiness = AdminService.registerBusiness(emailUsername, businessName, password, businessName, address1, address2, address3, address4, postcode, telephone, website, b.getBannerColor(), b.getLogo());
-                    List<LoggedInUser> loggedInUsers = LoginService.loginLoggedInUser(request.getSession().getId(), null, emailUsername, password);
+                    List<LoggedInUser> loggedInUsers = LoginService.loginLoggedInUser(null, emailUsername, password);
                     loggedInUser = null; // null it to be reset. If we can't find it we have a problem . . .
                     if (loggedInUsers.size() > 1){
                         request.getSession().setAttribute(LoginController.LOGGED_IN_USERS_SESSION, loggedInUsers);

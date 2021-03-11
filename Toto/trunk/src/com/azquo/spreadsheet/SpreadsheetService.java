@@ -24,7 +24,6 @@ import io.keikai.api.Exporter;
 import io.keikai.api.Exporters;
 import io.keikai.api.Importers;
 import io.keikai.api.model.Book;
-import org.apache.poi.util.POILogger;
 
 import java.io.*;
 import java.net.InetAddress;
@@ -81,7 +80,7 @@ public class SpreadsheetService {
         host = thost;
     }
 
-    private static Map<String, String> properties = new ConcurrentHashMap<>();
+    private static final Map<String, String> properties = new ConcurrentHashMap<>();
 
 
     // ints not boolean as I want to be able to tell if not set. Thread safety not such a concern, it's reading from a file, can't see how the state would be corrupted
@@ -487,7 +486,7 @@ public class SpreadsheetService {
                 DatabaseServer databaseServer = DatabaseServerDAO.findById(database.getDatabaseServerId());
                 // assuming no read permissions?
                 // I should factor these few lines really
-                LoggedInUser loggedInUser = new LoggedInUser("", user, databaseServer, database, null, b);
+                LoggedInUser loggedInUser = new LoggedInUser(user, databaseServer, database, null, b);
                 book.getInternalBook().setAttribute(OnlineController.LOGGED_IN_USER, loggedInUser);
                 // todo, address allowing multiple books open for one user. I think this could be possible. Might mean passing a DB connection not a logged in one
                 book.getInternalBook().setAttribute(OnlineController.REPORT_ID, reportSchedule.getReportId());

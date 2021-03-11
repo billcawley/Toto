@@ -277,7 +277,7 @@ public class ExcelController {
                         }
                     }
                 } else {
-                    List<LoggedInUser> loggedInUsers = LoginService.loginLoggedInUser(request.getSession().getId(), database, logon, URLDecoder.decode(password, "UTF-8"));
+                    List<LoggedInUser> loggedInUsers = LoginService.loginLoggedInUser(database, logon, URLDecoder.decode(password, "UTF-8"));
                     if (!loggedInUsers.isEmpty()) {
                         if (loggedInUsers.size() > 1) { // new criteria, need to pick the user! Replicate website functionality, keep functionality the same for single user
                             //session.setAttribute(LOGGED_IN_USERS_SESSION, loggedInUsers);

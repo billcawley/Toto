@@ -65,9 +65,7 @@ public class DownloadFileController {
                     }
                 }
             }
-        }
 
-        if (loggedInUser != null) {
             if (pendingUploadId != null && !pendingUploadId.isEmpty()) { // only admin on this stuff
                 final PendingUpload byId = PendingUploadDAO.findById(Integer.parseInt(pendingUploadId));
                 if (byId != null && byId.getBusinessId() == loggedInUser.getUser().getBusinessId()) {

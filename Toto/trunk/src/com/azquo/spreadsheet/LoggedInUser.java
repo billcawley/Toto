@@ -75,7 +75,6 @@ public class LoggedInUser implements Serializable {
 
     private static final String userLogsPath = "User Logs/"; // with a space
 
-    private final String sessionId; // it's used to match to a log server side
     private final User user;
 
     // in theory the concantation of strings for keys could trip up, maybe make more robust? TODO
@@ -117,8 +116,7 @@ public class LoggedInUser implements Serializable {
     private String lastFileName = null;
 
     // public allowing hack for xml scanning - need to sort - todo
-    public LoggedInUser(String sessionId, final User user, DatabaseServer databaseServer, Database database, String imageStoreName, Business business) {
-        this.sessionId = sessionId;
+    public LoggedInUser(final User user, DatabaseServer databaseServer, Database database, String imageStoreName, Business business) {
         this.user = user;
         this.business = business;
         sentCellsMaps = new HashMap<>();
@@ -253,7 +251,9 @@ public class LoggedInUser implements Serializable {
     public boolean copyMode = false;
 
     public DatabaseAccessToken getDataAccessToken() {
-        return new DatabaseAccessToken(sessionId, user.getEmail(), databaseServer.getIp(), (copyMode ? StringLiterals.copyPrefix + user.getEmail(): "") + database.getPersistenceName());
+        // change the session id to be the email and user id and report server alias so someone can log back in and have the same log. Notable for stopping something long running
+        // in theroy logs could clash in the case of multiple report servers on the same db but it's very very unlikely
+        return new DatabaseAccessToken(user.getEmail() + user.getId() + SpreadsheetService.getAlias() , user.getEmail(), databaseServer.getIp(), (copyMode ? StringLiterals.copyPrefix + user.getEmail(): "") + database.getPersistenceName());
     }
 
     public Business getBusiness(){
@@ -321,7 +321,6 @@ public class LoggedInUser implements Serializable {
     @Override
     public String toString() {
         return "LoggedInUser{" +
-                "sessionId='" + sessionId + '\'' +
                 ", user=" + user +
                 ", sentCellsMaps=" + sentCellsMaps +
                 ", database=" + database +
