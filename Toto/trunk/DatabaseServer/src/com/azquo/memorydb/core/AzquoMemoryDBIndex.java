@@ -325,37 +325,46 @@ public class AzquoMemoryDBIndex {
         //
         String[] attValues = attributeValue.split(StringLiterals.NEXTATTRIBUTE);
         for (String attValue : attValues) {
-            String lcAttributeValue = attValue.toLowerCase().trim().intern();
-            if (lcAttributeValue.indexOf(StringLiterals.QUOTE) >= 0 && !ucAttributeName.equals(StringLiterals.CALCULATION)) {
-                lcAttributeValue = lcAttributeValue.replace(StringLiterals.QUOTE, '\'').intern();
-            }
-            // moved to computeIfAbsent, saved a fair few lines of code
-            Map<String, Collection<Name>> namesForThisAttribute = nameByAttributeMap.computeIfAbsent(ucAttributeName, s -> new ConcurrentHashMap<>());
-            // Generally these lists will be single and not modified often so I think copy on write array should do the high read speed thread safe trick!
-            // cost on writes but thread safe reads, might take a little more memory than the ol ArrayList, hopefully not a big prob
-            // ok, these got bigger than expected, big bottleneck. Using compute should be able to safely switch over at 512 entries
-            //Collection<Name> names = namesForThisAttribute.computeIfAbsent(lcAttributeValue, s -> new CopyOnWriteArrayList<>());
-            // modification of the sets or list is in compute but I still need the collections themselves to be thread safe as I need to safely call an iterator on them
-            // EFC 13/02/20 - added in singleton
-            namesForThisAttribute.compute(lcAttributeValue, (k, v) -> {
-                // singleton should bring some speed and memory saving
-                // could other pointers be saved?
-                if (v == null) {
-                    v = name; // name now implements collections
-                } else {
-                    if (v.size() == 1) {
-                        v = new CopyOnWriteArrayList<>(v); // switch the single name as collection to copy on write array
-                    }
-                    if (v.size() == 512) { // switch the copy on write array to a set. Not sure how much this is used, this would mean many names with the same attribute and value
-                        Collection<Name> asSet = Collections.newSetFromMap(new ConcurrentHashMap<>());
-                        asSet.addAll(v);
-                        v = asSet;
-                    }
-                    v.add(name); // this WAS outside but in theory this might mean two different collections escaping to each have something added, hence an index entry gets missed. Unlikely but no harm in it being in here
-                }
-                return v;
-            });
+            setAttributeForNameInAttributeMap(attValue,ucAttributeName,name);
         }
+        // so if it was something||anotherthing make sure that is in there too, it may be referenced
+        if (attValues.length > 1){
+            setAttributeForNameInAttributeMap(attributeValue, ucAttributeName, name);
+        }
+    }
+
+    private void setAttributeForNameInAttributeMap(String attValue, String ucAttributeName, Name name){
+        String lcAttributeValue = attValue.toLowerCase().trim().intern();
+        if (lcAttributeValue.indexOf(StringLiterals.QUOTE) >= 0 && !ucAttributeName.equals(StringLiterals.CALCULATION)) {
+            lcAttributeValue = lcAttributeValue.replace(StringLiterals.QUOTE, '\'').intern();
+        }
+        // moved to computeIfAbsent, saved a fair few lines of code
+        Map<String, Collection<Name>> namesForThisAttribute = nameByAttributeMap.computeIfAbsent(ucAttributeName, s -> new ConcurrentHashMap<>());
+        // Generally these lists will be single and not modified often so I think copy on write array should do the high read speed thread safe trick!
+        // cost on writes but thread safe reads, might take a little more memory than the ol ArrayList, hopefully not a big prob
+        // ok, these got bigger than expected, big bottleneck. Using compute should be able to safely switch over at 512 entries
+        //Collection<Name> names = namesForThisAttribute.computeIfAbsent(lcAttributeValue, s -> new CopyOnWriteArrayList<>());
+        // modification of the sets or list is in compute but I still need the collections themselves to be thread safe as I need to safely call an iterator on them
+        // EFC 13/02/20 - added in singleton
+        namesForThisAttribute.compute(lcAttributeValue, (k, v) -> {
+            // singleton should bring some speed and memory saving
+            // could other pointers be saved?
+            if (v == null) {
+                v = name; // name now implements collections
+            } else {
+                if (v.size() == 1) {
+                    v = new CopyOnWriteArrayList<>(v); // switch the single name as collection to copy on write array
+                }
+                if (v.size() == 512) { // switch the copy on write array to a set. Not sure how much this is used, this would mean many names with the same attribute and value
+                    Collection<Name> asSet = Collections.newSetFromMap(new ConcurrentHashMap<>());
+                    asSet.addAll(v);
+                    v = asSet;
+                }
+                v.add(name); // this WAS outside but in theory this might mean two different collections escaping to each have something added, hence an index entry gets missed. Unlikely but no harm in it being in here
+            }
+            return v;
+        });
+
     }
 
     // Again use the compute, keeps things safe
