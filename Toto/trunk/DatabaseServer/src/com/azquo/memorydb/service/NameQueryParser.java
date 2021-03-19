@@ -111,7 +111,7 @@ public class NameQueryParser {
             filterByCriteria = setFormula.substring(firstQuote + 1, secondQuote);
             setFormula = setFormula.substring(0, firstQuote) + setFormula.substring(secondQuote + 1); // zap the criteria - it will mess up the parsing below
 
-            if (contextSource == null) {
+            if (contextSource == null || contextSource.size()==0) {
                 contextSource = new ArrayList<>();
                 int contextStart = setFormula.toLowerCase().indexOf(StringLiterals.CONTEXT);
                 if (contextStart >=0){
@@ -688,6 +688,8 @@ The set ‘recent sales by postcode area` will contain a selection of the postco
     }
 
     private static Collection<Name>  parseCategorisation(AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula, String language)throws Exception {
+        NameQueryParser.parseQuery(azquoMemoryDBConnection,"edit:zap `temporary categorisation` children");
+        NameQueryParser.parseQuery(azquoMemoryDBConnection,"edit:zap `temporary categorisation`");
         String[] categoriseSets = setFormula.split("categorised on");
         Collection<Name> namesToCategorise = parseQuery(azquoMemoryDBConnection, categoriseSets[0]);
         String remaining = categoriseSets[1].trim();
