@@ -2235,7 +2235,7 @@ fr.close();
                 //boolean validLine = true;
                 //INTERIM CHECK FOR HEADINGS ON THE WRONG LINE  - THIS DOES NOT WORK FOR HEADINGS BELOW WHERE EXPECTED
                 //ALSO SHOULD PROBABLY CHECK MORE THAN ONE CELL.
-                if (checkHeadings(inputColumns, line, headingsLookups)) {
+                if (isNewHeadings && checkHeadings(inputColumns, line, headingsLookups)) {
                     headingStartRow = lineNo;
 
                 }
@@ -2429,7 +2429,7 @@ fr.close();
             if (region == null) return toReturn;
 
             AreaReference area = new AreaReference(region.getRefersToFormula(), null);
-            for (int rowNo = area.getFirstCell().getRow(); rowNo < area.getLastCell().getRow();rowNo++){
+            for (int rowNo = area.getFirstCell().getRow(); rowNo <= area.getLastCell().getRow();rowNo++){
                 String cellVal = getCellValue(ppBook.getSheet(region.getSheetName()).getRow(rowNo).getCell(area.getFirstCell().getCol()));
                 if (cellVal != null){
                     toReturn.add(cellVal.toLowerCase(Locale.ROOT));
@@ -2444,10 +2444,14 @@ fr.close();
     private static boolean checkHeadings(Map <Integer, String>headingsMap, String[] line,Map<String,String>headingsLookups) {
 
         if (line.length < 5) return false;
-        //only look in the first five headings...
-        for (int col = 0; col < 5; col++) {
+        //found five within the first ten
+        int found = 0;
+        for (int col = 0; col < 10; col++) {
             if (line[col].length() > 0 && findFirst(headingsMap, headingFrom(line[col], headingsLookups)) >=0) {
-                return true;
+               found++;
+               if (found > 4){
+                   return true;
+               }
             }
         }
         return false;
