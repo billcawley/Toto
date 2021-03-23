@@ -335,9 +335,6 @@ public class DSSpreadsheetService {
             azquoMemoryDBConnection.setProvenance(userName, StringLiterals.IN_SPREADSHEET, reportName, context);
             if ((cellsAndHeadingsForDisplay.getRowHeadings().size()== 0 || cellsAndHeadingsForDisplay.getColumnHeadings().size() == 0) && cellsAndHeadingsForDisplay.getData().size() > 0) {
                 numberOfValuesModified = importDataFromSpreadsheet(azquoMemoryDBConnection, cellsAndHeadingsForDisplay, user, persist);
-                if (persist) {
-                    new Thread(azquoMemoryDBConnection::persist).start();
-                }
                 return "true " + numberOfValuesModified;
             }
             // check we're not getting cellsAndHeadingsForDisplay.getTimeStamp() = 0 here, it should only happen due tio ad hoc which should have returned by now . . .
