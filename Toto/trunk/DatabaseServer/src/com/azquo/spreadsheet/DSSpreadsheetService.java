@@ -188,7 +188,7 @@ public class DSSpreadsheetService {
     }
 
     // create a file to import from a populated region in the spreadsheet
-    private static int importDataFromSpreadsheet(AzquoMemoryDBConnection azquoMemoryDBConnection, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String user) throws Exception {
+    private static int importDataFromSpreadsheet(AzquoMemoryDBConnection azquoMemoryDBConnection, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String user, boolean persist) throws Exception {
         //write the column headings and data to a temporary file, then import it
         String fileName = "temp_" + user;
         File temp = File.createTempFile(fileName + ".csv", "csv");
@@ -279,13 +279,9 @@ public class DSSpreadsheetService {
         parameters.put("cleardata","true");
         uploadedFile.setParameters(parameters);
         DSImportService.readPreparedFile(azquoMemoryDBConnection, uploadedFile, user);
-        // persist no longer automatic on importing so just do it here
-        /*
-        if (!persist) {
-            return uploadedFile.getNoValuesAdjusted().get();
+        if (persist){
+            new Thread(azquoMemoryDBConnection::persist).start();
         }
-        */
-        new Thread(azquoMemoryDBConnection::persist).start();
         if (!temp.delete()) {// see no harm in this here. Delete on exit has a problem with Tomcat being killed from the command line. Why is intelliJ shirty about this?
             System.out.println("Unable to delete " + temp.getPath());
         }
@@ -338,7 +334,7 @@ public class DSSpreadsheetService {
             // ad hoc saves regardless of changes in the mean time. Perhaps not the best plan . . .
             azquoMemoryDBConnection.setProvenance(userName, StringLiterals.IN_SPREADSHEET, reportName, context);
             if ((cellsAndHeadingsForDisplay.getRowHeadings().size()== 0 || cellsAndHeadingsForDisplay.getColumnHeadings().size() == 0) && cellsAndHeadingsForDisplay.getData().size() > 0) {
-                numberOfValuesModified = importDataFromSpreadsheet(azquoMemoryDBConnection, cellsAndHeadingsForDisplay, user);
+                numberOfValuesModified = importDataFromSpreadsheet(azquoMemoryDBConnection, cellsAndHeadingsForDisplay, user, persist);
                 if (persist) {
                     new Thread(azquoMemoryDBConnection::persist).start();
                 }
