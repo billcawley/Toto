@@ -653,8 +653,27 @@ The set ‘recent sales by postcode area` will contain a selection of the postco
             }
             // 2)	Check each member of ‘sourceset’ for the attribute given, and match it to a member of ‘classifyset’.
             // Include the sourceset member in the classifyset member as a child, and include the classifyset member in the output
+            //NEW BEHAVIOUR:  if the 'attribute' contains QUOTE, consider the attribute to be between quotes, ant the rest to be a string
+            //eg   CLASSIFYBY <created on `created date`> in <Customers by age> language <default_display_name>
+            String attributeString = attribute;
+            int attNameStart = -1;
+            int attNameEnd = -1;
+            if (attribute.contains(""+StringLiterals.QUOTE)){
+                attNameStart = attribute.indexOf("" + StringLiterals.QUOTE);
+                attNameEnd = attribute.indexOf("" + StringLiterals.QUOTE, attNameStart + 1);
+                if (attNameEnd > 0){
+                    attribute = attributeString.substring(attNameStart + 1, attNameEnd);
+                }
+            }
             for (Name sourceName : sourceSet.getAsCollection()) {
-                Name destination = sourceName.getAttribute(attribute) != null ? classifySetLookup.get(sourceName.getAttribute(attribute).toLowerCase()) : null;
+                String attFound = sourceName.getAttribute(attribute);
+                Name destination = null;
+                if (attFound != null) {
+                    if (attNameStart >= 0)
+                        attFound = attributeString.substring(0, attNameStart) + attFound + attributeString.substring(attNameEnd + 1);
+                    destination = classifySetLookup.get(attFound.toLowerCase(Locale.ROOT));
+                }
+ //             Name destination = sourceName.getAttribute(attribute) != null ? classifySetLookup.get(sourceName.getAttribute(attribute).toLowerCase()) : null;
                 if (destination != null) {
                     destination.addChildWillBePersisted(sourceName, azquoMemoryDBConnection);
                     result.add(destination); // may be added many times but it should be a fast set check
