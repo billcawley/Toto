@@ -229,7 +229,7 @@ class AzquoMemoryDBTransport {
                 for (Future<?> future : futureBatches) {
                     future.get(1, TimeUnit.HOURS);
                 }
-                logInSessionLogAndSystem(tableNameEntities.getKey() + ", " + jsonRecordsLoaded + " records loaded in " + (System.currentTimeMillis() - marker) / 1000f + " second(s)");
+                logInSessionLogAndSystem(tableNameEntities.getKey() + ", " + (tableNameEntities.getKey().equals(Provenance.PERSIST_TABLE) ? provenanceLoaded : jsonRecordsLoaded) + " records loaded in " + (System.currentTimeMillis() - marker) / 1000f + " second(s)");
             }
             marker = System.currentTimeMillis();
             from = 0;

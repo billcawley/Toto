@@ -5,6 +5,7 @@ import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.controller.OnlineController;
 import com.azquo.spreadsheet.*;
 import com.azquo.spreadsheet.transport.*;
+import org.apache.commons.lang.StringEscapeUtils;
 import org.zkoss.chart.ChartsEvent;
 import org.zkoss.zk.ui.*;
 import org.zkoss.zk.ui.select.SelectorComposer;
@@ -88,6 +89,8 @@ public class ZKComposer extends SelectorComposer<Component> {
     }
 
     private static String MULTI = "Multi";
+    // chosentree
+    private static String CHOSENTREE = "ChosenTree";
     private static String CHOICE = "Choice";
 
     /*
@@ -119,6 +122,13 @@ public class ZKComposer extends SelectorComposer<Component> {
                     if (filterQueryCell != null) {
                         selectionList = BookUtils.getSnameCell(filterQueryCell).getStringValue();
                     }
+                    break;
+                }
+                if (name.getName().toLowerCase().endsWith(CHOSENTREE.toLowerCase())) { // aim is to pop open the inspect to get a name
+                    selectionName = name.getName();
+                    final SName filterQueryCell = event.getSheet().getBook().getInternalBook().getNameByName(name.getName().substring(0, name.getName().length() - CHOSENTREE.length()) + CHOICE, name.getApplyToSheetName());
+                    System.out.println(BookUtils.getSnameCell(filterQueryCell).getStringValue());
+                    Clients.evalJavaScript("chosenTree('" + StringEscapeUtils.escapeJavaScript(BookUtils.getSnameCell(filterQueryCell).getStringValue()) + "')");
                     break;
                 }
             }

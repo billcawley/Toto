@@ -1,3 +1,22 @@
+18-03-21
+
+Bug fix to allow something||somethign to be looked up in the database
+
+Keikai Upgrade
+
+12-03-21
+
+headings now allow for 'attributes of attributes'
+e.g. .`Brokasure Settlement Currency`.`Brokasure Currency Code` will find the attribute `Brokasure Settlement Currency` (e.g. "USD") convert that to a name, then look up the attribute of that name (e.g. '002')
+
+tidying and changing the user log id so it can be picked back up when a user logs back in. Useful for stopping a long running execute
+
+tidying, returns number of values when saving an "ad hoc" data region
+
+with 'allexact' checks the number of names so no spurious names allowed
+
+will not save a value as a date if the cell is formatted as text
+
 08-03-21
 
 A few minor bug fixes
