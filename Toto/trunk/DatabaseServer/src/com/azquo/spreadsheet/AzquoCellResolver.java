@@ -993,7 +993,7 @@ But can use a library?
         return count;
     }
 
-    private static String getUniqueName(AzquoMemoryDBConnection azquoMemoryDBConnection, Name name, List<String> languages){
+    public static String getUniqueName(AzquoMemoryDBConnection azquoMemoryDBConnection, Name name, List<String> languages){
         if (name.getDefaultDisplayName() == null){ // then let's run pass languages and see if we can get anything
             for (String language : languages){
                 if (name.getAttribute(language) != null){

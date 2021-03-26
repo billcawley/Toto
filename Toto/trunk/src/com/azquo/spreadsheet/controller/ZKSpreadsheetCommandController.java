@@ -6,8 +6,13 @@ import com.azquo.dataimport.ImportService;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.zk.*;
+import io.keikai.api.*;
+import io.keikai.api.model.CellData;
 import io.keikai.json.JSONValue;
 import io.keikai.jsp.SmartUpdateBridge;
+import io.keikai.model.SName;
+import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.commons.lang.math.NumberUtils;
 import org.apache.pdfbox.util.PDFMergerUtility;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -16,10 +21,6 @@ import org.zkoss.json.JSONObject;
 import org.zkoss.util.media.AMedia;
 import org.zkoss.zk.ui.Desktop;
 import org.zkoss.zk.ui.util.Clients;
-import io.keikai.api.Exporter;
-import io.keikai.api.Exporters;
-import io.keikai.api.Importers;
-import io.keikai.api.Ranges;
 import io.keikai.api.model.Book;
 import io.keikai.api.model.Sheet;
 import io.keikai.jsp.JsonUpdateBridge;
@@ -79,6 +80,9 @@ public class ZKSpreadsheetCommandController {
         Map<String, String> bodyData = (Map) JSONValue.parse(req.getReader().lines().collect(Collectors.joining()));
 
         final String action = bodyData.get("action");
+        final String nameIdForChosenTree = bodyData.get("nameIdForChosenTree");
+
+        System.out.println("name id in command controller " + nameIdForChosenTree);
 
         // add custom response message, it depends on your logic.
         final JSONObject appResponse = new JSONObject();
@@ -263,6 +267,24 @@ public class ZKSpreadsheetCommandController {
                     // should be all that's required
                     SpreadsheetService.unlockData(loggedInUser);
                     Clients.evalJavaScript("document.getElementById(\"unlockButton\").style.display=\"none\";");
+                }
+
+                if ("nameIdForChosenTree".equals(action) && NumberUtils.isDigits(nameIdForChosenTree)){
+                    String toAssign = SpreadsheetService.getUniqueNameFromId(loggedInUser, Integer.parseInt(nameIdForChosenTree));
+                    CellRef pos = ss.getCellFocus();
+                    List<SName> names = ReportUIUtils.getNamedRegionForRowAndColumnSelectedSheet(ss.getSelectedSheet(), pos.getRow(), pos.getColumn());
+                    for (SName name : names) {
+                        if (name.getName().toLowerCase().endsWith(ZKComposer.CHOSENTREE.toLowerCase())) { // match the composer code
+                            String choiceName = name.getName().substring(0, name.getName().length() - ZKComposer.CHOSENTREE.length());
+                            SpreadsheetService.setUserChoice(loggedInUser, choiceName, toAssign);
+                            Clients.showBusy(ss, "Reloading . . .");
+                            org.zkoss.zk.ui.event.Events.echoEvent("onReloadWhileClientProcessing", ss, null);
+                            break;
+                        }
+                    }
+
+//                    ss.getSelection().
+
                 }
 
             } catch (Exception e) {

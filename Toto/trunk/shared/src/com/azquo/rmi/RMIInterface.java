@@ -107,6 +107,8 @@ public interface RMIInterface extends Remote {
 
     JsonChildStructure getNameDetailsJson(DatabaseAccessToken databaseAccessToken, int nameId) throws RemoteException;
 
+    String getUniqueNameFromId(DatabaseAccessToken databaseAccessToken, int nameId) throws RemoteException;
+
     void editAttributes(DatabaseAccessToken databaseAccessToken, int nameId, Map<String, String> attributes) throws RemoteException;
 
     JsonChildren.Node createNode(DatabaseAccessToken dataAccessToken, int nameId) throws RemoteException;

@@ -62,6 +62,7 @@ public class JstreeController {
 
         if (query != null){
             itemsChosen = query;
+            jsTreeMode = "chosentree";
         }
         String jsonFunction = "azquojsonfeed";
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);

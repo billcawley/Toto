@@ -242,15 +242,22 @@ public class ChoicesService {
                         }
                         regionsToWatchForMerge.add(chosen);
                     }
-                } else if (sName.getName().toLowerCase().endsWith("multi")) { // set the multi here - it was during validation which makes no sense
+                } else if (sName.getName().toLowerCase().endsWith(ZKComposer.MULTI.toLowerCase())) { // set the multi here - it was during validation which makes no sense
                     SCell resultCell = BookUtils.getSnameCell(sName);
-                    String choiceLookup = sName.getName().substring(0, sName.getName().length() - 5);
+                    String choiceLookup = sName.getName().substring(0, sName.getName().length() - ZKComposer.MULTI.length());
                     SName choiceName = BookUtils.getNameByName(choiceLookup + "Choice", sheet);
                     SCell choiceCell = BookUtils.getSnameCell(choiceName);
                     if (choiceName != null) {
                         // all multi list is is a fancy way of saying to the user what is selected, e.g. all, various, all but or a list of those selected. The actual selection box is created in the composer, onclick
                         // pointless strip and re add of "Multi"? copied, code - todo address
                         BookUtils.setValue(resultCell, multiList(loggedInUser, choiceLookup + "Multi", choiceCell.getStringValue()));
+                    }
+                } else if (sName.getName().toLowerCase().endsWith(ZKComposer.CHOSENTREE.toLowerCase())) { // set chosen tree - no validations, just set from the choice in the user DB, may update later
+                    SCell resultCell = BookUtils.getSnameCell(sName);
+                    String choiceLookup = sName.getName().substring(0, sName.getName().length() - ZKComposer.CHOSENTREE.length()).toLowerCase();
+                    String userChoice = userChoices.get(choiceLookup.startsWith("az_") ? choiceLookup.substring(3) : choiceLookup);
+                    if (userChoice != null){
+                        BookUtils.setValue(resultCell, userChoice);
                     }
                 }
                 if (sName.getName().equalsIgnoreCase(ReportRenderer.AZREPORTNAME)) {

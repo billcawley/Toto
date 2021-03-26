@@ -1,3 +1,9 @@
+25-03-21
+
+Improvement to 'classifyby' allows strings - as in classifyby <born in `birth town`>
+
+checkHeadings' now only accepts a line is a heading line if it finds 5 known headings in the first ten columns
+
 18-03-21
 
 Bug fix to allow something||somethign to be looked up in the database

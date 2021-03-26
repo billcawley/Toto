@@ -6,10 +6,13 @@ import com.azquo.app.magento.DSDataLoadService;
 import com.azquo.dataimport.DSImportService;
 import com.azquo.memorydb.*;
 import com.azquo.memorydb.core.AzquoMemoryDB;
+import com.azquo.memorydb.core.Name;
+import com.azquo.memorydb.core.NameUtils;
 import com.azquo.memorydb.service.DSAdminService;
 import com.azquo.memorydb.service.NameQueryParser;
 import com.azquo.memorydb.service.NameService;
 import com.azquo.memorydb.service.ProvenanceService;
+import com.azquo.spreadsheet.AzquoCellResolver;
 import com.azquo.spreadsheet.DSSpreadsheetService;
 import com.azquo.spreadsheet.JSTreeService;
 import com.azquo.spreadsheet.UserChoiceService;
@@ -22,6 +25,7 @@ import java.lang.management.ManagementFactory;
 import java.lang.management.OperatingSystemMXBean;
 import java.rmi.RemoteException;
 import java.text.NumberFormat;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -169,6 +173,13 @@ class RMIImplementation implements RMIInterface {
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
+    }
+
+    @Override
+    public String getUniqueNameFromId(DatabaseAccessToken databaseAccessToken, int nameId) throws RemoteException {
+        AzquoMemoryDBConnection connectionFromAccessToken = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
+        Name n = NameService.findById(connectionFromAccessToken, nameId);
+        return n != null ? AzquoCellResolver.getUniqueName(connectionFromAccessToken, n, Collections.EMPTY_LIST) : ""; // don't deal with things that don't have default display names
     }
 
     @Override

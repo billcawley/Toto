@@ -27,41 +27,40 @@
             <div class="closebutton">
                 <a href="#" onclick="document.getElementById('textwindow').style.display='none';"><span class="fa fa-times-circle"></span></a>
             </div>
-            <div id="attributeList">
-                <label for="attributeChosen"> Attribute (language)</label>
-                <select class="simpleselect" id="attributeChosen" onchange="changeLanguage()">
 
-                    <c:forEach items="${attributes}" var="attribute">
-                        <option value="${attribute}"<c:if test="${attribute == attributeChosen}"> selected</c:if>>${attribute}</option>
-                    </c:forEach>
+                    <div id="attributeList">
+                        <label for="attributeChosen"> Attribute (language)</label>
+                        <select class="simpleselect" id="attributeChosen" onchange="changeLanguage()">
+
+                            <c:forEach items="${attributes}" var="attribute">
+                                <option value="${attribute}"<c:if test="${attribute == attributeChosen}"> selected</c:if>>${attribute}</option>
+                            </c:forEach>
 
 
-<!--                    #foreach($attribute in $attributes)
-                    <option value="$attribute"
-                            #if ($attribute == $attributeChosen)
-                            selected
-                            #end
-                    >
-                        $attribute
-                    </option>
-                    #end-->
-                </select>
-            </div>
+                            <!--                    #foreach($attribute in $attributes)
+                                                <option value="$attribute"
+                                                        #if ($attribute == $attributeChosen)
+                                                        selected
+                                                        #end
+                                                >
+                                                    $attribute
+                                                </option>
+                                                #end-->
+                        </select>
+                    </div>
 
-            <div>
-                <label for="itemschosen">Select items:</label>
-                <input class="itemselect" type="text" value="" id="itemschosen" name="itemschosen"/>
-            </div>
-            <c:choose>
-            <c:when test="${mode == 'choosename'}">
-                <div class="choicesubmit" style="margin-top:10px;"><p><input type="submit" onclick="submitName(); return false;" class="button" value="Choose name"></p></div>
-
-            </c:when>
-
-            <c:otherwise>
-            <div class="choicesubmit" style="margin-top:10px;"><p><input type="submit" onclick="showData(); return false;" class="button" value="Show data"></p></div>
-            </c:otherwise>
-            </c:choose>
+                    <div>
+                        <label for="itemschosen">Select items:</label>
+                        <input class="itemselect" type="text" value="" id="itemschosen" name="itemschosen"/>
+                    </div>
+                    <c:choose>
+                        <c:when test="${mode == 'choosename'}">
+                            <div class="choicesubmit" style="margin-top:10px;"><p><input type="submit" onclick="submitName(); return false;" class="button" value="Choose name"></p></div>
+                        </c:when>
+                        <c:otherwise>
+                            <div class="choicesubmit" style="margin-top:10px;"><p><input type="submit" onclick="showData(); return false;" class="button" value="Show data"></p></div>
+                        </c:otherwise>
+                    </c:choose>
         </div>
     </form>
     <div class="namedetails" id="namedetails" style="display:none">
@@ -139,6 +138,20 @@
                     "items": function($node) {
                         var tree = $("#js-container").jstree(true)
                         var menu =  {
+
+                            <c:choose>
+                            <c:when test="${mode == 'chosentree'}">
+                            select : {
+                                "label" : "Select",
+                                "action" : function(obj) {
+                                    window.parent.postNameIdForChosenTree($node.original.nameId);
+                                    // window.parent send the hjavascript??
+                                    window.parent.$['inspectOverlay']().close();
+                                },
+                                "_class" : "class"
+                            },
+                        </c:when>
+                        <c:otherwise>
                             createItem : {
                                 "label" : "New Name",
                                 "action" : function(obj) {
@@ -171,6 +184,9 @@
                                 }
 
                             }
+                            </c:otherwise>
+                        </c:choose>
+
                         };
                         return menu;
                     }

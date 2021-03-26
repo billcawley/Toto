@@ -20,7 +20,7 @@ import java.util.List;
  * Could maybe be called composer utils, t
  */
 public class ReportUIUtils {
-    static List<SName> getNamedRegionForRowAndColumnSelectedSheet(Sheet sheet, int row, int col) {
+    public static List<SName> getNamedRegionForRowAndColumnSelectedSheet(Sheet sheet, int row, int col) {
         // now how to get the name?? Guess run through them. Feel there should be a better way.
         final Book book = sheet.getBook();
         List<SName> found = new ArrayList<>();

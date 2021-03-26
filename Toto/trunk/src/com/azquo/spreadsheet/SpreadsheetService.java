@@ -27,6 +27,7 @@ import io.keikai.api.model.Book;
 
 import java.io.*;
 import java.net.InetAddress;
+import java.rmi.RemoteException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -579,6 +580,11 @@ public class SpreadsheetService {
             }
         }
         return images;
+    }
+
+    public static String getUniqueNameFromId(LoggedInUser loggedInUser, int nameId) throws RemoteException {
+        DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
+        return RMIClient.getServerInterface(databaseAccessToken.getServerIp()).getUniqueNameFromId(loggedInUser.getDataAccessToken(),nameId);
     }
     /* comment for the mo, might be useful later
     public static List<String> nameAutoComplete(LoggedInUser loggedInUser, String name) throws Exception {
