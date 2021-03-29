@@ -43,6 +43,9 @@ public class ZKComposer extends SelectorComposer<Component> {
     private ZKContextMenu zkContextMenu;
     private Window filterPopup;
 
+    // could this later incorporate the fast loading and no snapping of charts?
+    public static String AZSHEETOPTIONS = "az_sheetoptions";
+
     public void doAfterCompose(Component comp) throws Exception {
         super.doAfterCompose(comp);
         zkContextMenu = new ZKContextMenu(myzss);
@@ -73,6 +76,15 @@ public class ZKComposer extends SelectorComposer<Component> {
 //            myzss.setSelection(new AreaRef(row, col, row, col));
 //            myzss.setCellFocus(new CellRef(row,col));
             myzss.focusTo(row, col);
+        }
+        if(BookUtils.getNameByName(AZSHEETOPTIONS, myzss.getSelectedSheet()) != null){
+            SName azSheetOptionsName = BookUtils.getNameByName(AZSHEETOPTIONS, myzss.getSelectedSheet());
+            String azSheetOptions = BookUtils.getRegionValue(myzss.getSelectedSheet(), azSheetOptionsName.getRefersToCellRegion());
+            if (azSheetOptions.toLowerCase().contains("nosurround")){
+                myzss.setShowFormulabar(false);
+                myzss.setHidecolumnhead(true);
+                myzss.setHiderowhead(true);
+            }
         }
         // finally a quick check - is the currently selected sheet hidden? If so select another sheet! Unlike Excel ZK can have a hidden sheet selected and this makes no sense to the user
         if (myzss.getSelectedSheet().isHidden()) {

@@ -272,6 +272,7 @@ public class ReportAnalysis {
         if (name.startsWith(ReportRenderer.AZPDF)) return name.substring(ReportRenderer.AZPDF.length());
         if (name.startsWith(ReportRenderer.AZTOTALFORMAT)) return name.substring(ReportRenderer.AZTOTALFORMAT.length());
         if (name.startsWith(ReportRenderer.AZFASTLOAD)) return name.substring(ReportRenderer.AZFASTLOAD.length());
+        if (name.startsWith(ZKComposer.AZSHEETOPTIONS)) return name.substring(ZKComposer.AZSHEETOPTIONS.length());
         if (name.startsWith(ReportRenderer.AZEMAILADDRESS))
             return name.substring(ReportRenderer.AZEMAILADDRESS.length());
         if (name.startsWith(ReportRenderer.AZEMAILSUBJECT))
