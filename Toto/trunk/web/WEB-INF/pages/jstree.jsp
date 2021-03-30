@@ -58,7 +58,16 @@
                             <div class="choicesubmit" style="margin-top:10px;"><p><input type="submit" onclick="submitName(); return false;" class="button" value="Choose name"></p></div>
                         </c:when>
                         <c:otherwise>
-                            <div class="choicesubmit" style="margin-top:10px;"><p><input type="submit" onclick="showData(); return false;" class="button" value="Show data"></p></div>
+            <c:choose>
+                <c:when test="${mode == 'chosentree'}">
+                    <div class="choicesubmit" style="margin-top:10px;"><p><input type="submit" onclick="chosenTreeSelectSearch(); return false;" class="button" value="Select/Search"></p></div>
+                </c:when>
+                <c:otherwise>
+                    <div class="choicesubmit" style="margin-top:10px;"><p><input type="submit" onclick="showData(); return false;" class="button" value="Show data"></p></div>
+                </c:otherwise>
+            </c:choose>
+
+
                         </c:otherwise>
                     </c:choose>
         </div>
@@ -145,7 +154,6 @@
                                 "label" : "Select",
                                 "action" : function(obj) {
                                     window.parent.postNameIdForChosenTree($node.original.nameId);
-                                    // window.parent send the hjavascript??
                                     window.parent.$['inspectOverlay']().close();
                                 },
                                 "_class" : "class"
@@ -213,14 +221,22 @@
                 if (data.node.text.indexOf("more....") != -1){ // hacky that the more.... just has to match but anyway
                     hundredsMoreLookup[data.node.parent] = (hundredsMoreLookup[data.node.parent] || 0) + 1;
 //                    alert("node info : " + data.node.id + " text " + data.node.text + " parent : " + data.node.parent + " parent : " + data.instance.get_node(data.node.parent).text + " hundreds more" + hundredsMoreLookup[data.node.id]);
-/*                    for (i in hundredsMoreLookup) {
-                        alert("Name: " + i + " Value: " + hundredsMoreLookup[i]);
-                    }*/
+                    /*                    for (i in hundredsMoreLookup) {
+                                            alert("Name: " + i + " Value: " + hundredsMoreLookup[i]);
+                                        }*/
 //                $('#js-container').jstree(true).refresh_node('1');
                     //data.instance.refresh_node(data.node)
 //                data.instance.refresh_node('1');
                     data.instance.refresh_node(data.instance.get_node(data.node.parent));
                 }
+            }).on('dblclick.jstree', function (e) {
+                <c:if test="${mode == 'chosentree'}">
+                var instance = $.jstree.reference(this),
+                    node = instance.get_node(e.target);
+                window.parent.postNameIdForChosenTree(node.original.nameId);
+                // window.parent send the hjavascript??
+                window.parent.$['inspectOverlay']().close();
+                </c:if>
             });
 
         });
@@ -245,7 +261,6 @@
             localStorage.setItem("itemsChosen", selected[0].original.nameId + ":" + selected[0].text);//for ad-hoc reports
             window.opener = self;
             window.close();
-
         }
 
         function showData() {
@@ -267,7 +282,21 @@
                 }
             }else {
                 window.parent.$['inspectOverlay']().tab(window.location + "&itemschosen=" + itemsChosen, 'Select Items');
+            }
+        }
 
+        function chosenTreeSelectSearch() {
+            if (document.getElementById("itemschosen").value == "") {
+                // submit if there's one selected
+                var selected = $('#js-container').jstree("get_selected", true);
+                if (selected){
+                    window.parent.postNameIdForChosenTree(JSON.stringify(selected[0].original.nameId));
+                    window.parent.$['inspectOverlay']().close();
+                } else {
+                    return false;
+                }
+            } else {
+                showData(); // there's a value, normal search
             }
         }
 

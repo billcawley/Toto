@@ -61,7 +61,10 @@ public class JstreeController {
         }
 
         if (query != null){
-            itemsChosen = query;
+            // items chosen = search, allow that to override the query on the first window
+            if (itemsChosen == null){
+                itemsChosen = query;
+            }
             jsTreeMode = "chosentree";
         }
         String jsonFunction = "azquojsonfeed";

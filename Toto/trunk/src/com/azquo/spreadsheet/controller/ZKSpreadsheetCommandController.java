@@ -82,7 +82,7 @@ public class ZKSpreadsheetCommandController {
         final String action = bodyData.get("action");
         final String nameIdForChosenTree = bodyData.get("nameIdForChosenTree");
 
-        System.out.println("name id in command controller " + nameIdForChosenTree);
+//        System.out.println("name id in command controller " + nameIdForChosenTree);
 
         // add custom response message, it depends on your logic.
         final JSONObject appResponse = new JSONObject();
