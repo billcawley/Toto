@@ -116,7 +116,12 @@ Attributes of the names in other cells can be referenced also
         List<MutableImportHeading> contextHeadings = new ArrayList<>();
         String lastClauses = "";
         for (String headingString : headingsAsStrings) {
-            int dividerPos = headingString.lastIndexOf(headingDivider); // is there context defined here?
+            String namesString = headingString;
+            //avoid finding dividers in az=
+            if (namesString.contains("az=")){
+                namesString = namesString.substring(0,namesString.indexOf("az="));
+            }
+            int dividerPos = namesString.lastIndexOf(headingDivider); // is there context defined here?
             if (headingString.trim().length() > 0) { // miss out blanks also.
                 if (dividerPos > 0 || headingString.indexOf(";") > 0) {//any further clauses or new contexts  void existing context headings
                     contextHeadings = new ArrayList<>(); // reset/build the context headings
