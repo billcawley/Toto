@@ -280,7 +280,9 @@ public class LoggedInUser implements Serializable {
     }
 
     public void setReportDatabasePermission(String key, OnlineReport onlineReport, Database database){
-        reportIdDatabaseIdPermissions.put(key != null ? key.toLowerCase() : onlineReport.getReportName().toLowerCase(), new ReportIdDatabaseId(onlineReport.getId(), database.getId()));
+        if (!this.getUser().isDeveloper() && !this.getUser().isAdministrator()) {
+            reportIdDatabaseIdPermissions.put(key != null ? key.toLowerCase() : onlineReport.getReportName().toLowerCase(), new ReportIdDatabaseId(onlineReport.getId(), database.getId()));
+        }
     }
 
     public Map<String, ReportIdDatabaseId> getReportIdDatabaseIdPermissions() {
