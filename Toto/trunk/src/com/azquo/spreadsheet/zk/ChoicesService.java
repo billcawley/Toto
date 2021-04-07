@@ -1,5 +1,7 @@
 package com.azquo.spreadsheet.zk;
 
+import com.azquo.StringLiterals;
+import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.CommonReportUtils;
 import com.azquo.spreadsheet.LoggedInUser;
@@ -505,7 +507,19 @@ public class ChoicesService {
     static void setChoices(LoggedInUser loggedInUser, String context) {
         Map<String, String> stringStringMap = parseChoicesFromDrillDownContextString(context);
         for (Map.Entry<String, String> choiceChosen : stringStringMap.entrySet()) {
-            SpreadsheetService.setUserChoice(loggedInUser, choiceChosen.getKey(), choiceChosen.getValue());
+            // EFC note 07/04/2021 we need to support attributes here e.g. in spreadsheet Customer Record with customer = `[rowheading]`.`all customers`
+            // so by here (this function is only used for drilldown) we'll be at something like `DFKKHJKJH`.`all customers`. Try to resolve it.
+            String chosen = choiceChosen.getValue();
+            if (chosen.contains("`.`")){
+                DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
+                try{
+                    chosen = RMIClient.getServerInterface(databaseAccessToken.getServerIp()).getNameAttribute(databaseAccessToken, chosen.substring(chosen.indexOf("`"), chosen.indexOf("`.`")), chosen.substring( chosen.indexOf("`.`") + 3, chosen.lastIndexOf("`")));
+                } catch (Exception e){
+                    chosen = e.getMessage(); // I guess give them a clue when it doesn't work
+                }
+            }
+
+            SpreadsheetService.setUserChoice(loggedInUser, choiceChosen.getKey(), chosen);
         }
     }
 }
