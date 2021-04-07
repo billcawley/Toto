@@ -55,7 +55,7 @@ public class ReportService {
             if (sName.getName().equalsIgnoreCase(ALLOWABLE_REPORTS)) {
                 CellRegion allowable = sName.getRefersToCellRegion();
                 // need to detect 2nd AND 3rd column here - 2nd = db, if 3rd then last is db 2nd report and 1st name (key)
-                if (allowable.getLastColumn() - allowable.getColumn() == 2) { // name, report, database
+                if (allowable.getLastColumn() - allowable.getColumn() >= 2) { // name, report, database
                     for (int row = allowable.getRow(); row <= allowable.getLastRow(); row++) {
                         if (!sheet.getInternalSheet().getCell(row, allowable.getColumn()).isNull()) {
                             String name = sheet.getInternalSheet().getCell(row, allowable.getColumn()).getStringValue();
