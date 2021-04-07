@@ -165,6 +165,12 @@ public class ZKComposer extends SelectorComposer<Component> {
                     try {
                         for (int row1 = allowedRegion.getRow(); row1 < allowedRegion.getRow() + allowedRegion.getRowCount(); row1++) {
                             if (allowedSheet.getInternalSheet().getCell(row1, allowedRegion.getColumn()).getStringValue().equals(cellValue)) {// deal with security in the online controller
+                                if (allowedRegion.getLastColumn() - allowedRegion.getColumn()>=3){
+                                    String choices = allowedSheet.getInternalSheet().getCell(row1,allowedRegion.getColumn()+3).getStringValue();
+                                    if (choices != null){
+                                        ChoicesService.setChoices(loggedInUser,choices);
+                                    }
+                                }
                                 Clients.evalJavaScript("window.open(\"/api/Online?permissionid=" + URLEncoder.encode(cellValue, "UTF-8") + "\")");
                             }
                         }
