@@ -57,6 +57,7 @@ public class DateUtils {
     private static final long towDigitYearFutureThreshold = 10;
 
     public static LocalDate isADate(String maybeDate) {
+        if (maybeDate.contains(" - ")) return null;//date ranges are not dates
         String dateToTest = maybeDate.replace("/", "-").replace(" ", "-");
         if (dateToTest.length() > 5 && dateToTest.charAt(1) == '-') dateToTest = "0" + dateToTest;
         if (dateToTest.length() > 5 && dateToTest.charAt(2) == '-' && dateToTest.charAt(4) == '-')
