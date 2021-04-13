@@ -84,6 +84,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                 myzss.setShowFormulabar(false);
                 myzss.setHidecolumnhead(true);
                 myzss.setHiderowhead(true);
+                //myzss.setShowContextMenu(false);
             }
         }
         // finally a quick check - is the currently selected sheet hidden? If so select another sheet! Unlike Excel ZK can have a hidden sheet selected and this makes no sense to the user
@@ -488,6 +489,8 @@ public class ZKComposer extends SelectorComposer<Component> {
     // to deal with provenance
     @Listen("onCellRightClick = #myzss")
     public void onCellRightClick(CellMouseEvent cellMouseEvent) {
+        //Clients.evalJavaScript("zk.Widget.$('$myzss').setShowContextMenu(true);");
+        //Clients.evalJavaScript("alert(zk.Widget.$('$myzss').getShowContextMenu());");
         showAzquoContextMenu(cellMouseEvent.getRow(), cellMouseEvent.getColumn(), cellMouseEvent.getClientx(), cellMouseEvent.getClienty());
     }
 
