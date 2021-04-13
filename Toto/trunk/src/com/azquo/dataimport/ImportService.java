@@ -1981,8 +1981,8 @@ fr.close();
     public static void preProcessUsingPoi(LoggedInUser loggedInUser, UploadedFile uploadedFile, String preprocessor) throws Exception {
         String filePath = uploadedFile.getPath();
         OPCPackage opcPackage;
-        try {
-            opcPackage = OPCPackage.open(preprocessor);
+        try (FileInputStream fi = new FileInputStream(uploadedFile.getPath())){ // this will hopefully guarantee that the file handler is released under windows
+            opcPackage = OPCPackage.open(fi);
         } catch (Exception e) {
             e.printStackTrace();
             throw new Exception("Cannot load preprocessor template from " + preprocessor);
@@ -2073,7 +2073,9 @@ fr.close();
                         org.apache.poi.xssf.usermodel.XSSFWorkbook includeBook;
                         try {
                             String includeFilePath = SpreadsheetService.getHomeDir() + dbPath + loggedInUser.getBusinessDirectory() + importTemplatesDir + includeFile.getFilenameForDisk();
-                            opcPackageInclude = OPCPackage.open(includeFilePath);
+                            try (FileInputStream fi = new FileInputStream(includeFilePath)){
+                                opcPackageInclude = OPCPackage.open(fi);
+                            }
                             includeBook = new XSSFWorkbook(opcPackageInclude);
 
                         } catch (Exception e) {
