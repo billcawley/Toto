@@ -1981,7 +1981,7 @@ fr.close();
     public static void preProcessUsingPoi(LoggedInUser loggedInUser, UploadedFile uploadedFile, String preprocessor) throws Exception {
         String filePath = uploadedFile.getPath();
         OPCPackage opcPackage;
-        try (FileInputStream fi = new FileInputStream(uploadedFile.getPath())){ // this will hopefully guarantee that the file handler is released under windows
+        try (FileInputStream fi = new FileInputStream(preprocessor)){ // this will hopefully guarantee that the file handler is released under windows
             opcPackage = OPCPackage.open(fi);
         } catch (Exception e) {
             e.printStackTrace();
@@ -2337,10 +2337,10 @@ fr.close();
                     if (fileNameAreaRef != null) {
                         setCellValue(inputSheet, fileNameAreaRef.getFirstCell().getRow(), fileNameAreaRef.getFirstCell().getCol(), fileName);
                     }
-                    long t = System.currentTimeMillis();
+                    //long t = System.currentTimeMillis();
 
                     XSSFFormulaEvaluator.evaluateAllFormulaCells(ppBook);
-                    System.out.println("eval " + (System.currentTimeMillis()-t));
+                    //System.out.println("eval " + (System.currentTimeMillis()-t));
 
                     // EFC note - if you wan't full formula resolve on a bug switch on the poi logging options in
                     // SpreadsheetService and do something like this on the relevant cell
