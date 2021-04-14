@@ -37,11 +37,12 @@ public class UserRegionOptions extends StandardEntity {
     private String columnLanguage;
     private boolean ignoreHeadingErrors;
     private boolean preSave;
+    private boolean dynamicUpdate;
 
 
     UserRegionOptions(int id, int userId, int reportId, String region, int hideRows, int hideRowValues, int hideCols, boolean sortable
             , int rowLimit, int columnLimit, String sortRow, boolean sortRowAsc, String sortColumn
-            , boolean sortColumnAsc, int highlightDays, boolean noSave, String databaseName, String rowLanguage, String columnLanguage, boolean userLocked, int permuteTotalCount, boolean ignoreHeadingErrors, boolean preSave) {
+            , boolean sortColumnAsc, int highlightDays, boolean noSave, String databaseName, String rowLanguage, String columnLanguage, boolean userLocked, int permuteTotalCount, boolean ignoreHeadingErrors, boolean preSave, boolean dynamicUpdate) {
         this.id = id;
         this.userId = userId;
         this.reportId = reportId;
@@ -65,6 +66,7 @@ public class UserRegionOptions extends StandardEntity {
         this.userLocked = userLocked;
         this.ignoreHeadingErrors = ignoreHeadingErrors;
         this.preSave = preSave;
+        this.dynamicUpdate = dynamicUpdate;
     }
 
     // to read the format of options from the spreadsheet, code adapted from azquobook.
@@ -113,6 +115,7 @@ public class UserRegionOptions extends StandardEntity {
             };
             this.ignoreHeadingErrors = spreadsheetSource.contains("ignoreheadingerrors");
             this.preSave = spreadsheetSource.contains("presave");
+            this.dynamicUpdate = spreadsheetSource.toLowerCase().contains("dynamicupdate");
         } else {
             this.sortable = false;
             this.rowLimit = 0;
@@ -123,6 +126,7 @@ public class UserRegionOptions extends StandardEntity {
             this.userLocked = false;
             this.ignoreHeadingErrors = false;
             this.preSave = false;
+            this.dynamicUpdate = false;
         }
         this.sortRow = null;
         this.sortRowAsc = false;
@@ -281,7 +285,7 @@ public class UserRegionOptions extends StandardEntity {
 
     // As mentioned in RegionOptions,
     public RegionOptions getRegionOptionsForTransport() {
-        return new RegionOptions(hideRows, hideRowValues, hideCols, sortable, rowLimit, columnLimit, sortRow, sortRowAsc, sortColumn, sortColumnAsc, highlightDays, rowLanguage, columnLanguage, noSave, databaseName, userLocked, permuteTotalCount, ignoreHeadingErrors, preSave);
+        return new RegionOptions(hideRows, hideRowValues, hideCols, sortable, rowLimit, columnLimit, sortRow, sortRowAsc, sortColumn, sortColumnAsc, highlightDays, rowLanguage, columnLanguage, noSave, databaseName, userLocked, permuteTotalCount, ignoreHeadingErrors, preSave, dynamicUpdate);
     }
 
     public String getRowLanguage() {

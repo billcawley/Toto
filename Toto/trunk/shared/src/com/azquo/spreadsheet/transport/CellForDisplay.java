@@ -1,6 +1,7 @@
 package com.azquo.spreadsheet.transport;
 
 import java.io.Serializable;
+import java.util.Objects;
 
 /**
  * Copyright (C) 2016 Azquo Ltd.
@@ -164,5 +165,30 @@ public class CellForDisplay implements Serializable {
                 ", comment='" + comment + '\'' +
                 ", valueId=" + valueId +
                 '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        CellForDisplay that = (CellForDisplay) o;
+        return locked == that.locked &&
+                Double.compare(that.doubleValue, doubleValue) == 0 &&
+                changed == that.changed &&
+                Double.compare(that.newDoubleValue, newDoubleValue) == 0 &&
+                highlighted == that.highlighted &&
+                unsortedRow == that.unsortedRow &&
+                unsortedCol == that.unsortedCol &&
+                ignored == that.ignored &&
+                selected == that.selected &&
+                valueId == that.valueId &&
+                Objects.equals(stringValue, that.stringValue) &&
+                Objects.equals(newStringValue, that.newStringValue) &&
+                Objects.equals(comment, that.comment);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(locked, stringValue, doubleValue, changed, newStringValue, newDoubleValue, highlighted, unsortedRow, unsortedCol, ignored, selected, comment, valueId);
     }
 }

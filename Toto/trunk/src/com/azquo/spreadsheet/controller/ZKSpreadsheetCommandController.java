@@ -5,6 +5,7 @@ import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.dataimport.ImportService;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
+import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
 import com.azquo.spreadsheet.zk.*;
 import io.keikai.api.*;
 import io.keikai.api.model.CellData;
@@ -282,9 +283,32 @@ public class ZKSpreadsheetCommandController {
                             break;
                         }
                     }
-
 //                    ss.getSelection().
+                }
 
+                // note, this is vulnerable to changing region sizes, duplicate names etc. Should be used sparingly and carefully
+                if ("CHECKCDYNAMICUPDATE".equalsIgnoreCase(action)) { // then run through the regions seeing if any have the dynamic update flag and if they do check whether they need updating
+                    int reportId = (Integer) ss.getBook().getInternalBook().getAttribute(OnlineController.REPORT_ID);
+                    List<CellsAndHeadingsForDisplay> sentForReport = loggedInUser.getSentForReport(reportId);
+                    for (CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay : sentForReport){
+                        if (cellsAndHeadingsForDisplay.getOptions().dynamicUpdate){ // ok we need to check
+                            CellsAndHeadingsForDisplay cellsAndHeadingsForDisplayLatest = SpreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser, cellsAndHeadingsForDisplay.getRegion()
+                                    , cellsAndHeadingsForDisplay.getRowHeadingsSource(),
+                                    cellsAndHeadingsForDisplay.getColHeadingsSource(),
+                                    cellsAndHeadingsForDisplay.getContextSource(), cellsAndHeadingsForDisplay.getOptions());
+                            CellRegion region = BookUtils.getNameByName(ReportRenderer.AZDATAREGION + cellsAndHeadingsForDisplay.getRegion(), ss.getBook());
+                            Sheet sheetFor = BookUtils.getSheetFor(ReportRenderer.AZDATAREGION + cellsAndHeadingsForDisplay.getRegion(), ss.getBook());
+                            if (region != null && sheetFor != null){
+                                if (cellsAndHeadingsForDisplay.equals(cellsAndHeadingsForDisplayLatest)){
+                                    System.out.println(cellsAndHeadingsForDisplay.getRegion() +  " dynamic update check the data was the same");
+                                } else {
+                                    RegionFillerService.fillData(sheetFor, cellsAndHeadingsForDisplayLatest, region);
+                                    loggedInUser.setSentCells(reportId, sheetFor.getSheetName(), cellsAndHeadingsForDisplayLatest.getRegion(), cellsAndHeadingsForDisplayLatest);
+                                    System.out.println(cellsAndHeadingsForDisplay.getRegion() +  " dynamic update check the data was NOT the same");
+                                }
+                            }
+                        }
+                    }
                 }
 
             } catch (Exception e) {

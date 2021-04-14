@@ -16,6 +16,7 @@ import com.azquo.spreadsheet.controller.OnlineController;
 import com.azquo.spreadsheet.transport.CellForDisplay;
 import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
 import com.azquo.spreadsheet.transport.ProvenanceDetailsForDisplay;
+import com.azquo.spreadsheet.transport.RegionOptions;
 import com.azquo.spreadsheet.zk.ReportExecutor;
 import com.azquo.spreadsheet.zk.ReportRenderer;
 import com.azquo.util.AzquoMailer;
@@ -247,6 +248,13 @@ public class SpreadsheetService {
             , UserRegionOptions userRegionOptions, boolean quiet, String filterTargetName) throws Exception {
         return RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).getCellsAndHeadingsForDisplay(loggedInUser.getDataAccessToken(), loggedInUser.getUser().getEmail(), regionName, valueId, rowHeadingsSource, colHeadingsSource, contextSource,
                 userRegionOptions.getRegionOptionsForTransport(), quiet, filterTargetName);
+    }
+
+    public static CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(LoggedInUser loggedInUser, String regionName, List<List<String>> rowHeadingsSource
+            , List<List<String>> colHeadingsSource, List<List<String>> contextSource
+            , RegionOptions regionOptionsForTransport) throws Exception {
+        return RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).getCellsAndHeadingsForDisplay(loggedInUser.getDataAccessToken(), loggedInUser.getUser().getEmail(), regionName, 0, rowHeadingsSource, colHeadingsSource, contextSource,
+                regionOptionsForTransport, false, null);
     }
 
     // ok now this is going to ask the DB, it needs the selection criteria and original row and col for speed (so we don't need to get all the data and sort)

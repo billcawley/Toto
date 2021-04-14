@@ -89,8 +89,17 @@ public class ZKComposer extends SelectorComposer<Component> {
         for (int i = 0; i < myzss.getBook().getNumberOfSheets(); i++) {
             Ranges.range(myzss.getBook().getSheetAt(i)).notifyChange(); // try to update the lot - sometimes it seems it does not!
         }
+        LoggedInUser loggedInUser = (LoggedInUser) myzss.getBook().getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
+        int reportId = (Integer) myzss.getBook().getInternalBook().getAttribute(OnlineController.REPORT_ID);
+        List<CellsAndHeadingsForDisplay> sentForReport = loggedInUser.getSentForReport(reportId);
+        for (CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay : sentForReport){
+            if (cellsAndHeadingsForDisplay.getOptions().dynamicUpdate){
+                // so we are saying somewhere in this book is a data region we need to check for dynamic updates. Set this going on the client side
+                Clients.evalJavaScript("setInterval(function(){ postAjax('CHECKCDYNAMICUPDATE'); }, 5000);");
+                break;
+            }
+        }
 //        Clients.evalJavaScript("window.skipSetting = 0;window.skipMarker = 0;");
-//        Clients.evalJavaScript("setInterval(function(){ postAjax('CHECKDATA'); }, 5000);");
 
     }
 

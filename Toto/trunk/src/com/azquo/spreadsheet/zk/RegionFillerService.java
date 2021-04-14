@@ -25,7 +25,7 @@ import java.util.Set;
  * Break off fill code from the old Azquo Book Utils to put in here
  */
 
-class RegionFillerService {
+public class RegionFillerService {
     // as it says. Need to consider the factoring here given the number of parameters passed
     // this had clonecols which was added to "selection" to make it wider, this made no sense and has been removed
     static void fillRowHeadings(LoggedInUser loggedInUser, Sheet sheet, String region, CellRegion displayRowHeadings
@@ -571,7 +571,7 @@ class RegionFillerService {
 
     }
 
-    static void fillData(Sheet sheet, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, CellRegion displayDataRegion) {
+    public static void fillData(Sheet sheet, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, CellRegion displayDataRegion) {
         int row = displayDataRegion.getRow();
         List<String> bottomColHeadings = cellsAndHeadingsForDisplay.getColumnHeadings().get(cellsAndHeadingsForDisplay.getColumnHeadings().size() - 1); // bottom of the col headings if they are multi layered
         if (cellsAndHeadingsForDisplay.getData() != null) {

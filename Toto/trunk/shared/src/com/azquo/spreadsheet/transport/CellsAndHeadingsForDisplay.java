@@ -2,6 +2,7 @@ package com.azquo.spreadsheet.transport;
 
 import java.io.Serializable;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -107,4 +108,18 @@ public class CellsAndHeadingsForDisplay implements Serializable {
         return lockResult;
     }
 
+    // intellij generated. I want to compare if the data matches . . .
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        CellsAndHeadingsForDisplay that = (CellsAndHeadingsForDisplay) o;
+        return region.equals(that.region) &&
+                data.equals(that.data);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(region, data);
+    }
 }

@@ -149,7 +149,7 @@ class RMIImplementation implements RMIInterface {
     // spreadsheet service
     @Override
     public CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(DatabaseAccessToken databaseAccessToken, String user, String regionName, int valueId, List<List<String>> rowHeadingsSource
-            , List<List<String>> colHeadingsSource, List<List<String>> contextSource, RegionOptions regionOptions, boolean quiet, String filterTargetName) throws RemoteException {
+            , List<List<String>> colHeadingsSource, List<List<String>> contextSource, RegionOptions regionOptions, boolean quiet) throws RemoteException {
         try {
             return DSSpreadsheetService.getCellsAndHeadingsForDisplay(databaseAccessToken, user, regionName, valueId, rowHeadingsSource, colHeadingsSource, contextSource, regionOptions, quiet);
         } catch (Exception e) {
