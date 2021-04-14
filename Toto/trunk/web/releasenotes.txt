@@ -1,3 +1,23 @@
+13-04-21
+
+Preprocessor file handler leak fix
+
+12-04-21
+
+Fixed bug in inspecting heading lines
+
+Rejects ranges as dates
+
+picks up context in allowable reports
+
+drilldown context can reference attributes of the row or column heading name e.g. in spreadsheet Customer Record with customer = `[rowheading]`.`all customers`
+
+restricted search of headingDivider to first part of headings
+
+improving the new chosen tree option
+
+If we create a single-cell region named ‘az_SheetOptions’ can we spedify ‘nosurround’ to remove the column and row headings and formula bar. (done)
+
 25-03-21
 
 Improvement to 'classifyby' allows strings - as in classifyby <born in `birth town`>

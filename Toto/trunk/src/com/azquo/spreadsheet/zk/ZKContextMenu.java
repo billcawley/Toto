@@ -15,6 +15,7 @@ import com.azquo.spreadsheet.transport.*;
 import org.apache.commons.lang.math.NumberUtils;
 import org.zkoss.util.media.AMedia;
 import org.zkoss.zk.ui.Component;
+import org.zkoss.zk.ui.Components;
 import org.zkoss.zk.ui.Sessions;
 import io.keikai.api.*;
 import io.keikai.api.model.Book;
@@ -24,6 +25,9 @@ import io.keikai.model.SName;
 import io.keikai.model.SSheet;
 import io.keikai.ui.Spreadsheet;
 import io.keikaiex.ui.widget.Ghost;
+import org.zkoss.zk.ui.event.EventListener;
+import org.zkoss.zk.ui.event.Events;
+import org.zkoss.zk.ui.event.MouseEvent;
 import org.zkoss.zul.*;
 
 import java.io.File;
@@ -40,9 +44,8 @@ import java.util.Map;
  * Use of the ZK API to alter the user interface might be a little hacky, might be sensetive to changes to their API or implementation
  * <p>
  * THis class is a little bigger than I'd like. Could break code off for provenance stuff?
- *
+ * <p>
  * todo - string literals and check name lookups work for sheet names not just book names
- *
  */
 class ZKContextMenu {
 
@@ -61,47 +64,33 @@ class ZKContextMenu {
     ZKContextMenu(Spreadsheet myzss) {
         this.myzss = myzss;
         editPopup = new Menupopup();
-        // todo - check ZK to see if there's a better way to do this
+        // ZK SUPPORT - MATT NOTES: This is a reasonable way to create a popup and a menupopup. I'm not seeing a reason for the setId in your sample, but I assume you are using these IDs in other code locations
+        // EFC note - removed the set id
+        // ZK SUPPORT - MATT NOTES: draggable and dropable are related to the ZK drag and drop workflow. It doesn't appear that you are using this workflow in this sample
+        // Draggable indicate that an object can be grabbed and dragged (a ghost duplicate will be dragged around by the mouse)
+        // Droppable indicates that the object can be the target of a drop. If the mouse is hovering a droppable object, and the mouse button is released, the droppable object will trigger the onDrop event
+        // https://www.zkoss.org/wiki/ZK_Developer's_Reference/UI_Patterns/Drag_and_Drop
+        // again assuming that you are using this in a different code location
+        // EFC note - removed those two also
         editPopup.setId("editPopup");
         setPopupStyle(editPopup);
         provenancePopup = new Popup();
-        provenancePopup.setId("provenancePopup");
-        provenancePopup.setDraggable("true");
-        provenancePopup.setDroppable("true");
         setPopupStyle(provenancePopup);
         debugPopup = new Popup();
-        debugPopup.setId("debugPopup");
-        debugPopup.setDraggable("true");
-        debugPopup.setDroppable("true");
         setPopupStyle(debugPopup);
         instructionsLabel = new Label();
         instructionsPopup = new Popup();
-        instructionsPopup.setId("instructionsPopup");
         setPopupStyle(instructionsPopup);
         instructionsLabel.setMultiline(true);
         instructionsPopup.appendChild(instructionsLabel);
         highlightPopup = new Popup();
         setPopupStyle(highlightPopup);
-        highlightPopup.setId("highlightPopup");
-
-        // much hacking went into getting an appropriate object to hook into to make our extra contextual menu
-        if (myzss.getFirstChild() != null) {
-            myzss.getFirstChild().appendChild(editPopup);
-            myzss.getFirstChild().appendChild(provenancePopup);
-            myzss.getFirstChild().appendChild(debugPopup);
-            myzss.getFirstChild().appendChild(instructionsPopup);
-            myzss.getFirstChild().appendChild(highlightPopup);
-        } else { // it took some considerable time to work out this hack
-            Ghost g = new Ghost();
-            g.setAttribute("zsschildren", "");
-            g.setAttribute("kkchildren", "");
-            myzss.appendChild(g);
-            g.appendChild(editPopup);
-            g.appendChild(provenancePopup);
-            g.appendChild(debugPopup);
-            g.appendChild(instructionsPopup);
-            g.appendChild(highlightPopup);
-        }
+        // ZK SUPPORT - MATT NOTES: adding the popup as a child of a complex component is risky. A safer options is to assign them to the page directly, since they are displayed per x and y coordinates anyway.
+        editPopup.setPage(myzss.getPage());
+        provenancePopup.setPage(myzss.getPage());
+        debugPopup.setPage(myzss.getPage());
+        instructionsPopup.setPage(myzss.getPage());
+        highlightPopup.setPage(myzss.getPage());
         Book book = myzss.getBook();
         loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
         reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
@@ -114,20 +103,11 @@ class ZKContextMenu {
     highlight
     */
     void showAzquoContextMenu(int cellRow, int cellCol, int mouseX, int mouseY, Component ref, Spreadsheet myzss) {
-        while (editPopup.getChildren().size() > 0) { // clear it out
-            editPopup.removeChild(editPopup.getLastChild());
-        }
-        Component popupChild = provenancePopup.getFirstChild();
-        while (popupChild != null) {
-            provenancePopup.removeChild(popupChild);
-            popupChild = provenancePopup.getFirstChild();
-        }
-        // clear debug too, factor at some point?
-        popupChild = debugPopup.getFirstChild();
-        while (popupChild != null) {
-            debugPopup.removeChild(popupChild);
-            popupChild = debugPopup.getFirstChild();
-        }
+        // ZK SUPPORT - MATT NOTES: recommended shortcut ;)
+        Components.removeAllChildren(editPopup);
+        Components.removeAllChildren(provenancePopup);
+        Components.removeAllChildren(debugPopup);
+
         String region = null;
         int regionRow = 0;
         int regionColumn = 0;
@@ -190,25 +170,25 @@ class ZKContextMenu {
                     buildContextMenuProvenanceDownload(provenanceDetailsForDisplay, reportId);
                     Menuitem auditItem = new Menuitem("Audit");
                     editPopup.appendChild(auditItem);
-                    auditItem.setPopup(provenancePopup);
-//                            auditItem.addEventListener("onClick",
-//                                    event -> System.out.println("audit menu item clicked"));
+                    // todo zap other setpopups
+                    // ZK SUPPORT - MATT NOTES: you may add a onClick event the the menuitem itself programatically in Java. This is more reliable that using the setPopup method, since you may also perform java logic at this stage, and control the new popup without relying on the relation to the previous menuitem
+                    auditItem.addEventListener(Events.ON_CLICK, (EventListener<MouseEvent>) event -> {
+                        // ZK SUPPORT - MATT NOTES: you may open a popup at arbitrary coordinates, or based on another component's position.
+                        // In this case, I do not use the menuitem position, as it may already be closed at client-side
+                        provenancePopup.open(myzss.isShowFormulabar() ? (event.getX() - 140) : event.getX(), event.getY());
+                    });
                     buildContextMenuDrillDownIfApplicable(myzss.getSelectedSheetName(), region, regionRow, regionColumn);
                 }
                 buildContextMenuDebug(myzss.getSelectedSheetName(), region, userRegionOptions, regionRow, regionColumn);
             } catch (Exception e) {
                 e.printStackTrace();
             }
-            if (origServer != null && origDatabase != null){
+            if (origServer != null && origDatabase != null) {
                 loggedInUser.setDatabaseWithServer(origServer, origDatabase);
             }
             buildContextMenuInstructions(myzss.getSelectedSheetName(), region);
+            Components.removeAllChildren(highlightPopup);
 
-            popupChild = highlightPopup.getFirstChild();
-            while (popupChild != null) {
-                highlightPopup.removeChild(popupChild);
-                popupChild = highlightPopup.getFirstChild();
-            }
             // just concerned withe the user ones as opposed to the report ones
             userRegionOptions = UserRegionOptionsDAO.findForUserIdReportIdAndRegion(loggedInUser.getUser().getId(), reportId, region);
             int highlightDays = 0;
@@ -230,7 +210,11 @@ class ZKContextMenu {
             addHighlight(highlightPopup, 90);
             Menuitem highlightItem = new Menuitem("Highlight");
             editPopup.appendChild(highlightItem);
-            highlightItem.setPopup(highlightPopup);
+            highlightItem.addEventListener(Events.ON_CLICK, (EventListener<MouseEvent>) event -> {
+                // ZK SUPPORT - MATT NOTES: you may open a popup at arbitrary coordinates, or based on another component's position.
+                // In this case, I do not use the menuitem position, as it may already be closed at client-side
+                highlightPopup.open(event.getX(), event.getY());
+            });
             if (ref != null) {
                 editPopup.open(ref, "at_pointer");
             } else {
@@ -278,7 +262,7 @@ class ZKContextMenu {
         }
     }
 
-    private Label geLabelForProvenanceMenu(String colour, String text){
+    private Label geLabelForProvenanceMenu(String colour, String text) {
         Label provenanceLabel = new Label();
         provenanceLabel.setPre(true);
         provenanceLabel.setStyle("color:#" + colour + "; font-size:12pt");
@@ -387,13 +371,13 @@ class ZKContextMenu {
                     }
                     StringBuilder names = new StringBuilder();
                     for (String nameString : valueDetailsForProvenance.getNames()) {
-                            names.append(", ");
+                        names.append(", ");
                         names.append(nameString);
                     }
                     // I can't format within a label, need different labels for
                     provenancePopup.appendChild(geLabelForProvenanceMenu("333333", names.toString() + "\n"));
-                    if (valueDetailsForProvenance.getHistoricValuesAndProvenance() != null){
-                        for (ValueDetailsForProvenance.HistoricValueAndProvenance historicValue : valueDetailsForProvenance.getHistoricValuesAndProvenance()){
+                    if (valueDetailsForProvenance.getHistoricValuesAndProvenance() != null) {
+                        for (ValueDetailsForProvenance.HistoricValueAndProvenance historicValue : valueDetailsForProvenance.getHistoricValuesAndProvenance()) {
                             provenancePopup.appendChild(geLabelForProvenanceMenu("ff0000", "        " + historicValue.getValue()));
                             provenancePopup.appendChild(geLabelForProvenanceMenu("0000ff", "  " + historicValue.getProvenance() + "\n"));
                         }
@@ -432,7 +416,7 @@ class ZKContextMenu {
                                 int yOffset = 0;
                                 int xOffset = 0;
                                 String[] splitHeadline = provenanceDetailsForDisplay.getHeadline().split(",");
-                                for (String item : splitHeadline){
+                                for (String item : splitHeadline) {
                                     sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn() + xOffset).setStringValue(item);
                                     xOffset++;
                                 }
@@ -463,9 +447,9 @@ class ZKContextMenu {
                                                 sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn() + xOffset).setStringValue(name);
                                             }
                                             yOffset++;
-                                            if (valueDetailsForProvenance.getHistoricValuesAndProvenance() != null){
+                                            if (valueDetailsForProvenance.getHistoricValuesAndProvenance() != null) {
                                                 xOffset = 2;
-                                                for(ValueDetailsForProvenance.HistoricValueAndProvenance historicValue : valueDetailsForProvenance.getHistoricValuesAndProvenance()){
+                                                for (ValueDetailsForProvenance.HistoricValueAndProvenance historicValue : valueDetailsForProvenance.getHistoricValuesAndProvenance()) {
                                                     sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn() + xOffset).setStringValue(historicValue.getValue());
                                                     CellOperationUtil.applyFontColor(Ranges.range(sheet, sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn() + xOffset), "#FF0000");
                                                     sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn() + xOffset + 1).setStringValue(historicValue.getProvenance());
@@ -536,7 +520,7 @@ class ZKContextMenu {
     private void buildContextMenuDebug(String sheetName, String region, UserRegionOptions userRegionOptions, int regionRow, int regionColumn) {
         // ok, adding new debug info here, it doesn't require values in the cell unlike provenance
         try {
-            String debugString = "\nRegion : "+ region + "\n\n" + SpreadsheetService.getDebugForCell(loggedInUser, reportId, sheetName, region, userRegionOptions, regionRow, regionColumn);
+            String debugString = "\nRegion : " + region + "\n\n" + SpreadsheetService.getDebugForCell(loggedInUser, reportId, sheetName, region, userRegionOptions, regionRow, regionColumn);
             Label debugLabel = new Label();
             debugLabel.setMultiline(true);
             debugLabel.setValue("Derivation\n");
@@ -585,7 +569,12 @@ class ZKContextMenu {
             debugPopup.appendChild(button);
             Menuitem debugItem = new Menuitem("Derivation");
             editPopup.appendChild(debugItem);
-            debugItem.setPopup(debugPopup);
+
+            debugItem.addEventListener(Events.ON_CLICK, (EventListener<MouseEvent>) event -> {
+                // ZK SUPPORT - MATT NOTES: you may open a popup at arbitrary coordinates, or based on another component's position.
+                // In this case, I do not use the menuitem position, as it may already be closed at client-side
+                debugPopup.open(event.getX(), event.getY());
+            });
             instructionsLabel.setValue("");
         } catch (Exception e) {
             e.printStackTrace();
@@ -627,7 +616,11 @@ class ZKContextMenu {
         }
         Menuitem instructionsItem = new Menuitem("Region definition");
         editPopup.appendChild(instructionsItem);
-        instructionsItem.setPopup(instructionsPopup);
+        instructionsItem.addEventListener(Events.ON_CLICK, (EventListener<MouseEvent>) event -> {
+            // ZK SUPPORT - MATT NOTES: you may open a popup at arbitrary coordinates, or based on another component's position.
+            // In this case, I do not use the menuitem position, as it may already be closed at client-side
+            instructionsPopup.open(event.getX(), event.getY());
+        });
     }
 
     public static void setPopupStyle(Popup popup) {

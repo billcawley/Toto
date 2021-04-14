@@ -21,7 +21,6 @@ import io.keikai.model.impl.chart.GeneralChartDataImpl;
 import io.keikai.ui.Spreadsheet;
 import io.keikai.ui.event.*;
 import io.keikaiex.ui.widget.ChartsWidget;
-import io.keikaiex.ui.widget.Ghost;
 import io.keikaiex.ui.widget.WidgetCtrl;
 import org.zkoss.zul.*;
 
@@ -54,17 +53,8 @@ public class ZKComposer extends SelectorComposer<Component> {
         filterPopup.setVisible(false);
         filterPopup.setId("filterPopup");
         //ZKContextMenu.setPopupStyle(filterPopup);
-        // much hacking went into getting an appropriate object to hook into to make our extra contextual menu
-        if (myzss.getFirstChild() != null) {
-            myzss.getFirstChild().appendChild(filterPopup);
-        } else { // it took some considerable time to work out this hack
-            Ghost g = new Ghost();
-            g.setAttribute("zsschildren", "");
-            g.setAttribute("kkchildren", "");
-            myzss.appendChild(g);
-            g.appendChild(filterPopup);
-        }
-
+        // new thing as per advice from ZK
+        filterPopup.setPage(myzss.getPage());
         setChartClickProxies();
         // does the book say a particular cell should be selected?
         // maybe improve moving this number?
@@ -84,7 +74,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                 myzss.setShowFormulabar(false);
                 myzss.setHidecolumnhead(true);
                 myzss.setHiderowhead(true);
-                //myzss.setShowContextMenu(false);
+                myzss.setShowContextMenu(false);
             }
         }
         // finally a quick check - is the currently selected sheet hidden? If so select another sheet! Unlike Excel ZK can have a hidden sheet selected and this makes no sense to the user
@@ -99,6 +89,9 @@ public class ZKComposer extends SelectorComposer<Component> {
         for (int i = 0; i < myzss.getBook().getNumberOfSheets(); i++) {
             Ranges.range(myzss.getBook().getSheetAt(i)).notifyChange(); // try to update the lot - sometimes it seems it does not!
         }
+//        Clients.evalJavaScript("window.skipSetting = 0;window.skipMarker = 0;");
+//        Clients.evalJavaScript("setInterval(function(){ postAjax('CHECKDATA'); }, 5000);");
+
     }
 
     public static String MULTI = "Multi";
@@ -553,9 +546,7 @@ public class ZKComposer extends SelectorComposer<Component> {
     // as it says, show the multi selection list used by pivots and multi selections
     private void showMultiSelectionList(LoggedInUser loggedInUser, final String selectionName, final String selectionList,
                                         int pageX, int pageY) {
-        while (filterPopup.getChildren().size() > 0) { // clear it out
-            filterPopup.removeChild(filterPopup.getLastChild());
-        }
+        Components.removeAllChildren(filterPopup);
         Listbox listbox = new Listbox();
         // this is to make select all go across hidden pages - relevant IF pagination is used
 /*            listbox.addEventListener("onCheckSelectAll", event1 -> {
