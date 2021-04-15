@@ -133,7 +133,6 @@ public class OnlineController {
             , @RequestParam(value = "database", required = false, defaultValue = "") String database
             , @RequestParam(value = "imagename", required = false, defaultValue = "") String imageName
             , @RequestParam(value = "submit", required = false, defaultValue = "") String submit
-            , @RequestParam(value = "sessionid", required = false, defaultValue = "") String sessionId
             , @RequestParam(value = "uploadfile", required = false) MultipartFile uploadfile
 
     ) {
@@ -394,9 +393,8 @@ public class OnlineController {
             , @RequestParam(value = "database", required = false, defaultValue = "") String database
             , @RequestParam(value = "imagename", required = false, defaultValue = "") String imageName
             , @RequestParam(value = "submit", required = false, defaultValue = "") String submit
-            , @RequestParam(value = "sessionid", required = false, defaultValue = "") String sessionId
     ) {
-        return handleRequest(model, request, reportId, databaseId, permissionId, opcode, database, imageName, submit, sessionId, null);
+        return handleRequest(model, request, reportId, databaseId, permissionId, opcode, database, imageName, submit, null);
     }
 
     // these functions probably should be booted into a service but they make more sense in here than the ImportService

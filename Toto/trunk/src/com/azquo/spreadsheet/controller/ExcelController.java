@@ -1,5 +1,6 @@
 package com.azquo.spreadsheet.controller;
 
+import com.azquo.SessionListener;
 import com.azquo.admin.AdminService;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseDAO;
@@ -42,6 +43,7 @@ import io.keikai.api.model.Book;
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 import java.io.*;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
@@ -340,7 +342,13 @@ public class ExcelController {
             }
 
             // logic added by EFC 15/04/21. For Atos we're going to try to do some json graphs. This will be in the browser so try the logged in user in the normal way also
-            loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
+            if (loggedInUser == null && sessionId != null){
+
+                HttpSession httpSession = SessionListener.sessions.get(sessionId);
+                if (httpSession != null){
+                    loggedInUser = (LoggedInUser) httpSession.getAttribute(LoginController.LOGGED_IN_USER_SESSION);
+                }
+            }
 
             if (loggedInUser == null) {
                 return "invalid sessionid";
