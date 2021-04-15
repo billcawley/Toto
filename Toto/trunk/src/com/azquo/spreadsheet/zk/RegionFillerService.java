@@ -481,7 +481,7 @@ public class RegionFillerService {
                 , rootRow + (repeatRegionHeight * repeatRow) + repeatDataLastRowOffset, rootCol + (repeatRegionWidth * repeatColumn) + repeatDataLastColumnOffset);
 
         CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = SpreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser, region, valueId, rowHeadingList, columnHeadingList,
-                contextList, userRegionOptions, quiet, null);
+                contextList, userRegionOptions, quiet);
         // so I now need to do the row and column headings also
         if (displayRowHeadings != null && cellsAndHeadingsForDisplay.getRowHeadings() != null) {
             // yes, these offsets are being calculated every time but the performance save of finding them first would be minimal and would make the code more complex now this chunk is factored off
@@ -554,7 +554,7 @@ public class RegionFillerService {
                 , rootRow + (repeatRegionHeight * repeatRow) + repeatDataLastRowOffset, rootCol + (repeatRegionWidth * repeatColumn) + repeatDataLastColumnOffset);
 
         CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = SpreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser, region, valueId, rowHeadingList, columnHeadingList,
-                contextList, userRegionOptions, quiet, null);
+                contextList, userRegionOptions, quiet);
         // so I now need to do the row and column headings also
         if (displayRowHeadings != null && cellsAndHeadingsForDisplay.getRowHeadings() != null) {
             displayRowHeadings = new CellRegion(rootRow + (repeatRegionHeight * repeatRow) + repeatRowHeadingsRowOffset, rootCol + (repeatRegionWidth * repeatColumn) + repeatRowHeadingsColumnOffset

@@ -339,6 +339,9 @@ public class ExcelController {
                 loggedInUser = excelConnections.get(sessionId);
             }
 
+            // logic added by EFC 15/04/21. For Atos we're going to try to do some json graphs. This will be in the browser so try the logged in user in the normal way also
+            loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
+
             if (loggedInUser == null) {
                 return "invalid sessionid";
             }
@@ -872,7 +875,7 @@ public class ExcelController {
                                 replaceUserChoicesInHeadings(loggedInUser, excelJsonRequest.rowHeadings),
                                 replaceUserChoicesInHeadings(loggedInUser, excelJsonRequest.columnHeadings),
                                 replaceUserChoicesInHeadings(loggedInUser, excelJsonRequest.context),
-                                userRegionOptions, true, null);
+                                userRegionOptions, true);
                         RegionOptions holdOptions = cellsAndHeadingsForDisplay.getOptions();//don't want to send these to Excel
                         cellsAndHeadingsForDisplay.setOptions(null);
                         System.out.println("NPE checking : " + loggedInUser.getOnlineReport());

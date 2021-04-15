@@ -468,7 +468,7 @@ public class ReportExecutor {
                         //note that this routine gets the data twice - once here, and once before saving.  This is unnecessary, but quicker to program for the moment.
                         UserRegionOptions userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), 0, "", "execute");//must have userRegionOptions
                         CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = SpreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser, region, 0, rowHeadings, colHeadings,
-                                context, userRegionOptions, true, null);
+                                context, userRegionOptions, true);
                         loggedInUser.setSentCells(loggedInUser.getOnlineReport().getId(), region, region, cellsAndHeadingsForDisplay);
                         for (List<CellForDisplay> row : cellsAndHeadingsForDisplay.getData()) {
                             row.get(0).setNewStringValue(row.get(1).getStringValue());

@@ -687,7 +687,7 @@ public class ReportRenderer {
 
                 CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = SpreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser, region, valueId, rowHeadingList,
                         BookUtils.replaceUserChoicesInRegionDefinition(loggedInUser,columnHeadingsDescription),
-                        contextList, userRegionOptions, quiet,null);
+                        contextList, userRegionOptions, quiet);
                 loggedInUser.setSentCells(reportId, sheetName, region, cellsAndHeadingsForDisplay);
                 // now, put the headings into the sheet!
                 // might be factored into fill range in a bit
