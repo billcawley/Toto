@@ -12,6 +12,8 @@ import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.controller.OnlineController;
 import com.azquo.spreadsheet.transport.*;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang.math.NumberUtils;
 import org.zkoss.util.media.AMedia;
 import org.zkoss.zk.ui.Component;
@@ -28,10 +30,12 @@ import io.keikaiex.ui.widget.Ghost;
 import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
 import org.zkoss.zk.ui.event.MouseEvent;
+import org.zkoss.zk.ui.util.Clients;
 import org.zkoss.zul.*;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -107,7 +111,6 @@ class ZKContextMenu {
         Components.removeAllChildren(editPopup);
         Components.removeAllChildren(provenancePopup);
         Components.removeAllChildren(debugPopup);
-
         String region = null;
         int regionRow = 0;
         int regionColumn = 0;
@@ -621,6 +624,34 @@ class ZKContextMenu {
             // In this case, I do not use the menuitem position, as it may already be closed at client-side
             instructionsPopup.open(event.getX(), event.getY());
         });
+
+        String host = myzss.getPage().getDesktop().getSession().getLocalName();
+        System.out.println("web host " + host);
+        if (host.contains("localhost") || host.contains("data.azquo.com")){
+            Menuitem demoItem = new Menuitem("Graph Demo");
+            editPopup.appendChild(demoItem);
+            OnlineReport or = OnlineReportDAO.findById(reportId);
+            ObjectMapper jacksonMapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+
+            demoItem.addEventListener(Events.ON_CLICK, (EventListener<MouseEvent>) event -> {
+                // may as well prepare the json for the excel controller here, in future it will be JS but this is for a demo
+                // zap new lines they just cause a pain for the JS
+                String json = jacksonMapper.writeValueAsString("{\"reportId\": \"\"," +
+                        "\"sheetName\": \"\"," +
+                        "\"region\": \"\"," +
+                        "\"optionsSource\": \"\"," +
+                        "\"rowHeadings\": " + jacksonMapper.writeValueAsString(sentCells.getRowHeadingsSource()) + " ," +
+                        "\"columnHeadings\": " + jacksonMapper.writeValueAsString(sentCells.getColHeadingsSource()) + "," +
+                        "\"context\": " + jacksonMapper.writeValueAsString(sentCells.getContextSource()) +  "," +
+                        "\"query\": [[]]," +
+                        "\"userContext\": \"\"," +
+                        "\"data\": [[]]," +
+                        "\"comments\": [[]]}");
+
+                Clients.evalJavaScript("window.open(\"/graphtest.jsp?report=" + URLEncoder.encode(or.getReportName(), "UTF-8")  + "&json=" + URLEncoder.encode(json) + "\")");
+            });
+
+        }
     }
 
     public static void setPopupStyle(Popup popup) {
