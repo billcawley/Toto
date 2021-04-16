@@ -94,7 +94,7 @@ public class JSTreeService {
         Collection<Name> children = new ArrayList<>();
         Name name = nameId > 0 ? NameService.findById(azquoMemoryDBConnection, nameId) : null;
         if (jsTreeId == 0 && name == null) {// will be true on the initial call
-            text = "root";
+            text = "Azquo Sets";
             if (searchTerm == null || searchTerm.length() == 0) {// also true on the initial call
                 children = NameService.findTopNames(azquoMemoryDBConnection, language);// hence we get the top names, OK
             } else {

@@ -184,10 +184,10 @@ table.edit td label{min-width:100px;}
 .ui-dialog-title{text-align:left; font-weight:400; font-size:19px; color:#000;}
 
 /*.ui-dialog{min-height:400px; min-width:780px;}*/
-.ui-dialog-content{min-height:380px !important;}
-.ui-dialog-content iframe{min-height:380px !important;}
-.ui-dialog .ui-tabs-panel{min-height:350px; background:#ECECEC; padding:5px 5px 0px 5px; }
-.ui-dialog .ui-tabs-panel iframe{min-height:350px; background:#FFF;}
+/*.ui-dialog-content{min-height:380px !important;}
+.ui-dialog-content iframe{min-height:380px !important;}*/
+.ui-dialog .ui-tabs-panel{min-height:580px; background:#ECECEC; padding:5px 5px 0px 5px; }
+.ui-dialog .ui-tabs-panel iframe{min-height:580px; background:#FFF;}
 
 .ui-dialog .ui-tabs .ui-tabs-nav{}
 

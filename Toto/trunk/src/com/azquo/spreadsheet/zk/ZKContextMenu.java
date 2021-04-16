@@ -627,7 +627,7 @@ class ZKContextMenu {
 
         String host = myzss.getPage().getDesktop().getSession().getLocalName();
         System.out.println("web host " + host);
-        if (host.contains("localhost") || host.contains("data.azquo.com")){
+        if (host.contains("localhost") || host.contains("192.168.1.16")){
             Menuitem demoItem = new Menuitem("Graph Demo");
             editPopup.appendChild(demoItem);
             OnlineReport or = OnlineReportDAO.findById(reportId);

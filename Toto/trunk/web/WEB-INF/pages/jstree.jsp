@@ -25,11 +25,10 @@
 
         <div id="textwindow" class="js-col2">
             <div class="closebutton">
-                <a href="#" onclick="document.getElementById('textwindow').style.display='none';"><span class="fa fa-times-circle"></span></a>
+                <span class="ui-dialog-title">Search</span>
             </div>
-
                     <div id="attributeList">
-                        <label for="attributeChosen"> Attribute (language)</label>
+                        <label for="attributeChosen"> Attribute (language)&nbsp;<a href="#" onclick="document.getElementById('textwindow').style.display='none';"><span class="fa fa-times-circle"></span></label></a>
                         <select class="simpleselect" id="attributeChosen" onchange="changeLanguage()">
 
                             <c:forEach items="${attributes}" var="attribute">

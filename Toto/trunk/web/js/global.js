@@ -21,8 +21,8 @@
 				height		: $('.tabs').height(),
 				position	: { my: "left top", at: "left top", of: $('.tabs') },
 				*/
-				minHeight	: 490,
-				minWidth	: 780,
+				minHeight	: 720,
+				minWidth	: 1280,
 				title		: _.o_title,
 				/*draggable	: false,
 				resizeable	: false,*/
