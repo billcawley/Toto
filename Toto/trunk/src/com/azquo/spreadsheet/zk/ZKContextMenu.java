@@ -12,6 +12,7 @@ import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.controller.OnlineController;
 import com.azquo.spreadsheet.transport.*;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang.math.NumberUtils;
@@ -106,7 +107,7 @@ class ZKContextMenu {
     Instructions Labels - more region definitions
     highlight
     */
-    void showAzquoContextMenu(int cellRow, int cellCol, int mouseX, int mouseY, Component ref, Spreadsheet myzss) {
+    void showAzquoContextMenu(int cellRow, int cellCol, int mouseX, int mouseY, Component ref, Spreadsheet myzss) throws JsonProcessingException {
         // ZK SUPPORT - MATT NOTES: recommended shortcut ;)
         Components.removeAllChildren(editPopup);
         Components.removeAllChildren(provenancePopup);
@@ -250,14 +251,18 @@ class ZKContextMenu {
                 String region = name.getName().substring(13);
                 UserRegionOptions userRegionOptions = UserRegionOptionsDAO.findForUserIdReportIdAndRegion(loggedInUser.getUser().getId(), reportId, region);
                 if (userRegionOptions == null) {
-                    if (days == 0) break;
-                    userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), reportId, region, "highlight=" + days + "\n");
+                    if (days != 0){
+                        userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), reportId, region, "highlight=" + days + "\n");
+                        UserRegionOptionsDAO.store(userRegionOptions);
+                        reload = true;
+                    }
                 } else {
-                    if (userRegionOptions.getHighlightDays() == days) break;
-                    userRegionOptions.setHighlightDays(days);
+                    if (userRegionOptions.getHighlightDays() != days) {
+                        userRegionOptions.setHighlightDays(days);
+                        UserRegionOptionsDAO.store(userRegionOptions);
+                        reload = true;
+                    }
                 }
-                UserRegionOptionsDAO.store(userRegionOptions);
-                reload = true;
             }
         }
         if (reload) {
@@ -584,7 +589,7 @@ class ZKContextMenu {
         }
     }
 
-    private void buildContextMenuInstructions(String sheetName, String region) {
+    private void buildContextMenuInstructions(String sheetName, String region) throws JsonProcessingException {
         final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(reportId, sheetName, region);
         if (sentCells != null && sentCells.getData().size() > 0) {
             StringBuilder instructionsText = new StringBuilder();
@@ -628,27 +633,32 @@ class ZKContextMenu {
         String host = myzss.getPage().getDesktop().getSession().getLocalName();
         System.out.println("web host " + host);
         if (host.contains("localhost") || host.contains("192.168.1.16")){
+            ObjectMapper jacksonMapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+            // may as well prepare the json for the excel controller here, in future it will be JS but this is for a demo
+            // zap new lines they just cause a pain for the JS
+            String json = jacksonMapper.writeValueAsString("{\"reportId\": \"\"," +
+                    "\"sheetName\": \"\"," +
+                    "\"region\": \"\"," +
+                    "\"optionsSource\": \"\"," +
+                    "\"rowHeadings\": " + jacksonMapper.writeValueAsString(sentCells.getRowHeadingsSource()) + " ," +
+                    "\"columnHeadings\": " + jacksonMapper.writeValueAsString(sentCells.getColHeadingsSource()) + "," +
+                    "\"context\": " + jacksonMapper.writeValueAsString(sentCells.getContextSource()) +  "," +
+                    "\"query\": [[]]," +
+                    "\"userContext\": \"\"," +
+                    "\"data\": [[]]," +
+                    "\"comments\": [[]]}");
+
             Menuitem demoItem = new Menuitem("Graph Demo");
             editPopup.appendChild(demoItem);
             OnlineReport or = OnlineReportDAO.findById(reportId);
-            ObjectMapper jacksonMapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-
             demoItem.addEventListener(Events.ON_CLICK, (EventListener<MouseEvent>) event -> {
-                // may as well prepare the json for the excel controller here, in future it will be JS but this is for a demo
-                // zap new lines they just cause a pain for the JS
-                String json = jacksonMapper.writeValueAsString("{\"reportId\": \"\"," +
-                        "\"sheetName\": \"\"," +
-                        "\"region\": \"\"," +
-                        "\"optionsSource\": \"\"," +
-                        "\"rowHeadings\": " + jacksonMapper.writeValueAsString(sentCells.getRowHeadingsSource()) + " ," +
-                        "\"columnHeadings\": " + jacksonMapper.writeValueAsString(sentCells.getColHeadingsSource()) + "," +
-                        "\"context\": " + jacksonMapper.writeValueAsString(sentCells.getContextSource()) +  "," +
-                        "\"query\": [[]]," +
-                        "\"userContext\": \"\"," +
-                        "\"data\": [[]]," +
-                        "\"comments\": [[]]}");
-
                 Clients.evalJavaScript("window.open(\"/graphtest.jsp?report=" + URLEncoder.encode(or.getReportName(), "UTF-8")  + "&json=" + URLEncoder.encode(json) + "\")");
+            });
+
+            Menuitem demoItem2 = new Menuitem("Graph Demo YX");
+            editPopup.appendChild(demoItem2);
+            demoItem2.addEventListener(Events.ON_CLICK, (EventListener<MouseEvent>) event -> {
+                Clients.evalJavaScript("window.open(\"/graphtest.jsp?report=" + URLEncoder.encode(or.getReportName(), "UTF-8")  + "&json=" + URLEncoder.encode(json) + "&YX=true\")");
             });
 
         }

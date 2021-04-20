@@ -6,13 +6,45 @@
             var cellsAndHeadingsForExcel = await azquoSend("/api/Excel/", "op=loadregion&reportname=" + encodeURIComponent("<%= request.getParameter("report") %>") + "&json=" + encodeURIComponent(<%= request.getParameter("json") %>) + "&sessionid=<%= session.getId() %>");
 //    console.log(JSON.stringify(cellsAndHeadingsForExcel));
             var newChartData = [];
-            var newChartData2 = [];
             var grandTotal = 0;
             var rowTotals = [];
             var i;
 
             var visitorsData = {};
-            // atlanta sydney etc needs to be the col headings
+
+            <% if (request.getParameter("YX") != null){ %>
+            // this one is switched around, flip the XY where helpful
+            for (i = 0; i < cellsAndHeadingsForExcel.columnHeadings[0].length; i++) {
+                var rowTotal = 0;
+                dPoints = [];
+                var j;
+                for (j = 0; j < cellsAndHeadingsForExcel.rowHeadings.length; j++){
+                    dPoints.push(
+                        { label: "" + cellsAndHeadingsForExcel.rowHeadings[j] , y: parseFloat(cellsAndHeadingsForExcel.data[j][i]) }
+                    );
+                    parsed = parseFloat(cellsAndHeadingsForExcel.data[j][i]);
+                    if (!isNaN(parsed)){
+                        rowTotal += parsed;
+                    }
+                }
+                rowTotals.push(
+                    { y: rowTotal, name: cellsAndHeadingsForExcel.columnHeadings[0][i] + ""}
+                )
+                grandTotal += rowTotal;
+                newChartData.push({
+                    type: "spline",
+                    name: cellsAndHeadingsForExcel.columnHeadings[0][i] + "",
+                    showInLegend: true,
+                    dataPoints: dPoints
+                });
+
+                visitorsData[cellsAndHeadingsForExcel.columnHeadings[0][i] + ""] = [{
+                    name: cellsAndHeadingsForExcel.columnHeadings[0][i] + "",
+                    type: "column",
+                    dataPoints: dPoints
+                }]
+            }
+            <% } else { %>
             for (i = 0; i < cellsAndHeadingsForExcel.rowHeadings.length; i++) {
                 var rowTotal = 0;
                 dPoints = [];
@@ -21,7 +53,10 @@
                     dPoints.push(
                         { label: "" + cellsAndHeadingsForExcel.columnHeadings[0][j] , y: parseFloat(cellsAndHeadingsForExcel.data[i][j]) }
                     );
-                    rowTotal += parseFloat(cellsAndHeadingsForExcel.data[i][j]);
+                    parsed = parseFloat(cellsAndHeadingsForExcel.data[i][j]);
+                    if (!isNaN(parsed)){
+                        rowTotal += parsed;
+                    }
                 }
                 rowTotals.push(
                     { y: rowTotal, name: cellsAndHeadingsForExcel.rowHeadings[i] + ""}
@@ -33,12 +68,6 @@
                     showInLegend: true,
                     dataPoints: dPoints
                 });
-                newChartData2.push({
-                    type: "stackedColumn",
-                    name: cellsAndHeadingsForExcel.rowHeadings[i] + "",
-                    showInLegend: true,
-                    dataPoints: dPoints
-                });
 
                 visitorsData[cellsAndHeadingsForExcel.rowHeadings[i] + ""] = [{
                     name: cellsAndHeadingsForExcel.rowHeadings[i] + "",
@@ -46,6 +75,7 @@
                     dataPoints: dPoints
                 }]
             }
+            <% } %>
 
 
             visitorsData["<%= request.getParameter("report") %>"] = [{
@@ -80,25 +110,6 @@
                 data: newChartData
             });
             chart.render();
-
-            chart2 = new CanvasJS.Chart("chartContainer2", {
-                animationEnabled: true,
-                exportEnabled: true,
-                title:{
-                    text: "<%= request.getParameter("report") %>"
-                },
-                toolTip: {
-                    shared: true
-                },
-                legend:{
-                    cursor:"pointer",
-//            itemclick: toggleDataSeries
-                },
-                data: newChartData2
-            });
-            //chart2.render();
-
-
 
             var newVSReturningVisitorsOptions = {
                 animationEnabled: true,
@@ -199,13 +210,12 @@
         }
     </style>
 </head>
+<script src="js/jquery-1.11.1.min.js"></script>
+<script src="js/canvasjs.min.js"></script>
 <body onload="updateChart()">
-<script src="https://canvasjs.com/assets/script/jquery-1.11.1.min.js"></script>
-<script src="https://canvasjs.com/assets/script/canvasjs.min.js"></script>
 <div id="chartContainer3" style="height: 370px; width: 100%;"></div>
 <button class="btn invisible" id="backButton">< Back</button>
 <!--<button onclick="updateChart(); return false;">Update Chart</button>-->
 <div id="chartContainer" style="height: 370px; width: 100%;"></div>
-<div id="chartContainer2" style="height: 370px; width: 100%;"></div>
 </body>
 </html>

@@ -5,6 +5,7 @@ import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.controller.OnlineController;
 import com.azquo.spreadsheet.*;
 import com.azquo.spreadsheet.transport.*;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.zkoss.chart.ChartsEvent;
 import org.zkoss.zk.ui.*;
@@ -490,18 +491,18 @@ public class ZKComposer extends SelectorComposer<Component> {
 
     // to deal with provenance
     @Listen("onCellRightClick = #myzss")
-    public void onCellRightClick(CellMouseEvent cellMouseEvent) {
+    public void onCellRightClick(CellMouseEvent cellMouseEvent) throws JsonProcessingException {
         //Clients.evalJavaScript("zk.Widget.$('$myzss').setShowContextMenu(true);");
         //Clients.evalJavaScript("alert(zk.Widget.$('$myzss').getShowContextMenu());");
         showAzquoContextMenu(cellMouseEvent.getRow(), cellMouseEvent.getColumn(), cellMouseEvent.getClientx(), cellMouseEvent.getClienty());
     }
 
 
-    private void showAzquoContextMenu(int cellRow, int cellCol, int mouseX, int mouseY) {
+    private void showAzquoContextMenu(int cellRow, int cellCol, int mouseX, int mouseY) throws JsonProcessingException {
         zkContextMenu.showAzquoContextMenu(cellRow, cellCol, mouseX, mouseY, null, myzss);
     }
 
-    private void showAzquoContextMenu(int cellRow, int cellCol, Component ref) {
+    private void showAzquoContextMenu(int cellRow, int cellCol, Component ref) throws JsonProcessingException {
         zkContextMenu.showAzquoContextMenu(cellRow, cellCol, 0, 0, ref, myzss);
     }
 
