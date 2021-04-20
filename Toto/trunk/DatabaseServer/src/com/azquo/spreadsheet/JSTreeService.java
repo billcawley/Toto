@@ -126,7 +126,9 @@ public class JSTreeService {
         if (children.size() > 0 || (name != null && name.getAttributes().size() > 1)) {
             int count = 0;
             for (Name child : children) {
-                boolean childrenBoolean = child.hasChildren() || child.hasValues() || child.getAttributes().size() > 1;
+                // efc note - has values? I don't think this helps, it leaves nodes that look empty
+//                boolean childrenBoolean = child.hasChildren() || child.hasValues() || child.getAttributes().size() > 1;
+                boolean childrenBoolean = child.hasChildren() || child.getAttributes().size() > 1;
                 if (count > childrenLimit) {
                     childNodes.add(new JsonChildren.Node(-1, (children.size() - childrenLimit) + " more....", childrenBoolean, -1, -1));
                     break;
