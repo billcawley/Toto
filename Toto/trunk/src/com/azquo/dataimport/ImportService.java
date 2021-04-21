@@ -2001,6 +2001,22 @@ fr.close();
                     }
                 }
             }
+            List<String> useSheetList = getList(ppBook, "az_UseSheets");
+            if (useSheetList.size() > 0){
+                String sheetName = uploadedFile.getFileNames().get(uploadedFile.getFileNames().size()-1).toLowerCase(Locale.ROOT);
+                for (String useSheet:useSheetList) {
+                    boolean use = false;
+                    if (useSheet.length() > 0 && sheetName.contains(useSheet)) {
+                        use = true;
+                        break;
+                        //using 'contains' - maybe should check wildcards
+                     }
+                    if (!use){
+                        uploadedFile.setPath(null);
+                        return;
+                    }
+                }
+            }
 
             org.apache.poi.ss.usermodel.Name inputLineRegion = BookUtils.getName(ppBook, "az_input");
             AreaReference inputAreaRef = new AreaReference(inputLineRegion.getRefersToFormula(), null);
