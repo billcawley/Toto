@@ -635,39 +635,55 @@ public class AzquoCellService {
         }
         // the hide cols could make empty rows, this trips up code. Zap the empty rows
         toReturn.removeIf(List::isEmpty);
-
         // it's at this point we actually have data that's going to be sent to a user in newRow so do the highlighting here I think
-        if (regionOptions.highlightDays > 0) {
-            int highlightHours = regionOptions.highlightDays * 24;
-            //hack to allow highlight one hour
-            if (regionOptions.highlightDays == 2) highlightHours = 1; // todo - get rid of this!
+        long highlightMinutes =  regionOptions.highlightDays  * 24 * 60;
+        if (highlightMinutes==RegionOptions.ONEHOUR * 24 * 60){
+            highlightMinutes = 1;
+        }
+        if (highlightMinutes == RegionOptions.LATEST * 24 * 60){//latest-
             for (List<AzquoCell> row : toReturn) {
                 for (AzquoCell azquoCell : row) {
-                    long age = 1000000; // about 30 years old as default
-                    ListOfValuesOrNamesAndAttributeName valuesForCell = azquoCell.getListOfValuesOrNamesAndAttributeName();
-                    if (valuesForCell != null && (valuesForCell.getValues() != null && !valuesForCell.getValues().isEmpty())) {
-                        for (Value value : valuesForCell.getValues()) {
-                            if (value.getText().length() > 0) {
-                                if (value.getProvenance() == null) {
-                                    System.out.println("provenance null for " + value); // bit of a hack but lets log it
-                                    //break;
-                                } else {
-                                    LocalDateTime provdate = value.getProvenance().getTimeStamp();
-                                    long cellAge = provdate.until(LocalDateTime.now(), ChronoUnit.HOURS);
-                                    if (cellAge < age) {
-                                        age = cellAge;
-                                    }
-                                }
-                            }
-                        }
+                    long age = lowestAgeInMinutes(azquoCell);
+                    if (highlightMinutes > age) {
+                        highlightMinutes = age;
                     }
-                    if (highlightHours > age) {
+                }
+            }
+        }
+        if (highlightMinutes > 0) {
+             //hack to allow highlight one hour
+             for (List<AzquoCell> row : toReturn) {
+                for (AzquoCell azquoCell : row) {
+                    double age = lowestAgeInMinutes(azquoCell);
+                    if (highlightMinutes >= age) {
                         azquoCell.setAsHighlighted();
                     }
                 }
             }
         }
         return toReturn;
+    }
+
+    private static long lowestAgeInMinutes(AzquoCell azquoCell){
+        long age = 10000000; // about 30 years old as default
+        ListOfValuesOrNamesAndAttributeName valuesForCell = azquoCell.getListOfValuesOrNamesAndAttributeName();
+        if (valuesForCell != null && (valuesForCell.getValues() != null && !valuesForCell.getValues().isEmpty())) {
+            for (Value value : valuesForCell.getValues()) {
+                if (value.getText().length() > 0) {
+                    if (value.getProvenance() == null) {
+                        System.out.println("provenance null for " + value); // bit of a hack but lets log it
+                        //break;
+                    } else {
+                        LocalDateTime provdate = value.getProvenance().getTimeStamp();
+                        long cellAge = provdate.until(LocalDateTime.now(), ChronoUnit.MINUTES);
+                        if (cellAge < age) {
+                            age = cellAge;
+                        }
+                    }
+                }
+            }
+        }
+        return age;
     }
 
 

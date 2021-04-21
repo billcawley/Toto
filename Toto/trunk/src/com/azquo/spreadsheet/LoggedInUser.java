@@ -93,6 +93,7 @@ public class LoggedInUser implements Serializable {
     private String imageStoreName;
     // context is not the same as context per region and in fact this needs to be like sent cells in that it needs to be per report and perhaps stored as pairs? Or a map. Choices for report TODO
     private String context;
+    private int highlightDays;
 
     private final Business business;
 
@@ -128,6 +129,7 @@ public class LoggedInUser implements Serializable {
         //this.writePermissions = writePermissions;
         this.imageStoreName = imageStoreName;
         this.context = null;
+        this.highlightDays = 0;
         lastJSTreeNodeId = new AtomicInteger();
         jsTreeLookupMap = new ConcurrentHashMap<>();
         // make log files dir if required
@@ -242,6 +244,10 @@ public class LoggedInUser implements Serializable {
     public void setContext(String context) {
         this.context = context;
     }
+
+    public int getHighlightDays() {return highlightDays; }
+
+    public void setHighlightDays(int highlightDays) {this.highlightDays = highlightDays; }
 
     public DatabaseServer getDatabaseServer() {
         return databaseServer;

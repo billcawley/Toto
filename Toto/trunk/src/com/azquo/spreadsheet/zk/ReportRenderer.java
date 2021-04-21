@@ -304,7 +304,11 @@ public class ReportRenderer {
                             userRegionOptions.setSortRow(userRegionOptions2.getSortRow());
                             userRegionOptions.setSortRowAsc(userRegionOptions2.getSortRowAsc());
                         }
+
                         userRegionOptions.setHighlightDays(userRegionOptions2.getHighlightDays());
+                    }
+                    if (loggedInUser.getHighlightDays()>0){
+                        userRegionOptions.setHighlightDays(loggedInUser.getHighlightDays());
                     }
                     String databaseName = userRegionOptions.getDatabaseName();
                     // fairly simple addition to allow multiple databases on the same report

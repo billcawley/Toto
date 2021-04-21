@@ -199,15 +199,15 @@ class ZKContextMenu {
             if (userRegionOptions != null) {
                 highlightDays = userRegionOptions.getHighlightDays();
             }
-            String highlightString = "no highlight";
-            if (highlightDays > 0) highlightString = highlightDays + " days";
+            String highlightString = highlightString(highlightDays);
             final String highlightList = "Current highlight is " + highlightString + "\n";
             Label highlightLabel = new Label();
             highlightLabel.setMultiline(true);
             highlightLabel.setValue(highlightList);
             highlightPopup.appendChild(highlightLabel);
             addHighlight(highlightPopup, 0);
-            addHighlight(highlightPopup, 2);
+            addHighlight(highlightPopup, RegionOptions.LATEST);
+            addHighlight(highlightPopup, RegionOptions.ONEHOUR);
             addHighlight(highlightPopup, 1);
             addHighlight(highlightPopup, 7);
             addHighlight(highlightPopup, 30);
@@ -229,9 +229,7 @@ class ZKContextMenu {
     }
 
     private void addHighlight(Popup highlightPopup, final int days) {
-        String hDays = days + " days";
-        if (days == 0) hDays = "none";
-        if (days == 2) hDays = "1 hour";
+        String hDays = highlightString(days);
         final Toolbarbutton highlightButton = new Toolbarbutton("highlight " + hDays);
         highlightButton.addEventListener("onClick",
                 event -> showHighlight(days));
@@ -241,11 +239,22 @@ class ZKContextMenu {
         highlightPopup.appendChild(highlightLabel);
     }
 
+    private String highlightString(int days){
+        if (days == 0) return "none";
+        if (days == RegionOptions.LATEST) return"latest";
+        if (days == RegionOptions.ONEHOUR){
+            return "1 hour";
+        }
+        return days + " days";
+
+    }
+
     private void showHighlight(int days) {
         Book book = myzss.getBook();
         boolean reload = false;
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
         int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
+        loggedInUser.setHighlightDays(days);
         for (SName name : book.getInternalBook().getNames()) {
             if (name.getName().toLowerCase().startsWith(ReportRenderer.AZDATAREGION)) {
                 String region = name.getName().substring(13);
