@@ -1113,6 +1113,9 @@ public final class StandardName extends Name {
             values = new ArrayList<>(getValues());
             //parents = new ArrayList<>(getParents());
             parents = getParents();
+            // ok, having made a copy zap the parents! This is to avoid a performance issue. The iteration below will remove the parents one by one
+            // but if the parents (due to a misconfigured db) have say a million items then the name array copy above will be slow. This removes that issue
+            this.parents = new Name[0];
             // the basics are done here in the synchronized block
             getAzquoMemoryDB().removeNameFromDb(this);
             setNeedsDeleting();
