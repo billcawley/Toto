@@ -41,10 +41,11 @@ public class ExcelService {
                 userRegionOptions.setSortRow(userRegionOptions2.getSortRow());
                 userRegionOptions.setSortRowAsc(userRegionOptions2.getSortRowAsc());
             }
-            long highlightDays = userRegionOptions2.getHighlightDays();
+            userRegionOptions.setHighlightDays(userRegionOptions2.getHighlightDays());
             if (loggedInUser.getHighlightDays()> 0) {//last user choice overrides region option
-                highlightDays = loggedInUser.getHighlightDays();
+                userRegionOptions.setHighlightDays(loggedInUser.getHighlightDays());
             }
+
         }
         return userRegionOptions;
     }
