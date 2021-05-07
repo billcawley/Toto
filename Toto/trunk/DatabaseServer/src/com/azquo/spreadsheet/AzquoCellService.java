@@ -636,26 +636,26 @@ public class AzquoCellService {
         // the hide cols could make empty rows, this trips up code. Zap the empty rows
         toReturn.removeIf(List::isEmpty);
         // it's at this point we actually have data that's going to be sent to a user in newRow so do the highlighting here I think
-        long highlightMinutes =  regionOptions.highlightDays  * 24 * 60;
-        if (highlightMinutes==RegionOptions.ONEHOUR * 24 * 60){
-            highlightMinutes = 1;
+        long highlightSeconds =  regionOptions.highlightDays  * 24 * 60 * 60;
+        if (highlightSeconds==RegionOptions.ONEHOUR * 24 * 60 * 60){
+            highlightSeconds = 1;
         }
-        if (highlightMinutes == RegionOptions.LATEST * 24 * 60){//latest-
+        if (highlightSeconds == RegionOptions.LATEST * 24 * 60 * 60){//latest-
             for (List<AzquoCell> row : toReturn) {
                 for (AzquoCell azquoCell : row) {
-                    long age = lowestAgeInMinutes(azquoCell);
-                    if (highlightMinutes > age) {
-                        highlightMinutes = age;
+                    long age = lowestAgeInSeconds(azquoCell);
+                    if (highlightSeconds > age) {
+                        highlightSeconds = age;
                     }
                 }
             }
         }
-        if (highlightMinutes > 0) {
+        if (highlightSeconds > 0) {
              //hack to allow highlight one hour
              for (List<AzquoCell> row : toReturn) {
                 for (AzquoCell azquoCell : row) {
-                    double age = lowestAgeInMinutes(azquoCell);
-                    if (highlightMinutes >= age) {
+                    double age = lowestAgeInSeconds(azquoCell);
+                    if (highlightSeconds >= age) {
                         azquoCell.setAsHighlighted();
                     }
                 }
@@ -664,8 +664,8 @@ public class AzquoCellService {
         return toReturn;
     }
 
-    private static long lowestAgeInMinutes(AzquoCell azquoCell){
-        long age = 10000000; // about 30 years old as default
+    private static long lowestAgeInSeconds(AzquoCell azquoCell){
+        long age = 1000000000; // about 30 years old as default
         ListOfValuesOrNamesAndAttributeName valuesForCell = azquoCell.getListOfValuesOrNamesAndAttributeName();
         if (valuesForCell != null && (valuesForCell.getValues() != null && !valuesForCell.getValues().isEmpty())) {
             for (Value value : valuesForCell.getValues()) {
@@ -675,7 +675,10 @@ public class AzquoCellService {
                         //break;
                     } else {
                         LocalDateTime provdate = value.getProvenance().getTimeStamp();
-                        long cellAge = provdate.until(LocalDateTime.now(), ChronoUnit.MINUTES);
+                        long cellAge = provdate.until(LocalDateTime.now(), ChronoUnit.SECONDS);
+                        if (cellAge == 0){
+                            cellAge = 1;
+                        }
                         if (cellAge < age) {
                             age = cellAge;
                         }
