@@ -29,8 +29,8 @@ public class RegionOptions implements Serializable {
     public final boolean preSave;
     public final boolean dynamicUpdate;
 
-    public final static int LATEST = 100000;
-    public final static int ONEHOUR = 100001;
+    public final static int LATEST = 1000;
+    public final static int ONEHOUR = 1001;
 
 
     public RegionOptions(int hideRows, int hideRowValues,int hideCols, boolean sortable, int rowLimit, int columnLimit, String sortRow, boolean sortRowAsc, String sortColumn, boolean sortColumnAsc
