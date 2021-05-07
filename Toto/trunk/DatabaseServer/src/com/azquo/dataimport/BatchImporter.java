@@ -1144,7 +1144,7 @@ public class BatchImporter implements Callable<Void> {
                     }
                 }
                 // now attribute, not allowing attributes and peers to mix
-            } else if (cell.getImmutableImportHeading().indexForAttribute >= 0 && cell.getImmutableImportHeading().attribute != null && cell.getLineValue().length() > 0) {
+            } else if (cell.getImmutableImportHeading().indexForAttribute >= 0 && cell.getImmutableImportHeading().attribute != null && (cell.getLineValue().length() > 0||clearData)) {
                 String attribute = cell.getImmutableImportHeading().attribute;
                 if (cell.getImmutableImportHeading().attributeColumn >= 0) {//attribute *name* refers to the value in another column - so find it
                     attribute = cells.get(cell.getImmutableImportHeading().attributeColumn).getLineValue();
