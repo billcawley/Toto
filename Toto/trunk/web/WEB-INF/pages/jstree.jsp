@@ -159,22 +159,6 @@
                             },
                         </c:when>
                         <c:otherwise>
-                            createItem : {
-                                "label" : "New Name",
-                                "action" : function(obj) {
-                                    newNode = tree.create_node($node);
-                                    tree.open_node($node);
-                                },
-                                "_class" : "class"
-                            },
-                            deleteItem : {
-                                "label" : "Remove Name",
-                                "action" : function(obj) { tree.delete_node($node)}
-                            },
-                            editAttributes:{
-                                "label" : "Edit attributes",
-                                "action" :function(obj){editAttributes($node)}
-                            },
                             seeParents:{
                                 "label":  seeParents,
                                 "action" :function(obj) {
@@ -189,7 +173,14 @@
                                         window.open(url,"_blank","")
                                     }
                                 }
-
+                             },
+                             editAttributes:{
+                                "label" : "Edit attributes",
+                                "action" :function(obj){editAttributes($node)}
+                            },
+                            deleteItem : {
+                                "label" : "Remove Name - USE WITH CARE",
+                                "action" : function(obj) { tree.delete_node($node)}
                             }
                             </c:otherwise>
                         </c:choose>
