@@ -266,7 +266,6 @@ public class ReportAnalysis {
             return name.substring(ReportRenderer.AZCONTEXTHEADINGS.length());
         if (name.startsWith(ReportRenderer.AZPIVOTHEADINGS))
             return name.substring(ReportRenderer.AZPIVOTHEADINGS.length());
-        if (name.startsWith(ReportRenderer.AZIMPORTNAME)) return name.substring(ReportRenderer.AZIMPORTNAME.length());
         if (name.startsWith(ReportRenderer.AZSAVE)) return name.substring(ReportRenderer.AZSAVE.length());
         if (name.startsWith(ReportRenderer.AZREPEATSHEET)) return name.substring(ReportRenderer.AZREPEATSHEET.length());
         if (name.startsWith(ReportRenderer.AZPDF)) return name.substring(ReportRenderer.AZPDF.length());

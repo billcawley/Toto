@@ -393,15 +393,6 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
                             if (!lcName.contains("=") && (lcName.contains("import templates") || lcName.contains("preprocessor") || lcName.contains("headings")|| lcName.contains("lookups"))) {
                                 isImportTemplate = true;
                             }
-                            // detect Ben Jones contract style template
-
-                            Name importName = BookUtils.getName(book, ReportRenderer.AZIMPORTNAME);
-                            if (importName != null) {
-                                isImportTemplate = true;
-                            }
-                            if (BookUtils.getName(book, ReportRenderer.AZINPUTNAME) != null) {
-                                isImportTemplate = true;
-                            }
                             boolean assignTemplateToDatabase = false;
                             if (database != null && !database.isEmpty() && !database.equalsIgnoreCase("none")) {
                                 LoginService.switchDatabase(loggedInUser, database); // could be blank now

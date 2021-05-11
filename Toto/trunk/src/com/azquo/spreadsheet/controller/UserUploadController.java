@@ -184,15 +184,6 @@ public class UserUploadController {
                             if (uploadedFile.getFileName().toLowerCase().contains("import templates")) {
                                 isImportTemplate = true;
                             }
-                            // detect Ben Jones contract style template
-
-                            Name importName = BookUtils.getName(book, ReportRenderer.AZIMPORTNAME);
-                            if (importName != null) {
-                                isImportTemplate = true;
-                            }
-                            if (BookUtils.getName(book, ReportRenderer.AZINPUTNAME)!=null){
-                                isImportTemplate = true;
-                            }
                             // windows file write locking paranoia
                             if (opcPackage != null){
                                 opcPackage.revert();

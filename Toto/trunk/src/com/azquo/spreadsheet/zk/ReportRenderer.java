@@ -64,8 +64,6 @@ public class ReportRenderer {
     static final String AZPIVOTHEADINGS = "az_pivotheadings";//old version
     static final String AZMULTISELECTHEADINGS = "az_multiselectheadings";//EFC - only switch on the multi select headings if this name is there. Having them on auto causes problems
     public static final String AZREPORTNAME = "az_reportname";
-    public static final String AZIMPORTNAME = "az_importname";
-    public static final String AZINPUTNAME = "az_input";
     public static final String EXECUTE = "az_execute";
     public static final String PREEXECUTE = "az_preexecute";
     public static final String FOLLOWON = "az_followon";

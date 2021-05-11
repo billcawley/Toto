@@ -439,11 +439,9 @@ public final class ImportService {
                     }
                 }
             }
-            // is it the type of import template as required by Ben Jones
-            org.apache.poi.ss.usermodel.Name importName = BookUtils.getName(book, ReportRenderer.AZIMPORTNAME);
             // also just do a simple check on the file name.  Allow templates to be included in a setup bundle then directed correctly
             String lcName = uploadedFile.getFileName().toLowerCase();
-            if ((importName != null || lcName.contains("import templates") || lcName.contains(PREPROCESSOR) || lcName.contains("headings")) && !lcName.contains("=")) {
+            if ((lcName.contains("import templates") || lcName.contains(PREPROCESSOR) || lcName.contains("headings")) && !lcName.contains("=")) {
                 if ((loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
                     if (opcPackage != null) opcPackage.revert();
                     //preprocessors are not assigned to the file, import templates are assigned
@@ -539,8 +537,8 @@ public final class ImportService {
     resolve the output sheets, then import them.
      */
         if (uploadedFile.getParameter("workbookprocessor") != null) {
-            ImportTemplate preProcess = ImportTemplateDAO.findForNameAndBusinessId( uploadedFile.getParameter("workbookprocessor"), loggedInUser.getUser().getBusinessId());
-            if (preProcess != null){
+            ImportTemplate preProcess = ImportTemplateDAO.findForNameAndBusinessId(uploadedFile.getParameter("workbookprocessor"), loggedInUser.getUser().getBusinessId());
+            if (preProcess != null) {
                 String workbookProcessor = SpreadsheetService.getHomeDir() + dbPath + loggedInUser.getBusinessDirectory() + importTemplatesDir + preProcess.getFilenameForDisk();
                 OPCPackage opcPackage1;
                 try (FileInputStream fi = new FileInputStream(workbookProcessor)) { // this will hopefully guarantee that the file handler is released under windows
@@ -555,7 +553,7 @@ public final class ImportService {
                     org.apache.poi.ss.usermodel.Sheet inputSheet = book.getSheetAt(sheetNo);
                     for (int sheetNo1 = 0; sheetNo1 < ppBook.getNumberOfSheets(); sheetNo1++) {
                         org.apache.poi.ss.usermodel.Sheet outputSheet = ppBook.getSheetAt(sheetNo1);
-                        if (inputSheet.getSheetName().toLowerCase().contains(outputSheet.getSheetName().toLowerCase())){// then we have to move data
+                        if (inputSheet.getSheetName().toLowerCase().contains(outputSheet.getSheetName().toLowerCase())) {// then we have to move data
                             // issue here it what cells are already there or not
                             // stack overflow paste and modify alert! Actually modified quite a lot
 
@@ -564,7 +562,7 @@ public final class ImportService {
                             for (int iRow = fRow; iRow <= lRow; iRow++) {
                                 Row inputRow = inputSheet.getRow(iRow);
                                 Row outputRow = outputSheet.getRow(iRow);
-                                if (outputRow == null){// think that's the standard logic
+                                if (outputRow == null) {// think that's the standard logic
                                     outputRow = outputSheet.createRow(iRow);
                                 }
                                 if (inputRow != null) {
@@ -573,7 +571,7 @@ public final class ImportService {
                                     for (int iCell = fCell; iCell < lCell; iCell++) {
                                         Cell cell = inputRow.getCell(iCell);
                                         Cell oCell = outputRow.getCell(iCell);
-                                        if (oCell == null){
+                                        if (oCell == null) {
                                             oCell = outputRow.createCell(iCell);
                                         }
                                         if (cell != null) {
@@ -611,11 +609,9 @@ public final class ImportService {
                 for (int sheetNo = 0; sheetNo < ppBook.getNumberOfSheets(); sheetNo++) {
                     org.apache.poi.ss.usermodel.Sheet sheet = ppBook.getSheetAt(sheetNo);
                     if (sheet.getSheetName().toLowerCase().startsWith("azquo output")) {
-                        List<UploadedFile> uploadedFiles = readSheet(loggedInUser, uploadedFile, sheet, knownValues, pendingUploadConfig, templateCache);
-                        for (UploadedFile uploadedFile1 : uploadedFiles) {
-                            uploadedFile1.addToProcessingDuration(sheetExcelLoadTimeShare / uploadedFiles.size());
-                        }
-                        toReturn.addAll(uploadedFiles);
+                        UploadedFile uploadedFile1 = readSheet(loggedInUser, uploadedFile, sheet, knownValues, pendingUploadConfig, templateCache);
+                        uploadedFile1.addToProcessingDuration(sheetExcelLoadTimeShare);
+                        toReturn.add(uploadedFile1);
                     }
                 }
                 opcPackage1.revert();
@@ -624,11 +620,9 @@ public final class ImportService {
             for (int sheetNo = 0; sheetNo < book.getNumberOfSheets(); sheetNo++) {
                 org.apache.poi.ss.usermodel.Sheet sheet = book.getSheetAt(sheetNo);
                 if (!book.isSheetHidden(sheetNo)) {
-                    List<UploadedFile> uploadedFiles = readSheet(loggedInUser, uploadedFile, sheet, knownValues, pendingUploadConfig, templateCache);
-                    for (UploadedFile uploadedFile1 : uploadedFiles) {
-                        uploadedFile1.addToProcessingDuration(sheetExcelLoadTimeShare / uploadedFiles.size());
-                    }
-                    toReturn.addAll(uploadedFiles);
+                    UploadedFile uploadedFile1 = readSheet(loggedInUser, uploadedFile, sheet, knownValues, pendingUploadConfig, templateCache);
+                    uploadedFile1.addToProcessingDuration(sheetExcelLoadTimeShare);
+                    toReturn.add(uploadedFile1);
                 }
             }
         }
@@ -694,78 +688,10 @@ public final class ImportService {
     }
 
 
-    private static List<UploadedFile> readSheet(LoggedInUser loggedInUser, UploadedFile uploadedFile, org.apache.poi.ss.usermodel.Sheet sheet, Map<String, String> knownValues, PendingUploadConfig pendingUploadConfig, HashMap<String, ImportTemplateData> templateCache) {
+    private static UploadedFile readSheet(LoggedInUser loggedInUser, UploadedFile uploadedFile, org.apache.poi.ss.usermodel.Sheet sheet, Map<String, String> knownValues, PendingUploadConfig pendingUploadConfig, HashMap<String, ImportTemplateData> templateCache) {
         String sheetName = sheet.getSheetName();
         long time = System.currentTimeMillis();
         try {
-            boolean importByNamedRegion = false;
-            // reimplementing the old style import templates as used by Ben Jones
-            // this could perhaps be tidied, is a mix of API calls as the data is a workbook but the template is the new style,
-            // variable names could be better what with ,ap entries being used. TODO clean
-            ImportTemplateData importTemplateData = getImportTemplateForUploadedFile(loggedInUser, uploadedFile, templateCache);
-            if (importTemplateData != null) {
-                for (String templateSheetName : importTemplateData.getSheets().keySet()) {
-                    AreaReference importName = importTemplateData.getName(ReportRenderer.AZIMPORTNAME, templateSheetName);
-                    if (importName != null) {
-                        importByNamedRegion = true;
-                        int row = importName.getFirstCell().getRow();
-                        int col = importName.getFirstCell().getCol();
-                        String valueToLookFor = null;
-                        List<List<String>> sheetData = importTemplateData.getSheets().get(templateSheetName);
-                        if (sheetData.size() > row && sheetData.get(row).size() > col) {
-                            valueToLookFor = sheetData.get(row).get(col);
-                        }
-                        org.apache.poi.ss.usermodel.Cell cell = null;
-                        if (sheet.getRow(row) != null) {
-                            cell = sheet.getRow(row).getCell(col);
-                        }
-                        if (cell != null && getCellValue(cell).equals(valueToLookFor)) {// then we have a match
-                            //FIRST  glean information from range names
-                            Map<String, AreaReference> namesForTemplate = importTemplateData.getNamesForSheet(templateSheetName);
-                            for (Map.Entry<String, AreaReference> entry : namesForTemplate.entrySet()) {
-                                AreaReference ref = entry.getValue();
-                                if (ref.isSingleCell()) {
-                                    int rowNo = ref.getFirstCell().getRow();
-                                    int colNo = ref.getFirstCell().getCol();
-                                    knownValues.put(entry.getKey(), getCellValue(sheet.getRow(rowNo).getCell(colNo)));
-                                }
-                            }
-                            //now copy across the column headings in full
-                            ArrayList<UploadedFile> toReturn = new ArrayList<>();
-                            for (Map.Entry<String, AreaReference> entry : namesForTemplate.entrySet()) {
-                                if (entry.getKey().toLowerCase().startsWith(ReportRenderer.AZCOLUMNHEADINGS)) {
-                                    AreaReference dataRegion = importTemplateData.getName(ReportRenderer.AZDATAREGION + entry.getKey().toLowerCase().substring(ReportRenderer.AZCOLUMNHEADINGS.length()));
-                                    if (dataRegion != null) {
-                                        time = System.currentTimeMillis();
-                                        File newTempFile = File.createTempFile("from" + uploadedFile.getPath() + sheetName, ".csv");
-                                        newTempFile.deleteOnExit();
-                                        // Think it's ok with a blank file created
-                                        CsvWriter csvW = new CsvWriter(newTempFile.toString(), '\t', StandardCharsets.UTF_8);
-                                        csvW.setUseTextQualifier(false);
-                                        // this is called twice, for the column headers and then the data itself
-                                        rangeToCSV(importTemplateData.getSheets().get(sheetName), entry.getValue(), knownValues, csvW);
-                                        rangeToCSV(sheet, dataRegion, csvW);
-                                        csvW.close();
-                                        long convertTime = System.currentTimeMillis() - time;
-//                                fos.close();
-                                        List<String> names = new ArrayList<>(uploadedFile.getFileNames());
-                                        names.add(entry.getKey().substring(ReportRenderer.AZCOLUMNHEADINGS.length()));
-                                        // reassigning uploaded file so the correct object will be passed back on exception
-                                        uploadedFile = new UploadedFile(newTempFile.getPath(), names, uploadedFile.getParameters(), true, uploadedFile.isValidationTest());
-                                        uploadedFile.addToProcessingDuration(convertTime);
-                                        toReturn.add(readPreparedFile(loggedInUser, uploadedFile, true, pendingUploadConfig, templateCache));
-                                    }
-                                }
-                            }
-                            return toReturn;
-                        }
-                    }
-                }
-            }
-            if (importByNamedRegion) { // don't continue and try with the new method - if it was an old style import template and we got this far then it failed
-                return new ArrayList<>();
-            }
-            // end check on Ben Jones style import
             long test = System.currentTimeMillis();
             File temp = File.createTempFile(uploadedFile.getPath() + sheetName, ".csv");
             String tempPath = temp.getPath();
@@ -817,12 +743,12 @@ public final class ImportService {
                     pendingUploadConfig.incrementFileCounter();
                 }
                 uploadedFile.setError("Empty sheet : " + sheetName);
-                return Collections.singletonList(uploadedFile);
+                return uploadedFile;
             } else {
                 UploadedFile toReturn = readPreparedFile(loggedInUser, uploadedFile, false, pendingUploadConfig, templateCache);
                 // the UploadedFile will have the database server processing time, add the Excel stuff to it for better feedback to the user
                 toReturn.addToProcessingDuration(convertTime);
-                return Collections.singletonList(toReturn);
+                return toReturn;
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -835,7 +761,7 @@ public final class ImportService {
             if (pendingUploadConfig != null) {
                 pendingUploadConfig.incrementFileCounter();
             }
-            return Collections.singletonList(uploadedFile);
+            return uploadedFile;
         }
     }
 

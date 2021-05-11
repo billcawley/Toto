@@ -411,9 +411,6 @@ public class OnlineController {
         }
         String reportName = null;
         SName reportRange = book.getInternalBook().getNameByName(ReportRenderer.AZREPORTNAME);
-        if (reportRange == null) {
-            reportRange = book.getInternalBook().getNameByName(ReportRenderer.AZIMPORTNAME);
-        }
         if (reportRange != null) {
             reportName = BookUtils.getSnameCell(reportRange).getStringValue().trim();
         }
