@@ -17,6 +17,7 @@ import io.keikai.model.SCell;
 import io.keikai.model.SName;
 import io.keikai.model.SSheet;
 
+import java.rmi.RemoteException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -176,7 +177,7 @@ public class ChoicesService {
     }
 
     // choices can be a real pain, I effectively need to keep resolving them until they don't change due to choices being based on choices (dependencies in excel)
-    static Map<String, List<String>> resolveAndSetChoiceOptions(LoggedInUser loggedInUser, Sheet sheet, List<CellRegion> regionsToWatchForMerge) {
+    static Map<String, List<String>> resolveAndSetChoiceOptions(LoggedInUser loggedInUser, Sheet sheet, List<CellRegion> regionsToWatchForMerge) throws RemoteException {
         int attempts = 0;
         List<SName> namesForSheet = BookUtils.getNamesForSheet(sheet);
         boolean resolveChoices = true;
@@ -258,8 +259,19 @@ public class ChoicesService {
                     SCell resultCell = BookUtils.getSnameCell(sName);
                     String choiceLookup = sName.getName().substring(0, sName.getName().length() - ZKComposer.CHOSENTREE.length()).toLowerCase();
                     String userChoice = userChoices.get(choiceLookup.startsWith("az_") ? choiceLookup.substring(3) : choiceLookup);
+                    SName choiceName = BookUtils.getNameByName(choiceLookup + "Choice", sheet);
+                    SCell choiceCell = BookUtils.getSnameCell(choiceName);
+                    String query = choiceCell.getStringValue();
                     if (userChoice != null){
-                        BookUtils.setValue(resultCell, userChoice);
+                        // we need to check if this choice is in the tree that would be shown
+                        if (RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).nameValidForChosenTree(loggedInUser.getDataAccessToken(), userChoice, query)){
+                            BookUtils.setValue(resultCell, userChoice);
+                        } else { // set default
+                            BookUtils.setValue(resultCell, RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).getFirstChoiceForChosenTree(loggedInUser.getDataAccessToken(), query));
+                        }
+                    } else { // set default
+                        BookUtils.setValue(resultCell, RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).getFirstChoiceForChosenTree(loggedInUser.getDataAccessToken(), query));
+
                     }
                 }
                 if (sName.getName().equalsIgnoreCase(ReportRenderer.AZREPORTNAME)) {

@@ -25,9 +25,9 @@
 
         <div id="textwindow" class="js-col2">
             <div class="closebutton">
-                <span class="ui-dialog-title">Search</span>
+                <span class="ui-dialog-title"><a href="#" onclick="document.getElementById('attributeList').style.display='block';">Search</a></span>
             </div>
-                    <div id="attributeList">
+                    <div id="attributeList" style="display:none">
                         <label for="attributeChosen"> Attribute (language)<a href="#" onclick="document.getElementById('textwindow').style.display='none';"><span class="fa fa-times-circle"></span></a></label>
                         <select class="simpleselect" id="attributeChosen" onchange="changeLanguage()">
 

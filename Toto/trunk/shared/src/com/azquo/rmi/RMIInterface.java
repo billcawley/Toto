@@ -51,6 +51,10 @@ public interface RMIInterface extends Remote {
 
     JsonChildren getJsonChildren(DatabaseAccessToken databaseAccessToken, int jsTreeId, int nameId, boolean parents, String searchTerm, String language, int hundredMore) throws RemoteException;
 
+    boolean nameValidForChosenTree(DatabaseAccessToken databaseAccessToken, String chosenName, String searchTerm) throws RemoteException;
+
+    String getFirstChoiceForChosenTree(DatabaseAccessToken databaseAccessToken, String query) throws RemoteException;
+
     List<String> getAttributeList(DatabaseAccessToken databaseAccessToken) throws RemoteException;
 
     List<String> getDropDownListForQuery(DatabaseAccessToken databaseAccessToken, String query, String user, boolean justUser, int provenanceId) throws RemoteException;

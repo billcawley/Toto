@@ -39,7 +39,7 @@ import java.util.Set;
  */
 class RMIImplementation implements RMIInterface {
 
-    public void testConnection(){
+    public void testConnection() {
     }
 
     //Admin stuff
@@ -161,6 +161,24 @@ class RMIImplementation implements RMIInterface {
     public JsonChildren getJsonChildren(DatabaseAccessToken databaseAccessToken, int jsTreeId, int nameId, boolean parents, String searchTerm, String language, int hundredMore) throws RemoteException {
         try {
             return JSTreeService.getJsonChildren(databaseAccessToken, jsTreeId, nameId, parents, searchTerm, language, hundredMore);
+        } catch (Exception e) {
+            throw new RemoteException("Database Server Exception", e);
+        }
+    }
+
+    @Override
+    public boolean nameValidForChosenTree(DatabaseAccessToken databaseAccessToken, String chosenName, String searchTerm) throws RemoteException {
+        try {
+            return JSTreeService.nameValidForChosenTree(databaseAccessToken, chosenName, searchTerm);
+        } catch (Exception e) {
+            throw new RemoteException("Database Server Exception", e);
+        }
+    }
+
+    @Override
+    public String getFirstChoiceForChosenTree(DatabaseAccessToken databaseAccessToken, String query) throws RemoteException {
+        try {
+            return JSTreeService.getFirstChoiceForChosenTree(databaseAccessToken, query);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
@@ -595,10 +613,10 @@ class RMIImplementation implements RMIInterface {
     }
 
 
-   public void addToUserLog(DatabaseAccessToken databaseAccessToken, String loginfo) {
-        try{
+    public void addToUserLog(DatabaseAccessToken databaseAccessToken, String loginfo) {
+        try {
             AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken).addToUserLog(loginfo);
-        }catch(Exception e){
+        } catch (Exception e) {
             //if no log - ignore!
         }
     }

@@ -84,6 +84,32 @@ public class JSTreeService {
         name.delete(connectionFromAccessToken);
     }
 
+    // reports may be modified or use the same choice. This function is to check that the saved user choice is one that's in the tree, logic chouls be pretty transparent
+    public static boolean nameValidForChosenTree(DatabaseAccessToken databaseAccessToken, String chosenName, String searchTerm) throws Exception {
+        AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
+        Name n = NameService.findByName(azquoMemoryDBConnection, chosenName);
+        if (n == null){
+            return false;
+        }
+        Collection<Name> names = NameQueryParser.parseQuery(azquoMemoryDBConnection, searchTerm);
+        if (names.contains(n)){
+            return true;
+        }
+        for (Name parent : n.findAllParents()){
+            if (names.contains(parent)){
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // default choice for chosen tree
+    public static String getFirstChoiceForChosenTree(DatabaseAccessToken databaseAccessToken, String query) throws Exception {
+        AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
+        Collection<Name> names = NameQueryParser.parseQuery(azquoMemoryDBConnection, query);
+        return names.isEmpty() ? "" : AzquoCellResolver.getUniqueName(azquoMemoryDBConnection, names.iterator().next(), Collections.EMPTY_LIST);
+    }
+
     // Ok this now won't deal with the jstree ids (as it should not!), that can be dealt with on the front end
     public static JsonChildren getJsonChildren(DatabaseAccessToken databaseAccessToken, int jsTreeId, int nameId, boolean parents, String searchTerm, String language, int hundredMore) {
         int childrenLimit = (hundredMore + 1) * 100;
@@ -108,6 +134,9 @@ public class JSTreeService {
             }
         } else if (name != null) { // typically on open
             text = name.getAttribute(language);
+            if (!language.equals(StringLiterals.DEFAULT_DISPLAY_NAME)){
+                text += (" (" + name.getDefaultDisplayName() + ")");
+            }
             if (parents) {
                 for (Name nameParent : name.getParents()) {
                     if (nameParent != null) {//in case of corruption - this should not happen
@@ -133,7 +162,12 @@ public class JSTreeService {
                     childNodes.add(new JsonChildren.Node(-1, (children.size() - childrenLimit) + " more....", childrenBoolean, -1, -1));
                     break;
                 }
-                childNodes.add(new JsonChildren.Node(-1, child.getAttribute(language), childrenBoolean, child.getId(), name != null ? name.getId() : 0));
+                String childText = child.getAttribute(language);
+                if (!language.equals(StringLiterals.DEFAULT_DISPLAY_NAME)){
+                    childText += (" (" + child.getDefaultDisplayName() + ")");
+                }
+
+                childNodes.add(new JsonChildren.Node(-1, childText, childrenBoolean, child.getId(), name != null ? name.getId() : 0));
                 count++;
             }
             if (name != null) { // if it's not top then we add non DEFAULT_DISPLAY_NAME attributes to the bottom of the list
