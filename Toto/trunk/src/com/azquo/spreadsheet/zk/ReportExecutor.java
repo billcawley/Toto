@@ -13,10 +13,14 @@ import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.CommonReportUtils;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
+import com.azquo.spreadsheet.controller.DownloadController;
 import com.azquo.spreadsheet.controller.OnlineController;
 import com.azquo.spreadsheet.transport.CellForDisplay;
 import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
+import com.csvreader.CsvWriter;
 import org.apache.commons.lang.math.NumberUtils;
+import org.apache.poi.ss.util.AreaReference;
+import org.springframework.context.annotation.Import;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -28,6 +32,8 @@ import io.keikai.api.model.Sheet;
 import io.keikai.model.CellRegion;
 import io.keikai.model.SCell;
 import io.keikai.model.SName;
+import org.zkoss.util.media.AMedia;
+import org.zkoss.zul.Filedownload;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -188,151 +194,8 @@ public class ReportExecutor {
                 }
 
                 else if (trimmedLine.toLowerCase().startsWith("do")) {
-                    boolean debug = false;
-                    if (trimmedLine.toLowerCase().endsWith("debug")) {
-                        debug = true;
-                        trimmedLine = trimmedLine.substring(0, trimmedLine.length() - "debug".length()).trim();
-                    }
-                    String reportToRun = trimmedLine.substring(2).trim();
-                    Database oldDatabase = null;
-                    OnlineReport onlineReport;
-                    // so, first try to get the report based off permissions, if so it might override the current database
-                    // note this is a BAD idea e.g. for temporary databases, todo, stop it then
-                    if (loggedInUser.getPermission(reportToRun.toLowerCase()) != null) {
-                        LoggedInUser.ReportDatabase permission = loggedInUser.getPermission(reportToRun.toLowerCase());
-                        onlineReport = permission.getReport();
-                        if (permission.getDatabase() != null) {
-                            oldDatabase = loggedInUser.getDatabase();
-                            loggedInUser.setDatabaseWithServer(loggedInUser.getDatabaseServer(), permission.getDatabase());
-                        }
-                    } else { // otherwise try a straight lookup - stick on whatever db we're currently on
-                        onlineReport = OnlineReportDAO.findForDatabaseIdAndName(loggedInUser.getDatabase().getId(), reportToRun);
-                        if (onlineReport == null) {
-                            onlineReport = OnlineReportDAO.findForNameAndBusinessId(reportToRun, loggedInUser.getUser().getBusinessId());
-                        }
-                    }
-                    if (onlineReport != null) { // need to prepare it as in the controller todo - factor?
-                        loopsLog.append("Run : ").append(onlineReport.getReportName());
-                        RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).addToLog(loggedInUser.getDataAccessToken(), count.incrementAndGet() + " " + loggedInUser.getUser().getName() + " Running " + onlineReport.getReportName() + " ,");
-                        String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + onlineReport.getFilenameForDisk();
-                        final Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
-                        book.getInternalBook().setAttribute(OnlineController.BOOK_PATH, bookPath);
-                        book.getInternalBook().setAttribute(OnlineController.LOGGED_IN_USER, loggedInUser);
-                        book.getInternalBook().setAttribute(OnlineController.REPORT_ID, onlineReport.getId());
-                        StringBuilder errorLog = new StringBuilder();
-                        final boolean save = ReportRenderer.populateBook(book, 0, false, true, errorLog); // note true at the end here - keep on logging so users can see changes as they happen
-                        System.out.println("save flag : " + save);
-                        if (errorLog.length() > 0) {
-                            loopsLog.append(" ERROR : ").append(errorLog.toString());
-                            return null;
-                            // todo - how to stop all the way to the top? Can set count as -1 but this is hacky
-                        }
-                        ReportService.extractEmailInfo(book);
-                        if (save) { // so the data was changed and if we save from here it will make changes to the DB
-                            fillSpecialRegions(loggedInUser, book, onlineReport.getId());
-                            for (SName name : book.getInternalBook().getNames()) {
-                                if (name.getName().toLowerCase().startsWith(ReportRenderer.AZDATAREGION)) { // I'm saving on all sheets, this should be fine with zk
-                                    String region = name.getName().substring(ReportRenderer.AZDATAREGION.length());
-                                    // possibly the nosave check could be factored, in report service around line 230
-                                    // this is a bit annoying given that I should be able to get the options from the sent cells but there may be no sent cells. Need to investigate this - nosave is currently being used for different databases, that's the problem
-                                    SName optionsRegion = BookUtils.getNameByName(ReportRenderer.AZOPTIONS + region, book.getSheet(name.getRefersToSheetName()));
-                                    boolean noSave = false;
-                                    if (optionsRegion != null) {
-                                        String optionsSource = BookUtils.getSnameCell(optionsRegion).getStringValue();
-                                        UserRegionOptions userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), onlineReport.getId(), region, optionsSource);
-                                        noSave = userRegionOptions.getNoSave();
-                                    }
-                                    if (!noSave) {
-                                        System.out.println("saving for : " + region);
-                                        SpreadsheetService.saveData(loggedInUser, onlineReport.getId(), onlineReport.getReportName(), name.getRefersToSheetName(), region.toLowerCase(), false); // to not persist right now
-                                    }
-                                }
-                            }
-                            AdminService.updateNameAndValueCounts(loggedInUser, loggedInUser.getDatabase());
-                        }
-                        // here we try to get an outcome to return
-                        SName outcomeName = book.getInternalBook().getNameByName(OUTCOME); // I assume only one
-                        if (outcomeName != null) {
-                            final CellRegion refersToCellRegion = outcomeName.getRefersToCellRegion();
-                            SCell outcomeCell = book.getInternalBook().getSheetByName(outcomeName.getRefersToSheetName()).getCell(refersToCellRegion.getRow(), refersToCellRegion.getColumn());
-                            // ok now I think I need to be careful of the cell type
-                            if ((outcomeCell.getType() == SCell.CellType.FORMULA && outcomeCell.getFormulaResultType() == SCell.CellType.NUMBER) || outcomeCell.getType() == SCell.CellType.NUMBER) { // I think a decent enough way to number detect?
-                                toReturn = new DoubleAndOrString(outcomeCell.getNumberValue(), null);
-                            } else {
-                                toReturn = new DoubleAndOrString(null, outcomeCell.getStringValue());
-                            }
-                        }
-                        // revert database if it was changed
-                        if (oldDatabase != null) {
-                            loggedInUser.setDatabaseWithServer(loggedInUser.getDatabaseServer(), oldDatabase);
-                        }
+                    toReturn = handleReport(loggedInUser,trimmedLine,null,exportPath,loopsLog, systemData2DArrays,count);
 
-                        SName systemDataName = book.getInternalBook().getNameByName(SYSTEMDATA);
-                        if (systemDataName != null && systemData2DArrays != null) {
-                            // gather debug info
-                            systemData2DArrays.add(BookUtils.nameToStringLists(systemDataName));
-                        }
-
-                        //stuff added by edd, need an option for the user to see these files for debug purposes
-                        if (debug) {
-                            Exporter exporter = Exporters.getExporter();
-                            File file = File.createTempFile("debug" + System.currentTimeMillis(), "temp.xlsx");
-                            try (FileOutputStream fos = new FileOutputStream(file)) {
-                                exporter.export(book, fos);
-                            }
-                        }
-
-                        // check for XML, in the context of execute we run it automatically
-                        if (book.getInternalBook().getAttribute(OnlineController.XML) != null) {
-                            Path destdir = Paths.get(SpreadsheetService.getXMLDestinationDir());
-                            // note - I'm just grabbing the first sheet at the moment - this may need changing later
-                            ReportExecutor.generateXMLFilesAndSupportingReports(loggedInUser, book.getSheetAt(0), destdir);
-                        }
-                        // and now check new export criteria
-                        if (exportPath != null) {
-                            SName export = book.getInternalBook().getNameByName(EXPORT);
-                            if (export != null) { // then we have some data to read
-                                boolean existsAlready = Files.exists(Paths.get(exportPath));
-                                String exportFirstLine = null;
-                                if (existsAlready) {
-                                    try (BufferedReader br = Files.newBufferedReader(Paths.get(exportPath), StandardCharsets.UTF_8)) {
-                                        exportFirstLine = br.readLine();
-                                    }
-                                }
-                                Sheet sheet = book.getSheet(export.getRefersToSheetName());
-                                try (BufferedWriter bufferedWriter = Files.newBufferedWriter(Paths.get(exportPath), StandardCharsets.UTF_8, existsAlready ? StandardOpenOption.APPEND : StandardOpenOption.CREATE)) {
-                                    CellRegion refersToCellRegion = export.getRefersToCellRegion();
-                                    for (int rNo = refersToCellRegion.row; rNo <= refersToCellRegion.lastRow; rNo++) {
-                                        if (exportFirstLine != null && rNo == refersToCellRegion.row) {
-                                            StringBuilder test = new StringBuilder();
-                                            for (int cNo = refersToCellRegion.column; cNo <= refersToCellRegion.lastColumn; cNo++) {
-                                                String val = "";
-                                                if (sheet.getInternalSheet().getRow(rNo) != null) {
-                                                    val = ImportService.getCellValue(sheet, rNo, cNo).getString();
-                                                }
-                                                test.append(val).append("\t");
-                                            }
-                                            if (test.toString().equals(exportFirstLine)) {
-                                                if (rNo < refersToCellRegion.lastRow) {
-                                                    rNo++;// skip the first line if it's already on file
-                                                } else { // break if there's no second line to skip to
-                                                    break;
-                                                }
-                                            }
-                                        }
-                                        for (int cNo = refersToCellRegion.column; cNo <= refersToCellRegion.lastColumn; cNo++) {
-                                            String val = "";
-                                            if (sheet.getInternalSheet().getRow(rNo) != null) {
-                                                val = ImportService.getCellValue(sheet, rNo, cNo).getString();
-                                            }
-                                            bufferedWriter.write(val + "\t");
-                                        }
-                                        bufferedWriter.newLine();
-                                    }
-                                }
-                            }
-                        }
-                    }
                 }else if (trimmedLine.toLowerCase().startsWith("repeat until outcome")) { // new conditional logic
                     // similar to the for each - gather sub commands
                     String condition = trimmedLine.substring("repeat until outcome".length()).trim();
@@ -531,6 +394,14 @@ public class ReportExecutor {
                             toReturn = executeCommands(loggedInUser, subCommands, exportPath, loopsLog, systemData2DArrays, count, provenanceId);
                         }
                     }
+                }else if(trimmedLine.toLowerCase().startsWith("export ")) {
+                    int asPos = trimmedLine.toLowerCase(Locale.ROOT).indexOf("as \"");
+                    if (asPos < 0) return new DoubleAndOrString(null,"cannot find 'as \"' in 'export' instruction");
+                    String targetName = trimmedLine.substring(asPos + 3, trimmedLine.length() -1);
+                    targetName = CommonReportUtils.replaceUserChoicesInQuery(loggedInUser,targetName);
+                    toReturn = handleReport(loggedInUser,trimmedLine.substring(0,asPos-1),targetName,exportPath,loopsLog, systemData2DArrays,count);
+
+
                 } else {
                     loopsLog.append("badly formed execute line  : ").append(trimmedLine);
                 }
@@ -539,6 +410,193 @@ public class ReportExecutor {
         loopsLog.append("\r\n");
         return toReturn;
     }
+
+    private static DoubleAndOrString handleReport(LoggedInUser loggedInUser, String trimmedLine, String exportTarget, String exportPath, StringBuilder loopsLog, List<List<List<String>>> systemData2DArrays, AtomicInteger count)throws  Exception{
+        DoubleAndOrString toReturn = null;
+        boolean debug = false;
+        if (trimmedLine.toLowerCase().endsWith("debug")) {
+            debug = true;
+            trimmedLine = trimmedLine.substring(0, trimmedLine.length() - "debug".length()).trim();
+        }
+        String reportToRun = trimmedLine.substring(trimmedLine.indexOf(" ")).trim();
+        Database oldDatabase = null;
+        OnlineReport onlineReport;
+        // so, first try to get the report based off permissions, if so it might override the current database
+        // note this is a BAD idea e.g. for temporary databases, todo, stop it then
+        if (loggedInUser.getPermission(reportToRun.toLowerCase()) != null) {
+            LoggedInUser.ReportDatabase permission = loggedInUser.getPermission(reportToRun.toLowerCase());
+            onlineReport = permission.getReport();
+            if (permission.getDatabase() != null) {
+                oldDatabase = loggedInUser.getDatabase();
+                loggedInUser.setDatabaseWithServer(loggedInUser.getDatabaseServer(), permission.getDatabase());
+            }
+        } else { // otherwise try a straight lookup - stick on whatever db we're currently on
+            onlineReport = OnlineReportDAO.findForDatabaseIdAndName(loggedInUser.getDatabase().getId(), reportToRun);
+            if (onlineReport == null) {
+                onlineReport = OnlineReportDAO.findForNameAndBusinessId(reportToRun, loggedInUser.getUser().getBusinessId());
+            }
+        }
+        if (onlineReport != null) { // need to prepare it as in the controller todo - factor?
+            loopsLog.append("Run : ").append(onlineReport.getReportName());
+            RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).addToLog(loggedInUser.getDataAccessToken(), count.incrementAndGet() + " " + loggedInUser.getUser().getName() + " Running " + onlineReport.getReportName() + " ,");
+            String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + onlineReport.getFilenameForDisk();
+            final Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
+            book.getInternalBook().setAttribute(OnlineController.BOOK_PATH, bookPath);
+            book.getInternalBook().setAttribute(OnlineController.LOGGED_IN_USER, loggedInUser);
+            book.getInternalBook().setAttribute(OnlineController.REPORT_ID, onlineReport.getId());
+            StringBuilder errorLog = new StringBuilder();
+            final boolean save = ReportRenderer.populateBook(book, 0, false, true, errorLog); // note true at the end here - keep on logging so users can see changes as they happen
+            System.out.println("save flag : " + save);
+            if (errorLog.length() > 0) {
+                loopsLog.append(" ERROR : ").append(errorLog.toString());
+                return null;
+                // todo - how to stop all the way to the top? Can set count as -1 but this is hacky
+            }
+            if (exportTarget!=null){
+                //look for region 'az_csvExport, convert to CSV and export as 'exportTarget'
+                for (SName name : book.getInternalBook().getNames()) {
+                    if (name.getName().toLowerCase().equals("az_csvexport")) {
+                        File newTempFile = File.createTempFile("csv export", ".csv");
+                        newTempFile.deleteOnExit();
+                         CsvWriter csvWriter = new CsvWriter(newTempFile.toString(), ',', StandardCharsets.UTF_8);
+                         AreaReference areaReference= new AreaReference(name.getRefersToFormula(), null);
+                         rangeToCSV(book.getSheet(name.getRefersToSheetName()),areaReference,csvWriter);
+                        csvWriter.flush();
+                        csvWriter.close();
+                        Filedownload.save(new AMedia("export.csv", "csv", "text/csv", newTempFile, false));
+                        return null;
+
+                    }
+                }
+                return null;
+            }
+            ReportService.extractEmailInfo(book);
+            if (save) { // so the data was changed and if we save from here it will make changes to the DB
+                fillSpecialRegions(loggedInUser, book, onlineReport.getId());
+                for (SName name : book.getInternalBook().getNames()) {
+                    if (name.getName().toLowerCase().startsWith(ReportRenderer.AZDATAREGION)) { // I'm saving on all sheets, this should be fine with zk
+                        String region = name.getName().substring(ReportRenderer.AZDATAREGION.length());
+                        // possibly the nosave check could be factored, in report service around line 230
+                        // this is a bit annoying given that I should be able to get the options from the sent cells but there may be no sent cells. Need to investigate this - nosave is currently being used for different databases, that's the problem
+                        SName optionsRegion = BookUtils.getNameByName(ReportRenderer.AZOPTIONS + region, book.getSheet(name.getRefersToSheetName()));
+                        boolean noSave = false;
+                        if (optionsRegion != null) {
+                            String optionsSource = BookUtils.getSnameCell(optionsRegion).getStringValue();
+                            UserRegionOptions userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), onlineReport.getId(), region, optionsSource);
+                            noSave = userRegionOptions.getNoSave();
+                        }
+                        if (!noSave) {
+                            System.out.println("saving for : " + region);
+                            SpreadsheetService.saveData(loggedInUser, onlineReport.getId(), onlineReport.getReportName(), name.getRefersToSheetName(), region.toLowerCase(), false); // to not persist right now
+                        }
+                    }
+                }
+                AdminService.updateNameAndValueCounts(loggedInUser, loggedInUser.getDatabase());
+            }
+            // here we try to get an outcome to return
+            SName outcomeName = book.getInternalBook().getNameByName(OUTCOME); // I assume only one
+            if (outcomeName != null) {
+                final CellRegion refersToCellRegion = outcomeName.getRefersToCellRegion();
+                SCell outcomeCell = book.getInternalBook().getSheetByName(outcomeName.getRefersToSheetName()).getCell(refersToCellRegion.getRow(), refersToCellRegion.getColumn());
+                // ok now I think I need to be careful of the cell type
+                if ((outcomeCell.getType() == SCell.CellType.FORMULA && outcomeCell.getFormulaResultType() == SCell.CellType.NUMBER) || outcomeCell.getType() == SCell.CellType.NUMBER) { // I think a decent enough way to number detect?
+                    toReturn = new DoubleAndOrString(outcomeCell.getNumberValue(), null);
+                } else {
+                    toReturn = new DoubleAndOrString(null, outcomeCell.getStringValue());
+                }
+            }
+            // revert database if it was changed
+            if (oldDatabase != null) {
+                loggedInUser.setDatabaseWithServer(loggedInUser.getDatabaseServer(), oldDatabase);
+            }
+
+            SName systemDataName = book.getInternalBook().getNameByName(SYSTEMDATA);
+            if (systemDataName != null && systemData2DArrays != null) {
+                // gather debug info
+                systemData2DArrays.add(BookUtils.nameToStringLists(systemDataName));
+            }
+
+            //stuff added by edd, need an option for the user to see these files for debug purposes
+            if (debug) {
+                Exporter exporter = Exporters.getExporter();
+                File file = File.createTempFile("debug" + System.currentTimeMillis(), "temp.xlsx");
+                try (FileOutputStream fos = new FileOutputStream(file)) {
+                    exporter.export(book, fos);
+                }
+            }
+
+            // check for XML, in the context of execute we run it automatically
+            if (book.getInternalBook().getAttribute(OnlineController.XML) != null) {
+                Path destdir = Paths.get(SpreadsheetService.getXMLDestinationDir());
+                // note - I'm just grabbing the first sheet at the moment - this may need changing later
+                ReportExecutor.generateXMLFilesAndSupportingReports(loggedInUser, book.getSheetAt(0), destdir);
+            }
+            // and now check new export criteria
+            if (exportPath != null) {
+                SName export = book.getInternalBook().getNameByName(EXPORT);
+                if (export != null) { // then we have some data to read
+                    boolean existsAlready = Files.exists(Paths.get(exportPath));
+                    String exportFirstLine = null;
+                    if (existsAlready) {
+                        try (BufferedReader br = Files.newBufferedReader(Paths.get(exportPath), StandardCharsets.UTF_8)) {
+                            exportFirstLine = br.readLine();
+                        }
+                    }
+                    Sheet sheet = book.getSheet(export.getRefersToSheetName());
+                    try (BufferedWriter bufferedWriter = Files.newBufferedWriter(Paths.get(exportPath), StandardCharsets.UTF_8, existsAlready ? StandardOpenOption.APPEND : StandardOpenOption.CREATE)) {
+                        CellRegion refersToCellRegion = export.getRefersToCellRegion();
+                        for (int rNo = refersToCellRegion.row; rNo <= refersToCellRegion.lastRow; rNo++) {
+                            if (exportFirstLine != null && rNo == refersToCellRegion.row) {
+                                StringBuilder test = new StringBuilder();
+                                for (int cNo = refersToCellRegion.column; cNo <= refersToCellRegion.lastColumn; cNo++) {
+                                    String val = "";
+                                    if (sheet.getInternalSheet().getRow(rNo) != null) {
+                                        val = ImportService.getCellValue(sheet, rNo, cNo).getString();
+                                    }
+                                    test.append(val).append("\t");
+                                }
+                                if (test.toString().equals(exportFirstLine)) {
+                                    if (rNo < refersToCellRegion.lastRow) {
+                                        rNo++;// skip the first line if it's already on file
+                                    } else { // break if there's no second line to skip to
+                                        break;
+                                    }
+                                }
+                            }
+                            for (int cNo = refersToCellRegion.column; cNo <= refersToCellRegion.lastColumn; cNo++) {
+                                String val = "";
+                                if (sheet.getInternalSheet().getRow(rNo) != null) {
+                                    val = ImportService.getCellValue(sheet, rNo, cNo).getString();
+                                }
+                                bufferedWriter.write(val + "\t");
+                            }
+                            bufferedWriter.newLine();
+                        }
+                    }
+                }
+            }
+        }
+        return toReturn;
+
+    }
+
+    public static void rangeToCSV(Sheet sheet, AreaReference areaReference, CsvWriter csvW) throws Exception {
+        int startRow = areaReference.getFirstCell().getRow();
+        int endRow = areaReference.getLastCell().getRow();
+        int startCol = areaReference.getFirstCell().getCol();
+        int endCol = areaReference.getLastCell().getCol();
+        for (int rNo = startRow; rNo <= endRow; rNo++) {
+            for (int cNo = startCol; cNo <= endCol; cNo++) {
+                String val = "";
+                if (sheet.getInternalSheet().getCell(rNo, cNo) != null) {
+                    val = ImportService.getCellValue(sheet,rNo, cNo).getString();
+                }
+                csvW.write(val.replace("\n", "\\\\n").replace("\t", "\\\\t"));//nullify the tabs and carriage returns.  Note that the double slash is deliberate so as not to confuse inserted \\n with existing \n
+            }
+            csvW.endRecord();
+        }
+    }
+
 
     private static List<List<String>> makeNewListList(String source) {
         List<List<String>> toReturn = new ArrayList<>();
