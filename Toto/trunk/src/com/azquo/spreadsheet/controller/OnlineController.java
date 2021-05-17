@@ -264,6 +264,7 @@ public class OnlineController {
                         model.put("showUnlockButton", book.getInternalBook().getAttribute(LOCKED));
                         model.put("lockedResult", book.getInternalBook().getAttribute(LOCKED_RESULT));
                         model.put("xml", book.getInternalBook().getAttribute(XML) != null);
+                        model.put("csvexport", book.getInternalBook().getAttribute(ReportRenderer.AZCSVEXPORT) != null);
                         model.put("xmlzip", book.getInternalBook().getAttribute(XMLZIP) != null);
                         model.put("showSave", session.getAttribute(reportId + SAVE_FLAG));
                         model.put("masterUser", loggedInUser.getUser().isMaster());

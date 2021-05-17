@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.dataformat.csv.CsvMapper;
 import com.fasterxml.jackson.dataformat.csv.CsvParser;
 import com.fasterxml.jackson.dataformat.csv.CsvSchema;
+import io.keikai.model.SSheet;
 import net.lingala.zip4j.core.ZipFile;
 import org.apache.log4j.Logger;
 import org.apache.poi.poifs.crypt.Decryptor;
@@ -646,18 +647,15 @@ public final class ImportService {
     Known names not relevant on this data bit, now there's a split to the template source for the headings we just have it there
      */
 
-    private static void rangeToCSV(Sheet sheet, AreaReference areaReference, CsvWriter csvW) throws Exception {
+    public static void rangeToCSV(io.keikai.api.model.Sheet sheet, AreaReference areaReference, CsvWriter csvW) throws Exception {
         int startRow = areaReference.getFirstCell().getRow();
         int endRow = areaReference.getLastCell().getRow();
         int startCol = areaReference.getFirstCell().getCol();
         int endCol = areaReference.getLastCell().getCol();
         for (int rNo = startRow; rNo <= endRow; rNo++) {
             for (int cNo = startCol; cNo <= endCol; cNo++) {
-                String val = "";
-                if (sheet.getRow(rNo) != null) {
-                    val = getCellValue(sheet.getRow(rNo).getCell(cNo));
-                }
-                csvW.write(val.replace("\n", "\\\\n").replace("\t", "\\\\t"));//nullify the tabs and carriage returns.  Note that the double slash is deliberate so as not to confuse inserted \\n with existing \n
+                String val = getCellValue(sheet,rNo, cNo).getString();
+                csvW.write(val.replace("\n", "\\\\n").replace(",", "").replace("\t", "\\\\t"));//nullify the tabs and carriage returns.  Note that the double slash is deliberate so as not to confuse inserted \\n with existing \n
             }
             csvW.endRecord();
         }

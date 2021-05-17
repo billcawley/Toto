@@ -86,17 +86,17 @@
 
 
     function uploadFile(){
-    	var el = $('<div class="overlay"><iframe src="/api/Online?opcode=upload" width="100%" height="100%" frameborder="0" scrolling="auto"></iframe></div>').hide().appendTo('body');
-			
-			el.dialog({
-				modal	: 'true',
-				width	: 'auto',
-				title	: 'Upload File',
-                close: refreshReport
-			});
-			
-			el.show();
-         //window.open("/api/Online?opcode=upload", "_blank", "toolbar=no, status=no,scrollbars=no, resizable=no, top=150, left=200, width=300, height=300")
+        var el = $('<div class="overlay"><iframe src="/api/Online?opcode=upload" width="100%" height="100%" frameborder="0" scrolling="auto"></iframe></div>').hide().appendTo('body');
+
+        el.dialog({
+            modal	: 'true',
+            width	: 'auto',
+            title	: 'Upload File',
+            close: refreshReport
+        });
+
+        el.show();
+        //window.open("/api/Online?opcode=upload", "_blank", "toolbar=no, status=no,scrollbars=no, resizable=no, top=150, left=200, width=300, height=300")
     }
 
     // could inline?

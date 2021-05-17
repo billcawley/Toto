@@ -1,3 +1,19 @@
+12-05-21
+
+UI adjustments - tidying up the inspect database window
+
+Keikai libraary upgrade
+
+will clear attributes if the parameter 'cleardata' is set
+
+will persist highlight options between reports
+
+first version of workbook pre processor code, may need more testing
+
+Revised test to determine if a longer string is a date - not a range of dates (Arcana fix)
+
+check that the existing user choice is valid for chosen tree
+
 13-04-21
 
 Preprocessor file handler leak fix

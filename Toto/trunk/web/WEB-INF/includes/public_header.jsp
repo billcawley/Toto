@@ -48,6 +48,30 @@
 				window.open("/api/Online" + paramString)
 			}
 		}
+
+
+		function showInspectHelp(){
+			var el = $('<div class="overlay">This window allows  you to inspect most aspects of the database<br/>' +
+					'<br/>' +
+					'Open and close sets by clicking on the arrow to the left<br/>' +
+					'<br/>' +
+					'Use the right button of the mouse when a name is selected to see the submenu<br/>' +
+					'<br/>' +
+					'  See parents/Children:  Changes the direction of navigation up or down the sets<br/>' +
+					'  Edit Attributes:   Shows you the "attributes" - features of the name that are intrinsic to that name and, by default, to children of that name<br/>' +
+					'  Remove name - USE WITH CARE  This is for tidying up names that have been inserted by mistake.   It is irreversible!<br/>' +
+					'<br/>' +
+					'Entering a value in the text box and pressing "show data" looks for an exact match for the name.  If not found, it looks for any name containing the value you have entered<br/></div>').hide().appendTo('body');
+
+			el.dialog({
+				modal	: 'true',
+				width	: 'auto',
+				title	: 'Inspect Help',
+			});
+
+			el.show();
+			//window.open("/api/Online?opcode=upload", "_blank", "toolbar=no, status=no,scrollbars=no, resizable=no, top=150, left=200, width=300, height=300")
+		}
 	</script>
 </head>
 
@@ -88,6 +112,7 @@
 						<li ><a href="#" onclick="postAjax('SaveTemplate'); return false;">Save Template</a></li>
 					</c:if>
 					<c:if test="${templateMode == false}">
+<!--						<li><a href="#" title="Help" onclick="showInspectHelp()"><span class="fa fa-question-circle"></span></a></li> -->
 						<li><a href="#" onclick="return inspectDatabase();" title="Inspect database"><span class="fa fa-eye"></span> Inspect database</a></li>
 						<c:if test="${xml == true}"><li><a href="#" onclick="postAjax('XML');return false;">Send XML</a></li></c:if>
 						<c:if test="${xmlzip == true}"><li><a href="#" onclick="postAjax('XMLZIP');return false;">Download XML</a></li></c:if>
@@ -103,6 +128,7 @@
 					<li id="logoff"><a href="/api/Login?logoff=true">Log Off</a></li>
 					<li><a href="#"><span class="fa fa-bars"></span></a>
 						<ul>
+							<c:if test="${csvexport == true}"><li><a href="#" onclick="postAjax('CSVEXPORT');return false;"><span class="fa fa-download" > Download CSV</span></a></li></c:if>
 							<li><a href="#" onclick="postAjax('XLS'); return false;" title="Download as XLSX (Excel)"><span class="fa fa-file-excel-o"></span> Download as XLSX (Excel)</a></li>
 							<!-- <li><a href="#" onclick="postAjax('PDF'); return false;" title="Download as PDF"><span class="fa fa-file-pdf-o"></span> Download as PDF</a></li> -->
 							<li><a href="#" onclick="return inspectDatabase();" title="Inspect database"><span class="fa fa-eye"></span> Inspect database</a></li>

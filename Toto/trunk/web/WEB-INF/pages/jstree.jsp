@@ -178,6 +178,14 @@
                                 "label" : "Edit attributes",
                                 "action" :function(obj){editAttributes($node)}
                             },
+                            createItem : {
+                                "label" : "New Name",
+                                "action" : function(obj) {
+                                    newNode = tree.create_node($node);
+                                    tree.open_node($node);
+                                },
+                                "_class" : "class"
+                            },
                             deleteItem : {
                                 "label" : "Remove Name - USE WITH CARE",
                                 "action" : function(obj) { tree.delete_node($node)}

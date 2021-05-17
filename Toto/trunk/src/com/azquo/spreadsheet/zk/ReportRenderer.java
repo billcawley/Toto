@@ -10,6 +10,7 @@ import com.azquo.spreadsheet.controller.OnlineController;
 import com.azquo.spreadsheet.*;
 import com.azquo.spreadsheet.transport.CellForDisplay;
 import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
+import com.csvreader.CsvWriter;
 import com.github.rcaller.rstuff.RCaller;
 import com.github.rcaller.rstuff.RCode;
 import org.apache.commons.lang.math.NumberUtils;
@@ -17,8 +18,13 @@ import io.keikai.api.*;
 import io.keikai.api.model.*;
 import io.keikai.api.model.Sheet;
 import io.keikai.model.*;
+import org.apache.poi.ss.util.AreaReference;
+import org.zkoss.util.media.AMedia;
+import org.zkoss.zul.Filedownload;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.nio.charset.StandardCharsets;
 import java.rmi.RemoteException;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -57,7 +63,7 @@ public class ReportRenderer {
     static final String AZSUPPORTREPORTFILEXMLTAG = "az_supportreportfilexmltag";
     static final String AZSUPPORTREPORTSELECTIONS = "az_supportreportselections";
     static final String AZSUPPORTREPORTFILENAME = "az_supportreportfilename";
-     static final String AZCONTEXT = "az_context";
+    static final String AZCONTEXT = "az_context";
     static final String AZPIVOTFILTERS = "az_pivotfilters";//old version - not to be continued
     static final String AZCONTEXTFILTERS = "az_contextfilters";
     static final String AZCONTEXTHEADINGS = "az_contextheadings";
@@ -76,26 +82,27 @@ public class ReportRenderer {
     static final String AZEMAILADDRESS = "az_emailaddress";
     static final String AZEMAILSUBJECT = "az_emailsubject";
     static final String AZEMAILTEXT = "az_emailtext";
-     static final String AZCURRENTUSER = "az_currentuser";
+    static final String AZCURRENTUSER = "az_currentuser";
     // on an upload file, should this file be flagged as one that moves with backups and is available for non admin users to download
     public static final String AZFILETYPE = "az_filetype";
 
+    public static final String AZCSVEXPORT = "az_csvexport";
 
-    public static boolean populateBook(Book book, int valueId) throws Exception{
+    public static boolean populateBook(Book book, int valueId) throws Exception {
         return populateBook(book, valueId, false, false, null, true);
     }
 
-    public static void populateBook(Book book, int valueId, boolean useRepeats) throws Exception{
+    public static void populateBook(Book book, int valueId, boolean useRepeats) throws Exception {
         populateBook(book, valueId, false, false, null, useRepeats);
     }
 
 
-    public static boolean populateBook(Book book, int valueId, boolean useSavedValuesOnFormulae, boolean executeMode, StringBuilder errors) throws Exception{ // todo - make more elegant? error hack . . .
+    public static boolean populateBook(Book book, int valueId, boolean useSavedValuesOnFormulae, boolean executeMode, StringBuilder errors) throws Exception { // todo - make more elegant? error hack . . .
         return populateBook(book, valueId, useSavedValuesOnFormulae, executeMode, errors, true);
     }
 
     // todo - is it possible to extract some of this to a pre importer? Can't put it all in there . . .
-    private static boolean populateBook(Book book, int valueId, boolean useSavedValuesOnFormulae, boolean executeMode, StringBuilder errors, boolean useRepeats)throws Exception { // todo - make more elegant? error hack . . .
+    private static boolean populateBook(Book book, int valueId, boolean useSavedValuesOnFormulae, boolean executeMode, StringBuilder errors, boolean useRepeats) throws Exception { // todo - make more elegant? error hack . . .
 
         BookUtils.removeNamesWithNoRegion(book); // should protect against some errors.
 
@@ -126,7 +133,7 @@ public class ReportRenderer {
             Set<String> repeatRegionTracker = new HashSet<>();
             Sheet sheet = book.getSheetAt(sheetNumber);
             SName az_CurrentUser = BookUtils.getNameByName(AZCURRENTUSER, sheet);
-            if (az_CurrentUser != null){
+            if (az_CurrentUser != null) {
                 BookUtils.getSnameCell(az_CurrentUser).setStringValue(loggedInUser.getUser().getEmail());
             }
 
@@ -142,8 +149,8 @@ public class ReportRenderer {
             // options and validation now sorted per sheet
             // ignore permissions for developers and admins. A notable todo : zap permissions when reports/databses are edited or deleted
             //if (!loggedInUser.getUser().isDeveloper() && !loggedInUser.getUser().isAdministrator()){
-                ReportService.checkForPermissionsInSheet(loggedInUser, sheet, reportId);
-           // }
+            ReportService.checkForPermissionsInSheet(loggedInUser, sheet, reportId);
+            // }
             /* with the protect sheet command below commented this is currently pointless. I think ZK had some misbehavior while locked so leave this for the moment.
             int maxRow = sheet.getLastRow();
             int maxCol = 0;
@@ -181,11 +188,11 @@ public class ReportRenderer {
                     List<String> repeatItems = CommonReportUtils.getDropdownListForQuery(loggedInUser, snameCell.getStringValue());
                     String firstItem = null; // for api purposes I need to set the initial sheet name after it's copied or I get NPEs
                     int sheetPosition = 0;
-                    if (repeatItems.size()==0){
+                    if (repeatItems.size() == 0) {
                         BookUtils.deleteSheet(book, sheetNumber);
                         sheetNumber--;
                         continue;
-                    }else {
+                    } else {
                         for (String repeatItem : repeatItems) {
                             if (firstItem == null) { // set the repeat tiem on this sheet
                                 SCell repeatItemCell = BookUtils.getSnameCell(az_repeatItem);
@@ -275,9 +282,9 @@ public class ReportRenderer {
 
                     // we don't actually need to do anything with this now but we need to switch on the XML button
                     SName xmlHeadings = BookUtils.getNameByName(AZXML + region, sheet);
-                    if (xmlHeadings != null){
+                    if (xmlHeadings != null) {
                         sheet.getBook().getInternalBook().setAttribute(OnlineController.XMLZIP, true);
-                        if (SpreadsheetService.getXMLDestinationDir() != null && !SpreadsheetService.getXMLDestinationDir().isEmpty()){
+                        if (SpreadsheetService.getXMLDestinationDir() != null && !SpreadsheetService.getXMLDestinationDir().isEmpty()) {
                             sheet.getBook().getInternalBook().setAttribute(OnlineController.XML, true);
                         }
                     }
@@ -305,7 +312,7 @@ public class ReportRenderer {
 
                         userRegionOptions.setHighlightDays(userRegionOptions2.getHighlightDays());
                     }
-                    if (loggedInUser.getHighlightDays()>0){
+                    if (loggedInUser.getHighlightDays() > 0) {
                         userRegionOptions.setHighlightDays(loggedInUser.getHighlightDays());
                     }
                     String databaseName = userRegionOptions.getDatabaseName();
@@ -329,7 +336,7 @@ public class ReportRenderer {
                         }
                         loggedInUser.setDatabaseWithServer(origServer, origDatabase);
                     } else {
-                         String error = populateRegionSet(sheet, reportId, sheet.getSheetName(), region, valueId, userRegionOptions, loggedInUser, executeMode, repeatRegionTracker);
+                        String error = populateRegionSet(sheet, reportId, sheet.getSheetName(), region, valueId, userRegionOptions, loggedInUser, executeMode, repeatRegionTracker);
                         if (errors != null && error != null) {
                             if (errors.length() > 0) {
                                 errors.append("\n");
@@ -338,6 +345,10 @@ public class ReportRenderer {
                         }
                     }
                 }
+                if (name.getName().toLowerCase().equals(AZCSVEXPORT)) {
+                    sheet.getBook().getInternalBook().setAttribute(AZCSVEXPORT, true);
+                }
+
             }
             // after loading deal with lock stuff
             final List<CellsAndHeadingsForDisplay> sentForReport = loggedInUser.getSentForReport(reportId);
@@ -366,8 +377,8 @@ public class ReportRenderer {
             for (SName name : namesForSheet) {
                 // Old one was case insensitive - not so happy about this. Will allow it on prefixes. (fast load being set outside the loop so is there a problem with it not being found before data regions??)
                 if (name.getName().startsWith(ReportRenderer.AZRQUERY)) {
-                    SName rDataName = BookUtils.getNameByName( AZRDATA + name.getName().substring(ReportRenderer.AZRQUERY.length()), sheet);
-                    if (rDataName != null){
+                    SName rDataName = BookUtils.getNameByName(AZRDATA + name.getName().substring(ReportRenderer.AZRQUERY.length()), sheet);
+                    if (rDataName != null) {
                         RCaller caller = RCaller.create();
                         RCode code = RCode.create();
 
@@ -378,17 +389,17 @@ public class ReportRenderer {
                             boolean first = true;
                             List<Double> asDoubles = new ArrayList<>();
                             String heading = null;
-                            for (String value : row){
+                            for (String value : row) {
                                 if (first) {
-                                    if (value.startsWith(".")){
+                                    if (value.startsWith(".")) {
                                         value = value.substring(1);
                                     }
                                     heading = value;
                                 } else {
-                                    if (value.isEmpty()){
+                                    if (value.isEmpty()) {
                                         asDoubles.add(0.0);
                                     } else {
-                                        if (NumberUtils.isNumber(value)){
+                                        if (NumberUtils.isNumber(value)) {
                                             asDoubles.add(Double.parseDouble(value));
                                         } else {
                                             break;
@@ -397,7 +408,7 @@ public class ReportRenderer {
                                 }
                                 first = false;
                             }
-                            if (asDoubles.size() == (row.size() - 1)){ // then we can use numbers
+                            if (asDoubles.size() == (row.size() - 1)) { // then we can use numbers
                                 // apparently we have to array copy here hhhhngh
                                 double[] target = new double[asDoubles.size()];
                                 for (int i = 0; i < target.length; i++) {
@@ -417,7 +428,7 @@ public class ReportRenderer {
                         code.addRCode("BaseFrame <- as.data.frame(cbind(" + headings.substring(0, headings.length() - 1) + "))");
                         String query = BookUtils.getSnameCell(name).getStringValue();
                         String[] rcommands = query.split("\\n");
-                        for (int i = 0; i < rcommands.length; i++){
+                        for (int i = 0; i < rcommands.length; i++) {
                             code.addRCode(rcommands[i]);
                         }
                         caller.setRCode(code);
@@ -428,7 +439,7 @@ public class ReportRenderer {
                         String finalString = new String(stream.toByteArray());
                         finalString = finalString.replace("Output:", "");
                         String[] lines = finalString.split("\\n");
-                        for (int i = 0; i < lines.length; i++){
+                        for (int i = 0; i < lines.length; i++) {
                             sheet.getInternalSheet().getCell(name.getRefersToCellRegion().row + 1 + i, name.getRefersToCellRegion().column).setStringValue(lines[i]);
                         }
                         //System.out.println(finalString);
@@ -487,7 +498,7 @@ public class ReportRenderer {
                 // the boolean meant JUST horizontally, I don't know why. Hence false.
                 CellOperationUtil.merge(Ranges.range(sheet, merge.getRow(), merge.getColumn(), merge.getLastRow(), merge.getLastColumn()), false);
             }
-            if (book.getInternalBook().getAttribute("novalidations") == null){ // hack to stop them being added for PDF
+            if (book.getInternalBook().getAttribute("novalidations") == null) { // hack to stop them being added for PDF
                 List<SName> dependentRanges = ChoicesService.addValidation(sheet, loggedInUser, book, choiceOptionsMap);
                 if (dependentRanges.size() > 0) {
                     ChoicesService.resolveDependentChoiceOptions(sheet.getSheetName().replace(" ", ""), dependentRanges, book, loggedInUser);
@@ -495,9 +506,9 @@ public class ReportRenderer {
             }
         }
         for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {
-            Sheet s =  book.getSheetAt(sheetNumber);
-            if (s.getSheetName().startsWith("-")){
-                book.getInternalBook().moveSheetTo(s.getInternalSheet(), book.getNumberOfSheets()-1);
+            Sheet s = book.getSheetAt(sheetNumber);
+            if (s.getSheetName().startsWith("-")) {
+                book.getInternalBook().moveSheetTo(s.getInternalSheet(), book.getNumberOfSheets() - 1);
             }
         }
 
@@ -522,7 +533,7 @@ public class ReportRenderer {
                 name.setRefersToFormula(newFormula);
             }
             //and the sent cells maps to realign them to the renamed sheets
-            for (CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay: loggedInUser.getSentForReportAndSheet(reportId,oldName)){
+            for (CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay : loggedInUser.getSentForReportAndSheet(reportId, oldName)) {
                 String region = cellsAndHeadingsForDisplay.getRegion();
                 loggedInUser.setSentCells(reportId, newName, region, cellsAndHeadingsForDisplay);
                 //should we zap the old map?  does not do any harm?
@@ -582,12 +593,12 @@ public class ReportRenderer {
     }
 
     // return the error, executing reports might want it
-    private static String populateRegionSet(Sheet sheet, int reportId, final String sheetName, final String region, int valueId, UserRegionOptions userRegionOptions, LoggedInUser loggedInUser, boolean quiet, Set<String> repeatRegionTracker)throws Exception {
-        CellRegion queryRegion = BookUtils.getCellRegionForSheetAndName(sheet,"az_query"+region);
+    private static String populateRegionSet(Sheet sheet, int reportId, final String sheetName, final String region, int valueId, UserRegionOptions userRegionOptions, LoggedInUser loggedInUser, boolean quiet, Set<String> repeatRegionTracker) throws Exception {
+        CellRegion queryRegion = BookUtils.getCellRegionForSheetAndName(sheet, "az_query" + region);
         SName contextDescription = BookUtils.getNameByName(AZCONTEXT + region, sheet);
-        if (queryRegion!=null){
-            List<List<String>> contextList = BookUtils.replaceUserChoicesInRegionDefinition(loggedInUser,contextDescription);
-            ReportService.resolveQuery(loggedInUser,sheet,queryRegion, contextList);
+        if (queryRegion != null) {
+            List<List<String>> contextList = BookUtils.replaceUserChoicesInRegionDefinition(loggedInUser, contextDescription);
+            ReportService.resolveQuery(loggedInUser, sheet, queryRegion, contextList);
         }
 
         if (userRegionOptions.getUserLocked()) { // then put the flag on the book, remember to take it off (and unlock!) if there was an error
@@ -597,9 +608,9 @@ public class ReportRenderer {
         SName rowHeadingsDescription = BookUtils.getNameByName(AZROWHEADINGS + region, sheet);
         String errorMessage = null;
         // make a blank area for data to be populated from, an upload in the sheet so to speak (ad hoc)
-        if ((columnHeadingsDescription != null && rowHeadingsDescription == null)||(rowHeadingsDescription !=null && columnHeadingsDescription==null)) {
-            List<List<String>> colHeadings = BookUtils.replaceUserChoicesInRegionDefinition(loggedInUser,columnHeadingsDescription);
-            List<List<String>> rowHeadings= BookUtils.replaceUserChoicesInRegionDefinition(loggedInUser,rowHeadingsDescription);
+        if ((columnHeadingsDescription != null && rowHeadingsDescription == null) || (rowHeadingsDescription != null && columnHeadingsDescription == null)) {
+            List<List<String>> colHeadings = BookUtils.replaceUserChoicesInRegionDefinition(loggedInUser, columnHeadingsDescription);
+            List<List<String>> rowHeadings = BookUtils.replaceUserChoicesInRegionDefinition(loggedInUser, rowHeadingsDescription);
             List<List<CellForDisplay>> dataRegionCells = new ArrayList<>();
             CellRegion dataRegion = BookUtils.getCellRegionForSheetAndName(sheet, AZDATAREGION + region);
             for (int rowNo = 0; rowNo < dataRegion.getRowCount(); rowNo++) {
@@ -612,8 +623,8 @@ public class ReportRenderer {
             // note the col headings source is going in here as is without processing as in the case of ad-hoc it is not dynamic (i.e. an Azquo query), it's import file column headings
             CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = new CellsAndHeadingsForDisplay(region, colHeadings, rowHeadings, null, null, dataRegionCells, null, null, null, 0, userRegionOptions.getRegionOptionsForTransport(), null);// todo - work out what to do with the timestamp here! Might be a moot point given now row headings
             loggedInUser.setSentCells(reportId, sheetName, region, cellsAndHeadingsForDisplay);
-            if (userRegionOptions.getPreSave()){
-                ReportService.checkDataChangeAndSnapCharts(loggedInUser, reportId, sheet.getBook(), sheet, false, true,false);
+            if (userRegionOptions.getPreSave()) {
+                ReportService.checkDataChangeAndSnapCharts(loggedInUser, reportId, sheet.getBook(), sheet, false, true, false);
                 // see comment on other pre save b-t - should we just pass through online report?
                 SpreadsheetService.saveData(loggedInUser, reportId, loggedInUser.getOnlineReport().getReportName(), sheet.getSheetName(), region, false);
             }
@@ -647,9 +658,9 @@ public class ReportRenderer {
                     }
                 }
 
-                List<List<String>> contextList = BookUtils.replaceUserChoicesInRegionDefinition(loggedInUser,contextDescription);
+                List<List<String>> contextList = BookUtils.replaceUserChoicesInRegionDefinition(loggedInUser, contextDescription);
                 // can it sort out the formulae issues?
-                List<List<String>> rowHeadingList = BookUtils.replaceUserChoicesInRegionDefinition(loggedInUser,rowHeadingsDescription);
+                List<List<String>> rowHeadingList = BookUtils.replaceUserChoicesInRegionDefinition(loggedInUser, rowHeadingsDescription);
                 //check if this is a pivot - if so, then add in any additional filter needed
                 SName contextFilters = BookUtils.getNameByName(AZCONTEXTFILTERS, sheet);
                 if (contextFilters == null) {
@@ -688,7 +699,7 @@ public class ReportRenderer {
                 }
 
                 CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = SpreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser, region, valueId, rowHeadingList,
-                        BookUtils.replaceUserChoicesInRegionDefinition(loggedInUser,columnHeadingsDescription),
+                        BookUtils.replaceUserChoicesInRegionDefinition(loggedInUser, columnHeadingsDescription),
                         contextList, userRegionOptions, quiet);
                 loggedInUser.setSentCells(reportId, sheetName, region, cellsAndHeadingsForDisplay);
                 // now, put the headings into the sheet!
@@ -783,7 +794,7 @@ public class ReportRenderer {
                 return "no region found for " + AZDATAREGION + region;
             }
         }
-        if (userRegionOptions.getPreSave()){
+        if (userRegionOptions.getPreSave()) {
             ReportService.checkDataChangeAndSnapCharts(loggedInUser, reportId, sheet.getBook(), sheet, false, true, false);
             // I'm using the logged in user to get the report and the report name - should this be used for report id? Or pass through the report?
             SpreadsheetService.saveData(loggedInUser, reportId, loggedInUser.getOnlineReport().getReportName(), sheet.getSheetName(), region, false);
@@ -802,9 +813,9 @@ public class ReportRenderer {
             // most of the time rowsFormattingPatternHeight will be the same height as the row headings size but if the space is smaller need to do a first expand before we can do the tessalating copy paste
             int rowsFormattingPatternHeight = 1;
             // only look for the pattern if we're not using hide rows
-            if (userRegionOptions.getHideRows() == 0){
+            if (userRegionOptions.getHideRows() == 0) {
                 rowsFormattingPatternHeight = ReportUtils.guessColumnsFormattingPatternWidth(loggedInUser, MultidimensionalListUtils.transpose2DList(cellsAndHeadingsForDisplay.getRowHeadingsSource()));
-                if (rowsToAdd < rowsFormattingPatternHeight){
+                if (rowsToAdd < rowsFormattingPatternHeight) {
                     rowsFormattingPatternHeight = 1;
                 }
             }
@@ -825,30 +836,30 @@ public class ReportRenderer {
             //found a bug in ZK - lines to fudge it
             Range insertRange = Ranges.range(sheet, insertRow, 0, insertRow + rowsToAdd - 1, maxCol); // insert at the 3rd row - should be rows to add - 1 as it starts at one without adding anything
 //            if (rowsToAdd < 5000) {// ZK siesed when 16000 rows were added to a spreadsheet with 200 columns
-                CellOperationUtil.insertRow(insertRange);
+            CellOperationUtil.insertRow(insertRange);
 
 //            CellOperationUtil.insert(insertRange, Range.InsertShift.DOWN, Range.InsertCopyOrigin.FORMAT_NONE); // don't copy any formatting . . . a problem with hidden rows!
-                // this is hacky, the bulk insert above will have pushed the bottom row down and in many cases we want it back where it was for teh pattern to be pasted properly
-                if (rowsFormattingPatternHeight > 1) {
-                    //cut back the last column to it's original position, and shift the insert range one column to the right
-                    CellOperationUtil.cut(Ranges.range(sheet, insertRow + rowsToAdd, 0, insertRow + rowsToAdd, maxCol)
-                            , Ranges.range(sheet, insertRow, 0, insertRow, maxCol));
-                    // so the next row after the first section to copy until the end bit
-                    insertRange = Ranges.range(sheet, insertRow + 1, 0, insertRow + rowsToAdd, maxCol);
-                    copySource = Ranges.range(sheet, displayDataRegion.getRow(), 0, displayDataRegion.getRow() + rowsFormattingPatternHeight - 1, maxCol);// should be the section representing the pattern we want to copy (with the last row restored to where it was)
-                }
+            // this is hacky, the bulk insert above will have pushed the bottom row down and in many cases we want it back where it was for teh pattern to be pasted properly
+            if (rowsFormattingPatternHeight > 1) {
+                //cut back the last column to it's original position, and shift the insert range one column to the right
+                CellOperationUtil.cut(Ranges.range(sheet, insertRow + rowsToAdd, 0, insertRow + rowsToAdd, maxCol)
+                        , Ranges.range(sheet, insertRow, 0, insertRow, maxCol));
+                // so the next row after the first section to copy until the end bit
+                insertRange = Ranges.range(sheet, insertRow + 1, 0, insertRow + rowsToAdd, maxCol);
+                copySource = Ranges.range(sheet, displayDataRegion.getRow(), 0, displayDataRegion.getRow() + rowsFormattingPatternHeight - 1, maxCol);// should be the section representing the pattern we want to copy (with the last row restored to where it was)
+            }
 //            CellOperationUtil.pasteSpecial(copySource, insertRange, Range.PasteType.FORMULAS, Range.PasteOperation.NONE, false, false);
-                CellOperationUtil.paste(copySource, insertRange);
-                int originalHeight = sheet.getInternalSheet().getRow(insertRow - 1).getHeight();
-                if (originalHeight != sheet.getInternalSheet().getRow(insertRow).getHeight()) { // height may not match on insert
-                    insertRange.setRowHeight(originalHeight); // hopefully set the lot in one go??
+            CellOperationUtil.paste(copySource, insertRange);
+            int originalHeight = sheet.getInternalSheet().getRow(insertRow - 1).getHeight();
+            if (originalHeight != sheet.getInternalSheet().getRow(insertRow).getHeight()) { // height may not match on insert
+                insertRange.setRowHeight(originalHeight); // hopefully set the lot in one go??
+            }
+            boolean hidden = sheet.getInternalSheet().getRow(insertRow - 1).isHidden();
+            if (hidden) {
+                for (int row = insertRange.getRow(); row <= insertRange.getLastRow(); row++) {
+                    sheet.getInternalSheet().getRow(row).setHidden(true);
                 }
-                boolean hidden = sheet.getInternalSheet().getRow(insertRow - 1).isHidden();
-                if (hidden) {
-                    for (int row = insertRange.getRow(); row <= insertRange.getLastRow(); row++) {
-                        sheet.getInternalSheet().getRow(row).setHidden(true);
-                    }
-                }
+            }
             //}
         }
         // add columns

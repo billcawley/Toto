@@ -7,6 +7,7 @@ import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
 import com.azquo.spreadsheet.zk.*;
+import com.csvreader.CsvWriter;
 import io.keikai.api.*;
 import io.keikai.api.model.CellData;
 import io.keikai.json.JSONValue;
@@ -15,6 +16,7 @@ import io.keikai.model.SName;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.pdfbox.util.PDFMergerUtility;
+import org.apache.poi.ss.util.AreaReference;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.zeroturnaround.zip.ZipUtil;
@@ -34,6 +36,7 @@ import org.zkoss.zul.Filedownload;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -194,6 +197,10 @@ public class ZKSpreadsheetCommandController {
                     Clients.showBusy(ss,"Processing ...");
                     Clients.evalJavaScript("postAjax('ActuallyXMLZIP');");
                 }
+                if ("CSVEXPORT".equals(action)) {
+                    Clients.showBusy(ss,"Processing ...");
+                    Clients.evalJavaScript("postAjax('ActuallyCSVEXPORT');");
+                }
                 if (action != null && action.startsWith("ActuallyXML")) {
                     Path destdir;
                     boolean zipMode = true;
@@ -218,6 +225,24 @@ public class ZKSpreadsheetCommandController {
                         Clients.clearBusy(ss);
                         Clients.alert("No files created. Either no lines were selected or lines with empty supporting reports were skipped.");
                     }
+                }
+                if (action != null && action.startsWith("ActuallyCSVEXPORT")) {
+                    //look for region 'az_csvExport, convert to CSV and export as 'exportTarget'
+                    Book book = ss.getBook();
+                    for (SName name : book.getInternalBook().getNames()) {
+                        if (name.getName().toLowerCase().equals("az_csvexport")) {
+                            File newTempFile = File.createTempFile("csv export", ".csv");
+                            newTempFile.deleteOnExit();
+                            CsvWriter csvWriter = new CsvWriter(newTempFile.toString(), ',', StandardCharsets.UTF_8);
+                            AreaReference areaReference= new AreaReference(name.getRefersToFormula(), null);
+                            ImportService.rangeToCSV(book.getSheet(name.getRefersToSheetName()),areaReference,csvWriter);
+                            csvWriter.flush();
+                            csvWriter.close();
+                            Filedownload.save(new AMedia("export.csv", "csv", "text/csv", newTempFile, false));
+                            Clients.clearBusy(ss);
+                        }
+                    }
+
                 }
 
                 String saveMessage = "";
