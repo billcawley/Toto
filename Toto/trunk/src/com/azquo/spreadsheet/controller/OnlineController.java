@@ -150,6 +150,18 @@ public class OnlineController {
                 }
                 // dealing with the report/database combo WAS below but I see no reason for this, try and resolve it now
                 OnlineReport onlineReport = null;
+
+                // for direct linking to reports it's useful to be able to set choices. From an email sent to Shaun :
+                // choice_month=Nov-20&choice_costcentre=somewhere
+                Enumeration<String> parameterNames = request.getParameterNames();
+                while (parameterNames.hasMoreElements()){
+                    String paramName = parameterNames.nextElement();
+                    if (paramName.toLowerCase().startsWith("choice_")){
+                        String value = request.getParameter(paramName);
+                        SpreadsheetService.setUserChoice(loggedInUser, paramName.substring(7), value);
+                    }
+                }
+
                 if ((loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()) && reportId != null && reportId.length() > 0 && !reportId.equals("1")) { // admin, we allow a report and possibly db to be set
                     //report id is assumed to be integer - sent from the website
                     if (loggedInUser.getUser().isDeveloper()) { // for the user

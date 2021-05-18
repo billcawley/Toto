@@ -250,8 +250,8 @@ public class ExcelController {
                     encodedBytes = Base64.getEncoder().encode(IOUtils.toByteArray(servletContext.getResourceAsStream(filePath)));
 
                 }
-                  // similar to below but less going on
-                 String string64 = new String(encodedBytes);
+                // similar to below but less going on
+                String string64 = new String(encodedBytes);
                 int sliceSize = 8000;
                 Base64Return base64Return = new Base64Return();
                 int startPos = 0;
@@ -343,7 +343,6 @@ public class ExcelController {
 
             // logic added by EFC 15/04/21. For Atos we're going to try to do some json graphs. This will be in the browser so try the logged in user in the normal way also
             if (loggedInUser == null && sessionId != null){
-
                 HttpSession httpSession = SessionListener.sessions.get(sessionId);
                 if (httpSession != null){
                     loggedInUser = (LoggedInUser) httpSession.getAttribute(LoginController.LOGGED_IN_USER_SESSION);
@@ -386,7 +385,6 @@ public class ExcelController {
             if (op.equals("audit")) {
 //                UserRegionOptions userRegionOptions = ExcelService.getUserRegionOptions(loggedInUser, "", loggedInUser.getOnlineReport().getId(), region); // what it was, no good!
                 UserRegionOptions userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), 0, region, options); // fudging report id
-
                 jacksonMapper.registerModule(new JavaTimeModule());
                 jacksonMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
                 //jacksonMapper.registerModule(new JavaTimeModule());
