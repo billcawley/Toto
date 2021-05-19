@@ -25,6 +25,9 @@ import io.keikai.api.Exporter;
 import io.keikai.api.Exporters;
 import io.keikai.api.Importers;
 import io.keikai.api.model.Book;
+import serilogj.Log;
+import serilogj.LoggerConfiguration;
+import serilogj.events.LogEventLevel;
 
 import java.io.*;
 import java.net.InetAddress;
@@ -34,6 +37,10 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+
+import static serilogj.sinks.coloredconsole.ColoredConsoleSinkConfigurator.*;
+import static serilogj.sinks.rollingfile.RollingFileSinkConfigurator.*;
+import static serilogj.sinks.seq.SeqSinkConfigurator.*;
 
 /*
  * Copyright (C) 2016 Azquo Ltd.
@@ -80,6 +87,12 @@ public class SpreadsheetService {
         System.out.println("host : " + thost);
         System.out.println("Available processors : " + Runtime.getRuntime().availableProcessors());
         host = thost;
+        Log.setLogger(new LoggerConfiguration()
+                .writeTo(coloredConsole())
+                .writeTo(rollingFile("test-{Date}.log"), LogEventLevel.Information)
+//                .writeTo(seq("http://localhost:5341/"))
+                .setMinimumLevel(LogEventLevel.Verbose)
+                .createLogger());
     }
 
     private static final Map<String, String> properties = new ConcurrentHashMap<>();

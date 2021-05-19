@@ -32,6 +32,7 @@ import io.keikai.api.model.Book;
 import io.keikai.api.model.Sheet;
 import io.keikai.model.CellRegion;
 import io.keikai.model.SName;
+import serilogj.Log;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
@@ -104,7 +105,6 @@ public class OnlineController {
     private final int mb = 1024 * 1024;
     // break up into separate functions? I'm not sure it's that important while the class is under 500 lines. I suppose one could move uploading for example.
 
-    private static final Logger logger = Logger.getLogger(OnlineController.class);
 
     public static final String BOOK = "BOOK";
     public static final String BOOK_PATH = "BOOK_PATH";
@@ -136,6 +136,8 @@ public class OnlineController {
             , @RequestParam(value = "uploadfile", required = false) MultipartFile uploadfile
 
     ) {
+        //Log.information("Edd is testing");
+
         if (!"1".equals(reportId) && "true".equals(request.getSession().getAttribute("excelToggle"))) {
             return "redirect:/api/ExcelInterface?" + request.getQueryString();
         }
@@ -386,7 +388,7 @@ public class OnlineController {
                 }
                 model.addAttribute("content", result);
             } catch (Exception e) {
-                logger.error("online controller error", e);
+//                logger.error("online controller error", e);
                 model.addAttribute("content", "error:" + e.getMessage());
             }
             return "utf8page";

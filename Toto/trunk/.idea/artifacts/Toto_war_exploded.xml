@@ -9,6 +9,7 @@
           <element id="module-output" name="shared" />
           <element id="module-output" name="poi" />
           <element id="module-output" name="poi-ooxml" />
+          <element id="module-output" name="serilogj" />
         </element>
         <element id="directory" name="lib">
           <element id="library" level="project" name="net.lingala.zip4j:zip4j:1.3.2" />
