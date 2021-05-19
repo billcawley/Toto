@@ -51,7 +51,7 @@ public final class UserRegionOptionsDAO {
 
     private static final class UserRegionOptionRowMapper implements RowMapper<UserRegionOptions> {
         @Override
-        public UserRegionOptions mapRow(final ResultSet rs, final int row) throws SQLException {
+        public UserRegionOptions mapRow(final ResultSet rs, final int row) {
             try {
                 // set some defaults for the data not saved in mysql. As mentioned above this feels a little hacky
                 return new UserRegionOptions(rs.getInt(StandardDAO.ID)
@@ -78,6 +78,7 @@ public final class UserRegionOptionsDAO {
                         , false
                         ,false
                         ,false
+                        , false
                 );
             } catch (Exception e) {
                 e.printStackTrace();

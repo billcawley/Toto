@@ -100,6 +100,9 @@ public class ZKComposer extends SelectorComposer<Component> {
                 break;
             }
         }
+
+
+        ZKComposerUtils.checkCSVDownload(myzss.getBook());
 //        Clients.evalJavaScript("window.skipSetting = 0;window.skipMarker = 0;");
 
     }

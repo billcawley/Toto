@@ -2,17 +2,35 @@ package com.azquo.spreadsheet.zk;
 
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
+import com.azquo.admin.user.UserRegionOptions;
+import com.azquo.dataimport.ImportService;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.controller.OnlineController;
+import com.azquo.spreadsheet.transport.CellForDisplay;
+import com.csvreader.CsvWriter;
+import io.keikai.api.model.Sheet;
+import io.keikai.model.SName;
 import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.poi.ss.util.AreaReference;
+import org.zeroturnaround.zip.FileSource;
+import org.zeroturnaround.zip.ZipEntrySource;
+import org.zeroturnaround.zip.ZipUtil;
+import org.zkoss.util.media.AMedia;
 import org.zkoss.zk.ui.util.Clients;
 import io.keikai.api.Importers;
 import io.keikai.api.Ranges;
 import io.keikai.api.model.Book;
 import io.keikai.model.SSheet;
 import io.keikai.ui.Spreadsheet;
+import org.zkoss.zul.Filedownload;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 /**
  * Created by edward on 26/01/17.
@@ -51,8 +69,9 @@ class ZKComposerUtils {
                 }
             }
             Ranges.range(myzss.getSelectedSheet()).notifyChange(); // try to update the lot - sometimes it seems it does not!
-            // ok there is a danger right here : on some sheets the spreadsheet gets kind of frozen or rather the cells don't calculate until something like a scroll happens. Not a problem when not full screen either
-            // really something to send to ZK? Could be a a pain to prepare. TODO.
+
+            checkCSVDownload(book);
+
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -83,4 +102,64 @@ class ZKComposerUtils {
             Clients.evalJavaScript("alert(\"the report '" + reportName + "` is no longer available\")");
         }
     }
+
+    // check through the book to see if there are regions that we need to have as CSV downloads. Awkwardly we can't just check  the cells and headings for display - display column headings must be used if availabe
+    // hence we need to run through names, adding the csv download flag to the region options in CellsAndHeadingsForDisplay won't get us out of it
+
+    static void checkCSVDownload(Book book) throws Exception {
+        LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
+        // could be more than one and zipping might be a good idea anyway for fast downloads
+        List<ZipEntrySource> toZip = new ArrayList<>();
+        for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {
+            Sheet sheet = book.getSheetAt(sheetNumber);
+            List<SName> namesForSheet = BookUtils.getNamesForSheet(sheet);
+            for (SName name : namesForSheet){
+                if (name.getName().toLowerCase().startsWith(ReportRenderer.AZDATAREGION)){
+                    String region = name.getName().substring(ReportRenderer.AZDATAREGION.length());
+                    SName optionsRegion = BookUtils.getNameByName(ReportRenderer.AZOPTIONS + region, sheet);
+                    if (optionsRegion != null) {
+                        String optionsSource = BookUtils.getSnameCell(optionsRegion).getStringValue();
+                        int reportId = (int) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
+                        UserRegionOptions userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), reportId, region, optionsSource);
+                        if (userRegionOptions.getCsvDownload()){ // then we're off
+                            SName displayColumnHeadings = BookUtils.getNameByName(ReportRenderer.AZDISPLAYCOLUMNHEADINGS + region, sheet);
+                            File newTempFile = File.createTempFile("csv export", ".csv");
+                            newTempFile.deleteOnExit();
+                            CsvWriter csvWriter = new CsvWriter(newTempFile.toString(), ',', StandardCharsets.UTF_8);
+                            if (displayColumnHeadings != null){
+                                AreaReference areaReference= new AreaReference(name.getRefersToFormula(), null);
+                                ImportService.rangeToCSV(book.getSheet(name.getRefersToSheetName()),areaReference,csvWriter);
+                            } else {
+                                for (List<String> headingRow : loggedInUser.getSentCells(reportId, sheet.getSheetName(), region).getColumnHeadings()){
+                                    for (String heading : headingRow){
+                                        csvWriter.write(heading.replace("\n", "\\\\n").replace(",", "").replace("\t", "\\\\t"));//nullify the tabs and carriage returns.  Note that the double slash is deliberate so as not to confuse inserted \\n with existing \n
+                                    }
+                                    csvWriter.endRecord();
+                                }
+                            }
+                            for (List<CellForDisplay> dataRow : loggedInUser.getSentCells(reportId, sheet.getSheetName(), region).getData()){
+                                for (CellForDisplay dataCell : dataRow){
+                                    csvWriter.write(dataCell.getStringValue().replace("\n", "\\\\n").replace(",", "").replace("\t", "\\\\t"));
+                                }
+                                csvWriter.endRecord();
+                            }
+                            csvWriter.flush();
+                            csvWriter.close();
+                            toZip.add(new FileSource(region + "export.csv", newTempFile));
+                        }
+                    }
+
+                }
+            }
+        }
+        if (!toZip.isEmpty()){
+            File tempzip = File.createTempFile("csvexport", ".zip");
+            ZipEntrySource[] zes = new ZipEntrySource[toZip.size()];
+            toZip.toArray(zes);
+            ZipUtil.pack(zes, tempzip);
+            tempzip.deleteOnExit();
+            Filedownload.save(new AMedia("csvexport.zip", "zip", "application/zip", tempzip, true));
+        }
+    }
+
 }

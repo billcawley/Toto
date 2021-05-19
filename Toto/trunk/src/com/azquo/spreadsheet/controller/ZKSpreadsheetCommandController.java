@@ -197,10 +197,6 @@ public class ZKSpreadsheetCommandController {
                     Clients.showBusy(ss,"Processing ...");
                     Clients.evalJavaScript("postAjax('ActuallyXMLZIP');");
                 }
-                if ("CSVEXPORT".equals(action)) {
-                    Clients.showBusy(ss,"Processing ...");
-                    Clients.evalJavaScript("postAjax('ActuallyCSVEXPORT');");
-                }
                 if (action != null && action.startsWith("ActuallyXML")) {
                     Path destdir;
                     boolean zipMode = true;
@@ -226,25 +222,6 @@ public class ZKSpreadsheetCommandController {
                         Clients.alert("No files created. Either no lines were selected or lines with empty supporting reports were skipped.");
                     }
                 }
-                if (action != null && action.startsWith("ActuallyCSVEXPORT")) {
-                    //look for region 'az_csvExport, convert to CSV and export as 'exportTarget'
-                    Book book = ss.getBook();
-                    for (SName name : book.getInternalBook().getNames()) {
-                        if (name.getName().toLowerCase().equals("az_csvexport")) {
-                            File newTempFile = File.createTempFile("csv export", ".csv");
-                            newTempFile.deleteOnExit();
-                            CsvWriter csvWriter = new CsvWriter(newTempFile.toString(), ',', StandardCharsets.UTF_8);
-                            AreaReference areaReference= new AreaReference(name.getRefersToFormula(), null);
-                            ImportService.rangeToCSV(book.getSheet(name.getRefersToSheetName()),areaReference,csvWriter);
-                            csvWriter.flush();
-                            csvWriter.close();
-                            Filedownload.save(new AMedia("export.csv", "csv", "text/csv", newTempFile, false));
-                            Clients.clearBusy(ss);
-                        }
-                    }
-
-                }
-
                 String saveMessage = "";
 
                 // now just pops up the processing, bounces back to actually save below
@@ -327,7 +304,7 @@ public class ZKSpreadsheetCommandController {
                                 if (cellsAndHeadingsForDisplay.equals(cellsAndHeadingsForDisplayLatest)){
                                     System.out.println(cellsAndHeadingsForDisplay.getRegion() +  " dynamic update check the data was the same");
                                 } else {
-                                    RegionFillerService.fillData(sheetFor, cellsAndHeadingsForDisplayLatest, region);
+                                    RegionFillerService.fillData(sheetFor, cellsAndHeadingsForDisplayLatest, region, null);
                                     loggedInUser.setSentCells(reportId, sheetFor.getSheetName(), cellsAndHeadingsForDisplayLatest.getRegion(), cellsAndHeadingsForDisplayLatest);
                                     System.out.println(cellsAndHeadingsForDisplay.getRegion() +  " dynamic update check the data was NOT the same");
                                 }

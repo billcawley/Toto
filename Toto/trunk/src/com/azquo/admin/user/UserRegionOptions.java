@@ -39,10 +39,11 @@ public class UserRegionOptions extends StandardEntity {
     private boolean preSave;
     private boolean dynamicUpdate;
 
+    private boolean csvDownload;
 
     UserRegionOptions(int id, int userId, int reportId, String region, int hideRows, int hideRowValues, int hideCols, boolean sortable
             , int rowLimit, int columnLimit, String sortRow, boolean sortRowAsc, String sortColumn
-            , boolean sortColumnAsc, int highlightDays, boolean noSave, String databaseName, String rowLanguage, String columnLanguage, boolean userLocked, int permuteTotalCount, boolean ignoreHeadingErrors, boolean preSave, boolean dynamicUpdate) {
+            , boolean sortColumnAsc, int highlightDays, boolean noSave, String databaseName, String rowLanguage, String columnLanguage, boolean userLocked, int permuteTotalCount, boolean ignoreHeadingErrors, boolean preSave, boolean dynamicUpdate, boolean csvDownload) {
         this.id = id;
         this.userId = userId;
         this.reportId = reportId;
@@ -67,6 +68,7 @@ public class UserRegionOptions extends StandardEntity {
         this.ignoreHeadingErrors = ignoreHeadingErrors;
         this.preSave = preSave;
         this.dynamicUpdate = dynamicUpdate;
+        this.csvDownload = csvDownload;
     }
 
     // to read the format of options from the spreadsheet, code adapted from azquobook.
@@ -116,6 +118,7 @@ public class UserRegionOptions extends StandardEntity {
             this.ignoreHeadingErrors = spreadsheetSource.contains("ignoreheadingerrors");
             this.preSave = spreadsheetSource.contains("presave");
             this.dynamicUpdate = spreadsheetSource.toLowerCase().contains("dynamicupdate");
+            this.csvDownload = spreadsheetSource.toLowerCase().contains("csvdownload");
         } else {
             this.sortable = false;
             this.rowLimit = 0;
@@ -127,6 +130,7 @@ public class UserRegionOptions extends StandardEntity {
             this.ignoreHeadingErrors = false;
             this.preSave = false;
             this.dynamicUpdate = false;
+            this.csvDownload = false;
         }
         this.sortRow = null;
         this.sortRowAsc = false;
@@ -334,6 +338,10 @@ public class UserRegionOptions extends StandardEntity {
 
     public boolean getPreSave() {
         return preSave;
+    }
+
+    public boolean getCsvDownload() {
+        return csvDownload;
     }
 
     @Override

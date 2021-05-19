@@ -30,6 +30,10 @@ public class RegionFillerService {
     // this had clonecols which was added to "selection" to make it wider, this made no sense and has been removed
     static void fillRowHeadings(LoggedInUser loggedInUser, Sheet sheet, String region, CellRegion displayRowHeadings
             , CellRegion displayDataRegion, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, UserRegionOptions userRegionOptions) throws Exception {
+        // if downloading we're not populating row headings or the data
+        if (userRegionOptions.getCsvDownload()){
+            return;
+        }
         int rowHeadingsColumn = displayRowHeadings.getColumn();
         boolean isHierarchy = ReportUtils.isHierarchy(cellsAndHeadingsForDisplay.getRowHeadingsSource());
         int row = displayRowHeadings.getRow();
@@ -507,7 +511,7 @@ public class RegionFillerService {
                     , cellsAndHeadingsForDisplay);
         }
         loggedInUser.setSentCells(reportId, sheet.getSheetName(), region + "-" + repeatRow + "-" + repeatColumn, cellsAndHeadingsForDisplay); // todo- perhaps address that this is a bit of a hack!
-        RegionFillerService.fillData(sheet, cellsAndHeadingsForDisplay, displayDataRegion);
+        RegionFillerService.fillData(sheet, cellsAndHeadingsForDisplay, displayDataRegion,userRegionOptions);
     }
 
     private static void fillRepeatRegion(LoggedInUser loggedInUser,
@@ -567,11 +571,14 @@ public class RegionFillerService {
             RegionFillerService.fillColumnHeadings(sheet, userRegionOptions, displayColumnHeadings, cellsAndHeadingsForDisplay);
         }
         loggedInUser.setSentCells(reportId, sheet.getSheetName(), region + "-" + repeatRow + "-" + repeatColumn, cellsAndHeadingsForDisplay); // todo- perhaps address that this is a bit of a hack!
-        RegionFillerService.fillData(sheet, cellsAndHeadingsForDisplay, displayDataRegion);
+        RegionFillerService.fillData(sheet, cellsAndHeadingsForDisplay, displayDataRegion,userRegionOptions);
 
     }
 
-    public static void fillData(Sheet sheet, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, CellRegion displayDataRegion) {
+    public static void fillData(Sheet sheet, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, CellRegion displayDataRegion, UserRegionOptions userRegionOptions) {
+        if (userRegionOptions != null && userRegionOptions.getCsvDownload()){ // we don't fill the data when it will be downloaded as a CSV
+            return;
+        }
         int row = displayDataRegion.getRow();
         List<String> bottomColHeadings = cellsAndHeadingsForDisplay.getColumnHeadings().get(cellsAndHeadingsForDisplay.getColumnHeadings().size() - 1); // bottom of the col headings if they are multi layered
         if (cellsAndHeadingsForDisplay.getData() != null) {

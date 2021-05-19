@@ -10,7 +10,6 @@ import com.azquo.spreadsheet.controller.OnlineController;
 import com.azquo.spreadsheet.*;
 import com.azquo.spreadsheet.transport.CellForDisplay;
 import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
-import com.csvreader.CsvWriter;
 import com.github.rcaller.rstuff.RCaller;
 import com.github.rcaller.rstuff.RCode;
 import org.apache.commons.lang.math.NumberUtils;
@@ -18,13 +17,8 @@ import io.keikai.api.*;
 import io.keikai.api.model.*;
 import io.keikai.api.model.Sheet;
 import io.keikai.model.*;
-import org.apache.poi.ss.util.AreaReference;
-import org.zkoss.util.media.AMedia;
-import org.zkoss.zul.Filedownload;
 
 import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.nio.charset.StandardCharsets;
 import java.rmi.RemoteException;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -85,8 +79,6 @@ public class ReportRenderer {
     static final String AZCURRENTUSER = "az_currentuser";
     // on an upload file, should this file be flagged as one that moves with backups and is available for non admin users to download
     public static final String AZFILETYPE = "az_filetype";
-
-    public static final String AZCSVEXPORT = "az_csvexport";
 
     public static boolean populateBook(Book book, int valueId) throws Exception {
         return populateBook(book, valueId, false, false, null, true);
@@ -345,10 +337,6 @@ public class ReportRenderer {
                         }
                     }
                 }
-                if (name.getName().toLowerCase().equals(AZCSVEXPORT)) {
-                    sheet.getBook().getInternalBook().setAttribute(AZCSVEXPORT, true);
-                }
-
             }
             // after loading deal with lock stuff
             final List<CellsAndHeadingsForDisplay> sentForReport = loggedInUser.getSentForReport(reportId);
@@ -428,8 +416,8 @@ public class ReportRenderer {
                         code.addRCode("BaseFrame <- as.data.frame(cbind(" + headings.substring(0, headings.length() - 1) + "))");
                         String query = BookUtils.getSnameCell(name).getStringValue();
                         String[] rcommands = query.split("\\n");
-                        for (int i = 0; i < rcommands.length; i++) {
-                            code.addRCode(rcommands[i]);
+                        for (String rcommand : rcommands) {
+                            code.addRCode(rcommand);
                         }
                         caller.setRCode(code);
                         ByteArrayOutputStream stream = new ByteArrayOutputStream();
@@ -743,7 +731,7 @@ public class ReportRenderer {
                         if (displayColumnHeadings != null) {
                             RegionFillerService.fillColumnHeadings(sheet, userRegionOptions, displayColumnHeadings, cellsAndHeadingsForDisplay);
                         }
-                        RegionFillerService.fillData(sheet, cellsAndHeadingsForDisplay, displayDataRegion);
+                        RegionFillerService.fillData(sheet, cellsAndHeadingsForDisplay, displayDataRegion, userRegionOptions);
                         // without this multi step formulae e.g. in headings won't resolve. If this is a performance issue might need to pass through fast load.
                         // does this make later clear formulae result caches or indeed the lot redundant?? todo - investigate!
                         BookUtils.notifyChangeOnRegion(sheet, displayDataRegion);
@@ -805,7 +793,10 @@ public class ReportRenderer {
 
     private static void expandDataRegionBasedOnHeadings(LoggedInUser loggedInUser, Sheet sheet, String region, CellRegion displayDataRegion, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, int maxCol, UserRegionOptions userRegionOptions) {
         // add rows
-        if (cellsAndHeadingsForDisplay.getRowHeadings() != null && (displayDataRegion.getRowCount() < cellsAndHeadingsForDisplay.getRowHeadings().size()) && displayDataRegion.getRowCount() > 2) { // then we need to expand, and there is space to do so (3 or more allocated already)
+        if (cellsAndHeadingsForDisplay.getRowHeadings() != null
+                && (displayDataRegion.getRowCount() < cellsAndHeadingsForDisplay.getRowHeadings().size())
+                && displayDataRegion.getRowCount() > 2
+        && !userRegionOptions.getCsvDownload()) { // then we need to expand, and there is space to do so (3 or more allocated already)
             int rowsToAdd = cellsAndHeadingsForDisplay.getRowHeadings().size() - (displayDataRegion.getRowCount());
             int insertRow = displayDataRegion.getRow() + displayDataRegion.getRowCount() - 1; // last but one row
             Range copySource = Ranges.range(sheet, insertRow - 1, 0, insertRow - 1, maxCol);
