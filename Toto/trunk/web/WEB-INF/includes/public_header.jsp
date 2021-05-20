@@ -112,8 +112,7 @@
 						<li ><a href="#" onclick="postAjax('SaveTemplate'); return false;">Save Template</a></li>
 					</c:if>
 					<c:if test="${templateMode == false}">
-<!--						<li><a href="#" title="Help" onclick="showInspectHelp()"><span class="fa fa-question-circle"></span></a></li> -->
-						<li><a href="#" onclick="return inspectDatabase();" title="Inspect database"><span class="fa fa-eye"></span> Inspect database</a></li>
+						<li><a href="#" onclick="return inspectDatabase();" title="Inspect database"><span class="fa fa-eye"></span> Inspect database</a> <!--<span class="fa fa-question-circle" onclick="showInspectHelp(); return false;"></span>--></li>
 						<c:if test="${xml == true}"><li><a href="#" onclick="postAjax('XML');return false;">Send XML</a></li></c:if>
 						<c:if test="${xmlzip == true}"><li><a href="#" onclick="postAjax('XMLZIP');return false;">Download XML</a></li></c:if>
 						<c:if test="${showTemplate == true}"><li><a href="#" onclick="window.location.assign(window.location.href+='&opcode=template')">View Template</a></li></c:if>
