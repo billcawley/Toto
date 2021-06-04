@@ -2019,16 +2019,20 @@ fr.close();
                 }
             }
             List<String> useSheetList = getList(ppBook, "az_UseSheets");
-            if (useSheetList.size() > 0) {
+             if (useSheetList.size() > 0) {
+                boolean hasUseSheets = false;
                 String sheetName = uploadedFile.getFileNames().get(uploadedFile.getFileNames().size() - 1).toLowerCase(Locale.ROOT);
                 for (String useSheet : useSheetList) {
                     boolean use = false;
-                    if (useSheet.length() > 0 && sheetName.contains(useSheet)) {
-                        use = true;
-                        break;
+                    if (useSheet.length() > 0){
+                        hasUseSheets = true;
+                        if (sheetName.contains(useSheet)) {
+                           use = true;
+                           break;
+                        }
                         //using 'contains' - maybe should check wildcards
                     }
-                    if (!use) {
+                    if (hasUseSheets && !use) {
                         uploadedFile.setPath(null);
                         return;
                     }
