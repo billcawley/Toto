@@ -73,6 +73,12 @@ public final class CommentDAO {
         return StandardDAO.findOneWithWhereSQLAndParameters(" WHERE " + BUSINESSID + " = :" + BUSINESSID + " AND " + IDENTIFIER + " = :" + IDENTIFIER + " AND " + TEAM + " = :" + TEAM, TABLENAME, commentRowMapper, namedParams);
     }
 
+    public static List<Comment> findForBusinessId(final int businessId) {
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(BUSINESSID, businessId);
+        return StandardDAO.findListWithWhereSQLAndParameters(" WHERE " + BUSINESSID + " = :" + BUSINESSID, TABLENAME, commentRowMapper, namedParams);
+    }
+
     public static void removeById(Comment comment) {
         StandardDAO.removeById(comment, TABLENAME);
     }
