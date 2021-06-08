@@ -114,6 +114,13 @@ public final class UserActivityDAO {
         return StandardDAO.findListWithWhereSQLAndParameters(" WHERE " + BUSINESSID + " = :" + BUSINESSID + " and " + USER + " = :" + USER + "  and " + TS + " > :" + TS + " order by ts asc", TABLENAME, userActivityRowMapper, namedParams);
     }
 
+    public static List<UserActivity> findForBusinessIdSince(final int businessId, LocalDateTime since) {
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(BUSINESSID, businessId);
+        namedParams.addValue(TS, DateUtils.getDateFromLocalDateTime(since));
+        return StandardDAO.findListWithWhereSQLAndParameters(" WHERE " + BUSINESSID + " = :" + BUSINESSID + " and " + TS + " > :" + TS + " order by ts asc", TABLENAME, userActivityRowMapper, namedParams);
+    }
+
     public static void removeById(UserActivity comment) {
         StandardDAO.removeById(comment, TABLENAME);
     }

@@ -114,7 +114,7 @@ public class UserRegionOptions extends StandardEntity {
                 }else{
                     permuteTotalCount = 100;
                 }
-            };
+            }
             this.ignoreHeadingErrors = spreadsheetSource.contains("ignoreheadingerrors");
             this.preSave = spreadsheetSource.contains("presave");
             this.dynamicUpdate = spreadsheetSource.toLowerCase().contains("dynamicupdate");
