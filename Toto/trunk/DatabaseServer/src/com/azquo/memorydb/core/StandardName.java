@@ -76,7 +76,7 @@ public final class StandardName extends Name {
 
     // For the code to make new names (not when loading).
 
-    private static AtomicInteger newNameCount = new AtomicInteger(0);
+    private static final AtomicInteger newNameCount = new AtomicInteger(0);
 
     public StandardName(final AzquoMemoryDB azquoMemoryDB, final Provenance provenance) throws Exception {
         super(azquoMemoryDB, 0);
@@ -92,7 +92,7 @@ public final class StandardName extends Name {
         this.provenance = provenance;
     }
 
-    private static AtomicInteger newName3Count = new AtomicInteger(0);
+    private static final AtomicInteger newName3Count = new AtomicInteger(0);
 
     // For loading, it should only be used by the NameDAO, I can't really restrict it and make it non public without rearranging the package I don't think.
     // yes I am exposing "this". Seems ok so far. Interning the attributes should help memory usage.
@@ -143,7 +143,7 @@ public final class StandardName extends Name {
         getAzquoMemoryDB().addNameToDb(this);
     }
 
-    private static AtomicInteger getDefaultDisplayNameCount = new AtomicInteger(0);
+    private static final AtomicInteger getDefaultDisplayNameCount = new AtomicInteger(0);
 
     // for convenience but be careful where it is used . . .
     public String getDefaultDisplayName() {
@@ -183,7 +183,7 @@ public final class StandardName extends Name {
     Check that the array has elements before wrapping, want to avoid unnecessary garbage - hence Collections.emptyList() rather than unnecessary wrapping.
     */
 
-    private static AtomicInteger getValuesCount = new AtomicInteger(0);
+    private static final AtomicInteger getValuesCount = new AtomicInteger(0);
 
     public Collection<Value> getValues() {
         getValuesCount.incrementAndGet();
@@ -240,7 +240,7 @@ public final class StandardName extends Name {
     }*/
 
     // no duplication is while loading, to reduce work
-    private static AtomicInteger addToValuesCount = new AtomicInteger(0);
+    private static final AtomicInteger addToValuesCount = new AtomicInteger(0);
 
     void addToValues(final Value value) throws Exception {
         addToValues(value, false);
@@ -308,7 +308,7 @@ public final class StandardName extends Name {
         setNeedsPersisting(); // will be ignored on loading. Best to put in here to be safe. Could maybe check it's actually necessary above if performance an issue.
     }
 
-    private static AtomicInteger removeFromValuesCount = new AtomicInteger(0);
+    private static final AtomicInteger removeFromValuesCount = new AtomicInteger(0);
 
     void removeFromValues(final Value value) {
         removeFromValuesCount.incrementAndGet();
@@ -345,7 +345,7 @@ public final class StandardName extends Name {
     }
 
     // returns list now as that's what it is!
-    private static AtomicInteger getParentsCount = new AtomicInteger(0);
+    private static final AtomicInteger getParentsCount = new AtomicInteger(0);
 
     public List<Name> getParents() {
         getParentsCount.incrementAndGet();
@@ -366,7 +366,7 @@ public final class StandardName extends Name {
     but due to where these functions are called internally I think there would be little gain, these two functions only tend to be
      called after it is confirmed that changed to children actually happened*/
 
-    private static AtomicInteger addToParentsCount = new AtomicInteger(0);
+    private static final AtomicInteger addToParentsCount = new AtomicInteger(0);
 
     // don't trust no_parents, revert to old style but add logging
     void addToParents(final Name name, boolean databaseIsLoading) {
@@ -397,7 +397,7 @@ public final class StandardName extends Name {
         }
     }
 
-    private static AtomicInteger removeFromParentsCount = new AtomicInteger(0);
+    private static final AtomicInteger removeFromParentsCount = new AtomicInteger(0);
 
      void removeFromParents(final Name name) {
         removeFromParentsCount.incrementAndGet();
@@ -410,7 +410,7 @@ public final class StandardName extends Name {
     /* returns a collection, I think this is just iterated over to check stuff but a set internally as it should not have duplicates. These two functions moved
     here from the spreadsheet as I want direct access to the parents array, saving a fair amount of garbage if it's hammered (array vs ArrayList.iterator())*/
 
-    private static AtomicInteger findAllParentsCount = new AtomicInteger(0);
+    private static final AtomicInteger findAllParentsCount = new AtomicInteger(0);
 
     public Collection<Name> findAllParents() {
         findAllParentsCount.incrementAndGet();
@@ -419,7 +419,7 @@ public final class StandardName extends Name {
         return allParents;
     }
 
-    private static AtomicInteger findAllParents2Count = new AtomicInteger(0);
+    private static final AtomicInteger findAllParents2Count = new AtomicInteger(0);
 
     // note : this was using getParents, since it was really being hammered this was no good due to the garbage generation of that function, hence the change
     // in here as it accesses things I don't want accessed outside
@@ -447,7 +447,7 @@ public final class StandardName extends Name {
 
     // as above in here directly accessing fields due to performance
     // used when permuting - for element we want to find a parent it has (possibly up the chain) in top set. So if we had a shop and we did member name with that and "All Counties" we'd hope to find the county the shop was in
-    private static AtomicInteger memberNameCount = new AtomicInteger(0);
+    private static final AtomicInteger memberNameCount = new AtomicInteger(0);
 
     public Name memberName(Name topSet) {
         Name[] refCopy = parents;
@@ -466,7 +466,7 @@ public final class StandardName extends Name {
     }
 
 
-    private static AtomicInteger addNamesCount = new AtomicInteger(0);
+    private static final AtomicInteger addNamesCount = new AtomicInteger(0);
 
     // was in name service, added in here as a static function to give it direct access to the private arrays. Again an effort to reduce garbage.
     // Used by find all names, this is hammered, efficiency is important
@@ -535,7 +535,7 @@ public final class StandardName extends Name {
 
     // we are now allowing a name to be in more than one top parent, hence the name change
 
-    private static AtomicInteger findATopParentCount = new AtomicInteger(0);
+    private static final AtomicInteger findATopParentCount = new AtomicInteger(0);
 
     public Name findATopParent() {
         findATopParentCount.incrementAndGet();
@@ -558,7 +558,7 @@ public final class StandardName extends Name {
     // Koloboke makes the sets as light as can be expected, volatile to comply with double-checked locking pattern https://en.wikipedia.org/wiki/Double-checked_locking
     private volatile Set<Name> findAllChildrenCache = null;
 
-    private static AtomicInteger finaAllChildrenCount = new AtomicInteger(0);
+    private static final AtomicInteger finaAllChildrenCount = new AtomicInteger(0);
 
     void findAllChildren(final Set<Name> allChildren) {
         finaAllChildrenCount.incrementAndGet();
@@ -580,7 +580,7 @@ public final class StandardName extends Name {
         }
     }
 
-    private static AtomicInteger finaAllChildren2Count = new AtomicInteger(0);
+    private static final AtomicInteger finaAllChildren2Count = new AtomicInteger(0);
 
     public Collection<Name> findAllChildren() {
         finaAllChildren2Count.incrementAndGet();
@@ -614,7 +614,7 @@ public final class StandardName extends Name {
     private volatile Set<Value> valuesIncludingChildrenCache = null;
 
 
-    private static AtomicInteger findValuesIncludingChildrenCount = new AtomicInteger(0);
+    private static final AtomicInteger findValuesIncludingChildrenCount = new AtomicInteger(0);
 
     public Set<Value> findValuesIncludingChildren() {
         findValuesIncludingChildrenCount.incrementAndGet();
@@ -641,7 +641,7 @@ public final class StandardName extends Name {
     // synchronized? Not sure if it matters, don't need immediate visibility and the cache read should (!) be thread safe.
     // The read uses synchronized to stop creating the cache more than necessary rather than to be totally up to date
     // todo this is all well and good, are we clearing the clearing the parent's caches? Should we?? Some thought required!
-    private static AtomicInteger clearChildrenCachesCount = new AtomicInteger(0);
+    private static final AtomicInteger clearChildrenCachesCount = new AtomicInteger(0);
 
     void clearChildrenCaches() {
         clearChildrenCachesCount.incrementAndGet();
@@ -649,14 +649,14 @@ public final class StandardName extends Name {
         valuesIncludingChildrenCache = null;
     }
 
-    private static AtomicInteger getChildrenCount = new AtomicInteger(0);
+    private static final AtomicInteger getChildrenCount = new AtomicInteger(0);
 
     public Collection<Name> getChildren() {
         getChildrenCount.incrementAndGet();
         return childrenAsSet != null ? Collections.unmodifiableSet(childrenAsSet) : children.length > 0 ? Collections.unmodifiableList(Arrays.asList(children)) : Collections.emptyList();
     }
 
-    private static AtomicInteger getChildrenAsSetCount = new AtomicInteger(0);
+    private static final AtomicInteger getChildrenAsSetCount = new AtomicInteger(0);
 
     // if used incorrectly means NPE, I don't mind about this for the mo. We're allowing interpretSetTerm low level access to the list and sets to stop unnecessary collection copying in the query parser
     public Set<Name> getChildrenAsSet() {
@@ -664,7 +664,7 @@ public final class StandardName extends Name {
         return Collections.unmodifiableSet(childrenAsSet);
     }
 
-    private static AtomicInteger getChildrenAsListCount = new AtomicInteger(0);
+    private static final AtomicInteger getChildrenAsListCount = new AtomicInteger(0);
 
     public List<Name> getChildrenAsList() {
         getChildrenAsListCount.incrementAndGet();
@@ -682,7 +682,7 @@ public final class StandardName extends Name {
 
     // might seem inefficient but the adds and removes deal with parents and things. Might reconsider code if used more heavily
     // each add/remove is thread safe but should not allow two to run concurrently
-    private static AtomicInteger setChildrenCount = new AtomicInteger(0);
+    private static final AtomicInteger setChildrenCount = new AtomicInteger(0);
 
     // pass conneciton not provenance - we want the conneciton to know if the provenance was used or not
     public synchronized void setChildrenWillBePersisted(Collection<Name> newChildren, AzquoMemoryDBConnection azquoMemoryDBConnection) throws Exception {
@@ -707,7 +707,7 @@ public final class StandardName extends Name {
         }
     }
 
-    private static AtomicInteger addChildWillBePersistedCount = new AtomicInteger(0);
+    private static final AtomicInteger addChildWillBePersistedCount = new AtomicInteger(0);
 
     public void addChildWillBePersisted(Name child, AzquoMemoryDBConnection azquoMemoryDBConnection) throws Exception {
         addChildWillBePersistedCount.incrementAndGet();
@@ -716,7 +716,7 @@ public final class StandardName extends Name {
         }
     }
 
-    private static AtomicInteger addChildWillBePersisted3Count = new AtomicInteger(0);
+    private static final AtomicInteger addChildWillBePersisted3Count = new AtomicInteger(0);
 
     private boolean addChildWillBePersisted(Name child, boolean clearCache) throws Exception {
         addChildWillBePersisted3Count.incrementAndGet();
@@ -771,7 +771,7 @@ public final class StandardName extends Name {
         return changed;
     }
 
-    private static AtomicInteger removeFromChildrenWillBePersistedCount = new AtomicInteger(0);
+    private static final AtomicInteger removeFromChildrenWillBePersistedCount = new AtomicInteger(0);
 
     public void removeFromChildrenWillBePersisted(Name name, AzquoMemoryDBConnection azquoMemoryDBConnection) throws Exception {
         removeFromChildrenWillBePersistedCount.incrementAndGet();
@@ -782,7 +782,7 @@ public final class StandardName extends Name {
         //getAzquoMemoryDB().clearSetAndCountCacheForName(this);
     }
 
-    private static AtomicInteger removeFromChildrenWillBePersisted2Count = new AtomicInteger(0);
+    private static final AtomicInteger removeFromChildrenWillBePersisted2Count = new AtomicInteger(0);
 
     private boolean removeFromChildrenWillBePersistedNoCacheClear(Name name) throws Exception {
         removeFromChildrenWillBePersisted2Count.incrementAndGet();
@@ -804,7 +804,7 @@ public final class StandardName extends Name {
     }
 
     // notably, since the map is created on the fly and not canonical I could just return it. A moot point I think.
-    private static AtomicInteger getAttributesCount = new AtomicInteger(0);
+    private static final AtomicInteger getAttributesCount = new AtomicInteger(0);
 
     public Map<String, String> getAttributes() {
         getAttributesCount.incrementAndGet();
@@ -819,7 +819,7 @@ public final class StandardName extends Name {
     // I think plain old synchronized here is safe enough if not that fast
     // Hammered on importing but not loading, hence why I've not been as careful on garbage as I might be
 
-    private static AtomicInteger setAttributeWillBePersistedCount = new AtomicInteger(0);
+    private static final AtomicInteger setAttributeWillBePersistedCount = new AtomicInteger(0);
 
     public synchronized void setAttributeWillBePersisted(String attributeName, String attributeValue, AzquoMemoryDBConnection azquoMemoryDBConnection) throws Exception {
         setAttributeWillBePersistedCount.incrementAndGet();
@@ -874,7 +874,7 @@ public final class StandardName extends Name {
         setNeedsPersisting();
     }
 
-    private static AtomicInteger removeAttributeWillBePersistedCount = new AtomicInteger(0);
+    private static final AtomicInteger removeAttributeWillBePersistedCount = new AtomicInteger(0);
 
     private synchronized void removeAttributeWillBePersisted(String attributeName, AzquoMemoryDBConnection azquoMemoryDBConnection) throws Exception {
         removeAttributeWillBePersistedCount.incrementAndGet();
@@ -893,7 +893,7 @@ public final class StandardName extends Name {
     }
 
     // convenience - plain clearing of this object won't change the indexes in the memory db. Hence remove on each one.
-    private static AtomicInteger clearAttributesCount = new AtomicInteger(0);
+    private static final AtomicInteger clearAttributesCount = new AtomicInteger(0);
 
     public synchronized void clearAttributes(AzquoMemoryDBConnection azquoMemoryDBConnection) throws Exception {
         clearAttributesCount.incrementAndGet();
@@ -903,7 +903,7 @@ public final class StandardName extends Name {
     }
 
     // criteria for fall back attributes added by WFC, not entirely sure I'd have done this but anyway
-    private static AtomicInteger findParentAttributesCount = new AtomicInteger(0);
+    private static final AtomicInteger findParentAttributesCount = new AtomicInteger(0);
 
     // todo - make more generic?
     private static String findParentAttributes(StandardName child, String attributeName, Set<Name> checked, Name origName, int level) {
@@ -958,14 +958,14 @@ public final class StandardName extends Name {
 
     // default to parent check
 
-    private static AtomicInteger getAttributeCount = new AtomicInteger(0);
+    private static final AtomicInteger getAttributeCount = new AtomicInteger(0);
 
     public String getAttribute(String attributeName) {
         getAttributeCount.incrementAndGet();
         return getAttribute(attributeName, true, HashObjSets.newMutableSet());
     }
 
-    private static AtomicInteger getAttribute2Count = new AtomicInteger(0);
+    private static final AtomicInteger getAttribute2Count = new AtomicInteger(0);
 
     public String getAttribute(String attributeName, boolean parentCheck, Set<Name> checked) {
         return getAttribute(attributeName, parentCheck, checked, this, 0);
@@ -990,7 +990,7 @@ public final class StandardName extends Name {
 
     // in here is a bit more efficient I think but should it be in the DAO?
 
-    private static AtomicInteger getAttributesForFastStoreCount = new AtomicInteger(0);
+    private static final AtomicInteger getAttributesForFastStoreCount = new AtomicInteger(0);
 
     public String getAttributesForFastStore() {
         getAttributesForFastStoreCount.incrementAndGet();
@@ -1008,7 +1008,7 @@ public final class StandardName extends Name {
 
     // not really bothered about factoring at the moment - it would involve using the getChildren and getNames functions which needlesly create garbage (this function will be hammered when persisting, would rather not make the garbage)
 
-    private static AtomicInteger getChildrenIdsAsBytesCount = new AtomicInteger(0);
+    private static final AtomicInteger getChildrenIdsAsBytesCount = new AtomicInteger(0);
 
     private byte[] getChildrenIdsAsBytes(int tries) {
         getChildrenIdsAsBytesCount.incrementAndGet();
@@ -1044,7 +1044,7 @@ public final class StandardName extends Name {
     changing synchronized to only relevant portions
     note : this function is absolutely hammered while linking (surprise!) so optimisations here are helpful */
 
-    private static AtomicInteger linkCount = new AtomicInteger(0);
+    private static final AtomicInteger linkCount = new AtomicInteger(0);
 
     // 12/09/18 - adding the boolean for backup restore. Looks a bit less elegant, might be a way around it
     void link(byte[] childrenCache, boolean backupRestore) throws Exception {
@@ -1087,7 +1087,7 @@ public final class StandardName extends Name {
 
     // first of its kind. Try to be comprehensive
     // want to make it synchronized but I'm calling synchronized functions on other objects. Hmmmmmmmm.
-    private static AtomicInteger deleteCount = new AtomicInteger(0);
+    private static final AtomicInteger deleteCount = new AtomicInteger(0);
 
     public void delete(AzquoMemoryDBConnection azquoMemoryDBConnection) throws Exception {
         deleteCount.incrementAndGet();
