@@ -640,7 +640,7 @@ class ZKContextMenu {
         });
 
         String host = myzss.getPage().getDesktop().getSession().getLocalName();
-        System.out.println("web host " + host);
+        //System.out.println("web host " + host);
         if (host.contains("localhost") || host.contains("192.168.1.16")){
             ObjectMapper jacksonMapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
             // may as well prepare the json for the excel controller here, in future it will be JS but this is for a demo

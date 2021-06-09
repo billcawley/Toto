@@ -369,7 +369,6 @@ public final class StandardName extends Name {
     private static AtomicInteger addToParentsCount = new AtomicInteger(0);
 
     // don't trust no_parents, revert to old style but add logging
-    // changing to synchronizinig on the parents object will speed Joe Brown's loading but I'm not sure if it will be safe?
     void addToParents(final Name name, boolean databaseIsLoading) {
         addToParentsCount.incrementAndGet();
         synchronized (this) {
