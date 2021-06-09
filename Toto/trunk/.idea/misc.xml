@@ -59,6 +59,13 @@
             </SvnBranchConfiguration>
           </value>
         </entry>
+        <entry key="$PROJECT_DIR$/XLSX">
+          <value>
+            <SvnBranchConfiguration>
+              <option name="trunkUrl" value="http://192.168.1.10/repos/XLSX" />
+            </SvnBranchConfiguration>
+          </value>
+        </entry>
       </map>
     </option>
   </component>
