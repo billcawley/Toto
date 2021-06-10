@@ -1,5 +1,6 @@
 package com.azquo.spreadsheet.zk;
 
+import com.azquo.StringLiterals;
 import com.azquo.admin.user.*;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.controller.OnlineController;
@@ -120,10 +121,10 @@ public class ZKComposer extends SelectorComposer<Component> {
         final Book book = event.getSheet().getBook();
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
         String selectionName = null;
-        if (book.getInternalBook().getNameByName(ReportRenderer.AZMULTISELECTHEADINGS) != null){
-            selectionName = ReportUIUtils.pivotItem(event, ReportRenderer.AZPIVOTFILTERS, ReportRenderer.AZPIVOTHEADINGS, 3);//OLD STYLE
+        if (book.getInternalBook().getNameByName(StringLiterals.AZMULTISELECTHEADINGS) != null){
+            selectionName = ReportUIUtils.pivotItem(event, StringLiterals.AZPIVOTFILTERS, StringLiterals.AZPIVOTHEADINGS, 3);//OLD STYLE
             if (selectionName == null) {
-                selectionName = ReportUIUtils.pivotItem(event, ReportRenderer.AZCONTEXTFILTERS, ReportRenderer.AZCONTEXTHEADINGS, 3);
+                selectionName = ReportUIUtils.pivotItem(event, StringLiterals.AZCONTEXTFILTERS, StringLiterals.AZCONTEXTHEADINGS, 3);
             }
         }
 
@@ -187,7 +188,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                 }
             }
             // and now check for the cell being a save button
-            SName saveName = event.getSheet().getBook().getInternalBook().getNameByName(ReportRenderer.AZSAVE);
+            SName saveName = event.getSheet().getBook().getInternalBook().getNameByName(StringLiterals.AZSAVE);
             if (saveName != null && saveName.getRefersToSheetName().equals(myzss.getSelectedSheetName())
                     && event.getRow() >= saveName.getRefersToCellRegion().getRow()
                     && event.getRow() <= saveName.getRefersToCellRegion().getLastRow()
@@ -234,8 +235,8 @@ public class ZKComposer extends SelectorComposer<Component> {
         for (SName name : names) {
             if (name.getName().endsWith("Chosen") && name.getRefersToCellRegion().getRowCount() == 1) {// it ends chosen and is one row tall
                 //and it cannot be in an existing data region
-                if (BookUtils.getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn(), event.getSheet(), ReportRenderer.AZREPEATSCOPE).size() == 0
-                        && BookUtils.getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn(), event.getSheet(), ReportRenderer.AZDATAREGION).size() == 0) {
+                if (BookUtils.getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn(), event.getSheet(), StringLiterals.AZREPEATSCOPE).size() == 0
+                        && BookUtils.getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn(), event.getSheet(), StringLiterals.AZDATAREGION).size() == 0) {
                     // therefore it's a choice change, set the choice and the reload flag and break
                     String choice = name.getName().substring(0, name.getName().length() - "Chosen".length());
                     Map<String, String> params = new HashMap<>();
@@ -247,11 +248,11 @@ public class ZKComposer extends SelectorComposer<Component> {
                 }
             }
             // We may add row heading later but it's not a requirement currently
-            if (name.getName().toLowerCase().startsWith(ReportRenderer.AZDISPLAYCOLUMNHEADINGS)) { // ok going to try for a sorting on column heading detect
-                String region = name.getName().substring(ReportRenderer.AZDISPLAYCOLUMNHEADINGS.length());
+            if (name.getName().toLowerCase().startsWith(StringLiterals.AZDISPLAYCOLUMNHEADINGS)) { // ok going to try for a sorting on column heading detect
+                String region = name.getName().substring(StringLiterals.AZDISPLAYCOLUMNHEADINGS.length());
                 UserRegionOptions userRegionOptions = UserRegionOptionsDAO.findForUserIdReportIdAndRegion(loggedInUser.getUser().getId(), reportId, region);
                 if (userRegionOptions == null) {
-                    SName optionsRegion = BookUtils.getNameByName(ReportRenderer.AZOPTIONS + region, book.getSheet(name.getRefersToSheetName()));
+                    SName optionsRegion = BookUtils.getNameByName(StringLiterals.AZOPTIONS + region, book.getSheet(name.getRefersToSheetName()));
                     String source = null;
                     if (optionsRegion != null) {
                         source = BookUtils.getSnameCell(optionsRegion).getStringValue();
@@ -357,7 +358,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         // now how to get the name?? Guess run through them. Feel there should be a better way.
         final Book book = event.getSheet().getBook();
         List<SName> names = BookUtils.getNamedDataRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn(), event.getSheet());
-        List<SName> repeatRegionNames = BookUtils.getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn(), event.getSheet(), ReportRenderer.AZREPEATSCOPE);
+        List<SName> repeatRegionNames = BookUtils.getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn(), event.getSheet(), StringLiterals.AZREPEATSCOPE);
         int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
         checkRegionSizes(event.getSheet(), loggedInUser, reportId);
@@ -372,13 +373,13 @@ public class ZKComposer extends SelectorComposer<Component> {
         }
         if (regionRowColsToSave.isEmpty() && !names.isEmpty()) { // no repeat regions but there are normal ones
             for (SName name : names) {
-                String regionName = name.getName().substring(ReportRenderer.AZDATAREGION.length());
+                String regionName = name.getName().substring(StringLiterals.AZDATAREGION.length());
                 regionRowColsToSave.add(new RegionRowCol(name.getRefersToSheetName(), regionName, row - name.getRefersToCellRegion().getRow(), col - name.getRefersToCellRegion().getColumn()));
             }
         }
-        List<SName> headingNames = BookUtils.getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn(), event.getSheet(), ReportRenderer.AZDISPLAYROWHEADINGS);
+        List<SName> headingNames = BookUtils.getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn(), event.getSheet(), StringLiterals.AZDISPLAYROWHEADINGS);
         for (SName name : headingNames) {
-            headingRowColsToSave.add(new RegionRowCol(name.getRefersToSheetName(), name.getName().substring(ReportRenderer.AZDISPLAYROWHEADINGS.length()), row - name.getRefersToCellRegion().getRow(), col - name.getRefersToCellRegion().getColumn()));
+            headingRowColsToSave.add(new RegionRowCol(name.getRefersToSheetName(), name.getName().substring(StringLiterals.AZDISPLAYROWHEADINGS.length()), row - name.getRefersToCellRegion().getRow(), col - name.getRefersToCellRegion().getColumn()));
         }
         for (RegionRowCol regionRowCol : regionRowColsToSave) {
             final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(reportId, regionRowCol.sheetName, regionRowCol.region);
@@ -426,8 +427,8 @@ public class ZKComposer extends SelectorComposer<Component> {
         //we do not seem to be able to detect insertion or deletion of rows, so this routine detects row insertion/deletion after the event
         SBook book = sheet.getInternalSheet().getBook();
         for (SName name : book.getNames()) {
-            if (name.getRefersToSheetName() != null && name.getRefersToSheetName().equals(sheet.getSheetName()) && name.getName() != null && name.getName().toLowerCase().startsWith(ReportRenderer.AZDISPLAYROWHEADINGS)) {
-                String region = name.getName().substring(ReportRenderer.AZDISPLAYROWHEADINGS.length());
+            if (name.getRefersToSheetName() != null && name.getRefersToSheetName().equals(sheet.getSheetName()) && name.getName() != null && name.getName().toLowerCase().startsWith(StringLiterals.AZDISPLAYROWHEADINGS)) {
+                String region = name.getName().substring(StringLiterals.AZDISPLAYROWHEADINGS.length());
                 int size = name.getRefersToCellRegion().getRowCount();
                 CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(reportId, sheet.getSheetName(), region); // maybe jam this object against the book? Otherwise multiple books could cause problems
                 if (cellsAndHeadingsForDisplay != null && cellsAndHeadingsForDisplay.getRowHeadings() != null) { // apparently it can be??

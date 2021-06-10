@@ -231,11 +231,11 @@ public class ReportExecutor {
                         if (save) { // so the data was changed and if we save from here it will make changes to the DB
                             fillSpecialRegions(loggedInUser, book, onlineReport.getId());
                             for (SName name : book.getInternalBook().getNames()) {
-                                if (name.getName().toLowerCase().startsWith(ReportRenderer.AZDATAREGION)) { // I'm saving on all sheets, this should be fine with zk
-                                    String region = name.getName().substring(ReportRenderer.AZDATAREGION.length());
+                                if (name.getName().toLowerCase().startsWith(StringLiterals.AZDATAREGION)) { // I'm saving on all sheets, this should be fine with zk
+                                    String region = name.getName().substring(StringLiterals.AZDATAREGION.length());
                                     // possibly the nosave check could be factored, in report service around line 230
                                     // this is a bit annoying given that I should be able to get the options from the sent cells but there may be no sent cells. Need to investigate this - nosave is currently being used for different databases, that's the problem
-                                    SName optionsRegion = BookUtils.getNameByName(ReportRenderer.AZOPTIONS + region, book.getSheet(name.getRefersToSheetName()));
+                                    SName optionsRegion = BookUtils.getNameByName(StringLiterals.AZOPTIONS + region, book.getSheet(name.getRefersToSheetName()));
                                     boolean noSave = false;
                                     if (optionsRegion != null) {
                                         String optionsSource = BookUtils.getSnameCell(optionsRegion).getStringValue();
@@ -549,15 +549,15 @@ public class ReportExecutor {
 
     static void fillSpecialRegions(LoggedInUser loggedInUser, Book book, int reportId) {
         for (SName name : book.getInternalBook().getNames()) {
-            if (name.getName().toLowerCase().startsWith(ReportRenderer.AZDATAREGION)) { // I'm saving on all sheets, this should be fine with zk
-                String region = name.getName().substring(ReportRenderer.AZDATAREGION.length());
+            if (name.getName().toLowerCase().startsWith(StringLiterals.AZDATAREGION)) { // I'm saving on all sheets, this should be fine with zk
+                String region = name.getName().substring(StringLiterals.AZDATAREGION.length());
                 // possibly the nosave check could be factored, in report service around line 230
                 // this is a bit annoying given that I should be able to get the options from the sent cells but there may be no sent cells. Need to investigate this - nosave is currently being used for different databases, that's the problem
                 String sheetName = name.getRefersToSheetName();
                 Sheet sheet = book.getSheet(sheetName);
                 SName rowHeadings = null;
                 if (sheet != null) { // it seems it can be if names are not arranged properly
-                    rowHeadings = BookUtils.getNameByName(ReportRenderer.AZROWHEADINGS + region, sheet);
+                    rowHeadings = BookUtils.getNameByName(StringLiterals.AZROWHEADINGS + region, sheet);
                 }
                 if (rowHeadings == null) {
                     int top = name.getRefersToCellRegion().getRow();
@@ -620,18 +620,18 @@ public class ReportExecutor {
         LocalDateTime now = LocalDateTime.now();
         int filePointer = (int) (now.toEpochSecond(ZoneOffset.UTC) - start.toEpochSecond(ZoneOffset.UTC));
         for (SName name : namesForSheet) {
-            if (name.getName().toLowerCase().startsWith(ReportRenderer.AZDATAREGION)) { // then we have a data region to deal with here
-                String region = name.getName().substring(ReportRenderer.AZDATAREGION.length()); // might well be an empty string
+            if (name.getName().toLowerCase().startsWith(StringLiterals.AZDATAREGION)) { // then we have a data region to deal with here
+                String region = name.getName().substring(StringLiterals.AZDATAREGION.length()); // might well be an empty string
                 // we don't actually need to do anything with this now but we need to switch on the XML button
-                SName xmlHeadings = BookUtils.getNameByName(ReportRenderer.AZXML + region, selectedSheet);
+                SName xmlHeadings = BookUtils.getNameByName(StringLiterals.AZXML + region, selectedSheet);
                 Map<String, Integer> xmlToColMap = new HashMap<>();
                 if (xmlHeadings != null) {
                     Map<String, Integer> reportSelectionsColMap = new HashMap<>();
                     //todo - use azxmlflag . . .
-                    SName xmlFlagName = BookUtils.getNameByName(ReportRenderer.AZXMLFLAG + region, selectedSheet);
-                    SName filePrefixName = BookUtils.getNameByName(ReportRenderer.AZXMLFILENAME + region, selectedSheet);
+                    SName xmlFlagName = BookUtils.getNameByName(StringLiterals.AZXMLFLAG + region, selectedSheet);
+                    SName filePrefixName = BookUtils.getNameByName(StringLiterals.AZXMLFILENAME + region, selectedSheet);
                     // Ed B require the option to override the file name of the supporting report
-                    SName supportReportPrefixName = BookUtils.getNameByName(ReportRenderer.AZSUPPORTREPORTFILENAME + region, selectedSheet);
+                    SName supportReportPrefixName = BookUtils.getNameByName(StringLiterals.AZSUPPORTREPORTFILENAME + region, selectedSheet);
                     String filePrefix = null;
                     boolean multiRowPrefix = false; // a multi row prefix means the prefix will be different for each line
                     if (filePrefixName != null) {
@@ -657,9 +657,9 @@ public class ReportExecutor {
 
                     String reportName = null;
                     // the name of the xlsx file generated
-                    SName supportReportName = BookUtils.getNameByName(ReportRenderer.AZSUPPORTREPORTNAME + region, selectedSheet);
-                    SName supportReportSelections = BookUtils.getNameByName(ReportRenderer.AZSUPPORTREPORTSELECTIONS + region, selectedSheet);
-                    SName supportReportFileXMLTag = BookUtils.getNameByName(ReportRenderer.AZSUPPORTREPORTFILEXMLTAG + region, selectedSheet);
+                    SName supportReportName = BookUtils.getNameByName(StringLiterals.AZSUPPORTREPORTNAME + region, selectedSheet);
+                    SName supportReportSelections = BookUtils.getNameByName(StringLiterals.AZSUPPORTREPORTSELECTIONS + region, selectedSheet);
+                    SName supportReportFileXMLTag = BookUtils.getNameByName(StringLiterals.AZSUPPORTREPORTFILEXMLTAG + region, selectedSheet);
                     final int reportFileXMLTagIndex = -1;
                     boolean multipleReports = false;
                     if (supportReportName != null && supportReportSelections != null) {
@@ -691,7 +691,7 @@ public class ReportExecutor {
                     }
                     // if there's extra info e.g. EdIT Section (not brokasure section) that needs to be hung on to to help identify data on the way back in.
                     // Adding extra fields to the XML sent to Brokasure would do this but I want to stick as closely to the spec as possible
-                    SName xmlExtraInfo = BookUtils.getNameByName(ReportRenderer.AZXMLEXTRAINFO + region, selectedSheet);
+                    SName xmlExtraInfo = BookUtils.getNameByName(StringLiterals.AZXMLEXTRAINFO + region, selectedSheet);
                     Map<String, Integer> xmlExtraInfoColMap = new HashMap<>();
                     if (xmlExtraInfo != null) {
                         for (int col = xmlExtraInfo.getRefersToCellRegion().column; col <= xmlExtraInfo.getRefersToCellRegion().lastColumn; col++) {

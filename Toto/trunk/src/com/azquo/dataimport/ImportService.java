@@ -451,7 +451,7 @@ public final class ImportService {
             }
 
             // on an upload file, should this file be flagged as one that moves with backups and is available for non admin users to download
-            org.apache.poi.ss.usermodel.Name fileTypeRange = BookUtils.getName(book, ReportRenderer.AZFILETYPE);
+            org.apache.poi.ss.usermodel.Name fileTypeRange = BookUtils.getName(book, StringLiterals.AZFILETYPE);
             if (fileTypeRange != null) {
                 CellReference sheetNameCell = BookUtils.getNameCell(fileTypeRange);
                 if (sheetNameCell != null) {
@@ -470,7 +470,7 @@ public final class ImportService {
 
             String reportName = null;
             // a misleading name now we have the ImportTemplate object
-            org.apache.poi.ss.usermodel.Name reportRange = BookUtils.getName(book, ReportRenderer.AZREPORTNAME);
+            org.apache.poi.ss.usermodel.Name reportRange = BookUtils.getName(book, StringLiterals.AZREPORTNAME);
             if (reportRange != null) {
                 CellReference sheetNameCell = BookUtils.getNameCell(reportRange);
                 if (sheetNameCell != null) {

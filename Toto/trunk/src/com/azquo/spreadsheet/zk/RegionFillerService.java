@@ -80,7 +80,7 @@ public class RegionFillerService {
                     //this is a total line
                     int selStart = displayRowHeadings.getColumn();
                     int selEnd = displayDataRegion.getColumn() + displayDataRegion.getColumnCount() - 1;
-                    SCell lineFormat = BookUtils.getSnameCell(sheet.getBook().getInternalBook().getNameByName(ReportRenderer.AZTOTALFORMAT + totalCount + region));
+                    SCell lineFormat = BookUtils.getSnameCell(sheet.getBook().getInternalBook().getNameByName(StringLiterals.AZTOTALFORMAT + totalCount + region));
                     Range selection = Ranges.range(sheet, row - 1, selStart, row - 1, selEnd);
                     Range headingRange = Ranges.range(sheet, row - 1, selStart, row - 1, selStart + displayRowHeadings.getColumnCount() - 1);
                     if (lineFormat == null) {
@@ -146,7 +146,7 @@ public class RegionFillerService {
                     }
                     rowHeading = rowHeading.replace(StringLiterals.QUOTE + "", "").trim();
                     // EFC logic modify - the behavior on the multi select headings could confuse users so only do it if there's a named region switching it on
-                    if (sheet.getBook().getInternalBook().getNameByName(ReportRenderer.AZMULTISELECTHEADINGS) != null) {
+                    if (sheet.getBook().getInternalBook().getNameByName(StringLiterals.AZMULTISELECTHEADINGS) != null) {
                         RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).createFilterSet(loggedInUser.getDataAccessToken(), "az_" + rowHeading, loggedInUser.getUser().getEmail(), null); // create if necessary but leave what's in there
                     } else { // clean set every time - I'm making it so that empty children ids resets the list. Can't see how having none selected is ever helpful
                         RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).createFilterSet(loggedInUser.getDataAccessToken(), "az_" + rowHeading, loggedInUser.getUser().getEmail(), Collections.emptyList()); // reset regardless
@@ -251,19 +251,19 @@ public class RegionFillerService {
         // note - this means the repeatRegion may have been expanded but I think this makes sense - before if it wasn't big enough it would break
         // won't be properly tested until we need it again
         // the region to be repeated, will contain headings and an item which changes for each repetition
-        final SName repeatRegion = sheet.getBook().getInternalBook().getNameByName(ReportRenderer.AZREPEATREGION + region);
+        final SName repeatRegion = sheet.getBook().getInternalBook().getNameByName(StringLiterals.AZREPEATREGION + region);
         // the target space we can repeat into. Can expand down but not across
-        final SName repeatScope = sheet.getBook().getInternalBook().getNameByName(ReportRenderer.AZREPEATSCOPE + region);
+        final SName repeatScope = sheet.getBook().getInternalBook().getNameByName(StringLiterals.AZREPEATSCOPE + region);
         // the list of items we can repeat over
-        final SName repeatList = sheet.getBook().getInternalBook().getNameByName(ReportRenderer.AZREPEATLIST + region);
+        final SName repeatList = sheet.getBook().getInternalBook().getNameByName(StringLiterals.AZREPEATLIST + region);
         // the cell we'll put the items in the list in
-        final SName repeatItem = sheet.getBook().getInternalBook().getNameByName(ReportRenderer.AZREPEATITEM + region);
+        final SName repeatItem = sheet.getBook().getInternalBook().getNameByName(StringLiterals.AZREPEATITEM + region);
 
 
         // the list of items we can repeat over
-        final SName repeatList2 = sheet.getBook().getInternalBook().getNameByName(ReportRenderer.AZREPEATLIST + "2" + region);
+        final SName repeatList2 = sheet.getBook().getInternalBook().getNameByName(StringLiterals.AZREPEATLIST + "2" + region);
         // the cell we'll put the items in the list in
-        final SName repeatItem2 = sheet.getBook().getInternalBook().getNameByName(ReportRenderer.AZREPEATITEM + "2" + region);
+        final SName repeatItem2 = sheet.getBook().getInternalBook().getNameByName(StringLiterals.AZREPEATITEM + "2" + region);
 
         /*
         new criteria - if we have repeatList2 and repeatItem2 then repeatList and repeatItem define the columns in terms of repeat regions

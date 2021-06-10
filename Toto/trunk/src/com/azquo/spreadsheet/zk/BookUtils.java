@@ -1,6 +1,7 @@
 package com.azquo.spreadsheet.zk;
 
 import com.azquo.DateUtils;
+import com.azquo.StringLiterals;
 import com.azquo.spreadsheet.CommonReportUtils;
 import com.azquo.spreadsheet.LoggedInUser;
 import org.apache.commons.lang.math.NumberUtils;
@@ -9,7 +10,6 @@ import org.zkoss.poi.ss.usermodel.Name;
 import org.zkoss.poi.ss.usermodel.Workbook;
 import org.zkoss.poi.ss.util.AreaReference;
 import org.zkoss.poi.ss.util.CellReference;
-import org.zkoss.poi.xssf.usermodel.XSSFName;
 import io.keikai.api.Range;
 import io.keikai.api.Ranges;
 import io.keikai.api.model.Book;
@@ -170,7 +170,7 @@ java.lang.IllegalStateException: is ERROR, not the one of [STRING, BLANK]
 
     // moved/adapted from ZKComposer and made static
     static List<SName> getNamedDataRegionForRowAndColumnSelectedSheet(int row, int col, Sheet sheet) {
-        return getNamedRegionForRowAndColumnSelectedSheet(row, col, sheet, ReportRenderer.AZDATAREGION);
+        return getNamedRegionForRowAndColumnSelectedSheet(row, col, sheet, StringLiterals.AZDATAREGION);
     }
 
     // moved/adapted from ZKComposer and made static

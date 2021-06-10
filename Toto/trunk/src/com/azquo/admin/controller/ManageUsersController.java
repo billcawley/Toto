@@ -1,5 +1,6 @@
 package com.azquo.admin.controller;
 
+import com.azquo.StringLiterals;
 import com.azquo.admin.AdminService;
 import com.azquo.admin.business.Business;
 import com.azquo.admin.business.BusinessDAO;
@@ -398,8 +399,8 @@ public class ManageUsersController {
                     Sheet userSheet = book.getSheet("Users"); // literals not best practice, could it be factored between this and the xlsx file?
                     if (userSheet != null) {
                         int row;
-                        Name listRegion = BookUtils.getName(book,ReportRenderer.AZLISTSTART);
-//                SName listRegion = book.getInternalBook().getNameByName(ReportRenderer.AZLISTSTART);
+                        Name listRegion = BookUtils.getName(book, StringLiterals.AZLISTSTART);
+//                SName listRegion = book.getInternalBook().getNameByName(StringLiterals.AZLISTSTART);
                         if (listRegion != null && listRegion.getRefersToFormula() != null) {
                             AreaReference aref = new AreaReference(listRegion.getRefersToFormula());
                             row = aref.getFirstCell().getRow();

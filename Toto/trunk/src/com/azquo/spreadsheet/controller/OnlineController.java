@@ -1,6 +1,7 @@
 package com.azquo.spreadsheet.controller;
 
 import com.azquo.DoubleAndOrString;
+import com.azquo.StringLiterals;
 import com.azquo.admin.AdminService;
 import com.azquo.admin.business.Business;
 import com.azquo.admin.business.BusinessDAO;
@@ -20,7 +21,6 @@ import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
 import com.azquo.spreadsheet.zk.ReportExecutor;
 import com.azquo.spreadsheet.zk.ReportRenderer;
 import com.azquo.spreadsheet.zk.BookUtils;
-import org.apache.log4j.Logger;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.ServletRequestUtils;
@@ -32,7 +32,6 @@ import io.keikai.api.model.Book;
 import io.keikai.api.model.Sheet;
 import io.keikai.model.CellRegion;
 import io.keikai.model.SName;
-import serilogj.Log;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
@@ -290,8 +289,8 @@ public class OnlineController {
                         final List<SName> names = book.getInternalBook().getNames();
                         List<String> pdfMerges = new ArrayList<>();
                         for (SName name : names) {
-                            if (name.getName().toLowerCase().startsWith(ReportRenderer.AZPDF)) {
-                                pdfMerges.add(name.getName().substring(ReportRenderer.AZPDF.length()).replace("_", " "));
+                            if (name.getName().toLowerCase().startsWith(StringLiterals.AZPDF)) {
+                                pdfMerges.add(name.getName().substring(StringLiterals.AZPDF.length()).replace("_", " "));
                             }
                         }
                         // if this NPEs then it's probably to do with sessions crossing . . .
@@ -338,10 +337,10 @@ public class OnlineController {
                                         Sheet sheet = book.getSheetAt(sheetNumber);
                                         List<SName> namesForSheet = BookUtils.getNamesForSheet(sheet);
                                         for (SName sName : namesForSheet) {
-                                            if (sName.getName().equalsIgnoreCase(ReportRenderer.EXECUTE)) {
+                                            if (sName.getName().equalsIgnoreCase(StringLiterals.EXECUTE)) {
                                                 executeName = true;
                                             }
-                                            if (sName.getName().equalsIgnoreCase(ReportRenderer.PREEXECUTE)) {
+                                            if (sName.getName().equalsIgnoreCase(StringLiterals.PREEXECUTE)) {
                                                 executeNow = true;
                                             }
                                         }
@@ -357,7 +356,7 @@ public class OnlineController {
                                 }
 
                                 if (executeNow) {
-                                    book = ReportExecutor.runExecuteCommandForBook(book, ReportRenderer.EXECUTE); // standard, there's the option to execute the contents of a different names
+                                    book = ReportExecutor.runExecuteCommandForBook(book, StringLiterals.EXECUTE); // standard, there's the option to execute the contents of a different names
                                     session.setAttribute(finalReportId + SAVE_FLAG, false); // no save button after an execute
                                 }
                                 long newHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
@@ -424,7 +423,7 @@ public class OnlineController {
             return "Import error - " + e.getMessage();
         }
         String reportName = null;
-        SName reportRange = book.getInternalBook().getNameByName(ReportRenderer.AZREPORTNAME);
+        SName reportRange = book.getInternalBook().getNameByName(StringLiterals.AZREPORTNAME);
         if (reportRange != null) {
             reportName = BookUtils.getSnameCell(reportRange).getStringValue().trim();
         }
@@ -494,13 +493,13 @@ public class OnlineController {
 
     private static void checkEditableSets(Book book, LoggedInUser loggedInUser) {
         for (SName sName : book.getInternalBook().getNames()) {
-            if (sName.getName().toLowerCase().startsWith(ReportRenderer.AZROWHEADINGS)) {
-                String region = sName.getName().substring(ReportRenderer.AZROWHEADINGS.length());
+            if (sName.getName().toLowerCase().startsWith(StringLiterals.AZROWHEADINGS)) {
+                String region = sName.getName().substring(StringLiterals.AZROWHEADINGS.length());
                 io.keikai.api.model.Sheet sheet = book.getSheet(sName.getRefersToSheetName());
                 String rowHeading = ImportService.getCellValue(sheet, sName.getRefersToCellRegion().getRow(), sName.getRefersToCellRegion().getColumn()).getString();
                 if (rowHeading.toLowerCase().endsWith(" children editable")) {
                     String setName = rowHeading.substring(0, rowHeading.length() - " children editable".length()).replace("`", "");
-                    SName displayName = getNameByName(ReportRenderer.AZDISPLAYROWHEADINGS + region, sheet);
+                    SName displayName = getNameByName(StringLiterals.AZDISPLAYROWHEADINGS + region, sheet);
                     if (displayName != null) {
                         StringBuilder editLine = new StringBuilder();
                         editLine.append("edit:saveset ");
@@ -527,10 +526,10 @@ public class OnlineController {
             io.keikai.api.model.Sheet sheet = sourceBook.getSheet(sName.getRefersToSheetName());
             if (regionName != null) {
                 CellRegion sourceRegion = sName.getRefersToCellRegion();
-                if (name.toLowerCase().contains(ReportRenderer.AZREPEATSCOPE)) { // then deal with the multiple data regions sent due to this
+                if (name.toLowerCase().contains(StringLiterals.AZREPEATSCOPE)) { // then deal with the multiple data regions sent due to this
                     // need to gather associated names for calculations, the region and the data region, code copied and changewd from getRegionRowColForRepeatRegion, it needs to work well for a batch of cells not just one
-                    SName repeatRegion = getNameByName(ReportRenderer.AZREPEATREGION + regionName, sheet);
-                    SName repeatDataRegion = getNameByName(ReportRenderer.AZDATAREGION + regionName, sheet);
+                    SName repeatRegion = getNameByName(StringLiterals.AZREPEATREGION + regionName, sheet);
+                    SName repeatDataRegion = getNameByName(StringLiterals.AZDATAREGION + regionName, sheet);
                     // deal with repeat regions, it means getting sent cells that have been set as following : loggedInUser.setSentCells(reportId, region + "-" + repeatRow + "-" + repeatColumn, cellsAndHeadingsForDisplay)
                     if (repeatRegion != null && repeatDataRegion != null) {
                         int regionHeight = repeatRegion.getRefersToCellRegion().getRowCount();
@@ -621,11 +620,11 @@ public class OnlineController {
     }
 
     private static String getRegionName(String name) {
-        if (name.toLowerCase().startsWith(ReportRenderer.AZDATAREGION)) {
-            return name.substring(ReportRenderer.AZDATAREGION.length()).toLowerCase();
+        if (name.toLowerCase().startsWith(StringLiterals.AZDATAREGION)) {
+            return name.substring(StringLiterals.AZDATAREGION.length()).toLowerCase();
         }
-        if (name.toLowerCase().startsWith(ReportRenderer.AZREPEATSCOPE)) {
-            return name.substring(ReportRenderer.AZREPEATSCOPE.length()).toLowerCase();
+        if (name.toLowerCase().startsWith(StringLiterals.AZREPEATSCOPE)) {
+            return name.substring(StringLiterals.AZREPEATSCOPE.length()).toLowerCase();
         }
         return null;
     }

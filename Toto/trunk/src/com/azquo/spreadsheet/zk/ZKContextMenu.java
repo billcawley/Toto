@@ -116,7 +116,7 @@ class ZKContextMenu {
         int regionRow = 0;
         int regionColumn = 0;
         // adding support for repeat regions. There's an additional check for row headings in a normal data region but I think this is redundant in repeat regions
-        List<SName> repeatRegionNames = BookUtils.getNamedRegionForRowAndColumnSelectedSheet(cellRow, cellCol, myzss.getSelectedSheet(), ReportRenderer.AZREPEATSCOPE);
+        List<SName> repeatRegionNames = BookUtils.getNamedRegionForRowAndColumnSelectedSheet(cellRow, cellCol, myzss.getSelectedSheet(), StringLiterals.AZREPEATSCOPE);
         if (!repeatRegionNames.isEmpty()) {
             // repeat can overlap now, this should help
             for (SName name : repeatRegionNames) {
@@ -133,7 +133,7 @@ class ZKContextMenu {
             for (SName name : names) {
                 SName rowHeadingsName = BookUtils.getNameByName("az_rowheadings" + name.getName().substring(13), myzss.getSelectedSheet());
                 if (rowHeadingsName != null) {
-                    region = name.getName().substring(ReportRenderer.AZDATAREGION.length());
+                    region = name.getName().substring(StringLiterals.AZDATAREGION.length());
                     regionRow = cellRow - name.getRefersToCellRegion().getRow();
                     regionColumn = cellCol - name.getRefersToCellRegion().getColumn();
                     break;
@@ -143,7 +143,7 @@ class ZKContextMenu {
         // going to put a check on region not being null - should provenance etc work on headings? It will stop it for the mo
         if (region != null) {
             // Edd adding in the user region options that are now required due to column and row languages
-            SName optionsRegion = BookUtils.getNameByName(ReportRenderer.AZOPTIONS + region, myzss.getSelectedSheet());
+            SName optionsRegion = BookUtils.getNameByName(StringLiterals.AZOPTIONS + region, myzss.getSelectedSheet());
             String source = null;
             if (optionsRegion != null) {
                 source = BookUtils.getSnameCell(optionsRegion).getStringValue();
@@ -256,7 +256,7 @@ class ZKContextMenu {
         int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
         loggedInUser.setHighlightDays(days);
         for (SName name : book.getInternalBook().getNames()) {
-            if (name.getName().toLowerCase().startsWith(ReportRenderer.AZDATAREGION)) {
+            if (name.getName().toLowerCase().startsWith(StringLiterals.AZDATAREGION)) {
                 String region = name.getName().substring(13);
                 UserRegionOptions userRegionOptions = UserRegionOptionsDAO.findForUserIdReportIdAndRegion(loggedInUser.getUser().getId(), reportId, region);
                 if (userRegionOptions == null) {
@@ -322,17 +322,17 @@ class ZKContextMenu {
                                     Book book = myzss.getBook();
                                     boolean trySheetSwitch = false;
                                     for (SName name : book.getInternalBook().getNames()) {
-                                        if (name.getName().toLowerCase().contains(ReportRenderer.AZREPEATSHEET)) {
+                                        if (name.getName().toLowerCase().contains(StringLiterals.AZREPEATSHEET)) {
                                             trySheetSwitch = true;
                                             break;
                                         }
                                     }
                                     if (trySheetSwitch) {
                                         for (SSheet sheet : book.getInternalBook().getSheets()) {
-                                            SName reportNameName = BookUtils.getNameByName(ReportRenderer.AZREPORTNAME, book.getSheet(sheet.getSheetName()));
+                                            SName reportNameName = BookUtils.getNameByName(StringLiterals.AZREPORTNAME, book.getSheet(sheet.getSheetName()));
                                             if (reportNameName != null && reportNameName.getRefersToSheetName().equals(sheet.getSheetName()) &&
                                                     BookUtils.getSnameCell(reportNameName).getStringValue().equalsIgnoreCase(provenanceForDisplay.getName())) { // then it's a candidate
-                                                SName repeatItemName = book.getInternalBook().getNameByName(ReportRenderer.AZREPEATITEM, sheet.getSheetName()); // should be fine we want it specific to this
+                                                SName repeatItemName = book.getInternalBook().getNameByName(StringLiterals.AZREPEATITEM, sheet.getSheetName()); // should be fine we want it specific to this
                                                 if (repeatItemName != null) {
                                                     String repeatItem = BookUtils.getSnameCell(repeatItemName).getStringValue();
                                                     // does the repeatItem match a choice? I suppose there could be false matches, cross that bridge when we come to it.
@@ -367,7 +367,7 @@ class ZKContextMenu {
                                                             }
                                                         }
                                                         if (region != null) { // so now fund the data region's name, add the row and col indexes and we should have our cell to select!
-                                                            SName dataRegionName = BookUtils.getNameByName(ReportRenderer.AZDATAREGION + region, book.getSheet(sheet.getSheetName()));
+                                                            SName dataRegionName = BookUtils.getNameByName(StringLiterals.AZDATAREGION + region, book.getSheet(sheet.getSheetName()));
                                                             if (dataRegionName.getRefersToSheetName().equalsIgnoreCase(sheet.getSheetName())) { // gotta double check as global names may be left hanging around . . .
                                                                 myzss.focusTo(dataRegionName.getRefersToCellRegion().getRow() + rowIndex, dataRegionName.getRefersToCellRegion().getColumn() + colIndex);
                                                                 myzss.setFocus(true);
@@ -494,7 +494,7 @@ class ZKContextMenu {
         for (SName sName : myzss.getBook().getInternalBook().getNames()) {
             // going through all the names there might be one without a name
             if (sName.getName() != null && sName.getName().toLowerCase().startsWith("az_drilldown" + region.toLowerCase())) {
-                String qualifier = sName.getName().substring((ReportRenderer.AZDRILLDOWN + region).length()).replace("_", " ");
+                String qualifier = sName.getName().substring((StringLiterals.AZDRILLDOWN + region).length()).replace("_", " ");
                 String drillDownString = BookUtils.getSnameCell(sName).getStringValue();
                 if (drillDownString.length() > 0) {
                     CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(reportId, sheetName, region);

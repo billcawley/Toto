@@ -1,6 +1,7 @@
 package com.azquo.spreadsheet.zk;
 
 import com.azquo.DateUtils;
+import com.azquo.StringLiterals;
 import com.azquo.admin.AdminService;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseDAO;
@@ -41,7 +42,7 @@ public class ReportService {
         // a repeat call to this function - could be moved outside but I'm not too bothered about it at the moment
         List<SName> namesForSheet = BookUtils.getNamesForSheet(sheet);
         //current report is always allowable...
-        SName sReportName  = BookUtils.getNameByName(ReportRenderer.AZREPORTNAME, sheet);
+        SName sReportName  = BookUtils.getNameByName(StringLiterals.AZREPORTNAME, sheet);
         if (sReportName==null){
             return;
         }
@@ -162,9 +163,9 @@ public class ReportService {
         if (!skipSaveCheck) {
             List<SName> namesForSheet = BookUtils.getNamesForSheet(sheet);
             for (SName name : namesForSheet) {
-                if (name.getName().toLowerCase().startsWith(ReportRenderer.AZDATAREGION)) {
-                    String region = name.getName().substring(ReportRenderer.AZDATAREGION.length());
-                    CellRegion displayDataRegion = BookUtils.getCellRegionForSheetAndName(sheet, ReportRenderer.AZDATAREGION + region);
+                if (name.getName().toLowerCase().startsWith(StringLiterals.AZDATAREGION)) {
+                    String region = name.getName().substring(StringLiterals.AZDATAREGION.length());
+                    CellRegion displayDataRegion = BookUtils.getCellRegionForSheetAndName(sheet, StringLiterals.AZDATAREGION + region);
                     final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(reportId, sheet.getSheetName(), region);
                     if (displayDataRegion != null && sentCells != null) {
                         int startRow = displayDataRegion.getRow();
@@ -275,11 +276,11 @@ public class ReportService {
         int savedItems = 0;
         StringBuilder redundant = new StringBuilder();
         for (SName name : book.getInternalBook().getNames()) {
-            if (name.getName().toLowerCase().startsWith(ReportRenderer.AZDATAREGION.toLowerCase())) { // I'm saving on all sheets, this should be fine with zk
-                String region = name.getName().substring(ReportRenderer.AZDATAREGION.length());
+            if (name.getName().toLowerCase().startsWith(StringLiterals.AZDATAREGION.toLowerCase())) { // I'm saving on all sheets, this should be fine with zk
+                String region = name.getName().substring(StringLiterals.AZDATAREGION.length());
                 // todo - factor this chunk? - about to put it in the execute code
                 // this is a bit annoying given that I should be able to get the options from the sent cells but there may be no sent cells. Need to investigate this - nosave is currently being used for different databases, that's the problem
-                SName optionsRegion = BookUtils.getNameByName(ReportRenderer.AZOPTIONS + region, book.getSheet(name.getRefersToSheetName()));
+                SName optionsRegion = BookUtils.getNameByName(StringLiterals.AZOPTIONS + region, book.getSheet(name.getRefersToSheetName()));
                 String optionsSource;
                 boolean noSave = false;
                 if (optionsRegion != null) {
@@ -309,9 +310,9 @@ public class ReportService {
                 }
             }
             // deal with repeats, annoying!
-            if (name.getName().toLowerCase().startsWith(ReportRenderer.AZREPEATSCOPE)) { // then try to find the "sub" regions. todo, lower/upper case? Consistency . . .
-                String region = name.getName().substring(ReportRenderer.AZREPEATSCOPE.length());
-                final SName repeatRegion = book.getInternalBook().getNameByName(ReportRenderer.AZREPEATREGION + region);
+            if (name.getName().toLowerCase().startsWith(StringLiterals.AZREPEATSCOPE)) { // then try to find the "sub" regions. todo, lower/upper case? Consistency . . .
+                String region = name.getName().substring(StringLiterals.AZREPEATSCOPE.length());
+                final SName repeatRegion = book.getInternalBook().getNameByName(StringLiterals.AZREPEATREGION + region);
                 if (repeatRegion != null) {
                     int regionRows = repeatRegion.getRefersToCellRegion().getRowCount();
                     int regionCols = repeatRegion.getRefersToCellRegion().getColumnCount();
@@ -353,7 +354,7 @@ public class ReportService {
             Map<String, String> params = new HashMap<>();
             params.put("Report", (onlineReport != null ? onlineReport.getReportName() : ""));
             loggedInUser.userLog("Save",  params);
-            ReportExecutor.runExecuteCommandForBook(book, ReportRenderer.FOLLOWON); // that SHOULD do it. It will fail gracefully in the vast majority of times there is no followon
+            ReportExecutor.runExecuteCommandForBook(book, StringLiterals.FOLLOWON); // that SHOULD do it. It will fail gracefully in the vast majority of times there is no followon
             // unlock here makes sense think, if duff save probably leave locked
             SpreadsheetService.unlockData(loggedInUser);
             return error;
@@ -366,10 +367,10 @@ public class ReportService {
         // EFC - it's exceptioning - going to try catch it for the mo
         try {
             for (SName name : book.getInternalBook().getNames()) {
-                if (name.getName().toLowerCase().startsWith(ReportRenderer.AZEMAILADDRESS)) {
-                    String region = name.getName().substring(ReportRenderer.AZEMAILADDRESS.length());
-                    SName emailSubjectName = book.getInternalBook().getNameByName(ReportRenderer.AZEMAILSUBJECT + region);
-                    SName emailTextName = book.getInternalBook().getNameByName(ReportRenderer.AZEMAILTEXT + region);
+                if (name.getName().toLowerCase().startsWith(StringLiterals.AZEMAILADDRESS)) {
+                    String region = name.getName().substring(StringLiterals.AZEMAILADDRESS.length());
+                    SName emailSubjectName = book.getInternalBook().getNameByName(StringLiterals.AZEMAILSUBJECT + region);
+                    SName emailTextName = book.getInternalBook().getNameByName(StringLiterals.AZEMAILTEXT + region);
                     String emailAddress = BookUtils.getSnameCell(name).getStringValue();
                     if (emailAddress.length() > 0 && emailSubjectName != null && emailTextName != null) {
                         AzquoMailer.sendEMail(emailAddress, null, BookUtils.getSnameCell(emailSubjectName).getStringValue(), BookUtils.getSnameCell(emailTextName).getStringValue(), null, null);

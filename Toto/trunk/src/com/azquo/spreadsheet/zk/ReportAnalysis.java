@@ -1,5 +1,6 @@
 package com.azquo.spreadsheet.zk;
 
+import com.azquo.StringLiterals;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.dataimport.ImportService;
 import com.azquo.spreadsheet.LoggedInUser;
@@ -212,15 +213,15 @@ public class ReportAnalysis {
     // so a type of name that appears once e.g. az_reportName
     static boolean isSingleAzquoName(SName sName) {
         String name = sName.getName().toLowerCase();
-        if (name.equals(ReportRenderer.AZREPORTNAME)) return true;
+        if (name.equals(StringLiterals.AZREPORTNAME)) return true;
         if (name.equalsIgnoreCase(ReportExecutor.EXECUTERESULTS)) return true;
         if (name.equalsIgnoreCase(ReportExecutor.OUTCOME)) return true;
         if (name.equalsIgnoreCase(ReportExecutor.SYSTEMDATA)) return true;
         if (name.equalsIgnoreCase(ReportExecutor.EXPORT)) return true;
-        if (name.equalsIgnoreCase(ReportRenderer.EXECUTE)) return true;
-        if (name.equalsIgnoreCase(ReportRenderer.PREEXECUTE)) return true;
-        if (name.equalsIgnoreCase(ReportRenderer.AZCURRENTUSER)) return true;
-        if (name.startsWith(ReportRenderer.FOLLOWON)) return true;
+        if (name.equalsIgnoreCase(StringLiterals.EXECUTE)) return true;
+        if (name.equalsIgnoreCase(StringLiterals.PREEXECUTE)) return true;
+        if (name.equalsIgnoreCase(StringLiterals.AZCURRENTUSER)) return true;
+        if (name.startsWith(StringLiterals.FOLLOWON)) return true;
         // queries considered one offs
         if (name.endsWith("query")) return true;
         return false;
@@ -229,55 +230,55 @@ public class ReportAnalysis {
     static String getAzquoName(SName sName) {
         String name = sName.getName().toLowerCase();
 
-        if (name.startsWith(ReportRenderer.AZDATAREGION)) return name.substring(ReportRenderer.AZDATAREGION.length());
-        if (name.startsWith(ReportRenderer.AZLISTSTART)) return name.substring(ReportRenderer.AZLISTSTART.length());
-        if (name.startsWith(ReportRenderer.AZDISPLAYROWHEADINGS))
-            return name.substring(ReportRenderer.AZDISPLAYROWHEADINGS.length());
-        if (name.startsWith(ReportRenderer.AZDISPLAYCOLUMNHEADINGS))
-            return name.substring(ReportRenderer.AZDISPLAYCOLUMNHEADINGS.length());
-        if (name.startsWith(ReportRenderer.AZDISPLAY)) return name.substring(ReportRenderer.AZDISPLAY.length());
-        if (name.startsWith(ReportRenderer.AZDRILLDOWN)) return name.substring(ReportRenderer.AZDRILLDOWN.length());
-        if (name.startsWith(ReportRenderer.AZOPTIONS)) return name.substring(ReportRenderer.AZOPTIONS.length());
-        if (name.startsWith(ReportRenderer.AZREPEATREGION))
-            return name.substring(ReportRenderer.AZREPEATREGION.length());
-        if (name.startsWith(ReportRenderer.AZREPEATSCOPE)) return name.substring(ReportRenderer.AZREPEATSCOPE.length());
-        if (name.startsWith(ReportRenderer.AZREPEATITEM)) return name.substring(ReportRenderer.AZREPEATITEM.length());
-        if (name.startsWith(ReportRenderer.AZREPEATLIST)) return name.substring(ReportRenderer.AZREPEATLIST.length());
-        if (name.startsWith(ReportRenderer.AZCOLUMNHEADINGS))
-            return name.substring(ReportRenderer.AZCOLUMNHEADINGS.length());
-        if (name.startsWith(ReportRenderer.AZROWHEADINGS)) return name.substring(ReportRenderer.AZROWHEADINGS.length());
-        if (name.startsWith(ReportRenderer.AZXMLEXTRAINFO))
-            return name.substring(ReportRenderer.AZXMLEXTRAINFO.length());
-        if (name.startsWith(ReportRenderer.AZXMLFILENAME)) return name.substring(ReportRenderer.AZXMLFILENAME.length());
-        if (name.startsWith(ReportRenderer.AZXMLFLAG)) return name.substring(ReportRenderer.AZXMLFLAG.length());
-        if (name.startsWith(ReportRenderer.AZXML)) return name.substring(ReportRenderer.AZXML.length());
-        if (name.startsWith(ReportRenderer.AZSUPPORTREPORTNAME))
-            return name.substring(ReportRenderer.AZSUPPORTREPORTNAME.length());
-        if (name.startsWith(ReportRenderer.AZSUPPORTREPORTFILEXMLTAG))
-            return name.substring(ReportRenderer.AZSUPPORTREPORTFILEXMLTAG.length());
-        if (name.startsWith(ReportRenderer.AZSUPPORTREPORTSELECTIONS))
-            return name.substring(ReportRenderer.AZSUPPORTREPORTSELECTIONS.length());
-        if (name.startsWith(ReportRenderer.AZCONTEXT)) return name.substring(ReportRenderer.AZCONTEXT.length());
-        if (name.startsWith(ReportRenderer.AZPIVOTFILTERS))
-            return name.substring(ReportRenderer.AZPIVOTFILTERS.length());
-        if (name.startsWith(ReportRenderer.AZCONTEXTFILTERS))
-            return name.substring(ReportRenderer.AZCONTEXTFILTERS.length());
-        if (name.startsWith(ReportRenderer.AZCONTEXTHEADINGS))
-            return name.substring(ReportRenderer.AZCONTEXTHEADINGS.length());
-        if (name.startsWith(ReportRenderer.AZPIVOTHEADINGS))
-            return name.substring(ReportRenderer.AZPIVOTHEADINGS.length());
-        if (name.startsWith(ReportRenderer.AZSAVE)) return name.substring(ReportRenderer.AZSAVE.length());
-        if (name.startsWith(ReportRenderer.AZREPEATSHEET)) return name.substring(ReportRenderer.AZREPEATSHEET.length());
-        if (name.startsWith(ReportRenderer.AZPDF)) return name.substring(ReportRenderer.AZPDF.length());
-        if (name.startsWith(ReportRenderer.AZTOTALFORMAT)) return name.substring(ReportRenderer.AZTOTALFORMAT.length());
-        if (name.startsWith(ReportRenderer.AZFASTLOAD)) return name.substring(ReportRenderer.AZFASTLOAD.length());
+        if (name.startsWith(StringLiterals.AZDATAREGION)) return name.substring(StringLiterals.AZDATAREGION.length());
+        if (name.startsWith(StringLiterals.AZLISTSTART)) return name.substring(StringLiterals.AZLISTSTART.length());
+        if (name.startsWith(StringLiterals.AZDISPLAYROWHEADINGS))
+            return name.substring(StringLiterals.AZDISPLAYROWHEADINGS.length());
+        if (name.startsWith(StringLiterals.AZDISPLAYCOLUMNHEADINGS))
+            return name.substring(StringLiterals.AZDISPLAYCOLUMNHEADINGS.length());
+        if (name.startsWith(StringLiterals.AZDISPLAY)) return name.substring(StringLiterals.AZDISPLAY.length());
+        if (name.startsWith(StringLiterals.AZDRILLDOWN)) return name.substring(StringLiterals.AZDRILLDOWN.length());
+        if (name.startsWith(StringLiterals.AZOPTIONS)) return name.substring(StringLiterals.AZOPTIONS.length());
+        if (name.startsWith(StringLiterals.AZREPEATREGION))
+            return name.substring(StringLiterals.AZREPEATREGION.length());
+        if (name.startsWith(StringLiterals.AZREPEATSCOPE)) return name.substring(StringLiterals.AZREPEATSCOPE.length());
+        if (name.startsWith(StringLiterals.AZREPEATITEM)) return name.substring(StringLiterals.AZREPEATITEM.length());
+        if (name.startsWith(StringLiterals.AZREPEATLIST)) return name.substring(StringLiterals.AZREPEATLIST.length());
+        if (name.startsWith(StringLiterals.AZCOLUMNHEADINGS))
+            return name.substring(StringLiterals.AZCOLUMNHEADINGS.length());
+        if (name.startsWith(StringLiterals.AZROWHEADINGS)) return name.substring(StringLiterals.AZROWHEADINGS.length());
+        if (name.startsWith(StringLiterals.AZXMLEXTRAINFO))
+            return name.substring(StringLiterals.AZXMLEXTRAINFO.length());
+        if (name.startsWith(StringLiterals.AZXMLFILENAME)) return name.substring(StringLiterals.AZXMLFILENAME.length());
+        if (name.startsWith(StringLiterals.AZXMLFLAG)) return name.substring(StringLiterals.AZXMLFLAG.length());
+        if (name.startsWith(StringLiterals.AZXML)) return name.substring(StringLiterals.AZXML.length());
+        if (name.startsWith(StringLiterals.AZSUPPORTREPORTNAME))
+            return name.substring(StringLiterals.AZSUPPORTREPORTNAME.length());
+        if (name.startsWith(StringLiterals.AZSUPPORTREPORTFILEXMLTAG))
+            return name.substring(StringLiterals.AZSUPPORTREPORTFILEXMLTAG.length());
+        if (name.startsWith(StringLiterals.AZSUPPORTREPORTSELECTIONS))
+            return name.substring(StringLiterals.AZSUPPORTREPORTSELECTIONS.length());
+        if (name.startsWith(StringLiterals.AZCONTEXT)) return name.substring(StringLiterals.AZCONTEXT.length());
+        if (name.startsWith(StringLiterals.AZPIVOTFILTERS))
+            return name.substring(StringLiterals.AZPIVOTFILTERS.length());
+        if (name.startsWith(StringLiterals.AZCONTEXTFILTERS))
+            return name.substring(StringLiterals.AZCONTEXTFILTERS.length());
+        if (name.startsWith(StringLiterals.AZCONTEXTHEADINGS))
+            return name.substring(StringLiterals.AZCONTEXTHEADINGS.length());
+        if (name.startsWith(StringLiterals.AZPIVOTHEADINGS))
+            return name.substring(StringLiterals.AZPIVOTHEADINGS.length());
+        if (name.startsWith(StringLiterals.AZSAVE)) return name.substring(StringLiterals.AZSAVE.length());
+        if (name.startsWith(StringLiterals.AZREPEATSHEET)) return name.substring(StringLiterals.AZREPEATSHEET.length());
+        if (name.startsWith(StringLiterals.AZPDF)) return name.substring(StringLiterals.AZPDF.length());
+        if (name.startsWith(StringLiterals.AZTOTALFORMAT)) return name.substring(StringLiterals.AZTOTALFORMAT.length());
+        if (name.startsWith(StringLiterals.AZFASTLOAD)) return name.substring(StringLiterals.AZFASTLOAD.length());
         if (name.startsWith(ZKComposer.AZSHEETOPTIONS)) return name.substring(ZKComposer.AZSHEETOPTIONS.length());
-        if (name.startsWith(ReportRenderer.AZEMAILADDRESS))
-            return name.substring(ReportRenderer.AZEMAILADDRESS.length());
-        if (name.startsWith(ReportRenderer.AZEMAILSUBJECT))
-            return name.substring(ReportRenderer.AZEMAILSUBJECT.length());
-        if (name.startsWith(ReportRenderer.AZEMAILTEXT)) return name.substring(ReportRenderer.AZEMAILTEXT.length());
-        if (name.startsWith(ReportRenderer.AZFILETYPE)) return name.substring(ReportRenderer.AZFILETYPE.length());
+        if (name.startsWith(StringLiterals.AZEMAILADDRESS))
+            return name.substring(StringLiterals.AZEMAILADDRESS.length());
+        if (name.startsWith(StringLiterals.AZEMAILSUBJECT))
+            return name.substring(StringLiterals.AZEMAILSUBJECT.length());
+        if (name.startsWith(StringLiterals.AZEMAILTEXT)) return name.substring(StringLiterals.AZEMAILTEXT.length());
+        if (name.startsWith(StringLiterals.AZFILETYPE)) return name.substring(StringLiterals.AZFILETYPE.length());
         if (name.startsWith("az_query")) return name.substring("az_query".length());
 
         // damn string literals!

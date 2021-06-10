@@ -1,5 +1,6 @@
 package com.azquo.spreadsheet.controller;
 
+import com.azquo.StringLiterals;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.dataimport.ImportService;
@@ -298,8 +299,8 @@ public class ZKSpreadsheetCommandController {
                                     , cellsAndHeadingsForDisplay.getRowHeadingsSource(),
                                     cellsAndHeadingsForDisplay.getColHeadingsSource(),
                                     cellsAndHeadingsForDisplay.getContextSource(), cellsAndHeadingsForDisplay.getOptions());
-                            CellRegion region = BookUtils.getNameByName(ReportRenderer.AZDATAREGION + cellsAndHeadingsForDisplay.getRegion(), ss.getBook());
-                            Sheet sheetFor = BookUtils.getSheetFor(ReportRenderer.AZDATAREGION + cellsAndHeadingsForDisplay.getRegion(), ss.getBook());
+                            CellRegion region = BookUtils.getNameByName(StringLiterals.AZDATAREGION + cellsAndHeadingsForDisplay.getRegion(), ss.getBook());
+                            Sheet sheetFor = BookUtils.getSheetFor(StringLiterals.AZDATAREGION + cellsAndHeadingsForDisplay.getRegion(), ss.getBook());
                             if (region != null && sheetFor != null){
                                 if (cellsAndHeadingsForDisplay.equals(cellsAndHeadingsForDisplayLatest)){
                                     System.out.println(cellsAndHeadingsForDisplay.getRegion() +  " dynamic update check the data was the same");

@@ -1,5 +1,6 @@
 package com.azquo.spreadsheet.zk;
 
+import com.azquo.StringLiterals;
 import com.azquo.spreadsheet.CommonReportUtils;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.controller.OnlineController;
@@ -80,7 +81,7 @@ public class ReportUIUtils {
         }
         //look in the row headings.
         for (SName name : event.getSheet().getBook().getInternalBook().getNames()) {
-            if (name.getName().toLowerCase().startsWith(ReportRenderer.AZROWHEADINGS)) {
+            if (name.getName().toLowerCase().startsWith(StringLiterals.AZROWHEADINGS)) {
                 //surely there must be a better way of getting the first cell off a region!
                 String firstItem = "";
                 try {
@@ -90,7 +91,7 @@ public class ReportUIUtils {
                 }
                 if (firstItem.toLowerCase().startsWith("permute(")) {
                     String[] rowHeadings = firstItem.substring("permute(".length(), firstItem.length() - 1).split(",");
-                    String displayRowHeadingsString = ReportRenderer.AZDISPLAY + name.getName().substring(3);
+                    String displayRowHeadingsString = StringLiterals.AZDISPLAY + name.getName().substring(3);
                     CellRegion displayRowHeadings = BookUtils.getCellRegionForSheetAndName(event.getSheet(), displayRowHeadingsString);
                     if (displayRowHeadings != null) {
                         int hrow = displayRowHeadings.getRow() - 1;
@@ -109,7 +110,7 @@ public class ReportUIUtils {
         }
         //...and the column headings
         for (SName name : event.getSheet().getBook().getInternalBook().getNames()) {
-            if (name.getName().toLowerCase().startsWith(ReportRenderer.AZCOLUMNHEADINGS)) {
+            if (name.getName().toLowerCase().startsWith(StringLiterals.AZCOLUMNHEADINGS)) {
                 if (name.getRefersToCellRegion() != null && name.getRefersToSheetName() != null){ // stop duff names NPE
                     //surely there must be a better way of getting the first cell off a region!
                     SCell sCell = name.getBook().getSheetByName(name.getRefersToSheetName()).getCell(name.getRefersToCellRegion().getRow(), name.getRefersToCellRegion().getColumn());
@@ -121,7 +122,7 @@ public class ReportUIUtils {
                     }
                     if (firstItem.toLowerCase().startsWith("permute(")) {
                         String[] colHeadings = firstItem.substring("permute(".length(), firstItem.length() - 1).split(",");
-                        String displayColHeadingsString = ReportRenderer.AZDISPLAY + name.getName().substring(3);
+                        String displayColHeadingsString = StringLiterals.AZDISPLAY + name.getName().substring(3);
                         CellRegion displayColHeadings = BookUtils.getCellRegionForSheetAndName(event.getSheet(), displayColHeadingsString);
                         if (displayColHeadings != null) {
                             int hrow = displayColHeadings.getRow();
@@ -144,9 +145,9 @@ public class ReportUIUtils {
 
     // work out what the local region and row and column is for a given cell in a repeat score
     static ZKComposer.RegionRowCol getRegionRowColForRepeatRegion(Book book, int row, int col, SName repeatScopeName) {
-        String repeatRegionName = repeatScopeName.getName().substring(ReportRenderer.AZREPEATSCOPE.length());
-        SName repeatRegion = book.getInternalBook().getNameByName(ReportRenderer.AZREPEATREGION + repeatRegionName);
-        SName repeatDataRegion = book.getInternalBook().getNameByName(ReportRenderer.AZDATAREGION + repeatRegionName);
+        String repeatRegionName = repeatScopeName.getName().substring(StringLiterals.AZREPEATSCOPE.length());
+        SName repeatRegion = book.getInternalBook().getNameByName(StringLiterals.AZREPEATREGION + repeatRegionName);
+        SName repeatDataRegion = book.getInternalBook().getNameByName(StringLiterals.AZDATAREGION + repeatRegionName);
         // deal with repeat regions, it means getting sent cells that have been set as following : loggedInUser.setSentCells(reportId, region + "-" + repeatRow + "-" + repeatColumn, cellsAndHeadingsForDisplay)
         if (repeatRegion != null && repeatDataRegion != null) { // ergh, got to try and find the right sent cell!
             // local row ancd col starts off local to the repeat scope then the region and finally the data region in the repeated region

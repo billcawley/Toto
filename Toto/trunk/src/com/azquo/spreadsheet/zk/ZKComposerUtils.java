@@ -1,5 +1,6 @@
 package com.azquo.spreadsheet.zk;
 
+import com.azquo.StringLiterals;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.user.UserRegionOptions;
@@ -114,15 +115,15 @@ class ZKComposerUtils {
             Sheet sheet = book.getSheetAt(sheetNumber);
             List<SName> namesForSheet = BookUtils.getNamesForSheet(sheet);
             for (SName name : namesForSheet){
-                if (name.getName().toLowerCase().startsWith(ReportRenderer.AZDATAREGION)){
-                    String region = name.getName().substring(ReportRenderer.AZDATAREGION.length());
-                    SName optionsRegion = BookUtils.getNameByName(ReportRenderer.AZOPTIONS + region, sheet);
+                if (name.getName().toLowerCase().startsWith(StringLiterals.AZDATAREGION)){
+                    String region = name.getName().substring(StringLiterals.AZDATAREGION.length());
+                    SName optionsRegion = BookUtils.getNameByName(StringLiterals.AZOPTIONS + region, sheet);
                     if (optionsRegion != null) {
                         String optionsSource = BookUtils.getSnameCell(optionsRegion).getStringValue();
                         int reportId = (int) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
                         UserRegionOptions userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), reportId, region, optionsSource);
                         if (userRegionOptions.getCsvDownload()){ // then we're off
-                            SName displayColumnHeadings = BookUtils.getNameByName(ReportRenderer.AZDISPLAYCOLUMNHEADINGS + region, sheet);
+                            SName displayColumnHeadings = BookUtils.getNameByName(StringLiterals.AZDISPLAYCOLUMNHEADINGS + region, sheet);
                             File newTempFile = File.createTempFile("csv export", ".csv");
                             newTempFile.deleteOnExit();
                             CsvWriter csvWriter = new CsvWriter(newTempFile.toString(), ',', StandardCharsets.UTF_8);

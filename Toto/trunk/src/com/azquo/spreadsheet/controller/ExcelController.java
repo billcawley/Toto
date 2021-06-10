@@ -1,6 +1,7 @@
 package com.azquo.spreadsheet.controller;
 
 import com.azquo.SessionListener;
+import com.azquo.StringLiterals;
 import com.azquo.admin.AdminService;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseDAO;
@@ -626,7 +627,7 @@ public class ExcelController {
                     //Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
                     //book.getInternalBook().setAttribute(LOGGED_IN_USER, loggedInUser);
                     //book.getInternalBook().setAttribute(REPORT_ID, or.getId());
-                    //ReportRenderer.populateBook(book, 0);
+                    //StringLiterals.populateBook(book, 0);
                     Map<String, LoggedInUser.ReportIdDatabaseId> reports = loggedInUser.getReportIdDatabaseIdPermissions();
                     if (!reports.isEmpty()){
                         for (LoggedInUser.ReportIdDatabaseId reportIdDatabaseId : reports.values()) {
@@ -976,7 +977,7 @@ public class ExcelController {
                     book.getInternalBook().setAttribute(REPORT_ID, or.getId());
                     ReportRenderer.populateBook(book, 0);
                     // ok this crashes due to no book path but I think I'll allow no book path itnernally as
-                    ReportExecutor.runExecuteCommandForBook(book, ReportRenderer.FOLLOWON); // that SHOULD do it. It will fail gracefully in the vast majority of times there is no followon
+                    ReportExecutor.runExecuteCommandForBook(book, StringLiterals.FOLLOWON); // that SHOULD do it. It will fail gracefully in the vast majority of times there is no followon
                 }
                 return result;
             }

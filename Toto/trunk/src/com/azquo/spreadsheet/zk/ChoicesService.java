@@ -62,12 +62,12 @@ public class ChoicesService {
         for (SName name : book.getInternalBook().getNames()) {
             String rangeName = name.getName().toLowerCase();
             // are pivot headings being used at all now? Shall I zap? TODO
-            if (rangeName.toLowerCase().startsWith(ReportRenderer.AZPIVOTFILTERS) || rangeName.toLowerCase().startsWith(ReportRenderer.AZCONTEXTFILTERS)) {//the correct version should be 'az_ContextFilters'
+            if (rangeName.toLowerCase().startsWith(StringLiterals.AZPIVOTFILTERS) || rangeName.toLowerCase().startsWith(StringLiterals.AZCONTEXTFILTERS)) {//the correct version should be 'az_ContextFilters'
                 String[] filters = BookUtils.getSnameCell(name).getStringValue().split(",");
-                SName contextChoices = book.getInternalBook().getNameByName(ReportRenderer.AZCONTEXTHEADINGS);
+                SName contextChoices = book.getInternalBook().getNameByName(StringLiterals.AZCONTEXTHEADINGS);
                 if (contextChoices == null) {
                     //original name...
-                    contextChoices = book.getInternalBook().getNameByName(ReportRenderer.AZPIVOTHEADINGS);
+                    contextChoices = book.getInternalBook().getNameByName(StringLiterals.AZPIVOTHEADINGS);
                 }
                 if (contextChoices != null) {
                     showChoices(loggedInUser, book, contextChoices, filters );
@@ -274,7 +274,7 @@ public class ChoicesService {
 
                     }
                 }
-                if (sName.getName().equalsIgnoreCase(ReportRenderer.AZREPORTNAME)) {
+                if (sName.getName().equalsIgnoreCase(StringLiterals.AZREPORTNAME)) {
                     regionsToWatchForMerge.add(sName.getRefersToCellRegion());
                 }
             }

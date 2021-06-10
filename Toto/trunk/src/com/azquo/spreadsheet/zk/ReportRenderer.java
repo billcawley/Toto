@@ -1,6 +1,7 @@
 package com.azquo.spreadsheet.zk;
 
 import com.azquo.MultidimensionalListUtils;
+import com.azquo.StringLiterals;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseServer;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
@@ -29,56 +30,9 @@ import java.util.regex.Pattern;
  * <p>
  * Created by cawley on 03/03/15.
  * <p>
- * To render the report in ZK, the online excel view
+ * To render the report in Keikai, the online excel view
  */
 public class ReportRenderer {
-
-    // all case insensetive now so make these lower case and make the names from the reports .toLowerCase().startsWith().
-    public static final String AZDATAREGION = "az_dataregion";
-    public static final String AZLISTSTART = "az_ListStart";
-    static final String AZDISPLAY = "az_display";
-    static final String AZDRILLDOWN = "az_drilldown";
-    static final String AZOPTIONS = "az_options";
-    public static final String AZREPEATREGION = "az_repeatregion";
-    public static final String AZREPEATSCOPE = "az_repeatscope";
-    static final String AZREPEATITEM = "az_repeatitem";
-    static final String AZREPEATLIST = "az_repeatlist";
-    public static final String AZDISPLAYROWHEADINGS = "az_displayrowheadings";
-    static final String AZDISPLAYCOLUMNHEADINGS = "az_displaycolumnheadings";
-    public static final String AZCOLUMNHEADINGS = "az_columnheadings";
-    public static final String AZROWHEADINGS = "az_rowheadings";
-    public static final String AZRDATA = "az_RData";
-    public static final String AZRQUERY = "az_RQuery";
-    static final String AZXML = "az_xml";
-    static final String AZXMLEXTRAINFO = "az_xmlextrainfo";
-    static final String AZXMLFILENAME = "az_xmlfilename";
-    static final String AZXMLFLAG = "az_xmlflag";
-    static final String AZSUPPORTREPORTNAME = "az_supportreportname";
-    static final String AZSUPPORTREPORTFILEXMLTAG = "az_supportreportfilexmltag";
-    static final String AZSUPPORTREPORTSELECTIONS = "az_supportreportselections";
-    static final String AZSUPPORTREPORTFILENAME = "az_supportreportfilename";
-    static final String AZCONTEXT = "az_context";
-    static final String AZPIVOTFILTERS = "az_pivotfilters";//old version - not to be continued
-    static final String AZCONTEXTFILTERS = "az_contextfilters";
-    static final String AZCONTEXTHEADINGS = "az_contextheadings";
-    static final String AZPIVOTHEADINGS = "az_pivotheadings";//old version
-    static final String AZMULTISELECTHEADINGS = "az_multiselectheadings";//EFC - only switch on the multi select headings if this name is there. Having them on auto causes problems
-    public static final String AZREPORTNAME = "az_reportname";
-    public static final String EXECUTE = "az_execute";
-    public static final String PREEXECUTE = "az_preexecute";
-    public static final String FOLLOWON = "az_followon";
-    static final String AZSAVE = "az_save";
-    static final String AZREPEATSHEET = "az_repeatsheet";
-    public static final String AZPDF = "az_pdf";
-    static final String AZTOTALFORMAT = "az_totalformat";
-    static final String AZFASTLOAD = "az_fastload";
-    static final String AZSKIPCHARTSNAP = "az_skipchartsnap";
-    static final String AZEMAILADDRESS = "az_emailaddress";
-    static final String AZEMAILSUBJECT = "az_emailsubject";
-    static final String AZEMAILTEXT = "az_emailtext";
-    static final String AZCURRENTUSER = "az_currentuser";
-    // on an upload file, should this file be flagged as one that moves with backups and is available for non admin users to download
-    public static final String AZFILETYPE = "az_filetype";
 
     public static boolean populateBook(Book book, int valueId) throws Exception {
         return populateBook(book, valueId, false, false, null, true);
@@ -88,24 +42,22 @@ public class ReportRenderer {
         populateBook(book, valueId, false, false, null, useRepeats);
     }
 
-
     public static boolean populateBook(Book book, int valueId, boolean useSavedValuesOnFormulae, boolean executeMode, StringBuilder errors) throws Exception { // todo - make more elegant? error hack . . .
         return populateBook(book, valueId, useSavedValuesOnFormulae, executeMode, errors, true);
     }
 
-    // todo - is it possible to extract some of this to a pre importer? Can't put it all in there . . .
+    // note there is a post import keikai option which could speed big data inserts but it does this by not recalculating and that's kinda what we need to do
+    // when resolving e.g. choices etc before even populating data  so probably a moot point but worth noting
     private static boolean populateBook(Book book, int valueId, boolean useSavedValuesOnFormulae, boolean executeMode, StringBuilder errors, boolean useRepeats) throws Exception { // todo - make more elegant? error hack . . .
-
         BookUtils.removeNamesWithNoRegion(book); // should protect against some errors.
         book.getInternalBook().setAttribute(OnlineController.LOCKED, false); // by default
         long track = System.currentTimeMillis();
         String imageStoreName = "";
         boolean showSave = false;
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
-
         // unlock data on every report load. Maybe make this clear to the user?
         // is the exception a concern here?
-        // also clear temporary names?
+        // also clear temporary names? Apparently not - discuss with WFC
         try {
             //RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).clearTemporaryNames(loggedInUser.getDataAccessToken());
             SpreadsheetService.unlockData(loggedInUser);
@@ -122,7 +74,7 @@ public class ReportRenderer {
 
             Set<String> repeatRegionTracker = new HashSet<>();
             Sheet sheet = book.getSheetAt(sheetNumber);
-            SName az_CurrentUser = BookUtils.getNameByName(AZCURRENTUSER, sheet);
+            SName az_CurrentUser = BookUtils.getNameByName(StringLiterals.AZCURRENTUSER, sheet);
             if (az_CurrentUser != null) {
                 BookUtils.getSnameCell(az_CurrentUser).setStringValue(loggedInUser.getUser().getEmail());
             }
@@ -168,8 +120,8 @@ public class ReportRenderer {
             // az_RepeatSheet will have a valid name query in it, get the set of names (use choice query for this), then starting with the initial
             // sheet populate a sheet for each valie in az_RepeatItem starting with the first sheet and adding directly after
 
-            SName az_repeatSheet = BookUtils.getNameByName(AZREPEATSHEET, sheet);
-            SName az_repeatItem = BookUtils.getNameByName(AZREPEATITEM, sheet);
+            SName az_repeatSheet = BookUtils.getNameByName(StringLiterals.AZREPEATSHEET, sheet);
+            SName az_repeatItem = BookUtils.getNameByName(StringLiterals.AZREPEATITEM, sheet);
             // second name match is if the repeat item and repeat sheet names are set global, stop them being found on subsequent runs
             if (useRepeats && az_repeatSheet != null && az_repeatSheet.getRefersToSheetName().equals(sheet.getSheetName())
                     && az_repeatItem != null && az_repeatItem.getRefersToSheetName().equals(sheet.getSheetName())) {
@@ -195,7 +147,7 @@ public class ReportRenderer {
                                 Sheet newSheet = book.getSheetAt(book.getNumberOfSheets() - 1);// it will be the latest
                                 for (SName name : namesForSheet) {
                                     SName newName = book.getInternalBook().getNameByName(name.getName(), newSheet.getSheetName());
-                                    if (!name.getName().equalsIgnoreCase(AZREPEATSHEET)) { // don't copy the repeat or we'll get a recursive loop!
+                                    if (!name.getName().equalsIgnoreCase(StringLiterals.AZREPEATSHEET)) { // don't copy the repeat or we'll get a recursive loop!
                                         // cloneSheet won't copy the names, need to make new ones
                                         // the new ones need to be applies to as well as refers to the new sheet
                                         String newFormula;
@@ -213,7 +165,7 @@ public class ReportRenderer {
                                         book.getInternalBook().deleteName(newName); // now Keikai is automatically copying all names then we need to zap the repeat sheet to stop recursion
                                     }
                                 }
-                                SName newRepeatItem = BookUtils.getNameByName(AZREPEATITEM, newSheet);
+                                SName newRepeatItem = BookUtils.getNameByName(StringLiterals.AZREPEATITEM, newSheet);
                                 SCell repeatItemCell = BookUtils.getSnameCell(newRepeatItem);
                                 repeatItemCell.setStringValue(repeatItem);
                                 // now need to move it and rename - hopefully references e.g. names will be affected correctly?
@@ -253,10 +205,10 @@ public class ReportRenderer {
             boolean skipChartSnap = false; // skip some checks, initially related to saving
             for (SName name : namesForSheet) {
                 // Old one was case insensitive - not so happy about this. Will allow it on prefixes. (fast load being set outside the loop so is there a problem with it not being found before data regions??)
-                if (name.getName().equalsIgnoreCase(ReportRenderer.AZFASTLOAD)) {
+                if (name.getName().equalsIgnoreCase(StringLiterals.AZFASTLOAD)) {
                     fastLoad = true;
                 }
-                if (name.getName().equalsIgnoreCase(ReportRenderer.AZSKIPCHARTSNAP)) {
+                if (name.getName().equalsIgnoreCase(StringLiterals.AZSKIPCHARTSNAP)) {
                     skipChartSnap = true;
                 }
                 if (name.getName().equals("az_ImageStoreName")) {
@@ -264,14 +216,14 @@ public class ReportRenderer {
                 }
             }
             for (SName name : namesForSheet) {
-                if (name.getName().toLowerCase().startsWith(AZDATAREGION)) { // then we have a data region to deal with here
-                    String region = name.getName().substring(AZDATAREGION.length()); // might well be an empty string
-                    if (BookUtils.getNameByName(AZROWHEADINGS + region, sheet) == null) { // if no row headings then this is an ad hoc region, save possible by default
+                if (name.getName().toLowerCase().startsWith(StringLiterals.AZDATAREGION)) { // then we have a data region to deal with here
+                    String region = name.getName().substring(StringLiterals.AZDATAREGION.length()); // might well be an empty string
+                    if (BookUtils.getNameByName(StringLiterals.AZROWHEADINGS + region, sheet) == null) { // if no row headings then this is an ad hoc region, save possible by default
                         showSave = true;
                     }
 
                     // we don't actually need to do anything with this now but we need to switch on the XML button
-                    SName xmlHeadings = BookUtils.getNameByName(AZXML + region, sheet);
+                    SName xmlHeadings = BookUtils.getNameByName(StringLiterals.AZXML + region, sheet);
                     if (xmlHeadings != null) {
                         sheet.getBook().getInternalBook().setAttribute(OnlineController.XMLZIP, true);
                         if (SpreadsheetService.getXMLDestinationDir() != null && !SpreadsheetService.getXMLDestinationDir().isEmpty()) {
@@ -279,7 +231,7 @@ public class ReportRenderer {
                         }
                     }
 
-                    SName optionsRegion = BookUtils.getNameByName(AZOPTIONS + region, sheet);
+                    SName optionsRegion = BookUtils.getNameByName(StringLiterals.AZOPTIONS + region, sheet);
                     String optionsSource = "";
                     if (optionsRegion != null) {
                         SCell optionsCell = BookUtils.getSnameCell(optionsRegion);
@@ -362,8 +314,8 @@ public class ReportRenderer {
             // 19/10/20. Initial R implementation, may require modifying later to increase capacity
             for (SName name : namesForSheet) {
                 // Old one was case insensitive - not so happy about this. Will allow it on prefixes. (fast load being set outside the loop so is there a problem with it not being found before data regions??)
-                if (name.getName().startsWith(ReportRenderer.AZRQUERY)) {
-                    SName rDataName = BookUtils.getNameByName(AZRDATA + name.getName().substring(ReportRenderer.AZRQUERY.length()), sheet);
+                if (name.getName().startsWith(StringLiterals.AZRQUERY)) {
+                    SName rDataName = BookUtils.getNameByName(StringLiterals.AZRDATA + name.getName().substring(StringLiterals.AZRQUERY.length()), sheet);
                     if (rDataName != null) {
                         RCaller caller = RCaller.create();
                         RCode code = RCode.create();
@@ -581,7 +533,7 @@ public class ReportRenderer {
     // return the error, executing reports might want it
     private static String populateRegionSet(Sheet sheet, int reportId, final String sheetName, final String region, int valueId, UserRegionOptions userRegionOptions, LoggedInUser loggedInUser, boolean quiet, Set<String> repeatRegionTracker) throws Exception {
         CellRegion queryRegion = BookUtils.getCellRegionForSheetAndName(sheet, "az_query" + region);
-        SName contextDescription = BookUtils.getNameByName(AZCONTEXT + region, sheet);
+        SName contextDescription = BookUtils.getNameByName(StringLiterals.AZCONTEXT + region, sheet);
         if (queryRegion != null) {
             List<List<String>> contextList = BookUtils.replaceUserChoicesInRegionDefinition(loggedInUser, contextDescription);
             ReportService.resolveQuery(loggedInUser, sheet, queryRegion, contextList);
@@ -590,15 +542,15 @@ public class ReportRenderer {
         if (userRegionOptions.getUserLocked()) { // then put the flag on the book, remember to take it off (and unlock!) if there was an error
             sheet.getBook().getInternalBook().setAttribute(OnlineController.LOCKED, true);
         }
-        SName columnHeadingsDescription = BookUtils.getNameByName(AZCOLUMNHEADINGS + region, sheet);
-        SName rowHeadingsDescription = BookUtils.getNameByName(AZROWHEADINGS + region, sheet);
+        SName columnHeadingsDescription = BookUtils.getNameByName(StringLiterals.AZCOLUMNHEADINGS + region, sheet);
+        SName rowHeadingsDescription = BookUtils.getNameByName(StringLiterals.AZROWHEADINGS + region, sheet);
         String errorMessage = null;
         // make a blank area for data to be populated from, an upload in the sheet so to speak (ad hoc)
         if ((columnHeadingsDescription != null && rowHeadingsDescription == null) || (rowHeadingsDescription != null && columnHeadingsDescription == null)) {
             List<List<String>> colHeadings = BookUtils.replaceUserChoicesInRegionDefinition(loggedInUser, columnHeadingsDescription);
             List<List<String>> rowHeadings = BookUtils.replaceUserChoicesInRegionDefinition(loggedInUser, rowHeadingsDescription);
             List<List<CellForDisplay>> dataRegionCells = new ArrayList<>();
-            CellRegion dataRegion = BookUtils.getCellRegionForSheetAndName(sheet, AZDATAREGION + region);
+            CellRegion dataRegion = BookUtils.getCellRegionForSheetAndName(sheet, StringLiterals.AZDATAREGION + region);
             for (int rowNo = 0; rowNo < dataRegion.getRowCount(); rowNo++) {
                 List<CellForDisplay> oneRow = new ArrayList<>();
                 for (int colNo = 0; colNo < dataRegion.getColumnCount(); colNo++) {
@@ -625,8 +577,8 @@ public class ReportRenderer {
 
                  Have added repeat item 2 as well
                   */
-                SName repeatList = BookUtils.getNameByName(ReportRenderer.AZREPEATLIST + region, sheet);
-                SName repeatItem = BookUtils.getNameByName(ReportRenderer.AZREPEATITEM + region, sheet);
+                SName repeatList = BookUtils.getNameByName(StringLiterals.AZREPEATLIST + region, sheet);
+                SName repeatItem = BookUtils.getNameByName(StringLiterals.AZREPEATITEM + region, sheet);
                 if (repeatList != null && repeatItem != null) {
                     String repeatListText = BookUtils.getSnameCell(repeatList).getStringValue();
                     List<String> repeatListItems = CommonReportUtils.getDropdownListForQuery(loggedInUser, repeatListText);
@@ -634,8 +586,8 @@ public class ReportRenderer {
                         BookUtils.getSnameCell(repeatItem).setStringValue(repeatListItems.get(0));// and set the first
                     }
                 }
-                SName repeatList2 = BookUtils.getNameByName(ReportRenderer.AZREPEATLIST + "2" + region, sheet);
-                SName repeatItem2 = BookUtils.getNameByName(ReportRenderer.AZREPEATITEM + "2" + region, sheet);
+                SName repeatList2 = BookUtils.getNameByName(StringLiterals.AZREPEATLIST + "2" + region, sheet);
+                SName repeatItem2 = BookUtils.getNameByName(StringLiterals.AZREPEATITEM + "2" + region, sheet);
                 if (repeatList2 != null && repeatItem2 != null) {
                     String repeatListText2 = BookUtils.getSnameCell(repeatList2).getStringValue();
                     List<String> repeatListItems2 = CommonReportUtils.getDropdownListForQuery(loggedInUser, repeatListText2);
@@ -648,9 +600,9 @@ public class ReportRenderer {
                 // can it sort out the formulae issues?
                 List<List<String>> rowHeadingList = BookUtils.replaceUserChoicesInRegionDefinition(loggedInUser, rowHeadingsDescription);
                 //check if this is a pivot - if so, then add in any additional filter needed
-                SName contextFilters = BookUtils.getNameByName(AZCONTEXTFILTERS, sheet);
+                SName contextFilters = BookUtils.getNameByName(StringLiterals.AZCONTEXTFILTERS, sheet);
                 if (contextFilters == null) {
-                    contextFilters = BookUtils.getNameByName(AZPIVOTFILTERS, sheet);
+                    contextFilters = BookUtils.getNameByName(StringLiterals.AZPIVOTFILTERS, sheet);
                 }
                 // a comma separated list of names
                 if (contextFilters != null) {
@@ -690,9 +642,9 @@ public class ReportRenderer {
                 loggedInUser.setSentCells(reportId, sheetName, region, cellsAndHeadingsForDisplay);
                 // now, put the headings into the sheet!
                 // might be factored into fill range in a bit
-                CellRegion displayRowHeadings = BookUtils.getCellRegionForSheetAndName(sheet, AZDISPLAYROWHEADINGS + region);
-                CellRegion displayColumnHeadings = BookUtils.getCellRegionForSheetAndName(sheet, AZDISPLAYCOLUMNHEADINGS + region);
-                CellRegion displayDataRegion = BookUtils.getCellRegionForSheetAndName(sheet, AZDATAREGION + region);
+                CellRegion displayRowHeadings = BookUtils.getCellRegionForSheetAndName(sheet, StringLiterals.AZDISPLAYROWHEADINGS + region);
+                CellRegion displayColumnHeadings = BookUtils.getCellRegionForSheetAndName(sheet, StringLiterals.AZDISPLAYCOLUMNHEADINGS + region);
+                CellRegion displayDataRegion = BookUtils.getCellRegionForSheetAndName(sheet, StringLiterals.AZDATAREGION + region);
 
                 int colsToAdd;
                 int maxRow = sheet.getLastRow();
@@ -708,12 +660,12 @@ public class ReportRenderer {
                     expandDataRegionBasedOnHeadings(loggedInUser, sheet, region, displayDataRegion, cellsAndHeadingsForDisplay, maxCol, userRegionOptions);
                     // these re loadings are because the region may have changed
                     // why reload displayDataRegion but not displayRowHeadings for example? todo - check, either both need reloading or both don't - this isn't a biggy it's just to do with name references which now I think about it probably don't need reloading but it's worth checking and being consistent
-                    displayDataRegion = BookUtils.getCellRegionForSheetAndName(sheet, AZDATAREGION + region);
+                    displayDataRegion = BookUtils.getCellRegionForSheetAndName(sheet, StringLiterals.AZDATAREGION + region);
                     // so it's NOT a repeat region. Fill the headings and populate the data!
-                    if (BookUtils.getNameByName(ReportRenderer.AZREPEATREGION + region, sheet) == null
-                            || BookUtils.getNameByName(ReportRenderer.AZREPEATSCOPE + region, sheet) == null
-                            || BookUtils.getNameByName(ReportRenderer.AZREPEATLIST + region, sheet) == null
-                            || BookUtils.getNameByName(ReportRenderer.AZREPEATITEM + region, sheet) == null) {
+                    if (BookUtils.getNameByName(StringLiterals.AZREPEATREGION + region, sheet) == null
+                            || BookUtils.getNameByName(StringLiterals.AZREPEATSCOPE + region, sheet) == null
+                            || BookUtils.getNameByName(StringLiterals.AZREPEATLIST + region, sheet) == null
+                            || BookUtils.getNameByName(StringLiterals.AZREPEATITEM + region, sheet) == null) {
                         // ok there should be the right space for the headings
                         if (displayRowHeadings != null && cellsAndHeadingsForDisplay.getRowHeadings() != null) {
                             int rowHeadingCols = cellsAndHeadingsForDisplay.getRowHeadings().get(0).size();
@@ -722,7 +674,7 @@ public class ReportRenderer {
                                 int insertCol = displayRowHeadings.getColumn() + displayRowHeadings.getColumnCount() - 1;
                                 Range insertRange = Ranges.range(sheet, 0, insertCol, maxRow, insertCol + colsToAdd - 1);
                                 CellOperationUtil.insert(insertRange.toColumnRange(), Range.InsertShift.RIGHT, Range.InsertCopyOrigin.FORMAT_LEFT_ABOVE);
-                                displayDataRegion = BookUtils.getCellRegionForSheetAndName(sheet, ReportRenderer.AZDATAREGION + region);
+                                displayDataRegion = BookUtils.getCellRegionForSheetAndName(sheet, StringLiterals.AZDATAREGION + region);
                             }
                             RegionFillerService.fillRowHeadings(loggedInUser, sheet, region, displayRowHeadings, displayDataRegion, cellsAndHeadingsForDisplay, userRegionOptions);
                         }
@@ -758,7 +710,7 @@ public class ReportRenderer {
                 int colNo = 0;
                 while (sheet.getInternalSheet().getColumn(colNo).isHidden() && colNo < 100) colNo++;
                 while (sheet.getInternalSheet().getRow(rowNo).isHidden() && rowNo < 100) rowNo++;
-                String eMessage = "Error populating this data region : " + AZDATAREGION + region + " : " + errorMessage;
+                String eMessage = "Error populating this data region : " + StringLiterals.AZDATAREGION + region + " : " + errorMessage;
                 sheet.getInternalSheet().getCell(rowNo, colNo).setStringValue(eMessage);
                 /*
                 CellRegion dataRegion = getCellRegionForSheetAndName(sheet, "az_DataRegion" + region);// this function should not be called without a valid data region
@@ -771,13 +723,13 @@ public class ReportRenderer {
                 return eMessage;
             }
         } else {
-            CellRegion dataRegion = BookUtils.getCellRegionForSheetAndName(sheet, AZDATAREGION + region);// this function should not be called without a valid data region
+            CellRegion dataRegion = BookUtils.getCellRegionForSheetAndName(sheet, StringLiterals.AZDATAREGION + region);// this function should not be called without a valid data region
             if (dataRegion != null) {
-                sheet.getInternalSheet().getCell(dataRegion.getRow(), dataRegion.getColumn()).setStringValue("Unable to find matching heading and context regions for this data region : " + AZDATAREGION + region);
-                return "Unable to find matching heading and context regions for this data region : " + AZDATAREGION + region;
+                sheet.getInternalSheet().getCell(dataRegion.getRow(), dataRegion.getColumn()).setStringValue("Unable to find matching heading and context regions for this data region : " + StringLiterals.AZDATAREGION + region);
+                return "Unable to find matching heading and context regions for this data region : " + StringLiterals.AZDATAREGION + region;
             } else {
-                System.out.println("no region found for " + AZDATAREGION + region);
-                return "no region found for " + AZDATAREGION + region;
+                System.out.println("no region found for " + StringLiterals.AZDATAREGION + region);
+                return "no region found for " + StringLiterals.AZDATAREGION + region;
             }
         }
         if (userRegionOptions.getPreSave()) {
@@ -857,7 +809,7 @@ public class ReportRenderer {
         if (displayDataRegion.getColumnCount() < colsToShow && displayDataRegion.getColumnCount() > 1 && displayDataRegion.getColumnCount() < colsToShow) { // then we need to expand
             int colsToAdd = cellsAndHeadingsForDisplay.getColumnHeadings().get(0).size() - (displayDataRegion.getColumnCount());
             int topRow = 0;
-            CellRegion displayColumnHeadings = BookUtils.getCellRegionForSheetAndName(sheet, AZDISPLAYCOLUMNHEADINGS + region);
+            CellRegion displayColumnHeadings = BookUtils.getCellRegionForSheetAndName(sheet, StringLiterals.AZDISPLAYCOLUMNHEADINGS + region);
             if (displayColumnHeadings != null) {
                 topRow = displayColumnHeadings.getRow();
             }
