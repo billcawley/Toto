@@ -313,7 +313,7 @@ class AzquoMemoryDBTransport {
             long marker = System.currentTimeMillis();
             for (Name name : azquoMemoryDB.getAllNames()) {
                 if (name.hasParents() && name.getParents().size() > 200){
-                    System.out.println("Over 200 parents on : " + name.getDefaultDisplayName());
+                    System.out.println("Over 200 parents on : " + name.getDefaultDisplayName() + " parents : " + name.getParents().size());
                     counter++;
                     if (counter > 10000) {
                         System.out.println("10k breaking;");
