@@ -174,12 +174,19 @@ public class PendingUploadController {
                 String importVersion;
                 String[] fileSplit = mainFileName.replace("  ", " ").split(" "); // make double spaces be like single spaces for the purposes of parsing basic info
                 String password = null; // password for excel files
-
+                ImportTemplate preProcess = null;
                 if (fileSplit.length < 3) {
                     model.put("error", "Filename in unknown format.");
                     return "pendingupload";
                 } else {
-                    importVersion = fileSplit[0] + fileSplit[1];
+                    //need to think about option to find a pre processor with the first and second words, if so the second word is the version
+                    String possiblePreprocessorName = fileSplit[0] + " " + fileSplit[1] + " preprocessor.xlsx";
+                    preProcess = ImportTemplateDAO.findForNameAndBusinessId(possiblePreprocessorName, loggedInUser.getUser().getBusinessId());
+                    if (preProcess != null){
+                        importVersion = fileSplit[1];
+                    } else {
+                        importVersion = fileSplit[0] + fileSplit[1];
+                    }
                     month = fileSplit[2];
                     if (month.contains(".")) {
                         month = month.substring(0, month.indexOf("."));
@@ -216,6 +223,7 @@ public class PendingUploadController {
                 ImportTemplateData importTemplateForUploadedFile = ImportService.getImportTemplateForUploadedFile(loggedInUser, null, null);
                 List<List<String>> lookupSheet = null;
                 String runClearExecuteCommand  = null;
+                final HashMap<String, String> params = new HashMap<>();
                 if (importTemplateForUploadedFile == null) {
                     model.put("error", "Import template not found for " + database.getName() + ", please upload one for it.");
                     return "pendingupload";
@@ -245,8 +253,11 @@ public class PendingUploadController {
                         return "pendingupload";
                     }
                     model.put(ImportService.IMPORTVERSION, importVersion);
+                    if (preProcess != null){
+                        model.put(ImportService.PREPROCESSOR, preProcess.getFilename());
+                        params.put(ImportService.PREPROCESSOR, preProcess.getFilename());
+                    }
                 }
-                final HashMap<String, String> params = new HashMap<>();
                 params.put(ImportService.IMPORTVERSION, importVersion);
                 params.put("month", month);
                 if (password != null){
