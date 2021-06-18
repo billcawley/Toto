@@ -87,6 +87,7 @@
             </c:otherwise>
         </c:choose>
         <h2>Import Version : ${importversion}</h2>
+        <h2>Preprocessor : ${preprocessor}</h2>
         <h2>Month : ${month}</h2>
         <div class="error">${error}</div>
         <!-- params passed if they need to be set-->

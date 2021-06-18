@@ -74,6 +74,7 @@ public class JSTreeService {
         Name name = NameService.findById(connectionFromAccessToken, nameId); // the parent, will be null if -1 passed in the case of adding to root . . .
         Name newName = NameService.findOrCreateNameInParent(connectionFromAccessToken, "newnewnew", name, true);
         newName.setAttributeWillBePersisted(StringLiterals.DEFAULT_DISPLAY_NAME, "New node",connectionFromAccessToken);
+        connectionFromAccessToken.persist();
         return new JsonChildren.Node(-1, "New node", false, newName.getId(), nameId);
     }
 
@@ -82,6 +83,7 @@ public class JSTreeService {
         final AzquoMemoryDBConnection connectionFromAccessToken = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
         Name name = NameService.findById(connectionFromAccessToken, nameId);
         name.delete(connectionFromAccessToken);
+        connectionFromAccessToken.persist();
     }
 
     // reports may be modified or use the same choice. This function is to check that the saved user choice is one that's in the tree, logic chouls be pretty transparent

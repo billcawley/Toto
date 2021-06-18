@@ -669,7 +669,7 @@ this may now not work at all, perhaps delete?
         String bannerColor = business.getBannerColor();
         if (bannerColor == null || bannerColor.length() == 0) bannerColor = "#F58030";
         String logo = business.getLogo();
-        if (logo == null || logo.length() == 0) logo = "logo_alt.png";
+        if (logo == null || logo.length() == 0) logo = "logo_admin.png";
         model.addAttribute("bannerColor", bannerColor);
         model.addAttribute("logo", logo);
 
