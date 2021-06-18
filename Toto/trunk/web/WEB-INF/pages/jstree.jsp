@@ -217,8 +217,15 @@
                // data.instance.refresh_node(data.instance.get_node(data.instance).parent);
             }).on('select_node.jstree', function (e, data) {
                 if (data.node.text.indexOf("more....") != -1){ // hacky that the more.... just has to match but anyway
-                    hundredsMoreLookup[data.node.parent] = (hundredsMoreLookup[data.node.parent] || 0) + 1;
-//                    alert("node info : " + data.node.id + " text " + data.node.text + " parent : " + data.node.parent + " parent : " + data.instance.get_node(data.node.parent).text + " hundreds more" + hundredsMoreLookup[data.node.id]);
+                    var specificParent;
+                    if (data.node.parents.length > 0){// efc note. For some reason the parents are in pairs  and if different we seem to want the second one. Relevant when clicking more on a "root" list
+                        specificParent = data.node.parents[1];
+                    } else {
+                        specificParent = data.node.parent;
+                    }
+                    hundredsMoreLookup[specificParent] = (hundredsMoreLookup[specificParent] || 0) + 1;
+                    //alert("node info : " + data.node.id + " text " + data.node.text + " parent : " + specificParent + " parent : " + data.instance.get_node(specificParent).text + " hundreds more" + hundredsMoreLookup[data.node.id]);
+//                    alert(JSON.stringify(data.node));
                     /*                    for (i in hundredsMoreLookup) {
                                             alert("Name: " + i + " Value: " + hundredsMoreLookup[i]);
                                         }*/
