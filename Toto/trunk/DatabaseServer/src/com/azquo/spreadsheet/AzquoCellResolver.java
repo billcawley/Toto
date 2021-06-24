@@ -704,7 +704,11 @@ But can use a library?
                             }*/
                             // was isnumber test here to add a double to the
                         } else if (!isString && valuesHook.values != null && valuesHook.values.size() > 0) {
-                            stringValue = doubleValue + "";
+                            // don't set 0 on scale values
+                            if (!(scaleValuesHook != null && doubleValue == 0))
+                            {
+                                stringValue = doubleValue + "";
+                            }
                         }
                         if (stringValue.equals("") && function == DataRegionHeading.FUNCTION.DEFAULT){
                             stringValue = stringParameter; // bad parameter names - not the description

@@ -1674,48 +1674,51 @@ public final class ImportService {
         //if (colCount++ > 0) bw.write('\t');
         if (cellData != null) {
             String stringValue = "";
-            try {
-                stringValue = cellData.getFormatText();// I assume means formatted text
-                if (dataFormat.equals("h:mm") && stringValue.length() == 4) {
-                    //ZK BUG - reads "hh:mm" as "h:mm"
-                    stringValue = "0" + stringValue;
-                } else {
-                    if (dataFormat.toLowerCase().contains("m") && dataFormat.length() > 6) {
-                        try {
-                            Date javaDate = DateUtil.getJavaDate((cellData.getDoubleValue()));
-                            stringValue = YYYYMMDD.format(javaDate);
-                        } catch (Exception e) {
-                            //not sure what to do here.
-                        }
-                    }
-                }
-                if ((stringValue.length() == 6 || stringValue.length() == 8) && stringValue.charAt(3) == ' ' && dataFormat.toLowerCase().contains("mm-")) {//another ZK bug
-                    stringValue = stringValue.replace(" ", "-");//crude replacement of spaces in dates with dashes
-                }
-            } catch (Exception ignored) {
-            }
-            if (stringValue.endsWith("%") || (stringValue.contains(".") || !stringValue.startsWith("0")) && !dataFormat.toLowerCase().contains("m")) {//check that it is not a date or a time
-                //if it's a number, remove all formatting
+            // EFC adjusted logic on
+            if (!cellData.isBlank() && !(cellData.isFormula() && cellData.getResultType() == CellData.CellType.BLANK)){
                 try {
-                    double d = cellData.getDoubleValue();
-                    returnNumber = d;
-                    String newStringValue = d + "";
-                    if (newStringValue.contains("E")) {
-                        newStringValue = String.format("%f", d);
-                    }
-                    if (newStringValue.endsWith(".0")) {
-                        stringValue = newStringValue.substring(0, newStringValue.length() - 2);
+                    stringValue = cellData.getFormatText();// I assume means formatted text
+                    if (dataFormat.equals("h:mm") && stringValue.length() == 4) {
+                        //ZK BUG - reads "hh:mm" as "h:mm"
+                        stringValue = "0" + stringValue;
                     } else {
-                        if (!newStringValue.endsWith(".000000")) {
-                            stringValue = newStringValue;
+                        if (dataFormat.toLowerCase().contains("m") && dataFormat.length() > 6) {
+                            try {
+                                Date javaDate = DateUtil.getJavaDate((cellData.getDoubleValue()));
+                                stringValue = YYYYMMDD.format(javaDate);
+                            } catch (Exception e) {
+                                //not sure what to do here.
+                            }
                         }
+                    }
+                    if ((stringValue.length() == 6 || stringValue.length() == 8) && stringValue.charAt(3) == ' ' && dataFormat.toLowerCase().contains("mm-")) {//another ZK bug
+                        stringValue = stringValue.replace(" ", "-");//crude replacement of spaces in dates with dashes
                     }
                 } catch (Exception ignored) {
                 }
-            }
-            if (stringValue.contains("\"\"") && stringValue.startsWith("\"") && stringValue.endsWith("\"")) {
-                //remove spuriouse quote marks
-                stringValue = stringValue.substring(1, stringValue.length() - 1).replace("\"\"", "\"");
+                if (stringValue.endsWith("%") || (stringValue.contains(".") || !stringValue.startsWith("0")) && !dataFormat.toLowerCase().contains("m")) {//check that it is not a date or a time
+                    //if it's a number, remove all formatting
+                    try {
+                        double d = cellData.getDoubleValue();
+                        returnNumber = d;
+                        String newStringValue = d + "";
+                        if (newStringValue.contains("E")) {
+                            newStringValue = String.format("%f", d);
+                        }
+                        if (newStringValue.endsWith(".0")) {
+                            stringValue = newStringValue.substring(0, newStringValue.length() - 2);
+                        } else {
+                            if (!newStringValue.endsWith(".000000")) {
+                                stringValue = newStringValue;
+                            }
+                        }
+                    } catch (Exception ignored) {
+                    }
+                }
+                if (stringValue.contains("\"\"") && stringValue.startsWith("\"") && stringValue.endsWith("\"")) {
+                    //remove spuriouse quote marks
+                    stringValue = stringValue.substring(1, stringValue.length() - 1).replace("\"\"", "\"");
+                }
             }
             returnString = stringValue;
         }

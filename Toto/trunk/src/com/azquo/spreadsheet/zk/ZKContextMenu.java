@@ -641,7 +641,7 @@ class ZKContextMenu {
 
         String host = myzss.getPage().getDesktop().getSession().getLocalName();
         //System.out.println("web host " + host);
-        if (host.contains("localhost") || host.contains("192.168.1.16")){
+        /*if (host.contains("localhost") || host.contains("192.168.1.16")){
             ObjectMapper jacksonMapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
             // may as well prepare the json for the excel controller here, in future it will be JS but this is for a demo
             // zap new lines they just cause a pain for the JS
@@ -670,7 +670,7 @@ class ZKContextMenu {
                 Clients.evalJavaScript("window.open(\"/graphtest.jsp?report=" + URLEncoder.encode(or.getReportName(), "UTF-8")  + "&json=" + URLEncoder.encode(json) + "&YX=true\")");
             });
 
-        }
+        }*/
     }
 
     public static void setPopupStyle(Popup popup) {
