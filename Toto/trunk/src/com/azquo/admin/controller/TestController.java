@@ -3,6 +3,7 @@ package com.azquo.admin.controller;
 import com.azquo.admin.onlinereport.UserActivity;
 import com.azquo.dataimport.*;
 import com.csvreader.CsvWriter;
+import com.extractagilecrm.ExtractContacts;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -367,6 +368,12 @@ public class TestController {
     public String handleRequest(HttpServletRequest request, HttpServletResponse response
             , @RequestParam(value = "something", required = false) String something
     ) {
+        if ("mailchimp".equals(something)){
+        }
+
+        if ("agilecrm".equals(something)){
+            ExtractContacts.extract();
+        }
 
         if ("pdfbox".equals(something)) {
             /*XSSFWorkbook wb = new XSSFWorkbook();
