@@ -1,0 +1,10 @@
+<component name="libraryTable">
+  <library name="agilecrm">
+    <CLASSES>
+      <root url="file://$PROJECT_DIR$/lib/agilecrm" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+    <jarDirectory url="file://$PROJECT_DIR$/lib/agilecrm" recursive="false" />
+  </library>
+</component>

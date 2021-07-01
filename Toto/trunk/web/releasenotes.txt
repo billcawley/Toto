@@ -1,3 +1,13 @@
+24-06-21
+
+No 0s on scale
+
+Inspect "x more . . ." improvement
+
+Support pre processor on pending uploads
+
+Delete business
+
 12-05-21
 
 UI adjustments - tidying up the inspect database window

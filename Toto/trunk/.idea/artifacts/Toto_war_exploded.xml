@@ -41,6 +41,8 @@
           <element id="library" level="project" name="poi-ooxml-full-5.0.0" />
           <element id="library" level="project" name="Simple Logging Facade for Java:1.7.30" />
           <element id="library" level="project" name="org.apache.xmlbeans:xmlbeans:4.0.0" />
+          <element id="library" level="project" name="agilecrm" />
+          <element id="library" level="project" name="com.ecwid:maleorang:3.0-0.9.6" />
         </element>
       </element>
     </root>
