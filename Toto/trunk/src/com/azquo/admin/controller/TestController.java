@@ -3,7 +3,10 @@ package com.azquo.admin.controller;
 import com.azquo.admin.onlinereport.UserActivity;
 import com.azquo.dataimport.*;
 import com.csvreader.CsvWriter;
+import com.ecwid.maleorang.MailchimpException;
+import com.ecwid.maleorang.annotation.*;
 import com.extractagilecrm.ExtractContacts;
+import com.extractmailchimp.ExtractMailchimp;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -12,7 +15,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.ValueNode;
 import com.github.rcaller.rstuff.RCaller;
 import com.github.rcaller.rstuff.RCode;
-import org.apache.pdfbox.cos.COSDocument;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.util.PDFTextStripper;
@@ -21,9 +24,6 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
-import org.zkoss.poi.xssf.usermodel.XSSFRow;
-import org.zkoss.poi.xssf.usermodel.XSSFSheet;
-import org.zkoss.poi.xssf.usermodel.XSSFWorkbook;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -40,6 +40,12 @@ import java.text.NumberFormat;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
+
+import com.ecwid.maleorang.MailchimpClient;
+import com.ecwid.maleorang.MailchimpObject;
+import com.ecwid.maleorang.method.v3_0.lists.members.EditMemberMethod;
+import com.ecwid.maleorang.method.v3_0.lists.members.MemberInfo;
+import com.ecwid.maleorang.method.v3_0.lists.members.GetMembersMethod;
 
 /**
  * Created by EFC on 17/11/20.
@@ -362,13 +368,19 @@ public class TestController {
         }
     }
 
-
     @RequestMapping
     @ResponseBody
-    public String handleRequest(HttpServletRequest request, HttpServletResponse response
-            , @RequestParam(value = "something", required = false) String something
+    public String handleRequest(
+             @RequestParam(value = "something", required = false) String something
     ) {
         if ("mailchimp".equals(something)){
+            try {
+                ExtractMailchimp.extractData("516f98d1f28e8cc97a2b8da9025d3b78-us1");
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (MailchimpException e) {
+                e.printStackTrace();
+            }
         }
 
         if ("agilecrm".equals(something)){

@@ -26,6 +26,10 @@ class NameEditFunctions {
         if (setFormula.startsWith("findduplicates")) {
             return findDuplicateNames(azquoMemoryDBConnection, setFormula);
         }
+        if (setFormula.startsWith("cleanroot")) {
+            cleanRoot(azquoMemoryDBConnection);
+            return Collections.emptyList();
+        }
 // todo, finish and make it work
 
         if (setFormula.startsWith("orphan")) {
@@ -271,6 +275,22 @@ class NameEditFunctions {
         }
         /*input syntax 'findduplicates`   probably need to add 'exception' list of cases where duplicates are expected (e.g.   Swimshop product categories)*/
         return azquoMemoryDBConnection.getAzquoMemoryDBIndex().findDuplicateNames(StringLiterals.DEFAULT_DISPLAY_NAME, attributeExceptions);
+    }
+
+    private static AtomicInteger cleanRootCount = new AtomicInteger(0);
+
+    private static void cleanRoot(AzquoMemoryDBConnection azquoMemoryDBConnection) throws Exception {
+        List<Name> topNames = azquoMemoryDBConnection.getAzquoMemoryDBIndex().findTopNames(StringLiterals.DEFAULT_DISPLAY_NAME); // should be a big list
+        boolean deleted = false;
+        for (Name topName : topNames){
+            if (!topName.hasChildren() && !topName.hasValues()){
+                topName.delete(azquoMemoryDBConnection);
+                deleted = true;
+            }
+        }
+        if (deleted){
+            new Thread(azquoMemoryDBConnection::persist).start();
+        }
     }
 
     private static List<Name> deduplicate(AzquoMemoryDBConnection azquoMemoryDBConnection, String formula) throws Exception {

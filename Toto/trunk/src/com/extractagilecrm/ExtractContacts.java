@@ -2,17 +2,11 @@ package com.extractagilecrm;
 
 import com.agilecrm.api.APIManager;
 import com.agilecrm.api.ContactAPI;
-import com.azquo.admin.AdminService;
-import com.azquo.admin.onlinereport.UserActivity;
-import com.azquo.admin.onlinereport.UserActivityDAO;
-import com.azquo.admin.user.User;
 import com.google.gson.Gson;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.core.util.MultivaluedMapImpl;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.math.NumberUtils;
-import org.exolab.castor.types.DateTime;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.zkoss.poi.xssf.usermodel.XSSFRow;
@@ -21,8 +15,9 @@ import org.zkoss.poi.xssf.usermodel.XSSFWorkbook;
 
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
+import java.io.File;
 import java.io.FileOutputStream;
-import java.io.OutputStream;
+import java.io.FileWriter;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -97,16 +92,18 @@ public class ExtractContacts {
             APIManager apiManager = new APIManager(baseUrl, userEmail, restAPIKey);
             ContactAPI contactApi = apiManager.getContactAPI();
             String cursor = "first_page";
-
+//            StringBuilder contactsJson = new StringBuilder();
             // remove campaign status + a certain amount? there are a lot . . .
             while (cursor != null){
                 // List of tags to add it to contact
                 // --------------------- Get contacts -----------------------------
-                JSONArray contacts = getDeals("5", cursor);
+
+                JSONArray contacts = getDeals("250", cursor);
+                FileUtils.writeStringToFile(new File("/home/edward/Downloads/" + System.currentTimeMillis() + "deals.json"), contacts.toString());
                 cursor = null;
                 for (Object contact : contacts){
                     JSONObject jcontact = (JSONObject) contact;
-                    XSSFWorkbook wb = new XSSFWorkbook();
+/*                    XSSFWorkbook wb = new XSSFWorkbook();
                     XSSFSheet sheet = wb.createSheet("Contact");
                     AtomicInteger rownum = new AtomicInteger(0);
                     for (String key : jcontact.keySet()){
@@ -114,7 +111,10 @@ public class ExtractContacts {
                     }
                     FileOutputStream fos = new FileOutputStream("/home/edward/Downloads/" + System.currentTimeMillis() + "bonzatest.xlsx");
                     wb.write(fos);
-                    fos.close();
+                    fos.close();*/
+                    if (jcontact.has("cursor")){
+                        cursor = jcontact.getString("cursor");
+                    }
                     //System.out.println(contact);
                 }
                 System.out.println("+++++++++++++++++++ cursor : " + cursor);

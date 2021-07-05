@@ -1,0 +1,20 @@
+<component name="libraryTable">
+  <library name="com.ecwid:maleorang:3.0-0.9.6" type="repository">
+    <properties maven-id="com.ecwid:maleorang:3.0-0.9.6" />
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/lib/maleorang-3.0-0.9.6.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/kotlin-stdlib-1.0.3.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/kotlin-runtime-1.0.3.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/kotlin-reflect-1.0.3.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/guava-19.0.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/gson-2.7.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/httpclient-4.5.2.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/httpcore-4.4.4.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/commons-logging-1.2.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/commons-codec-1.9.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/joda-time-2.9.4.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
