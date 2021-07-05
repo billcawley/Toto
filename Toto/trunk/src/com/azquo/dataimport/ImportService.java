@@ -1,11 +1,14 @@
 package com.azquo.dataimport;
 
+import com.agilecrm.api.APIManager;
 import com.azquo.*;
 import com.azquo.spreadsheet.transport.HeadingWithInterimLookup;
 import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.dataformat.csv.CsvMapper;
 import com.fasterxml.jackson.dataformat.csv.CsvParser;
 import com.fasterxml.jackson.dataformat.csv.CsvSchema;
+import com.sun.jersey.api.client.ClientResponse;
+import com.sun.jersey.core.util.MultivaluedMapImpl;
 import io.keikai.model.SSheet;
 import net.lingala.zip4j.core.ZipFile;
 import org.apache.log4j.Logger;
@@ -62,8 +65,11 @@ import io.keikai.api.Ranges;
 import io.keikai.api.model.CellData;
 
 import javax.servlet.http.HttpSession;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.MultivaluedMap;
 import javax.xml.parsers.*;
 import java.io.*;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.text.SimpleDateFormat;
@@ -71,6 +77,8 @@ import java.time.LocalDateTime;
 import java.util.*;
 
 import static org.apache.poi.ss.usermodel.CellType.*;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 /**
  * Copyright (C) 2016 Azquo Ltd.
@@ -90,6 +98,26 @@ import static org.apache.poi.ss.usermodel.CellType.*;
  * todo : switch all poi references to use the latest version
  */
 
+class JsonRule {
+    String sourceTerm;
+    String condition;
+    String target;
+    String format;
+    List<String> found;
+
+    JsonRule(String sourceTerm, String condition, String target, String format) {
+        this.sourceTerm = sourceTerm;
+        this.condition = condition;
+        this.target = target;
+        this.format = format;
+        found = new ArrayList<>();
+
+    }
+
+}
+
+
+
 public final class ImportService {
 
     public static final String dbPath = "/databases/";
@@ -102,6 +130,7 @@ public final class ImportService {
     public static final String IMPORTMODEL = "Import Model";
     public static final String SHEETNAME = "sheet name";
     public static final String FILEENCODING = "fileencoding";
+    public static final String JSONFIELDDIVIDER = "|";
 
 
     /* external entry point, moves the file to a temp directory in case pre processing is required
@@ -654,7 +683,7 @@ public final class ImportService {
         int endCol = areaReference.getLastCell().getCol();
         for (int rNo = startRow; rNo <= endRow; rNo++) {
             for (int cNo = startCol; cNo <= endCol; cNo++) {
-                String val = getCellValue(sheet,rNo, cNo).getString();
+                String val = getCellValue(sheet, rNo, cNo).getString();
                 csvW.write(val.replace("\n", "\\\\n").replace(",", "").replace("\t", "\\\\t"));//nullify the tabs and carriage returns.  Note that the double slash is deliberate so as not to confuse inserted \\n with existing \n
             }
             csvW.endRecord();
@@ -1675,7 +1704,7 @@ public final class ImportService {
         if (cellData != null) {
             String stringValue = "";
             // EFC adjusted logic on
-            if (!cellData.isBlank() && !(cellData.isFormula() && cellData.getResultType() == CellData.CellType.BLANK)){
+            if (!cellData.isBlank() && !(cellData.isFormula() && cellData.getResultType() == CellData.CellType.BLANK)) {
                 try {
                     stringValue = cellData.getFormatText();// I assume means formatted text
                     if (dataFormat.equals("h:mm") && stringValue.length() == 4) {
@@ -2010,6 +2039,12 @@ fr.close();
         Workbook ppBook = null;
         try {
             ppBook = new XSSFWorkbook(opcPackage);
+            org.apache.poi.ss.usermodel.Name jsonRegion = BookUtils.getName(ppBook, "az_JSONRules");
+            if (jsonRegion != null) {
+                preProcessJSON(loggedInUser, uploadedFile, ppBook);
+                opcPackage.revert();
+                return;
+            }
             List<String> ignoreSheetList = getList(ppBook, "az_IgnoreSheets");
             if (ignoreSheetList.size() > 0) {
                 String sheetName = uploadedFile.getFileNames().get(uploadedFile.getFileNames().size() - 1).toLowerCase(Locale.ROOT);
@@ -2022,16 +2057,16 @@ fr.close();
                 }
             }
             List<String> useSheetList = getList(ppBook, "az_UseSheets");
-             if (useSheetList.size() > 0) {
+            if (useSheetList.size() > 0) {
                 boolean hasUseSheets = false;
                 String sheetName = uploadedFile.getFileNames().get(uploadedFile.getFileNames().size() - 1).toLowerCase(Locale.ROOT);
                 for (String useSheet : useSheetList) {
                     boolean use = false;
-                    if (useSheet.length() > 0){
+                    if (useSheet.length() > 0) {
                         hasUseSheets = true;
                         if (sheetName.contains(useSheet)) {
-                           use = true;
-                           break;
+                            use = true;
+                            break;
                         }
                         //using 'contains' - maybe should check wildcards
                     }
@@ -2513,7 +2548,7 @@ fr.close();
         }
         Sheet hSheet = ppBook.getSheet(headingsLookupsRegion.getSheetName());
         AreaReference nameArea = new AreaReference(headingsLookupsRegion.getRefersToFormula(), null);
-        CellReference cellRef = nameArea.getFirstCell();
+        //CellReference cellRef = nameArea.getFirstCell();
         int firstCol = nameArea.getFirstCell().getCol();
         int lastRow = nameArea.getLastCell().getRow();
         for (int rowNo = nameArea.getFirstCell().getRow(); rowNo <= lastRow; rowNo++) {
@@ -2810,5 +2845,164 @@ fr.close();
         }
 
     }
+    public static void preProcessJSON(LoggedInUser loggedInUser, UploadedFile uploadedFile, Workbook ppBook) throws Exception {
+
+         org.apache.poi.ss.usermodel.Name jsonRulesRegion = BookUtils.getName(ppBook, "az_jsonrules");
+        AreaReference jsonRulesAreaRef = new AreaReference(jsonRulesRegion.getRefersToFormula(), null);
+        Sheet jSheet = ppBook.getSheet(jsonRulesRegion.getSheetName());
+
+        int firstCol = jsonRulesAreaRef.getFirstCell().getCol();
+        int lastRow = jsonRulesAreaRef.getLastCell().getRow();
+        List<JsonRule> jsonRules = new ArrayList<>();
+        Set<String> relevantPaths = new HashSet();
+        for (int rowNo = jsonRulesAreaRef.getFirstCell().getRow(); rowNo <= lastRow; rowNo++) {
+            Row row = jSheet.getRow(rowNo);
+            JsonRule jsonRule = new JsonRule(getCellValue(row.getCell(firstCol)), getCellValue(row.getCell(firstCol + 1)), getCellValue(row.getCell(firstCol + 2)), getCellValue(row.getCell(firstCol + 3)));
+            jsonRules.add(jsonRule);
+            List<String> jPath = Arrays.asList(jsonRule.sourceTerm.split(JSONFIELDDIVIDER));
+            relevantPaths.add(jPath.get(0));
+            String path = jPath.get(0);
+            for (int i = 0;i<jPath.size();i++){
+                path+=JSONFIELDDIVIDER + jPath.get(i);
+                relevantPaths.add(path);
+            }
+        }
+        try {
+            String outFile = uploadedFile.getPath() + " converted";
+            File writeFile = new File(outFile);
+            writeFile.delete(); // to avoid confusion
+            BufferedWriter fileWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(outFile), StandardCharsets.UTF_8));
+            for (JsonRule jsonRule:jsonRules){
+                fileWriter.write(jsonRule.target + "\t");
+            }
+            fileWriter.write("\n");
+            JSONArray jsonArray = readJSON(uploadedFile.getPath(),null,null);
+            for (Object o : jsonArray) {
+                JSONObject jsonObject = (JSONObject) o;
+                for (JsonRule jsonRule:jsonRules) {
+                    String[] jsonPath = jsonRule.sourceTerm.split("\\" + JSONFIELDDIVIDER);
+
+                    traverseJSON(jsonRule, jsonPath, jsonObject, 0);
+                }
+                int maxRecord = 0;
+                for (JsonRule jsonRule:jsonRules){
+                    if (jsonRule.found.size() > maxRecord){
+                        maxRecord = jsonRule.found.size();
+                    }
+                }
+
+                for (int outRecord = 0;outRecord < maxRecord; outRecord++){
+                    for (JsonRule jsonRule:jsonRules){
+                        String outvalue = null;
+                        if (outRecord < jsonRule.found.size()){
+                            outvalue = jsonRule.found.get(outRecord);
+                        }else{
+                            if (jsonRule.found.size() > 0){
+                                outvalue = jsonRule.found.get(jsonRule.found.size()-1);
+                            }
+                        }
+                        if (outvalue!=null && jsonRule.format.length() > 0) {
+                            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+                            try {
+                                if (jsonRule.format.equals("seconds")) {
+                                    outvalue = sdf.format(new Date(Long.parseLong(outvalue)));
+                                }else {
+                                    if (jsonRule.format.equals("milliseconds")) {
+                                        outvalue = sdf.format(new Date(Long.parseLong(outvalue)/1000));
+                                    }
+                                }
+
+                            }catch (Exception e2){
+                                //leave outvalue as it is
+                            }
+                         }
+                        if (outvalue!=null &&outvalue.length() > 0){
+                            fileWriter.write(outvalue);
+                        }
+                        fileWriter.write("\t");
+                    }
+                    fileWriter.write("\n");
+                }
+                for (JsonRule jsonRule:jsonRules) {
+                    jsonRule.found = new ArrayList<>();
+                }
+            }
+
+            fileWriter.flush();
+            fileWriter.close();
+            uploadedFile.setPath(outFile);
+
+
+        } catch (Exception e) {
+            //todo - report exceptions
+
+        }
+    }
+
+
+    private static void traverseJSON(JsonRule jsonRule,String[] jsonPath,JSONObject jsonNext, int level) {
+        if (level < jsonPath.length - 1) {
+            JSONArray jsonArray1 = new JSONArray();
+            try {
+                JSONObject jsonNext1 = jsonNext.getJSONObject(jsonPath[level]);
+                jsonArray1.put(jsonNext1);
+            } catch (Exception e) {
+                jsonArray1 = jsonNext.getJSONArray(jsonPath[level]);
+            }
+            level++;
+            if (jsonArray1 != null) {
+                for (Object o1 : jsonArray1) {
+                    jsonNext = (JSONObject) o1;
+                    traverseJSON(jsonRule, jsonPath, jsonNext, level);
+                }
+            }
+            return;
+        }
+        String found = null;
+        try {
+            found = jsonNext.get(jsonPath[level]).toString();
+        } catch (Exception e) {
+        }
+        if(found==null){
+            return;
+        }
+        if (jsonRule.condition.length() > 0) {
+            if (jsonRule.condition.toLowerCase(Locale.ROOT).startsWith("contains")) {
+                String toFind = jsonRule.condition.substring(8).replace("\"", "").trim();
+                if (!found.contains(toFind)) {
+                    found = null;
+                }
+            }
+            if (jsonRule.condition.toLowerCase(Locale.ROOT).startsWith("where")) {
+                String condition = jsonRule.condition.substring(6).trim();
+                int equalPos = condition.indexOf("=");
+
+                String compFound = jsonNext.get(condition.substring(0, equalPos).trim()).toString();
+                if (compFound == null || !compFound.equalsIgnoreCase(condition.substring(equalPos + 1).trim())) {
+                    found = null;
+                }
+            }
+        }
+        if (found != null) {
+            jsonRule.found.add(found);
+        }
+    }
+
+
+
+
+    public static JSONArray readJSON(String filePath, String page_size, String cursor)
+            throws Exception {
+        List<String> data = Files.readAllLines(Paths.get(filePath), Charset.defaultCharset());
+        JSONArray jsonArray = null;
+        try {
+            jsonArray = new JSONArray(data.get(0));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return jsonArray;
+    }
+
+
 
 }
