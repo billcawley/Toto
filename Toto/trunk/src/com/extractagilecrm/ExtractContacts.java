@@ -97,7 +97,7 @@ public class ExtractContacts {
             while (cursor != null){
                 // List of tags to add it to contact
                 // --------------------- Get contacts -----------------------------
-
+// testing??
                 JSONArray contacts = getDeals("250", cursor);
                 FileUtils.writeStringToFile(new File("/home/edward/Downloads/" + System.currentTimeMillis() + "deals.json"), contacts.toString());
                 cursor = null;
