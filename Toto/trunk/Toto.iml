@@ -61,6 +61,6 @@
     <orderEntry type="library" name="org.apache.xmlbeans:xmlbeans:4.0.0" level="project" />
     <orderEntry type="module" module-name="serilogj" />
     <orderEntry type="library" name="agilecrm" level="project" />
-    <orderEntry type="library" name="com.github.wnameless:json-flattener:0.7.1" level="project" />
+    <orderEntry type="library" name="com.ecwid:maleorang:3.0-0.9.6" level="project" />
   </component>
 </module>
