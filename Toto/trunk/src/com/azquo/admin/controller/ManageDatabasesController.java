@@ -172,7 +172,12 @@ public class ManageDatabasesController {
             StringBuilder error = new StringBuilder();
             // EFC - I can't see a way around this one currently. I want to use @SuppressWarnings very sparingly
             @SuppressWarnings("unchecked")
-            List<UploadedFile> importResult = (List<UploadedFile>) request.getSession().getAttribute(ManageDatabasesController.IMPORTRESULT);
+            List<UploadedFile> importResult = null;
+            try{
+                importResult = (List<UploadedFile>) request.getSession().getAttribute(ManageDatabasesController.IMPORTRESULT);
+            }catch(Exception e){
+                //if the error is a singleton, it causes a problem - ignore it at the moment.
+            }
             if (importResult != null) {
                 error.append(formatUploadedFiles(importResult, -1, false, null));
                 request.getSession().removeAttribute(ManageDatabasesController.IMPORTRESULT);
