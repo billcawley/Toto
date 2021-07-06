@@ -151,10 +151,17 @@ class ImportCellWithHeading {
                     languages = StringLiterals.DEFAULT_DISPLAY_NAME_AS_LIST;
                 }
                 // note I'm not going to check parentNames are not empty here, if someone put existing without specifying child of then I think it's fair to say the line isn't valid
-                for (Name parent : immutableImportHeading.parentNames) { // try to find any names from anywhere
-                    if (!azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNamesForAttributeNamesAndParent(languages, this.lineValue, parent).isEmpty()) { // NOT empty, we found one!
+                if (immutableImportHeading.parentNames.size()> 0) {
+                    for (Name parent : immutableImportHeading.parentNames) { // try to find any names from anywhere
+                        if (!azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNamesForAttributeNamesAndParent(languages, this.lineValue, parent).isEmpty()) { // NOT empty, we found one!
+                            cellOk = true;
+                            break; // no point continuing, we found one
+                        }
+                    }
+                }else{
+                    //if no parent, look at the language given
+                    if (azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNamesForAttribute(languages.get(0),this.lineValue).size()> 0){
                         cellOk = true;
-                        break; // no point continuing, we found one
                     }
                 }
                 if (!cellOk) {
