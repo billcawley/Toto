@@ -130,7 +130,9 @@ public class JstreeController {
                         if (itemsChosen == null) itemsChosen = "";
                         if (itemsChosen.lastIndexOf(",") > 0){
                             //not sure why itemsChosen has become a list, but removing the list!
-                            itemsChosen = itemsChosen.substring(itemsChosen.lastIndexOf(",") + 1).trim();
+                            if (!itemsChosen.startsWith("edit")){
+                                itemsChosen = itemsChosen.substring(itemsChosen.lastIndexOf(",") + 1).trim();
+                            }
                         }
                         model.addAttribute("parents", parents);
                         model.addAttribute("rootid", rootId);
