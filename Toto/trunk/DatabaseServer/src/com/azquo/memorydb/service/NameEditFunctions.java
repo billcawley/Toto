@@ -30,6 +30,12 @@ class NameEditFunctions {
             cleanRoot(azquoMemoryDBConnection);
             return Collections.emptyList();
         }
+        if (setFormula.startsWith("zapattributes")) {
+            zapAttributes(azquoMemoryDBConnection, setFormula.substring(14).trim());
+            return Collections.emptyList();
+        }
+
+
 // todo, finish and make it work
 
         if (setFormula.startsWith("orphan")) {
@@ -283,13 +289,26 @@ class NameEditFunctions {
         List<Name> topNames = azquoMemoryDBConnection.getAzquoMemoryDBIndex().findTopNames(StringLiterals.DEFAULT_DISPLAY_NAME); // should be a big list
         boolean deleted = false;
         for (Name topName : topNames){
-            if (!topName.hasChildren() && !topName.hasValues()){
+            if ((!topName.hasChildren() ||topName.getChildren().size()==1) && !topName.hasValues()){
                 topName.delete(azquoMemoryDBConnection);
                 deleted = true;
             }
         }
         if (deleted){
             new Thread(azquoMemoryDBConnection::persist).start();
+        }
+    }
+
+    private static void zapAttributes(AzquoMemoryDBConnection azquoMemoryDBConnection, String attList)throws Exception{
+        String[] attributes = attList.split("\\|");
+        for(String attribute:attributes){
+            Set<String> attVals = azquoMemoryDBConnection.getAzquoMemoryDBIndex().getValuesForAttribute(attribute);
+            for (String attVal:attVals){
+                Set<Name> names = azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNamesForAttribute(attribute,attVal);
+                for (Name name:names){
+                    name.setAttributeWillBePersisted(attribute,"", azquoMemoryDBConnection);
+                }
+            }
         }
     }
 
