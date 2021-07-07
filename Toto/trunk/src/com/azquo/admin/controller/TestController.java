@@ -91,7 +91,7 @@ public class TestController {
                 float x = textPosition.getX();
                 float y = textPosition.getY();
                 String sku = text.substring("Product Code:".length()).trim();
-                if (sku.contains(" ")){
+                if (sku.contains(" ")) {
                     sku = sku.substring(0, sku.indexOf(" "));
                 }
                 skuCoordinates.put(sku, new XYPair(x, y));
@@ -100,35 +100,35 @@ public class TestController {
     }
 
 
-    void classifySKUPagePositions(Map<String, XYPair> skuCoordinates, Map<String, String> classifications, Map<String, Integer> pagePercentages){
+    void classifySKUPagePositions(Map<String, XYPair> skuCoordinates, Map<String, String> classifications, Map<String, Integer> pagePercentages) {
         // todo - add % of page taken up
         skuCoordinates = new HashMap<>(skuCoordinates); // copy as the combining will change the map
         // ok if two skus are within 15% of each other then we combine them
 
         boolean combined = false;
         boolean runCombineCheck = true;
-        while (runCombineCheck){
+        while (runCombineCheck) {
             String combine1 = null;
             String combine2 = null;
-            for (String sku1 : skuCoordinates.keySet()){
-                for (String sku2 : skuCoordinates.keySet()){
+            for (String sku1 : skuCoordinates.keySet()) {
+                for (String sku2 : skuCoordinates.keySet()) {
                     XYPair coordinates1 = skuCoordinates.get(sku1);
                     XYPair coordinates2 = skuCoordinates.get(sku2);
                     if (coordinates1 != coordinates2 &&
                             (Math.abs(coordinates1.getX() - coordinates2.getX()) + Math.abs(coordinates1.getY() - coordinates2.getY()) < .15)
-                    ){ // then combine them
+                    ) { // then combine them
                         combine1 = sku1;
                         combine2 = sku2;
                         break;
                     }
                 }
-                if (combine1 != null){
+                if (combine1 != null) {
                     break;
                 }
             }
-            if (combine1 != null){
+            if (combine1 != null) {
                 combined = true;
-                skuCoordinates.put(combine1 + "&&" + combine2, new XYPair((skuCoordinates.get(combine1).getX() + skuCoordinates.get(combine2).getX()) / 2,  (skuCoordinates.get(combine1).getY() + skuCoordinates.get(combine2).getY()) / 2));
+                skuCoordinates.put(combine1 + "&&" + combine2, new XYPair((skuCoordinates.get(combine1).getX() + skuCoordinates.get(combine2).getX()) / 2, (skuCoordinates.get(combine1).getY() + skuCoordinates.get(combine2).getY()) / 2));
                 skuCoordinates.remove(combine1);
                 skuCoordinates.remove(combine2);
             } else {
@@ -137,11 +137,11 @@ public class TestController {
         }
 
 
-        if (skuCoordinates.size() == 1){
+        if (skuCoordinates.size() == 1) {
             classifications.put(skuCoordinates.keySet().iterator().next(), "FullPage");
             pagePercentages.put(skuCoordinates.keySet().iterator().next(), 100);
         }
-        if (skuCoordinates.size() == 2){
+        if (skuCoordinates.size() == 2) {
             Iterator<String> iterator = skuCoordinates.keySet().iterator();
             String sku1 = iterator.next();
             String sku2 = iterator.next();
@@ -151,128 +151,128 @@ public class TestController {
             int sku2X = Math.round(skuCoordinates.get(sku2).getX() * 100);
             int sku2Y = Math.round(skuCoordinates.get(sku2).getY() * 100);
 
-            if (sku1X == sku2X){
-                if (sku1Y < 50 && sku2Y > 50){
+            if (sku1X == sku2X) {
+                if (sku1Y < 50 && sku2Y > 50) {
                     classifications.put(sku1, "Top");
                     classifications.put(sku2, "Bottom");
                 }
-                if (sku2Y < 50 && sku1Y > 50){
+                if (sku2Y < 50 && sku1Y > 50) {
                     classifications.put(sku2, "Top");
                     classifications.put(sku1, "Bottom");
                 }
             }
-            if (sku1Y == sku2Y){
-                if (sku1X < 50 && sku2X > 50){
+            if (sku1Y == sku2Y) {
+                if (sku1X < 50 && sku2X > 50) {
                     classifications.put(sku1, "Left");
                     classifications.put(sku2, "Right");
                 }
-                if (sku2X < 50 && sku1X > 50){
+                if (sku2X < 50 && sku1X > 50) {
                     classifications.put(sku2, "Left");
                     classifications.put(sku1, "Right");
                 }
             }
-            if (!classifications.isEmpty()){
+            if (!classifications.isEmpty()) {
                 pagePercentages.put(sku1, 50);
                 pagePercentages.put(sku2, 50);
             }
         }
 
         // .45 based on careco thresholds
-        if (skuCoordinates.size() == 4 || skuCoordinates.size() == 3){
+        if (skuCoordinates.size() == 4 || skuCoordinates.size() == 3) {
             // check for a basic split 4 ways
-            for (String sku : skuCoordinates.keySet()){
+            for (String sku : skuCoordinates.keySet()) {
                 pagePercentages.put(sku, 25);
-                if (skuCoordinates.get(sku).getX() > .45){ // right
-                    if (skuCoordinates.get(sku).getY() > .45){ // bottom
+                if (skuCoordinates.get(sku).getX() > .45) { // right
+                    if (skuCoordinates.get(sku).getY() > .45) { // bottom
                         classifications.put(sku, "BottomRight");
                     } else {
                         classifications.put(sku, "TopRight");
                     }
                 } else { // left
-                    if (skuCoordinates.get(sku).getY() > .45){ // bottom
+                    if (skuCoordinates.get(sku).getY() > .45) { // bottom
                         classifications.put(sku, "BottomLeft");
                     } else {
                         classifications.put(sku, "TopLeft");
                     }
                 }
             }
-            if (new HashSet<>(classifications.values()).size() != skuCoordinates.size()){ // then there were duplicates e.g. two top lefts, no good for this methodology, clear the set
+            if (new HashSet<>(classifications.values()).size() != skuCoordinates.size()) { // then there were duplicates e.g. two top lefts, no good for this methodology, clear the set
                 classifications.clear();
                 pagePercentages.clear();
-            } else if (skuCoordinates.size() == 3){ // then one is a half, just a top or bottom, need to find which one
+            } else if (skuCoordinates.size() == 3) { // then one is a half, just a top or bottom, need to find which one
                 int bottoms = 0;
                 int tops = 0;
-                for (String classification : classifications.values()){
-                    if (classification.contains("Top")){
+                for (String classification : classifications.values()) {
+                    if (classification.contains("Top")) {
                         tops++;
                     }
-                    if (classification.contains("Bottom")){
+                    if (classification.contains("Bottom")) {
                         bottoms++;
                     }
                 }
                 // we assume that half pages are horizontal
-                for (String sku : classifications.keySet()){
-                    if (classifications.get(sku).contains("Top") && tops == 1){
+                for (String sku : classifications.keySet()) {
+                    if (classifications.get(sku).contains("Top") && tops == 1) {
                         classifications.put(sku, "Top");
                         pagePercentages.put(sku, 50);
                     }
-                    if (classifications.get(sku).contains("Bottom")&& bottoms == 1){
+                    if (classifications.get(sku).contains("Bottom") && bottoms == 1) {
                         classifications.put(sku, "Bottom");
                         pagePercentages.put(sku, 50);
                     }
                 }
             }
         }
-        if (classifications.isEmpty()){ // try for a three row page, making a judgement call of .35 - .65 for middle
-            for (String sku : skuCoordinates.keySet()){
+        if (classifications.isEmpty()) { // try for a three row page, making a judgement call of .35 - .65 for middle
+            for (String sku : skuCoordinates.keySet()) {
                 pagePercentages.put(sku, 17);
-                if (skuCoordinates.get(sku).getX() > .45){ // right
-                    if (skuCoordinates.get(sku).getY() > .65){ // bottom
+                if (skuCoordinates.get(sku).getX() > .45) { // right
+                    if (skuCoordinates.get(sku).getY() > .65) { // bottom
                         classifications.put(sku, "BottomRight");
-                    } else if (skuCoordinates.get(sku).getY() > .35){ // middle
+                    } else if (skuCoordinates.get(sku).getY() > .35) { // middle
                         classifications.put(sku, "MiddleRight");
                     } else {// top
                         classifications.put(sku, "TopRight");
                     }
                 } else { // left
-                    if (skuCoordinates.get(sku).getY() > .65){ // bottom
+                    if (skuCoordinates.get(sku).getY() > .65) { // bottom
                         classifications.put(sku, "BottomLeft");
-                    } else if (skuCoordinates.get(sku).getY() > .35){ // middle
+                    } else if (skuCoordinates.get(sku).getY() > .35) { // middle
                         classifications.put(sku, "MiddleLeft");
                     } else {// top
                         classifications.put(sku, "TopLeft");
                     }
                 }
             }
-            if (new HashSet<>(classifications.values()).size() != skuCoordinates.size()){ // then there were duplicates e.g. two top lefts, no good for this methodology, clear the set
+            if (new HashSet<>(classifications.values()).size() != skuCoordinates.size()) { // then there were duplicates e.g. two top lefts, no good for this methodology, clear the set
                 classifications.clear();
                 pagePercentages.clear();
-            } else if (skuCoordinates.size() < 6){ // at least one is spanning a row
+            } else if (skuCoordinates.size() < 6) { // at least one is spanning a row
                 int bottoms = 0;
                 int tops = 0;
                 int middles = 0;
-                for (String classification : classifications.values()){
-                    if (classification.contains("Top")){
+                for (String classification : classifications.values()) {
+                    if (classification.contains("Top")) {
                         tops++;
                     }
-                    if (classification.contains("Middle")){
+                    if (classification.contains("Middle")) {
                         middles++;
                     }
-                    if (classification.contains("Bottom")){
+                    if (classification.contains("Bottom")) {
                         bottoms++;
                     }
                 }
                 // we assume that half pages are horizontal
-                for (String sku : classifications.keySet()){
-                    if (classifications.get(sku).contains("Top") && tops == 1){
+                for (String sku : classifications.keySet()) {
+                    if (classifications.get(sku).contains("Top") && tops == 1) {
                         classifications.put(sku, "Top");
                         pagePercentages.put(sku, 33);
                     }
-                    if (classifications.get(sku).contains("Middle")&& middles == 1){
+                    if (classifications.get(sku).contains("Middle") && middles == 1) {
                         classifications.put(sku, "Middle");
                         pagePercentages.put(sku, 33);
                     }
-                    if (classifications.get(sku).contains("Bottom")&& bottoms == 1){
+                    if (classifications.get(sku).contains("Bottom") && bottoms == 1) {
                         classifications.put(sku, "Bottom");
                         pagePercentages.put(sku, 33);
                     }
@@ -280,68 +280,68 @@ public class TestController {
             }
         }
         // need to do 8 and 10, there will be some copy pasting. Probably will be able to factor later but it will involve some thinking
-        if (classifications.isEmpty()){
-            for (String sku : skuCoordinates.keySet()){
+        if (classifications.isEmpty()) {
+            for (String sku : skuCoordinates.keySet()) {
                 pagePercentages.put(sku, 17);
-                if (skuCoordinates.get(sku).getX() > .45){ // right
-                    if (skuCoordinates.get(sku).getY() > .70){ // bottom
+                if (skuCoordinates.get(sku).getX() > .45) { // right
+                    if (skuCoordinates.get(sku).getY() > .70) { // bottom
                         classifications.put(sku, "BottomRight");
-                    } else if (skuCoordinates.get(sku).getY() > .50){
+                    } else if (skuCoordinates.get(sku).getY() > .50) {
                         classifications.put(sku, "LowerRight");
-                    } else if (skuCoordinates.get(sku).getY() > .30){
+                    } else if (skuCoordinates.get(sku).getY() > .30) {
                         classifications.put(sku, "UpperRight");
                     } else {// top
                         classifications.put(sku, "TopRight");
                     }
                 } else { // left
-                    if (skuCoordinates.get(sku).getY() > .70){ // bottom
+                    if (skuCoordinates.get(sku).getY() > .70) { // bottom
                         classifications.put(sku, "BottomLeft");
-                    } else if (skuCoordinates.get(sku).getY() > .50){ // bottom middle
+                    } else if (skuCoordinates.get(sku).getY() > .50) { // bottom middle
                         classifications.put(sku, "LowerLeft");
-                    } else if (skuCoordinates.get(sku).getY() > .30){ // top middle
+                    } else if (skuCoordinates.get(sku).getY() > .30) { // top middle
                         classifications.put(sku, "UpperLeft");
                     } else {// top
                         classifications.put(sku, "TopLeft");
                     }
                 }
             }
-            if (new HashSet<>(classifications.values()).size() != skuCoordinates.size()){ // then there were duplicates e.g. two top lefts, no good for this methodology, clear the set
+            if (new HashSet<>(classifications.values()).size() != skuCoordinates.size()) { // then there were duplicates e.g. two top lefts, no good for this methodology, clear the set
                 classifications.clear();
                 pagePercentages.clear();
-            } else if (skuCoordinates.size() < 6){ // at least one is spanning a row
+            } else if (skuCoordinates.size() < 6) { // at least one is spanning a row
                 int bottoms = 0;
                 int lowers = 0;
                 int uppers = 0;
                 int tops = 0;
-                for (String classification : classifications.values()){
-                    if (classification.contains("Top")){
+                for (String classification : classifications.values()) {
+                    if (classification.contains("Top")) {
                         tops++;
                     }
-                    if (classification.contains("Lower")){
+                    if (classification.contains("Lower")) {
                         lowers++;
                     }
-                    if (classification.contains("Upper")){
+                    if (classification.contains("Upper")) {
                         uppers++;
                     }
-                    if (classification.contains("Bottom")){
+                    if (classification.contains("Bottom")) {
                         bottoms++;
                     }
                 }
                 // we assume that half pages are horizontal
-                for (String sku : classifications.keySet()){
-                    if (classifications.get(sku).contains("Top") && tops == 1){
+                for (String sku : classifications.keySet()) {
+                    if (classifications.get(sku).contains("Top") && tops == 1) {
                         classifications.put(sku, "Top");
                         pagePercentages.put(sku, 20);
                     }
-                    if (classifications.get(sku).contains("Upper") && uppers == 1){
+                    if (classifications.get(sku).contains("Upper") && uppers == 1) {
                         classifications.put(sku, "Upper");
                         pagePercentages.put(sku, 20);
                     }
-                    if (classifications.get(sku).contains("Lower") && lowers == 1){
+                    if (classifications.get(sku).contains("Lower") && lowers == 1) {
                         classifications.put(sku, "Lower");
                         pagePercentages.put(sku, 20);
                     }
-                    if (classifications.get(sku).contains("Bottom") && bottoms == 1){
+                    if (classifications.get(sku).contains("Bottom") && bottoms == 1) {
                         classifications.put(sku, "Bottom");
                         pagePercentages.put(sku, 20);
                     }
@@ -350,10 +350,10 @@ public class TestController {
         }
 
 
-        while (combined){
+        while (combined) {
             boolean removed = false;
-            for (String sku : new ArrayList<>(classifications.keySet())){
-                if (sku.contains("&&")){
+            for (String sku : new ArrayList<>(classifications.keySet())) {
+                if (sku.contains("&&")) {
                     classifications.put(sku.substring(0, sku.indexOf("&&")), (classifications.get(sku) + "Shared").replace("SharedShared", "Shared"));
                     classifications.put(sku.substring(sku.indexOf("&&") + 2), (classifications.get(sku) + "Shared").replace("SharedShared", "Shared"));
                     classifications.keySet().remove(sku);
@@ -371,19 +371,18 @@ public class TestController {
     @RequestMapping
     @ResponseBody
     public String handleRequest(
-             @RequestParam(value = "something", required = false) String something
+            @RequestParam(value = "something", required = false) String something
     ) {
-        if ("mailchimp".equals(something)){
+        if ("mailchimp".equals(something)) {
             try {
+// azquo                ExtractMailchimp.extractData("516f98d1f28e8cc97a2b8da9025d3b78-us1");
                 ExtractMailchimp.extractData("516f98d1f28e8cc97a2b8da9025d3b78-us1");
-            } catch (IOException e) {
-                e.printStackTrace();
-            } catch (MailchimpException e) {
+            } catch (IOException | MailchimpException e) {
                 e.printStackTrace();
             }
         }
 
-        if ("agilecrm".equals(something)){
+        if ("agilecrm".equals(something)) {
             ExtractContacts.extract();
         }
 
@@ -397,7 +396,7 @@ public class TestController {
             toprow.createCell(2).setCellValue("Location");
             toprow.createCell(3).setCellValue("Page %");*/
 
-            Map<Integer, Map<String, XYPair>> skuCoordinates = new HashMap<>() ;
+            Map<Integer, Map<String, XYPair>> skuCoordinates = new HashMap<>();
 
             PDDocument pdDoc = null;
             PDFTextStripper pdfStripper;
@@ -416,15 +415,15 @@ public class TestController {
                 List<PDPage> pages = pdDoc.getDocumentCatalog().getAllPages();
                 int pageNo = 1;
                 for (PDPage page : pages) {
-                    Map<String, XYPair> skuCoordinatesForPage = new HashMap<>() ;
+                    Map<String, XYPair> skuCoordinatesForPage = new HashMap<>();
                     PrintTextLocator locator = new PrintTextLocator(skuCoordinatesForPage);
                     locator.setStartPage(pageNo);
                     locator.setEndPage(pageNo);
                     float height = page.getMediaBox().getHeight();
                     float width = page.getMediaBox().getWidth();
                     locator.getText(pdDoc);
-                    Map<String, XYPair> percentageSkuCoordinatesForPage = new HashMap<>() ;
-                    for (String sku : skuCoordinatesForPage.keySet()){
+                    Map<String, XYPair> percentageSkuCoordinatesForPage = new HashMap<>();
+                    for (String sku : skuCoordinatesForPage.keySet()) {
                         XYPair xyPair = skuCoordinatesForPage.get(sku);
                         percentageSkuCoordinatesForPage.put(sku, new XYPair(xyPair.getX() / width, xyPair.getY() / height));
                     }
@@ -432,13 +431,13 @@ public class TestController {
                     pageNo++;
                 }
                 NumberFormat percentInstance = NumberFormat.getPercentInstance();
-                for (Integer page : skuCoordinates.keySet()){
+                for (Integer page : skuCoordinates.keySet()) {
 
                     System.out.println("page : " + page);
                     Map<String, String> skusclassifications = new HashMap<>();
                     Map<String, Integer> skuspercentages = new HashMap<>();
                     classifySKUPagePositions(skuCoordinates.get(page), skusclassifications, skuspercentages);
-                    for (String sku : skuCoordinates.get(page).keySet()){
+                    for (String sku : skuCoordinates.get(page).keySet()) {
 /*                        rownum++;
                         XSSFRow row = user_activity.createRow(rownum);
                         row.createCell(0).setCellValue(page);
@@ -816,7 +815,7 @@ customer - address enough?
                 writeCSV("/home/edward/Downloads/orderlines.tsv", new ArrayList<>(orderlinesheadings), orderlinesmaplist);
                 writeCSV("/home/edward/Downloads/products.tsv", new ArrayList<>(productheadings), productsmaplist);
 
-  //              return "done";
+                //              return "done";
 
                 /*
 

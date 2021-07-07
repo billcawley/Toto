@@ -6,7 +6,9 @@ import com.ecwid.maleorang.MailchimpMethod;
 import com.ecwid.maleorang.MailchimpObject;
 import com.ecwid.maleorang.annotation.*;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.io.FileUtils;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Map;
@@ -134,11 +136,14 @@ public class ExtractMailchimp {
             CampaignsResponse response = client.execute(new CampaignsGet());
             for (Map<String, Object> campaign : response.campaigns){
                 System.out.print("Campaigns id : " + campaign.get("id"));
-                //ListResponse response1 = client.execute(new CampaignGet((String) campaign.get("id")));
-//                ListResponse response1 = client.execute(new OpenDetailsGet((String) campaign.get("id")));
-//                ListResponse response1 = client.execute(new ClickDetailsGet((String) campaign.get("id")));
-                ListResponse response1 = client.execute(new UnsubscribedGet((String) campaign.get("id")));
-                System.out.print("response 1 : " + response1);
+                ListResponse response1 = client.execute(new CampaignGet((String) campaign.get("id")));
+                FileUtils.writeStringToFile(new File("/home/edward/Downloads/" + System.currentTimeMillis() + "campaign.json"), response1.toJson());
+                ListResponse response2 = client.execute(new OpenDetailsGet((String) campaign.get("id")));
+                FileUtils.writeStringToFile(new File("/home/edward/Downloads/" + System.currentTimeMillis() + "opens.json"), response2.toJson());
+                ListResponse response3 = client.execute(new ClickDetailsGet((String) campaign.get("id")));
+                FileUtils.writeStringToFile(new File("/home/edward/Downloads/" + System.currentTimeMillis() + "clicks.json"), response3.toJson());
+                ListResponse response4 = client.execute(new UnsubscribedGet((String) campaign.get("id")));
+                FileUtils.writeStringToFile(new File("/home/edward/Downloads/" + System.currentTimeMillis() + "unsubscribed.json"), response4.toJson());
             }
            //System.err.println("response" + response.lists);
 
