@@ -560,21 +560,24 @@ public final class StandardName extends Name {
 
     private static final AtomicInteger finaAllChildrenCount = new AtomicInteger(0);
 
-    void findAllChildren(final Set<Name> allChildren) {
+    void findAllChildren(final Set<Name> allChildren, int level) {
+        if (level > 100){
+            System.out.println("Find all children stopping at level 100 " + this.getDefaultDisplayName());
+        }
         finaAllChildrenCount.incrementAndGet();
         // similar to optimisation for get all parents
         // and we'll know if we look at the log. If this happened a local reference to the array should sort it, save the pointer garbage for the mo
         if (childrenAsSet != null) {
             for (Name child : childrenAsSet) { // as mentioned above I'll allow this kind of access in here
                 if (allChildren.add(child)) {
-                    child.findAllChildren(allChildren);
+                    child.findAllChildren(allChildren, level + 1);
                 }
             }
         } else if (children.length > 0) {
             Name[] childrenRefCopy = children; // in case it gets switched out half way through
             for (Name child : childrenRefCopy) {
                 if (allChildren.add(child)) {
-                    child.findAllChildren(allChildren);
+                    child.findAllChildren(allChildren, level + 1);
                 }
             }
         }
@@ -594,7 +597,7 @@ public final class StandardName extends Name {
                 localReference = findAllChildrenCache; // check again after synchronized, it may have been sorted in the mean time
                 if (localReference == null) {
                     localReference = HashObjSets.newUpdatableSet();
-                    findAllChildren(localReference);
+                    findAllChildren(localReference, 0);
                     if (localReference.isEmpty()) {
                         findAllChildrenCache = Collections.emptySet(); // stop memory overhead, ooh I feel all clever!
                     } else {

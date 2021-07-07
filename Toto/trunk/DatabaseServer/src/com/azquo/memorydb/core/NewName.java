@@ -549,14 +549,17 @@ public final class NewName extends Name {
 
     private static AtomicInteger finaAllChildrenCount = new AtomicInteger(0);
 
-    public void findAllChildren(final Set<Name> allChildren) {
+    public void findAllChildren(final Set<Name> allChildren, int level) {
         finaAllChildrenCount.incrementAndGet();
+        if (level > 100){
+            System.out.println("Find all children stopping at level 100 " + this.getDefaultDisplayName());
+        }
         // similar to optimisation for get all parents
         if (hasChildren()){
             if (nameData.directSetChildren() != null) {
                 for (Name child : nameData.directSetChildren()) { // as mentioned above I'll allow this kind of access in here
                     if (allChildren.add(child)) {
-                        child.findAllChildren(allChildren);
+                        child.findAllChildren(allChildren, level + 1);
                     }
                 }
                 // in theory could get switched but no exception just no children briefly. A concern? Would be sorted by getting namesref above. Consider . . .
@@ -565,7 +568,7 @@ public final class NewName extends Name {
                 if (namesRef != null && namesRef.length > 0) {
                     for (Name child : namesRef) {
                         if (allChildren.add(child)) {
-                            child.findAllChildren(allChildren);
+                            child.findAllChildren(allChildren, level + 1);
                         }
                     }
                 }
@@ -579,7 +582,7 @@ public final class NewName extends Name {
         finaAllChildren2Count.incrementAndGet();
         return Collections.unmodifiableSet(getAzquoMemoryDB().getFindAllChildrenCacheMap().computeIfAbsent(this, name -> {
             Set<Name> toReturn = HashObjSets.newUpdatableSet();
-            findAllChildren(toReturn);
+            findAllChildren(toReturn, 0);
             return toReturn.isEmpty() ? Collections.emptySet() : toReturn;
         }));
     }
