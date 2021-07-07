@@ -1,4 +1,10 @@
+07-07-21
 
+stop stack overflow where the children levels go into thousands
+
+Agile CRM and mailchimp integration work
+
+added 'edit:zapattributes <pipe separated attribute list>'
 
 24-06-21
 
