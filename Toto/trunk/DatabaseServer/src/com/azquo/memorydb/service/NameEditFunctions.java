@@ -46,15 +46,25 @@ class NameEditFunctions {
                 String parent = setFormula.substring(setFormula.indexOf(" from ") + " from ".length()).trim();
                 Collection<Name> children = NameQueryParser.parseQuery(azquoMemoryDBConnection,child);
                 Collection<Name> parents = NameQueryParser.parseQuery(azquoMemoryDBConnection, parent);
+                int count = 0;
+                long allCount = 0;
+                System.out.println("starting orphaning - child has " + children.size() + " elements");
                 for (Name parentName:parents){
                     for (Name childName:parentName.getChildren()){
                         if (children.contains(childName)){
+                            System.out.println(".." + allCount + " names - now removing " + childName.getDefaultDisplayName() + " from " + parentName.getDefaultDisplayName());
                             //note only removing one child at a time - for loop may be corrupted
-                            parentName.removeFromChildrenWillBePersisted(childName, azquoMemoryDBConnection);
+                            try{
+                                parentName.removeFromChildrenWillBePersisted(childName, azquoMemoryDBConnection);
+                             }catch(Exception e){
+                                System.out.println("Problem - failed to remove " + childName.getDefaultDisplayName() + " from " + parentName.getDefaultDisplayName());
+
+                            }
                             break;
                         }
                     }
                 }
+                System.out.println("finished orphaning");
 
 
             }
