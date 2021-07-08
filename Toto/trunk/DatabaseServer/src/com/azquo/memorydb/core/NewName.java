@@ -553,6 +553,7 @@ public final class NewName extends Name {
         finaAllChildrenCount.incrementAndGet();
         if (level > 100){
             System.out.println("Find all children stopping at level 100 " + this.getDefaultDisplayName());
+            return;
         }
         // similar to optimisation for get all parents
         if (hasChildren()){

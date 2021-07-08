@@ -563,6 +563,7 @@ public final class StandardName extends Name {
     void findAllChildren(final Set<Name> allChildren, int level) {
         if (level > 100){
             System.out.println("Find all children stopping at level 100 " + this.getDefaultDisplayName());
+            return;
         }
         finaAllChildrenCount.incrementAndGet();
         // similar to optimisation for get all parents

@@ -11,6 +11,7 @@ import org.apache.commons.io.FileUtils;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 public class ExtractMailchimp {
@@ -72,14 +73,40 @@ public class ExtractMailchimp {
     }
 
     @Method(httpMethod = HttpMethod.GET, version = APIVersion.v3_0, path = "/lists/{list_id}/members")
-    private static class ListGet extends MailchimpMethod<ListResponse> {
+    private static class MembersGet extends MailchimpMethod<ListResponse> {
         @PathParam
         public final String list_id;
 
-        private ListGet(String list_id) {
+        private MembersGet(String list_id) {
             this.list_id = list_id;
         }
     }
+
+    @Method(httpMethod = HttpMethod.GET, version = APIVersion.v3_0, path = "/lists/{list_id}/activity")
+    private static class ActivityGet extends MailchimpMethod<ListResponse> {
+        @PathParam
+        public final String list_id;
+
+        private ActivityGet(String list_id) {
+            this.list_id = list_id;
+        }
+    }
+
+    @Method(httpMethod = HttpMethod.GET, version = APIVersion.v3_0, path = "/lists/{list_id}/members/{subscriber_hash}/activity-feed")
+    private static class MemberActivityGet extends MailchimpMethod<ListResponse> {
+        @PathParam
+        public final String list_id;
+
+        @PathParam
+        public final String subscriber_hash;
+
+        private MemberActivityGet(String list_id, String subscriber_hash) {
+            this.list_id = list_id;
+            this.subscriber_hash = subscriber_hash;
+        }
+    }
+
+
 
     @Method(httpMethod = HttpMethod.GET, version = APIVersion.v3_0, path = "/campaigns/{campaign_id}")
     private static class CampaignGet extends MailchimpMethod<ListResponse> {
@@ -92,7 +119,7 @@ public class ExtractMailchimp {
     }
 
     @Method(httpMethod = HttpMethod.GET, version = APIVersion.v3_0, path = "/reports/{campaign_id}/open-details")
-    private static class OpenDetailsGet extends MailchimpMethod<ListResponse> {
+    private static class OpenDetailsGet extends MailchimpMethod<MembersResponse> {
         @PathParam
         public final String campaign_id;
 
@@ -135,15 +162,25 @@ public class ExtractMailchimp {
             }*/
             CampaignsResponse response = client.execute(new CampaignsGet());
             for (Map<String, Object> campaign : response.campaigns){
+                Map<String, Object> recipients = (Map<String, Object>) campaign.get("recipients");
                 System.out.print("Campaigns id : " + campaign.get("id"));
                 ListResponse response1 = client.execute(new CampaignGet((String) campaign.get("id")));
                 FileUtils.writeStringToFile(new File("/home/edward/Downloads/" + System.currentTimeMillis() + "campaign.json"), response1.toJson());
-                ListResponse response2 = client.execute(new OpenDetailsGet((String) campaign.get("id")));
+                MembersResponse response2 = client.execute(new OpenDetailsGet((String) campaign.get("id")));
+                for (Map<String, Object> member : response2.members){
+                    String subscriberid = (String) member.get("email_id");
+                    ListResponse activityresponse = client.execute(new MemberActivityGet((String) recipients.get("list_id"), subscriberid));
+                    FileUtils.writeStringToFile(new File("/home/edward/Downloads/" + System.currentTimeMillis() + "memberactivity.json"), activityresponse.toJson());
+                }
                 FileUtils.writeStringToFile(new File("/home/edward/Downloads/" + System.currentTimeMillis() + "opens.json"), response2.toJson());
                 ListResponse response3 = client.execute(new ClickDetailsGet((String) campaign.get("id")));
                 FileUtils.writeStringToFile(new File("/home/edward/Downloads/" + System.currentTimeMillis() + "clicks.json"), response3.toJson());
                 ListResponse response4 = client.execute(new UnsubscribedGet((String) campaign.get("id")));
                 FileUtils.writeStringToFile(new File("/home/edward/Downloads/" + System.currentTimeMillis() + "unsubscribed.json"), response4.toJson());
+                ListResponse response5 = client.execute(new MembersGet((String) recipients.get("list_id")));
+                FileUtils.writeStringToFile(new File("/home/edward/Downloads/" + System.currentTimeMillis() + "members.json"), response5.toJson());
+/*                ListResponse response6 = client.execute(new ActivityGet((String) recipients.get("list_id")));
+                FileUtils.writeStringToFile(new File("/home/edward/Downloads/" + System.currentTimeMillis() + "activity.json"), response6.toJson());*/
             }
            //System.err.println("response" + response.lists);
 
@@ -163,6 +200,10 @@ public class ExtractMailchimp {
     private static class CampaignsResponse extends MailchimpObject {
         @Field
         public ArrayList<Map<String, Object>> campaigns;
+    }
+    private static class MembersResponse extends MailchimpObject {
+        @Field
+        public ArrayList<Map<String, Object>> members;
     }
     private static class SubscribeResponse extends MailchimpObject {
         @Field

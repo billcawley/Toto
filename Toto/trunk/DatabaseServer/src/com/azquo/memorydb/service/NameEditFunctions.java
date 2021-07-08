@@ -41,28 +41,29 @@ class NameEditFunctions {
         if (setFormula.startsWith("orphan")) {
             //e.g  orphan `suspect set` children from `global set` children  removes all grandchildren in 'global set' which are in 'suspect set` children
             setFormula = setFormula.substring("remove".length()).trim();
-            if (setFormula.indexOf(" from ") > 0){
+            if (setFormula.indexOf(" from ") > 0) {
                 String child = setFormula.substring(0, setFormula.indexOf(" from "));
                 String parent = setFormula.substring(setFormula.indexOf(" from ") + " from ".length()).trim();
-                Collection<Name> children = NameQueryParser.parseQuery(azquoMemoryDBConnection,child);
+                Collection<Name> children = NameQueryParser.parseQuery(azquoMemoryDBConnection, child);
                 Collection<Name> parents = NameQueryParser.parseQuery(azquoMemoryDBConnection, parent);
-                int count = 0;
-                long allCount = 0;
-                System.out.println("starting orphaning - child has " + children.size() + " elements");
-                for (Name parentName:parents){
-                    for (Name childName:parentName.getChildren()){
-                        if (children.contains(childName)){
-                            System.out.println(".." + allCount + " names - now removing " + childName.getDefaultDisplayName() + " from " + parentName.getDefaultDisplayName());
-                            //note only removing one child at a time - for loop may be corrupted
-                            try{
+                System.out.println("parents for " + parent + " size " + parents.size());
+                System.out.println("children for " + child + " size " + children.size());
+                try {
+                    int count = 0;
+                    long allCount = 0;
+                    //System.out.println("starting orphaning - child has " + children.size() + " elements");
+                    for (Name parentName : parents) {
+                        for (Name childName : parentName.getChildren()) {
+                            if (children.contains(childName)) {
+                                System.out.println(".." + allCount + " names - now removing " + childName.getDefaultDisplayName() + " from " + parentName.getDefaultDisplayName());
+                                //note only removing one child at a time - for loop may be corrupted
                                 parentName.removeFromChildrenWillBePersisted(childName, azquoMemoryDBConnection);
-                             }catch(Exception e){
-                                System.out.println("Problem - failed to remove " + childName.getDefaultDisplayName() + " from " + parentName.getDefaultDisplayName());
-
+                                break;
                             }
-                            break;
                         }
                     }
+                } catch (StackOverflowError e){
+                    e.printStackTrace();
                 }
                 System.out.println("finished orphaning");
 
@@ -298,25 +299,25 @@ class NameEditFunctions {
     private static void cleanRoot(AzquoMemoryDBConnection azquoMemoryDBConnection) throws Exception {
         List<Name> topNames = azquoMemoryDBConnection.getAzquoMemoryDBIndex().findTopNames(StringLiterals.DEFAULT_DISPLAY_NAME); // should be a big list
         boolean deleted = false;
-        for (Name topName : topNames){
-            if ((!topName.hasChildren() ||topName.getChildren().size()==1) && !topName.hasValues()){
+        for (Name topName : topNames) {
+            if ((!topName.hasChildren() || topName.getChildren().size() == 1) && !topName.hasValues()) {
                 topName.delete(azquoMemoryDBConnection);
                 deleted = true;
             }
         }
-        if (deleted){
+        if (deleted) {
             new Thread(azquoMemoryDBConnection::persist).start();
         }
     }
 
-    private static void zapAttributes(AzquoMemoryDBConnection azquoMemoryDBConnection, String attList)throws Exception{
+    private static void zapAttributes(AzquoMemoryDBConnection azquoMemoryDBConnection, String attList) throws Exception {
         String[] attributes = attList.split("\\|");
-        for(String attribute:attributes){
+        for (String attribute : attributes) {
             Set<String> attVals = azquoMemoryDBConnection.getAzquoMemoryDBIndex().getValuesForAttribute(attribute);
-            for (String attVal:attVals){
-                Set<Name> names = azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNamesForAttribute(attribute,attVal);
-                for (Name name:names){
-                    name.setAttributeWillBePersisted(attribute,"", azquoMemoryDBConnection);
+            for (String attVal : attVals) {
+                Set<Name> names = azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNamesForAttribute(attribute, attVal);
+                for (Name name : names) {
+                    name.setAttributeWillBePersisted(attribute, "", azquoMemoryDBConnection);
                 }
             }
         }
