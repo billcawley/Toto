@@ -318,7 +318,7 @@ public class BatchImporter implements Callable<Void> {
                             if (cell.getImmutableImportHeading().localParentIndex == -1) { // no local parents across the cells, means we can do some resolution here
                                 // resolution that will take into account the parents as assigned by the heading
                                 // but NOT, notably, any parents this cell may have from another cell in the same line
-                                if (!cell.getLineValue().isEmpty()) {
+                                if (!cell.getLineValue().isEmpty() && cell.getLineValue().trim().length()> 0) {
                                     // in simple terms if a line cell value refers to a name it can now refer to a set of names
                                     // to make a set parent of more than one thing e.g. parent of set a, set b, set c
                                     // nothing in the heading has changed except the split char but we need to detect it here
