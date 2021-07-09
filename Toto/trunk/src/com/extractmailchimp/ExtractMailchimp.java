@@ -5,11 +5,13 @@ import com.ecwid.maleorang.MailchimpException;
 import com.ecwid.maleorang.MailchimpMethod;
 import com.ecwid.maleorang.MailchimpObject;
 import com.ecwid.maleorang.annotation.*;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FileUtils;
+import org.json.JSONObject;
 
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -152,43 +154,40 @@ public class ExtractMailchimp {
     private static class CampaignsGet extends MailchimpMethod<CampaignsResponse> {
     }
 
-    public static void extractData(String apiKey) throws IOException, MailchimpException {
+    public static void extractData(String apiKey, String listName) throws IOException, MailchimpException {
         try (MailchimpClient client = new MailchimpClient(apiKey)) {
+            String tempPath = "c:\\users\\test\\Downloads\\";
 /*            ListResponse response = client.execute(new ListsGet());
             for (Map<String, Object> listItem : response.lists){
                 System.out.print("List id : " + listItem.get("id"));
                 ListResponse response1 = client.execute(new ListGet((String) listItem.get("id")));
                 System.out.print("response 1 : " + response1);
             }*/
-            CampaignsResponse response = client.execute(new CampaignsGet());
-            for (Map<String, Object> campaign : response.campaigns){
-                Map<String, Object> recipients = (Map<String, Object>) campaign.get("recipients");
-                System.out.print("Campaigns id : " + campaign.get("id"));
-                ListResponse response1 = client.execute(new CampaignGet((String) campaign.get("id")));
-                FileUtils.writeStringToFile(new File("/home/edward/Downloads/" + System.currentTimeMillis() + "campaign.json"), response1.toJson());
-                MembersResponse response2 = client.execute(new OpenDetailsGet((String) campaign.get("id")));
-                for (Map<String, Object> member : response2.members){
-                    String subscriberid = (String) member.get("email_id");
-                    ListResponse activityresponse = client.execute(new MemberActivityGet((String) recipients.get("list_id"), subscriberid));
-                    FileUtils.writeStringToFile(new File("/home/edward/Downloads/" + System.currentTimeMillis() + "memberactivity.json"), activityresponse.toJson());
-                }
-                FileUtils.writeStringToFile(new File("/home/edward/Downloads/" + System.currentTimeMillis() + "opens.json"), response2.toJson());
-                ListResponse response3 = client.execute(new ClickDetailsGet((String) campaign.get("id")));
-                FileUtils.writeStringToFile(new File("/home/edward/Downloads/" + System.currentTimeMillis() + "clicks.json"), response3.toJson());
-                ListResponse response4 = client.execute(new UnsubscribedGet((String) campaign.get("id")));
-                FileUtils.writeStringToFile(new File("/home/edward/Downloads/" + System.currentTimeMillis() + "unsubscribed.json"), response4.toJson());
-                ListResponse response5 = client.execute(new MembersGet((String) recipients.get("list_id")));
-                FileUtils.writeStringToFile(new File("/home/edward/Downloads/" + System.currentTimeMillis() + "members.json"), response5.toJson());
-/*                ListResponse response6 = client.execute(new ActivityGet((String) recipients.get("list_id")));
-                FileUtils.writeStringToFile(new File("/home/edward/Downloads/" + System.currentTimeMillis() + "activity.json"), response6.toJson());*/
-            }
-           //System.err.println("response" + response.lists);
+            String outFile = tempPath + "activity";
+            File writeFile = new File(outFile);
+            writeFile.delete(); // to avoid confusion
+            BufferedWriter fileWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(outFile), StandardCharsets.UTF_8));
+            fileWriter.write("Campaign\tName\tTimestamp\tAction\tLink\n");
+            //CampaignsResponse response = client.execute(new CampaignsGet());
+            ListResponse resp = client.execute(new ListsGet());
+            for (Map<String, Object> list : resp.lists){
+                if (list.get("name").equals(listName)){
+                    ListResponse response2 = client.execute(new MembersGet((String)list.get("id")));
 
-//            SubscribeRequest request = new SubscribeRequest("ed.lennox@azquo.com");
-            //request.status = "subscribed";
-/*            request.merge_fields = new MergeFields();
-            request.merge_fields.FNAME = "Vasya";
-            request.merge_fields.LNAME = "Pupkin";*/
+                    List<MailchimpObject> members = (List<MailchimpObject>)response2.mapping.get("members");
+                    for (MailchimpObject member:members){
+                        String subscriberid = (String) member.mapping.get("id");
+                        String subscriberName = (String) member.mapping.get("email_address");
+                        ListResponse activityresponse = client.execute(new MemberActivityGet((String) list.get("id"), subscriberid));
+                        List<MailchimpObject> activities = (List<MailchimpObject>)activityresponse.mapping.get("activity");
+                        for (MailchimpObject activity:activities){
+                            fileWriter.write((String) activity.mapping.get("campaign_title") + "\t" + subscriberName + "\t" + (String) activity.mapping.get("created_at_timestamp") + "\t" + (String) activity.mapping.get("activity_type") + "\t" + (String) activity.mapping.get("link_clicked") + "\n");
+                        }
+                    }
+                }
+            }
+            fileWriter.flush();
+            fileWriter.close();
 
         }
     }
