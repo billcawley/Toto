@@ -12,9 +12,7 @@ import org.json.JSONObject;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class ExtractMailchimp {
 
@@ -75,11 +73,24 @@ public class ExtractMailchimp {
     }
 
     @Method(httpMethod = HttpMethod.GET, version = APIVersion.v3_0, path = "/lists/{list_id}/members")
-    private static class MembersGet extends MailchimpMethod<ListResponse> {
+    private static class MembersGet extends MailchimpMethod<MembersResponse> {
+
+        /**
+         * This param will be included into the query string.
+         * It is not a part of the method API and is added here just for demonstration.
+         */
+        @QueryStringParam
+        public final int count;
+
+        @QueryStringParam
+        public final int offset;
+
         @PathParam
         public final String list_id;
 
-        private MembersGet(String list_id) {
+        private MembersGet(String list_id, int count, int offset) {
+            this.count = count;
+            this.offset = offset;
             this.list_id = list_id;
         }
     }
@@ -156,7 +167,8 @@ public class ExtractMailchimp {
 
     public static void extractData(String apiKey, String listName) throws IOException, MailchimpException {
         try (MailchimpClient client = new MailchimpClient(apiKey)) {
-            String tempPath = "c:\\users\\test\\Downloads\\";
+//            String tempPath = "c:\\users\\test\\Downloads\\";
+            String tempPath = "/home/edward/Downloads/";
 /*            ListResponse response = client.execute(new ListsGet());
             for (Map<String, Object> listItem : response.lists){
                 System.out.print("List id : " + listItem.get("id"));
@@ -168,24 +180,36 @@ public class ExtractMailchimp {
             writeFile.delete(); // to avoid confusion
             BufferedWriter fileWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(outFile), StandardCharsets.UTF_8));
             fileWriter.write("Campaign\tName\tTimestamp\tAction\tLink\n");
-            //CampaignsResponse response = client.execute(new CampaignsGet());
-            ListResponse resp = client.execute(new ListsGet());
-            for (Map<String, Object> list : resp.lists){
-                if (list.get("name").equals(listName)){
-                    ListResponse response2 = client.execute(new MembersGet((String)list.get("id")));
 
-                    List<MailchimpObject> members = (List<MailchimpObject>)response2.mapping.get("members");
-                    for (MailchimpObject member:members){
-                        String subscriberid = (String) member.mapping.get("id");
-                        String subscriberName = (String) member.mapping.get("email_address");
-                        ListResponse activityresponse = client.execute(new MemberActivityGet((String) list.get("id"), subscriberid));
-                        List<MailchimpObject> activities = (List<MailchimpObject>)activityresponse.mapping.get("activity");
-                        for (MailchimpObject activity:activities){
-                            fileWriter.write((String) activity.mapping.get("campaign_title") + "\t" + subscriberName + "\t" + (String) activity.mapping.get("created_at_timestamp") + "\t" + (String) activity.mapping.get("activity_type") + "\t" + (String) activity.mapping.get("link_clicked") + "\n");
+
+            CampaignsResponse response = client.execute(new CampaignsGet());
+            Set<String> loadedLists = new HashSet<>();
+            for (Map<String, Object> campaign : response.campaigns){
+                ListResponse response1 = client.execute(new CampaignGet((String) campaign.get("id")));
+                String list_id = (String) ((MailchimpObject) response1.mapping.get("recipients")).mapping.get("list_id");
+                int page = 100;
+                int offset = 0;
+                if (loadedLists.add(list_id)){
+                    System.out.println("calling members, offset : " + offset);
+                    MembersResponse response2 = client.execute(new MembersGet(list_id, page, offset));
+                    while (!response2.members.isEmpty()){
+                        for (Map member:response2.members){
+                            String subscriberid = (String) member.get("id");
+                            String subscriberName = (String) member.get("email_address");
+                            ListResponse activityresponse = client.execute(new MemberActivityGet(list_id, subscriberid));
+                            List<MailchimpObject> activities = (List<MailchimpObject>)activityresponse.mapping.get("activity");
+                            for (MailchimpObject activity:activities){
+                                fileWriter.write((String) activity.mapping.get("campaign_title") + "\t" + subscriberName + "\t" + (String) activity.mapping.get("created_at_timestamp") + "\t" + (String) activity.mapping.get("activity_type") + "\t" + (String) activity.mapping.get("link_clicked") + "\n");
+                            }
                         }
+                        offset += page;
+                        System.out.println("calling members, offset : " + offset);
+                        response2 = client.execute(new MembersGet(list_id, page, offset));
                     }
                 }
+
             }
+
             fileWriter.flush();
             fileWriter.close();
 
