@@ -43,7 +43,6 @@ import java.util.stream.Stream;
 
 import com.ecwid.maleorang.MailchimpClient;
 import com.ecwid.maleorang.MailchimpObject;
-import com.ecwid.maleorang.method.v3_0.lists.members.EditMemberMethod;
 import com.ecwid.maleorang.method.v3_0.lists.members.MemberInfo;
 import com.ecwid.maleorang.method.v3_0.lists.members.GetMembersMethod;
 
@@ -376,7 +375,7 @@ public class TestController {
         if ("mailchimp".equals(something)) {
             try {
 // azquo                ExtractMailchimp.extractData("516f98d1f28e8cc97a2b8da9025d3b78-us1");
-                ExtractMailchimp.extractData("516f98d1f28e8cc97a2b8da9025d3b78-us1");
+                ExtractMailchimp.extractData("516f98d1f28e8cc97a2b8da9025d3b78-us1","Azquo Holdings ltd");
             } catch (IOException | MailchimpException e) {
                 e.printStackTrace();
             }
