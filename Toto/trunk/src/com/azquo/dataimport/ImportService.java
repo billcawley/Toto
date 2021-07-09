@@ -2905,10 +2905,10 @@ fr.close();
                             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm");
                             try {
                                 if (jsonRule.format.equals("seconds")) {
-                                    outvalue = sdf.format(new Date(Long.parseLong(outvalue)));
+                                    outvalue = sdf.format(new Date(Long.parseLong(outvalue)*1000));
                                 }else {
                                     if (jsonRule.format.equals("milliseconds")) {
-                                        outvalue = sdf.format(new Date(Long.parseLong(outvalue)/1000));
+                                        outvalue = sdf.format(new Date(Long.parseLong(outvalue)));
                                     }
                                 }
 
@@ -2993,10 +2993,10 @@ fr.close();
 
     public static JSONArray readJSON(String filePath, String page_size, String cursor)
             throws Exception {
-        List<String> data = Files.readAllLines(Paths.get(filePath), Charset.defaultCharset());
+        String data = new String(Files.readAllBytes(Paths.get(filePath)), Charset.defaultCharset());
         JSONArray jsonArray = null;
         try {
-            jsonArray = new JSONArray(data.get(0));
+            jsonArray = new JSONArray(data.replace("\n",""));//remove line feeds
         } catch (Exception e) {
             e.printStackTrace();
         }
