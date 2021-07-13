@@ -838,7 +838,11 @@ public class ReportRenderer {
                 copySource = Ranges.range(sheet, topRow, displayDataRegion.getColumn(), maxRow, displayDataRegion.getColumn() + columnsFormattingPatternWidth - 1);
             }
             // will this paste the lot?
-            CellOperationUtil.paste(copySource, insertRange);
+            Range paste = CellOperationUtil.paste(copySource, insertRange);
+
+            if (columnsFormattingPatternWidth > 1){
+                paste = CellOperationUtil.pasteSpecial(copySource, insertRange, Range.PasteType.COLUMN_WIDTHS,Range.PasteOperation.NONE, false,false);
+            }
             int originalWidth = sheet.getInternalSheet().getColumn(insertCol - 1).getWidth();
             if (originalWidth != sheet.getInternalSheet().getColumn(insertCol).getWidth()) { // height may not match on insert
                 insertRange.setColumnWidth(originalWidth); // hopefully set the lot in one go??
