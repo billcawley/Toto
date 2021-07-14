@@ -185,7 +185,7 @@ public class AzquoCellService {
             rowHeadings.add(new ArrayList<>());
             rowHeadings.get(0).add(new DataRegionHeading(null, false, null));
         }
-        List<List<AzquoCell>> dataToShow = getAzquoCellsForRowsColumnsAndContext(azquoMemoryDBConnection, rowHeadings, columnHeadings, contextHeadings, languages, valueId, quiet);
+        List<List<AzquoCell>> dataToShow = getAzquoCellsForRowsColumnsAndContext(azquoMemoryDBConnection, rowHeadings, columnHeadings, contextHeadings, languages, valueId, quiet, regionOptions.noLimit);
         time = (System.currentTimeMillis() - track);
         if (time > threshold) System.out.println("data populated in " + time + "ms");
         if (time > 5000) { // a bit arbitrary
@@ -706,7 +706,7 @@ public class AzquoCellService {
 
     public static List<List<AzquoCell>> getAzquoCellsForRowsColumnsAndContext(AzquoMemoryDBConnection connection, List<List<DataRegionHeading>> headingsForEachRow
             , final List<List<DataRegionHeading>> headingsForEachColumn
-            , final List<DataRegionHeading> contextHeadings, List<String> languages, int valueId, boolean quiet) throws Exception {
+            , final List<DataRegionHeading> contextHeadings, List<String> languages, int valueId, boolean quiet, boolean noLimit) throws Exception {
         long oldHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
         long newHeapMarker;
         long track = System.currentTimeMillis();
@@ -722,7 +722,7 @@ public class AzquoCellService {
             connection.addToUserLog("1%--------25%---------50%---------75%--------100%");
         }
         int maxRegionSize = 5000000;//EFC 1/2/19
-        if (totalRows * totalCols > maxRegionSize) {
+        if (totalRows * totalCols > maxRegionSize && !noLimit) {
             throw new Exception("Data region too large - " + totalRows + " * " + totalCols + ", max cells " + maxRegionSize);
         }
         ExecutorService executor = ThreadPools.getMainThreadPool();

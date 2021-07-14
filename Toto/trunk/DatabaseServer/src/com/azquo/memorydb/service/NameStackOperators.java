@@ -203,7 +203,8 @@ class NameStackOperators {
         List<List<DataRegionHeading>> colHeadings = new ArrayList<>(1);
          colHeadings.add(Collections.singletonList(new DataRegionHeading(null, false, null, null, null, null, null, 0, filterByCriteria)));
         final List<DataRegionHeading> contextHeadings = DataRegionHeadingService.getContextHeadings(azquoMemoryDBConnection, contextSource, languages);
-        List<List<AzquoCell>> dataToShow = AzquoCellService.getAzquoCellsForRowsColumnsAndContext(azquoMemoryDBConnection, rowHeadings, colHeadings, contextHeadings, languages, 0, true);
+        // note - this won't set no limit based on being a csv download. Change if it becomes a problem
+        List<List<AzquoCell>> dataToShow = AzquoCellService.getAzquoCellsForRowsColumnsAndContext(azquoMemoryDBConnection, rowHeadings, colHeadings, contextHeadings, languages, 0, true, false);
         //a set being built as a result of a value being non zero, a set being true
         Iterator<List<AzquoCell>> rowIt = dataToShow.iterator();
         List<Name> result = new ArrayList<>();

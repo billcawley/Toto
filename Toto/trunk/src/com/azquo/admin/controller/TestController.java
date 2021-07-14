@@ -6,6 +6,7 @@ import com.csvreader.CsvWriter;
 import com.ecwid.maleorang.MailchimpException;
 import com.ecwid.maleorang.annotation.*;
 import com.extractagilecrm.ExtractContacts;
+import com.extractdotdigital.ExtractDotDigital;
 import com.extractmailchimp.ExtractMailchimp;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -377,6 +378,14 @@ public class TestController {
 // azquo                ExtractMailchimp.extractData("516f98d1f28e8cc97a2b8da9025d3b78-us1");
                 ExtractMailchimp.extractData("516f98d1f28e8cc97a2b8da9025d3b78-us1","Azquo Holdings ltd");
             } catch (IOException | MailchimpException e) {
+                e.printStackTrace();
+            }
+        }
+
+        if ("dotdigital".equals(something)) {
+            try {
+                ExtractDotDigital.extractDotDigital();
+            } catch (IOException e) {
                 e.printStackTrace();
             }
         }

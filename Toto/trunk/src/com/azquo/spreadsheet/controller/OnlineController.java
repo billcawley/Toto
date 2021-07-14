@@ -592,6 +592,7 @@ public class OnlineController {
                     }
                     try {
                         final String result = SpreadsheetService.saveData(loggedInUser, onlineReport.getId(), onlineReport.getReportName(), sName.getRefersToSheetName(), regionName);
+                        ReportExecutor.runExecuteCommandForBook(sourceBook, StringLiterals.FOLLOWON); // followon should work after an upload of this type
                         if (!result.startsWith("true")) {// unlikely to fail here I think but catch it anyway . . .
                             errorMessage.append("- in region ").append(regionName).append(" -").append(result);
                         } else {

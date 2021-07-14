@@ -40,10 +40,12 @@ public class UserRegionOptions extends StandardEntity {
     private boolean dynamicUpdate;
 
     private boolean csvDownload;
+    // rendered means formulae etc resolved
+    private boolean csvRenderedDownload;
 
     UserRegionOptions(int id, int userId, int reportId, String region, int hideRows, int hideRowValues, int hideCols, boolean sortable
             , int rowLimit, int columnLimit, String sortRow, boolean sortRowAsc, String sortColumn
-            , boolean sortColumnAsc, int highlightDays, boolean noSave, String databaseName, String rowLanguage, String columnLanguage, boolean userLocked, int permuteTotalCount, boolean ignoreHeadingErrors, boolean preSave, boolean dynamicUpdate, boolean csvDownload) {
+            , boolean sortColumnAsc, int highlightDays, boolean noSave, String databaseName, String rowLanguage, String columnLanguage, boolean userLocked, int permuteTotalCount, boolean ignoreHeadingErrors, boolean preSave, boolean dynamicUpdate, boolean csvDownload, boolean csvRenderedDownload) {
         this.id = id;
         this.userId = userId;
         this.reportId = reportId;
@@ -69,6 +71,7 @@ public class UserRegionOptions extends StandardEntity {
         this.preSave = preSave;
         this.dynamicUpdate = dynamicUpdate;
         this.csvDownload = csvDownload;
+        this.csvRenderedDownload = csvRenderedDownload;
     }
 
     // to read the format of options from the spreadsheet, code adapted from azquobook.
@@ -119,6 +122,7 @@ public class UserRegionOptions extends StandardEntity {
             this.preSave = spreadsheetSource.contains("presave");
             this.dynamicUpdate = spreadsheetSource.toLowerCase().contains("dynamicupdate");
             this.csvDownload = spreadsheetSource.toLowerCase().contains("csvdownload");
+            this.csvRenderedDownload = spreadsheetSource.toLowerCase().contains("csvrendereddownload");
         } else {
             this.sortable = false;
             this.rowLimit = 0;
@@ -131,6 +135,7 @@ public class UserRegionOptions extends StandardEntity {
             this.preSave = false;
             this.dynamicUpdate = false;
             this.csvDownload = false;
+            this.csvRenderedDownload = false;
         }
         this.sortRow = null;
         this.sortRowAsc = false;
@@ -289,7 +294,7 @@ public class UserRegionOptions extends StandardEntity {
 
     // As mentioned in RegionOptions,
     public RegionOptions getRegionOptionsForTransport() {
-        return new RegionOptions(hideRows, hideRowValues, hideCols, sortable, rowLimit, columnLimit, sortRow, sortRowAsc, sortColumn, sortColumnAsc, highlightDays, rowLanguage, columnLanguage, noSave, databaseName, userLocked, permuteTotalCount, ignoreHeadingErrors, preSave, dynamicUpdate);
+        return new RegionOptions(hideRows, hideRowValues, hideCols, sortable, rowLimit, columnLimit, sortRow, sortRowAsc, sortColumn, sortColumnAsc, highlightDays, rowLanguage, columnLanguage, noSave, databaseName, userLocked, permuteTotalCount, ignoreHeadingErrors, preSave, dynamicUpdate, csvDownload);
     }
 
     public String getRowLanguage() {
@@ -342,6 +347,10 @@ public class UserRegionOptions extends StandardEntity {
 
     public boolean getCsvDownload() {
         return csvDownload;
+    }
+
+    public boolean getCsvRenderedDownload() {
+        return csvRenderedDownload;
     }
 
     @Override

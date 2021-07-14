@@ -45,7 +45,7 @@ public class APIManager
 	ClientConfig config = new DefaultClientConfig();
 
 	Client client = Client.create(config);
-	client.addFilter(new LoggingFilter(System.out));
+//	client.addFilter(new LoggingFilter(System.out));
 
 	this.resource = client.resource(baseUrl);
 

@@ -122,14 +122,14 @@ class ZKComposerUtils {
                         String optionsSource = BookUtils.getSnameCell(optionsRegion).getStringValue();
                         int reportId = (int) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
                         UserRegionOptions userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), reportId, region, optionsSource);
-                        if (userRegionOptions.getCsvDownload()){ // then we're off
+                        if (userRegionOptions.getCsvDownload() || userRegionOptions.getCsvRenderedDownload()){ // then we're off
                             SName displayColumnHeadings = BookUtils.getNameByName(StringLiterals.AZDISPLAYCOLUMNHEADINGS + region, sheet);
                             File newTempFile = File.createTempFile("csv export", ".csv");
                             newTempFile.deleteOnExit();
                             CsvWriter csvWriter = new CsvWriter(newTempFile.toString(), ',', StandardCharsets.UTF_8);
                             if (displayColumnHeadings != null){
-                                AreaReference areaReference= new AreaReference(name.getRefersToFormula(), null);
-                                ImportService.rangeToCSV(book.getSheet(name.getRefersToSheetName()),areaReference,csvWriter);
+                                AreaReference areaReference= new AreaReference(displayColumnHeadings.getRefersToFormula(), null);
+                                ImportService.rangeToCSV(book.getSheet(displayColumnHeadings.getRefersToSheetName()),areaReference,csvWriter);
                             } else {
                                 for (List<String> headingRow : loggedInUser.getSentCells(reportId, sheet.getSheetName(), region).getColumnHeadings()){
                                     for (String heading : headingRow){
@@ -138,18 +138,22 @@ class ZKComposerUtils {
                                     csvWriter.endRecord();
                                 }
                             }
-                            for (List<CellForDisplay> dataRow : loggedInUser.getSentCells(reportId, sheet.getSheetName(), region).getData()){
-                                for (CellForDisplay dataCell : dataRow){
-                                    csvWriter.write(dataCell.getStringValue().replace("\n", "\\\\n").replace(",", "").replace("\t", "\\\\t"));
+                            if (userRegionOptions.getCsvRenderedDownload()){
+                                AreaReference areaReference= new AreaReference(name.getRefersToFormula(), null);
+                                ImportService.rangeToCSV(book.getSheet(name.getRefersToSheetName()),areaReference,csvWriter);
+                            } else {
+                                for (List<CellForDisplay> dataRow : loggedInUser.getSentCells(reportId, sheet.getSheetName(), region).getData()){
+                                    for (CellForDisplay dataCell : dataRow){
+                                        csvWriter.write(dataCell.getStringValue().replace("\n", "\\\\n").replace(",", "").replace("\t", "\\\\t"));
+                                    }
+                                    csvWriter.endRecord();
                                 }
-                                csvWriter.endRecord();
                             }
                             csvWriter.flush();
                             csvWriter.close();
                             toZip.add(new FileSource(region + "export.csv", newTempFile));
                         }
                     }
-
                 }
             }
         }

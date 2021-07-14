@@ -84,7 +84,7 @@ public class ExtractContacts {
         System.out.print("current time millis : " + System.currentTimeMillis());
         Gson gson = new Gson();
         try {
-            List<String> config = Files.readAllLines(Paths.get("/home/edward/bonza.txt"), Charset.defaultCharset());
+            List<String> config = Files.readAllLines(Paths.get("/home/edward/charterhouse.txt"), Charset.defaultCharset());
             String baseUrl = config.get(0);
             String userEmail = config.get(1);
             String restAPIKey = config.get(2);
@@ -98,7 +98,7 @@ public class ExtractContacts {
                 // List of tags to add it to contact
                 // --------------------- Get contacts -----------------------------
 // testing??
-                JSONArray contacts = getDeals("250", cursor);
+                JSONArray contacts = getDeals("150", cursor);
                 FileUtils.writeStringToFile(new File("/home/edward/Downloads/" + System.currentTimeMillis() + "deals.json"), contacts.toString());
                 cursor = null;
                 for (Object contact : contacts){
