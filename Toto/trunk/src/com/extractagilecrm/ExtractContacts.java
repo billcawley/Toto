@@ -80,11 +80,13 @@ public class ExtractContacts {
         }
     }
 
+    static String agileFile = "/home/edward/charterhouse.txt";
+
     public static String extract() {
         System.out.print("current time millis : " + System.currentTimeMillis());
         Gson gson = new Gson();
         try {
-            List<String> config = Files.readAllLines(Paths.get("/home/edward/charterhouse.txt"), Charset.defaultCharset());
+            List<String> config = Files.readAllLines(Paths.get(agileFile), Charset.defaultCharset());
             String baseUrl = config.get(0);
             String userEmail = config.get(1);
             String restAPIKey = config.get(2);
@@ -92,30 +94,28 @@ public class ExtractContacts {
             APIManager apiManager = new APIManager(baseUrl, userEmail, restAPIKey);
             ContactAPI contactApi = apiManager.getContactAPI();
             String cursor = "first_page";
-//            StringBuilder contactsJson = new StringBuilder();
-            // remove campaign status + a certain amount? there are a lot . . .
             while (cursor != null){
-                // List of tags to add it to contact
-                // --------------------- Get contacts -----------------------------
-// testing??
-                JSONArray contacts = getDeals("150", cursor);
-                FileUtils.writeStringToFile(new File("/home/edward/Downloads/" + System.currentTimeMillis() + "deals.json"), contacts.toString());
+                JSONArray contacts = contactApi.getContacts("150", cursor);
+                FileUtils.writeStringToFile(new File("/home/edward/Downloads/" + System.currentTimeMillis() + "contacts.json"), contacts.toString());
                 cursor = null;
                 for (Object contact : contacts){
                     JSONObject jcontact = (JSONObject) contact;
-/*                    XSSFWorkbook wb = new XSSFWorkbook();
-                    XSSFSheet sheet = wb.createSheet("Contact");
-                    AtomicInteger rownum = new AtomicInteger(0);
-                    for (String key : jcontact.keySet()){
-                        writeRow(sheet, rownum, 0, key, jcontact.get(key));
-                    }
-                    FileOutputStream fos = new FileOutputStream("/home/edward/Downloads/" + System.currentTimeMillis() + "bonzatest.xlsx");
-                    wb.write(fos);
-                    fos.close();*/
                     if (jcontact.has("cursor")){
                         cursor = jcontact.getString("cursor");
                     }
-                    //System.out.println(contact);
+                }
+                System.out.println("+++++++++++++++++++ cursor : " + cursor);
+            }
+            cursor = "first_page";
+            while (cursor != null){
+                JSONArray deals = getDeals("150", cursor);
+                FileUtils.writeStringToFile(new File("/home/edward/Downloads/" + System.currentTimeMillis() + "deals.json"), deals.toString());
+                cursor = null;
+                for (Object deal : deals){
+                    JSONObject jdeal = (JSONObject) deal;
+                    if (jdeal.has("cursor")){
+                        cursor = jdeal.getString("cursor");
+                    }
                 }
                 System.out.println("+++++++++++++++++++ cursor : " + cursor);
             }
@@ -170,7 +170,7 @@ public class ExtractContacts {
     public static JSONArray getDeals(String page_size, String cursor)
             throws Exception {
         // todo - don't do this every time
-        List<String> config = Files.readAllLines(Paths.get("/home/edward/bonza.txt"), Charset.defaultCharset());
+        List<String> config = Files.readAllLines(Paths.get(agileFile), Charset.defaultCharset());
         String baseUrl = config.get(0);
         String userEmail = config.get(1);
         String restAPIKey = config.get(2);
