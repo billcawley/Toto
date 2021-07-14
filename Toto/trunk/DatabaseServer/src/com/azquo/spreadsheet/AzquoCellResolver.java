@@ -998,6 +998,7 @@ But can use a library?
     }
 
     public static String getUniqueName(AzquoMemoryDBConnection azquoMemoryDBConnection, Name name, List<String> languages){
+        // returning the value in a language seems dodgy....
         if (name.getDefaultDisplayName() == null){ // then let's run pass languages and see if we can get anything
             for (String language : languages){
                 if (name.getAttribute(language) != null){
@@ -1007,13 +1008,14 @@ But can use a library?
             return "";
         }
         try{
-            if (NameService.findByName(azquoMemoryDBConnection,name.getDefaultDisplayName())!=null) {
-                return name.getDefaultDisplayName();
-            }else{
+           Name possible =  NameService.findByName(azquoMemoryDBConnection,name.getDefaultDisplayName());
+           return possible.getDefaultDisplayName();
+         }catch(Exception e){
+            try {
                 return NameUtils.getFullyQualifiedDefaultDisplayName(name);
+            }catch(Exception e2){
+                return "";
             }
-        }catch(Exception e){
-            return "";
         }
     }
     // todo for EFC
