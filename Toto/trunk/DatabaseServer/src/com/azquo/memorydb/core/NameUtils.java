@@ -63,7 +63,7 @@ public class NameUtils {
             Iterator<Name> piterator = parents.iterator();
             Name parent = piterator.next();
             // EFC note 15/07/2012 - the key here is that if there are multiple paths and one is temporary names then choose the other
-            if (parent.getDefaultDisplayName()==null && piterator.hasNext()){
+            while (parent.getDefaultDisplayName()==null && piterator.hasNext()){
                 parent = piterator.next();
             }
             if (parent.getDefaultDisplayName() != null){
