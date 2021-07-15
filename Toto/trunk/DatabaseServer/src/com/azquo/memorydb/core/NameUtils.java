@@ -4,6 +4,7 @@ import com.azquo.StringLiterals;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -59,7 +60,12 @@ public class NameUtils {
         StringBuilder qualified = new StringBuilder(name.getDefaultDisplayName() != null ? name.getDefaultDisplayName() : "");
         // IntelliJ suggested StringBuilder with .insert, I didn't know about that before :)
         while (!parents.isEmpty()) {
-            Name parent = parents.iterator().next();
+            Iterator<Name> piterator = parents.iterator();
+            Name parent = piterator.next();
+            // EFC note 15/07/2012 - the key here is that if there are multiple paths and one is temporary names then choose the other
+            if (StringLiterals.TEMPORARYNAMES.equals(parent.getDefaultDisplayName()) && piterator.hasNext()){
+                parent = piterator.next();
+            }
             if (parent.getDefaultDisplayName() != null){
                 if (qualified.length() == 0){
                     qualified.append(parent.getDefaultDisplayName());
