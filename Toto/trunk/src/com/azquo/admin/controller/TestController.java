@@ -376,7 +376,7 @@ public class TestController {
         if ("mailchimp".equals(something)) {
             try {
 // azquo                ExtractMailchimp.extractData("516f98d1f28e8cc97a2b8da9025d3b78-us1");
-                ExtractMailchimp.extractData("516f98d1f28e8cc97a2b8da9025d3b78-us1","Azquo Holdings ltd");
+                ExtractMailchimp.extractData("7098a7c3111522fa3efcea3aff87d976-us19","micro scooter");
             } catch (IOException | MailchimpException e) {
                 e.printStackTrace();
             }

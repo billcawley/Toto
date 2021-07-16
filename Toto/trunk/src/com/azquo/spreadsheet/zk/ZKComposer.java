@@ -9,6 +9,7 @@ import com.azquo.spreadsheet.transport.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.zkoss.chart.ChartsEvent;
+import org.zkoss.util.media.AMedia;
 import org.zkoss.zk.ui.*;
 import org.zkoss.zk.ui.select.SelectorComposer;
 import org.zkoss.zk.ui.select.annotation.Listen;
@@ -26,6 +27,8 @@ import io.keikaiex.ui.widget.ChartsWidget;
 import io.keikaiex.ui.widget.WidgetCtrl;
 import org.zkoss.zul.*;
 
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.net.URLEncoder;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -104,6 +107,10 @@ public class ZKComposer extends SelectorComposer<Component> {
 
 
         ZKComposerUtils.checkCSVDownload(myzss.getBook());
+        if (myzss.getBook().getInternalBook().getAttribute("csvdownload") != null){
+            Filedownload.save(new AMedia(System.currentTimeMillis() + "csvexport.zip", "zip", "application/zip", (File) myzss.getBook().getInternalBook().getAttribute("csvdownload"), true));
+            myzss.getBook().getInternalBook().setAttribute("csvdownload",null);
+        }
 //        Clients.evalJavaScript("window.skipSetting = 0;window.skipMarker = 0;");
 
     }
@@ -304,6 +311,15 @@ public class ZKComposer extends SelectorComposer<Component> {
     public void onReloadWhileClientProcessing() {
         ZKComposerUtils.reloadBook(myzss, myzss.getBook());
         Clients.clearBusy(myzss);
+        if (myzss.getBook().getInternalBook().getAttribute("csvdownload") != null){
+            try {
+                Filedownload.save(new AMedia(System.currentTimeMillis() + "csvexport.zip", "zip", "application/zip", (File) myzss.getBook().getInternalBook().getAttribute("csvdownload"), true));
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            }
+            myzss.getBook().getInternalBook().setAttribute("csvdownload",null);
+        }
+
     }
 
     // used directly below, I need a list of the following

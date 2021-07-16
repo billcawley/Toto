@@ -71,7 +71,7 @@ class ZKComposerUtils {
             }
             Ranges.range(myzss.getSelectedSheet()).notifyChange(); // try to update the lot - sometimes it seems it does not!
 
-            checkCSVDownload(book);
+            checkCSVDownload(newBook);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -163,7 +163,7 @@ class ZKComposerUtils {
             toZip.toArray(zes);
             ZipUtil.pack(zes, tempzip);
             tempzip.deleteOnExit();
-            Filedownload.save(new AMedia("csvexport.zip", "zip", "application/zip", tempzip, true));
+            book.getInternalBook().setAttribute("csvdownload", tempzip);
         }
     }
 

@@ -194,13 +194,13 @@ public class ExtractMailchimp {
                     MembersResponse response2 = client.execute(new MembersGet(list_id, page, offset));
                     while (!response2.members.isEmpty()){
                         for (Map member:response2.members){
-                            String subscriberid = (String) member.get("id");
+                            /*String subscriberid = (String) member.get("id");
                             String subscriberName = (String) member.get("email_address");
                             ListResponse activityresponse = client.execute(new MemberActivityGet(list_id, subscriberid));
                             List<MailchimpObject> activities = (List<MailchimpObject>)activityresponse.mapping.get("activity");
                             for (MailchimpObject activity:activities){
                                 fileWriter.write((String) activity.mapping.get("campaign_title") + "\t" + subscriberName + "\t" + (String) activity.mapping.get("created_at_timestamp") + "\t" + (String) activity.mapping.get("activity_type") + "\t" + (String) activity.mapping.get("link_clicked") + "\n");
-                            }
+                            }*/
                         }
                         offset += page;
                         System.out.println("calling members, offset : " + offset);
