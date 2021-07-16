@@ -8,6 +8,7 @@ import com.azquo.admin.business.BusinessDAO;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseDAO;
 import com.azquo.admin.database.DatabaseServer;
+import com.azquo.admin.database.DatabaseServerDAO;
 import com.azquo.admin.onlinereport.DatabaseReportLinkDAO;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.onlinereport.OnlineReport;
@@ -592,6 +593,7 @@ public class OnlineController {
                     }
                     try {
                         final String result = SpreadsheetService.saveData(loggedInUser, onlineReport.getId(), onlineReport.getReportName(), sName.getRefersToSheetName(), regionName);
+                        sourceBook.getInternalBook().setAttribute(OnlineController.LOGGED_IN_USER, loggedInUser);
                         ReportExecutor.runExecuteCommandForBook(sourceBook, StringLiterals.FOLLOWON); // followon should work after an upload of this type
                         if (!result.startsWith("true")) {// unlikely to fail here I think but catch it anyway . . .
                             errorMessage.append("- in region ").append(regionName).append(" -").append(result);
