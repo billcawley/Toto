@@ -16,8 +16,8 @@ import org.apache.poi.poifs.crypt.Decryptor;
 import org.apache.poi.poifs.crypt.EncryptionInfo;
 import org.apache.poi.poifs.filesystem.POIFSFileSystem;
 import org.apache.poi.ss.usermodel.CellType;
-import org.apache.poi.xssf.usermodel.XSSFFormulaEvaluator;
-import org.apache.poi.xssf.usermodel.XSSFRow;
+import org.apache.poi.xssf.usermodel.*;
+import org.bouncycastle.jce.provider.JDKKeyFactory;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.multipart.MultipartFile;
 import org.w3c.dom.*;
@@ -58,7 +58,6 @@ import org.apache.poi.ss.util.AreaReference;
 import org.apache.poi.ss.util.CellReference;
 import org.apache.poi.xssf.eventusermodel.ReadOnlySharedStringsTable;
 import org.apache.poi.xssf.eventusermodel.XSSFReader;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import io.keikai.api.Range;
 import io.keikai.api.Ranges;
@@ -73,7 +72,9 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 import static org.apache.poi.ss.usermodel.CellType.*;
@@ -562,12 +563,17 @@ public final class ImportService {
         List<UploadedFile> toReturn = new ArrayList<>();
 
         // check for whether the book should be transformed using the workbook processor - a bit like the preprocessor but all in one shot
-    /* For Bonza. Let us say the preprocessor has a sheet called Financial Addbacks along with some output sheets Azquo Output1 and Azquo Output2
-    If the input file contains in its name "Financial Addbacks" then we paste the contents into the Financial Addbacks sheet in the pre-processor,
-    resolve the output sheets, then import them.
+    /* For Bonza - check the Bonza Appraisal Preprocessor
+       The first sheet gives a list of ranges that will be transferred individually to other sheets in the workbook.  Formulae will be executed,
+       and any sheet labelled 'output' will be output - assuming here no further need for import templates (though these could be added)
+
      */
-        if (uploadedFile.getParameter("workbookprocessor") != null) {
-            ImportTemplate preProcess = ImportTemplateDAO.findForNameAndBusinessId(uploadedFile.getParameter("workbookprocessor"), loggedInUser.getUser().getBusinessId());
+        String preprocessor = uploadedFile.getParameter("workbookprocessor");
+        if (preprocessor!= null) {
+            if (!preprocessor.toLowerCase(Locale.ROOT).endsWith(".xlsx")){
+                preprocessor +=".xlsx";
+            }
+            ImportTemplate preProcess = ImportTemplateDAO.findForNameAndBusinessId(preprocessor, loggedInUser.getUser().getBusinessId());
             if (preProcess != null) {
                 String workbookProcessor = SpreadsheetService.getHomeDir() + dbPath + loggedInUser.getBusinessDirectory() + importTemplatesDir + preProcess.getFilenameForDisk();
                 OPCPackage opcPackage1;
@@ -579,66 +585,21 @@ public final class ImportService {
                 }
                 Workbook ppBook = new XSSFWorkbook(opcPackage1);
                 // need to set values, need to be careful of what space there is on the output book
-                for (int sheetNo = 0; sheetNo < book.getNumberOfSheets(); sheetNo++) { // outer loop on the input sheet
-                    org.apache.poi.ss.usermodel.Sheet inputSheet = book.getSheetAt(sheetNo);
-                    for (int sheetNo1 = 0; sheetNo1 < ppBook.getNumberOfSheets(); sheetNo1++) {
-                        org.apache.poi.ss.usermodel.Sheet outputSheet = ppBook.getSheetAt(sheetNo1);
-                        if (inputSheet.getSheetName().toLowerCase().contains(outputSheet.getSheetName().toLowerCase())) {// then we have to move data
-                            // issue here it what cells are already there or not
-                            // stack overflow paste and modify alert! Actually modified quite a lot
-
-                            int fRow = inputSheet.getFirstRowNum();
-                            int lRow = inputSheet.getLastRowNum();
-                            for (int iRow = fRow; iRow <= lRow; iRow++) {
-                                Row inputRow = inputSheet.getRow(iRow);
-                                Row outputRow = outputSheet.getRow(iRow);
-                                if (outputRow == null) {// think that's the standard logic
-                                    outputRow = outputSheet.createRow(iRow);
-                                }
-                                if (inputRow != null) {
-                                    int fCell = inputRow.getFirstCellNum();
-                                    int lCell = inputRow.getLastCellNum();
-                                    for (int iCell = fCell; iCell < lCell; iCell++) {
-                                        Cell cell = inputRow.getCell(iCell);
-                                        Cell oCell = outputRow.getCell(iCell);
-                                        if (oCell == null) {
-                                            oCell = outputRow.createCell(iCell);
-                                        }
-                                        if (cell != null) {
-                                            switch (cell.getCellType()) {
-                                                case BLANK:
-                                                    oCell.setBlank();
-                                                    break;
-                                                case BOOLEAN:
-                                                    oCell.setCellValue(cell.getBooleanCellValue());
-                                                    break;
-                                                case ERROR:
-                                                    oCell.setCellErrorValue(cell.getErrorCellValue());
-                                                    break;
-                                                case FORMULA:
-                                                    oCell.setCellFormula(cell.getCellFormula());
-                                                    break;
-                                                case NUMERIC:
-                                                    oCell.setCellValue(cell.getNumericCellValue());
-                                                    break;
-                                                case STRING:
-                                                    oCell.setCellValue(cell.getStringCellValue());
-                                                    break;
-                                                default:
-                                                    oCell.setCellFormula(cell.getCellFormula());
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                Sheet ppSheet = ppBook.getSheetAt(0);
+                int rowNo = 1;
+                while (ppSheet.getRow(rowNo)!=null){
+                    try{
+                        oneRange(ppBook, ppSheet.getRow(rowNo++),book);
+                    }catch(Exception e){
+                        throw new Exception("cannot read row " + (rowNo + 1) + " in the preprocessor");
                     }
+
                 }
 
                 XSSFFormulaEvaluator.evaluateAllFormulaCells(ppBook);
                 for (int sheetNo = 0; sheetNo < ppBook.getNumberOfSheets(); sheetNo++) {
                     org.apache.poi.ss.usermodel.Sheet sheet = ppBook.getSheetAt(sheetNo);
-                    if (sheet.getSheetName().toLowerCase().startsWith("azquo output")) {
+                    if (sheet.getSheetName().toLowerCase().contains("output")) {
                         UploadedFile uploadedFile1 = readSheet(loggedInUser, uploadedFile, sheet, knownValues, pendingUploadConfig, templateCache);
                         uploadedFile1.addToProcessingDuration(sheetExcelLoadTimeShare);
                         toReturn.add(uploadedFile1);
@@ -661,20 +622,168 @@ public final class ImportService {
         return toReturn;
     }
 
-    /*
 
-    To import standardised workbooks
+    private static void copyRange(Cell firstCell, int rows, int cols, Sheet outputSheet){
+        for (int rowNo = outputSheet.getFirstRowNum();rowNo <= outputSheet.getLastRowNum();rowNo++){
+            Row row = outputSheet.getRow(rowNo);
+            for (int colNo = row.getFirstCellNum();colNo <= row.getLastCellNum(); colNo++){
+                Cell cell = row.getCell(colNo);
+                if (cell!=null){
+                    cell.setCellValue("");
+                }
+            }
+        }
+        int fRow = firstCell.getRowIndex();
+        int lRow = fRow + rows;
+        int olRow = outputSheet.getLastRowNum();
+        Sheet inputSheet = firstCell.getSheet();
+        int ofRow = 0;
+        for (int iRow = fRow; iRow <= lRow; iRow++) {
+            Row inputRow = inputSheet.getRow(iRow);
+            int oRow = iRow;
+            if (oRow < olRow) {
+                Row outputRow = outputSheet.getRow(oRow);
+                int fCell = firstCell.getColumnIndex();
+                int lCell = fCell + cols;
+                for (int iCell = fCell; iCell < lCell; iCell++) {
+                    Cell cell = inputRow.getCell(iCell);
+                    Cell oCell = outputRow.getCell(iCell);
+                    if (oCell == null) {
+                        oCell = outputRow.createCell(iCell);
+                    }
+                    if (cell != null) {
+                        switch (cell.getCellType()) {
+                            case BLANK:
+                                oCell.setBlank();
+                                break;
+                            case BOOLEAN:
+                                oCell.setCellValue(cell.getBooleanCellValue());
+                                break;
+                            case ERROR:
+                                oCell.setCellErrorValue(cell.getErrorCellValue());
+                                break;
+                            case FORMULA:
+                                oCell.setCellFormula(cell.getCellFormula());
+                                break;
+                            case NUMERIC:
+                                oCell.setCellValue(cell.getNumericCellValue());
+                                break;
+                            case STRING:
+                                oCell.setCellValue(cell.getStringCellValue());
+                                break;
+                            default:
+                                oCell.setCellFormula(cell.getCellFormula());
+                        }
+                    }
+                }
+            }
+        }
+    }
 
-    A business has a whole lot of data in a given format which is NOT in a format which slots easily into a converted csv
-    with headings/columns. It will have named ranges.
+    private static int getIntorNull(Cell cell){
+        if (cell==null){
+            return 0;
+        }
+        return (int) cell.getNumericCellValue();
+    }
 
-    To make Azquo understand this we upload one of these files with a named range AZIMPORTNAME which is the report name
-    there will be other ranges tagged in that file - pairs of data and column headings currently
 
-    This is used to extract data regions to files. How to detect this without annoying code.
+    private static void oneRange(Workbook ppBook, Row row, Workbook inputBook)throws Exception{
+        String rangeName = row.getCell(0).getStringCellValue().trim();
+        String sheetName = row.getCell(1).getStringCellValue().trim();
+        String anchor = null;
+        Sheet sheet = inputBook.getSheet(sheetName);
+        if (sheet == null){
+            throw new Exception ("cannot find " + sheetName);
+        }
+        String text = null;
+        try{
 
-    Known names not relevant on this data bit, now there's a split to the template source for the headings we just have it there
-     */
+            anchor = row.getCell(2).getStringCellValue().trim();
+            if (anchor.startsWith("[")&& anchor.endsWith("]")) {
+                //anchor is the text in a shape
+                XSSFDrawing drawing = (XSSFDrawing) sheet.getDrawingPatriarch();
+
+                for (XSSFShape shape : drawing.getShapes()) {
+                    // possible:   XSSFConnector, XSSFGraphicFrame, XSSFPicture, XSSFShapeGroup, XSSFSimpleShape
+                    if (shape instanceof XSSFTextBox) {
+                        if (shape.getShapeName().equals(anchor.substring(1, anchor.length() - 1))) {
+                            text = ((XSSFTextBox) shape).getText();
+                            break;
+                        }
+                    }
+                }
+            }
+        }catch(Exception e){
+            //anchor is null!
+        }
+        int rowOffset = getIntorNull(row.getCell(3));
+        int colOffset = getIntorNull(row.getCell(4));
+        int columns = getIntorNull(row.getCell(5));
+        String endRowString = null;
+        int endRow = 0;
+        try{
+            endRowString = row.getCell(6).getStringCellValue().trim();
+        }catch(Exception e){
+            endRow = getIntorNull(row.getCell(6));
+
+        }
+        Cell topLeft= null;
+
+        if (anchor!=null) {
+            Cell found = findCell(inputBook, sheetName, anchor);
+            if (found==null){
+                throw new Exception("cannot find anchor " + anchor);
+            }
+            topLeft = sheet.getRow(found.getRowIndex() + rowOffset).getCell(found.getColumnIndex() + colOffset);
+        }else {
+            topLeft = sheet.getRow(rowOffset - 1).getCell(colOffset - 1);
+        }
+        if (endRow==0) {
+            for (endRow = topLeft.getRowIndex(); endRow <= topLeft.getSheet().getLastRowNum(); endRow++) {
+                if (sheet.getRow(endRow) != null) {
+                    Cell cell = sheet.getRow(endRow).getCell(topLeft.getColumnIndex());
+                    if ((endRowString==null && cell==null)||(cell != null && cell.getCellType() == STRING && cell.getStringCellValue().trim().equalsIgnoreCase(endRowString))){
+                        break;
+                    }
+                }
+            }
+            if (endRow >topLeft.getSheet().getLastRowNum()){
+                endRow = 0;
+            }
+        }
+        if (endRow > 0){
+            Sheet outputSheet = ppBook.getSheet(rangeName);
+            if (outputSheet != null){
+                copyRange(topLeft, endRow - topLeft.getRowIndex() + 1, columns, outputSheet);
+            }
+        }
+    }
+
+
+    private static Cell findCell(Workbook book, String sheetName, String cellVal){
+        if (sheetName == null){
+            for (Sheet sheet:book){
+                Cell  cell = findCell(book, sheet.getSheetName(), cellVal);
+                if(cell!=null){
+                    return cell;
+                }
+            }
+        }
+        Sheet sheet = book.getSheet(sheetName);
+        for (int rowNo= sheet.getTopRow(); rowNo<=sheet.getLastRowNum();rowNo++){
+            if (sheet.getRow(rowNo)!= null){
+                Row row = sheet.getRow(rowNo);
+                for (int cellNo= row.getFirstCellNum();cellNo<row.getLastCellNum();cellNo++){
+                    if (row.getCell(cellNo)!=null && row.getCell(cellNo).getCellType()== STRING && row.getCell(cellNo).getStringCellValue().equalsIgnoreCase(cellVal)){
+                        return row.getCell(cellNo);
+                    }
+                }
+            }
+
+        }
+        return null;
+    }
 
     public static void rangeToCSV(io.keikai.api.model.Sheet sheet, AreaReference areaReference, CsvWriter csvW) throws Exception {
         int startRow = areaReference.getFirstCell().getRow();
@@ -717,6 +826,10 @@ public final class ImportService {
 
     private static UploadedFile readSheet(LoggedInUser loggedInUser, UploadedFile uploadedFile, org.apache.poi.ss.usermodel.Sheet sheet, Map<String, String> knownValues, PendingUploadConfig pendingUploadConfig, HashMap<String, ImportTemplateData> templateCache) {
         String sheetName = sheet.getSheetName();
+        boolean usDates = false;
+        if (uploadedFile.getParameter("usdates")!=null){
+            usDates = true;
+        }
         long time = System.currentTimeMillis();
         try {
             long test = System.currentTimeMillis();
@@ -747,7 +860,7 @@ public final class ImportService {
                             cellIndex++;
                         }
                     }
-                    final String cellValue = getCellValue(cell);
+                    final String cellValue = getCellValueUS(cell, usDates);
                     csvW.write(cellValue.replace("\n", "\\\\n").replace("\r", "")
                             .replace("\t", "\\\\t"));
                 }
@@ -1559,6 +1672,10 @@ public final class ImportService {
                                     String left = pair.substring(0, pair.indexOf("=")).trim();
                                     String right = pair.substring(pair.indexOf("=") + 1).trim();
                                     map.put(left.toLowerCase(), right);
+                                }else{
+                                    if (pair.toLowerCase(Locale.ROOT).equals("usdates")){
+                                        map.put("usdates","true");
+                                    }
                                 }
                             }
                         }
@@ -1586,7 +1703,12 @@ public final class ImportService {
         return getCellValue(sheet.getRow(areaRef.getFirstCell().getRow()).getCell(areaRef.getFirstCell().getCol()));
     }
 
+
     public static String getCellValue(org.apache.poi.ss.usermodel.Cell cell) {
+        return getCellValueUS(cell, false);
+    }
+
+    public static String getCellValueUS(org.apache.poi.ss.usermodel.Cell cell, boolean usDates){
         String returnString = "";
         if (cell == null) {
             return "";
@@ -1595,6 +1717,12 @@ public final class ImportService {
         if (cell.getCellType() == STRING || (cell.getCellType() == FORMULA && cell.getCachedFormulaResultType() == STRING)) {
             try {
                 returnString = cell.getStringCellValue().replace(Character.toString((char) 160), "");// I assume means formatted text? The 160 is some kind of hard space that causes trouble and is unaffected by trim(), zap it
+                 if (usDates){
+                     LocalDate d = DateUtils.isUSDate(returnString);
+                     if (d!=null){
+                          returnString = d.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+                     }
+                 }
             } catch (Exception ignored) {
             }
         } else if (cell.getCellType() == NUMERIC || (cell.getCellType() == FORMULA && cell.getCachedFormulaResultType() == NUMERIC)) {
@@ -2750,82 +2878,102 @@ fr.close();
                     UploadedFile zipEntryUploadFile = new UploadedFile(f.getPath(), Collections.singletonList(f.getName()), fileNameParams, false, false);
                     // ok I need to convert the excel input files here hhhhhhhngh
                     org.apache.poi.xssf.usermodel.XSSFWorkbook book;
-                    try {
-                        book = new org.apache.poi.xssf.usermodel.XSSFWorkbook(org.apache.poi.openxml4j.opc.OPCPackage.open(new FileInputStream(new File(zipEntryUploadFile.getPath()))));
-                    } catch (org.apache.poi.openxml4j.exceptions.InvalidFormatException ife) {
-                        // Hanover may send 'em encrypted
-                        POIFSFileSystem fileSystem = new POIFSFileSystem(new FileInputStream(zipEntryUploadFile.getPath()));
-                        EncryptionInfo info = new EncryptionInfo(fileSystem);
-                        Decryptor decryptor = Decryptor.getInstance(info);
-                        String password = zipEntryUploadFile.getParameter("password") != null ? zipEntryUploadFile.getParameter("password") : "b0702"; // defaulting to an old Hanover password. Maybe zap . . .
-                        if (!decryptor.verifyPassword(password)) { // currently hardcoded, this will change
-                            throw new RuntimeException("Unable to process: document is encrypted.");
+                    if (!f.getName().endsWith(".xlsx")) {
+                        UploadedFile uf = new UploadedFile(f.getPath(), zipEntryUploadFile.getFileNames(), fileNameParams, true, false);
+                        ImportService.preProcessUsingPoi(loggedInUser, uf, preprocessorTempLocation.getPath());
+                        String name = uf.getPath();
+                        if (name.contains("/")) {
+                            name = name.substring(name.lastIndexOf("/") + 1);
+                        } else if (name.contains("\\")) {
+                            name = name.substring(name.lastIndexOf("\\") + 1);
                         }
-                        InputStream dataStream = decryptor.getDataStream(fileSystem);
-                        book = new org.apache.poi.xssf.usermodel.XSSFWorkbook(dataStream);
-                    }
-
-                    for (int sheetNo = 0; sheetNo < book.getNumberOfSheets(); sheetNo++) {
-                        org.apache.poi.ss.usermodel.Sheet sheet = book.getSheetAt(sheetNo);
-
-                        File temp = File.createTempFile(f.getPath() + sheet.getSheetName(), ".tsv");
-                        String tempPath = temp.getPath();
-                        temp.deleteOnExit();
-                        FileOutputStream fos = new FileOutputStream(tempPath);
-                        CsvWriter csvW = new CsvWriter(fos, '\t', StandardCharsets.UTF_8);
-                        csvW.setUseTextQualifier(false);
-                        // poi convert - notably the iterators skip blank rows and cells hence the checking that indexes match
-                        int rowIndex = -1;
-                        boolean emptySheet = true;
-                        for (org.apache.poi.ss.usermodel.Row row : sheet) {
-                            emptySheet = false;
-                            // turns out blank lines are important
-                            if (++rowIndex != row.getRowNum()) {
-                                while (rowIndex != row.getRowNum()) {
-                                    csvW.endRecord();
-                                    rowIndex++;
-                                }
+                        if (name.endsWith(" converted")) {
+                            name = name.substring(0, name.length() - 10);
+                            // now try to zap the last number
+                            int timestampLength = (System.currentTimeMillis() + "").length();
+                            if (name.endsWith(".tsv")) {
+                                name = name.substring(0, name.length() - (timestampLength + 4)) + ".tsv";
                             }
-                            int cellIndex = -1;
-                            for (Iterator<org.apache.poi.ss.usermodel.Cell> ri = row.cellIterator(); ri.hasNext(); ) {
-                                org.apache.poi.ss.usermodel.Cell cell = ri.next();
-                                if (++cellIndex != cell.getColumnIndex()) {
-                                    while (cellIndex != cell.getColumnIndex()) {
-                                        if (!sheet.isColumnHidden(cellIndex)) {
-                                            csvW.write("");
-                                        }
-                                        cellIndex++;
+                        }
+                        Files.copy(Paths.get(uf.getPath()), zipforuploadresult.resolve(name));
+                    } else {
+                        try {
+                            book = new org.apache.poi.xssf.usermodel.XSSFWorkbook(org.apache.poi.openxml4j.opc.OPCPackage.open(new FileInputStream(new File(zipEntryUploadFile.getPath()))));
+                        } catch (org.apache.poi.openxml4j.exceptions.InvalidFormatException ife) {
+                            // Hanover may send 'em encrypted
+                            POIFSFileSystem fileSystem = new POIFSFileSystem(new FileInputStream(zipEntryUploadFile.getPath()));
+                            EncryptionInfo info = new EncryptionInfo(fileSystem);
+                            Decryptor decryptor = Decryptor.getInstance(info);
+                            String password = zipEntryUploadFile.getParameter("password") != null ? zipEntryUploadFile.getParameter("password") : "b0702"; // defaulting to an old Hanover password. Maybe zap . . .
+                            if (!decryptor.verifyPassword(password)) { // currently hardcoded, this will change
+                                throw new RuntimeException("Unable to process: document is encrypted.");
+                            }
+                            InputStream dataStream = decryptor.getDataStream(fileSystem);
+                            book = new org.apache.poi.xssf.usermodel.XSSFWorkbook(dataStream);
+                        }
+
+                        for (int sheetNo = 0; sheetNo < book.getNumberOfSheets(); sheetNo++) {
+                            org.apache.poi.ss.usermodel.Sheet sheet = book.getSheetAt(sheetNo);
+
+                            File temp = File.createTempFile(f.getPath() + sheet.getSheetName(), ".tsv");
+                            String tempPath = temp.getPath();
+                            temp.deleteOnExit();
+                            FileOutputStream fos = new FileOutputStream(tempPath);
+                            CsvWriter csvW = new CsvWriter(fos, '\t', StandardCharsets.UTF_8);
+                            csvW.setUseTextQualifier(false);
+                            // poi convert - notably the iterators skip blank rows and cells hence the checking that indexes match
+                            int rowIndex = -1;
+                            boolean emptySheet = true;
+                            for (org.apache.poi.ss.usermodel.Row row : sheet) {
+                                emptySheet = false;
+                                // turns out blank lines are important
+                                if (++rowIndex != row.getRowNum()) {
+                                    while (rowIndex != row.getRowNum()) {
+                                        csvW.endRecord();
+                                        rowIndex++;
                                     }
                                 }
-                                final String cellValue = ImportService.getCellValue(cell);
-                                if (!sheet.isColumnHidden(cellIndex)) {
-                                    csvW.write(cellValue.replace("\n", "\\\\n").replace("\r", "")
-                                            .replace("\t", "\\\\t"));
+                                int cellIndex = -1;
+                                for (Iterator<org.apache.poi.ss.usermodel.Cell> ri = row.cellIterator(); ri.hasNext(); ) {
+                                    org.apache.poi.ss.usermodel.Cell cell = ri.next();
+                                    if (++cellIndex != cell.getColumnIndex()) {
+                                        while (cellIndex != cell.getColumnIndex()) {
+                                            if (!sheet.isColumnHidden(cellIndex)) {
+                                                csvW.write("");
+                                            }
+                                            cellIndex++;
+                                        }
+                                    }
+                                    final String cellValue = ImportService.getCellValue(cell);
+                                    if (!sheet.isColumnHidden(cellIndex)) {
+                                        csvW.write(cellValue.replace("\n", "\\\\n").replace("\r", "")
+                                                .replace("\t", "\\\\t"));
+                                    }
                                 }
+                                csvW.endRecord();
                             }
-                            csvW.endRecord();
-                        }
-                        csvW.close();
-                        fos.close();
-                        if (!emptySheet) {
-                            UploadedFile uf = new UploadedFile(tempPath, zipEntryUploadFile.getFileNames(), fileNameParams, true, false);
-                            ImportService.preProcessUsingPoi(loggedInUser, uf, preprocessorTempLocation.getPath());
-                            String name = uf.getPath();
-                            if (name.contains("/")) {
-                                name = name.substring(name.lastIndexOf("/") + 1);
-                            } else if (name.contains("\\")) {
-                                name = name.substring(name.lastIndexOf("\\") + 1);
-                            }
-                            if (name.endsWith(" converted")) {
-                                name = name.substring(0, name.length() - 10);
-                                // now try to zap the last number
-                                int timestampLength = (System.currentTimeMillis() + "").length();
-                                if (name.endsWith(".tsv")) {
-                                    name = name.substring(0, name.length() - (timestampLength + 4)) + ".tsv";
+                            csvW.close();
+                            fos.close();
+                            if (!emptySheet) {
+                                UploadedFile uf = new UploadedFile(tempPath, zipEntryUploadFile.getFileNames(), fileNameParams, true, false);
+                                ImportService.preProcessUsingPoi(loggedInUser, uf, preprocessorTempLocation.getPath());
+                                String name = uf.getPath();
+                                if (name.contains("/")) {
+                                    name = name.substring(name.lastIndexOf("/") + 1);
+                                } else if (name.contains("\\")) {
+                                    name = name.substring(name.lastIndexOf("\\") + 1);
                                 }
-                            }
-                            Files.copy(Paths.get(uf.getPath()), zipforuploadresult.resolve(name));
+                                if (name.endsWith(" converted")) {
+                                    name = name.substring(0, name.length() - 10);
+                                    // now try to zap the last number
+                                    int timestampLength = (System.currentTimeMillis() + "").length();
+                                    if (name.endsWith(".tsv")) {
+                                        name = name.substring(0, name.length() - (timestampLength + 4)) + ".tsv";
+                                    }
+                                }
+                                Files.copy(Paths.get(uf.getPath()), zipforuploadresult.resolve(name));
 
+                            }
                         }
                     }
                 }
@@ -2902,6 +3050,10 @@ fr.close();
                             }
                         }
                         if (outvalue!=null && jsonRule.format.length() > 0) {
+                            if (jsonRule.format.equals("text")){
+                                //remove line feeds and tabs
+                                outvalue = outvalue.replace("\t"," ").replace("\n",";");
+                            }
                             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm");
                             try {
                                 if (jsonRule.format.equals("seconds")) {
@@ -2940,14 +3092,22 @@ fr.close();
     }
 
 
-    private static void traverseJSON(JsonRule jsonRule,String[] jsonPath,JSONObject jsonNext, int level) {
+    private static void traverseJSON(JsonRule jsonRule,String[] jsonPath,JSONObject jsonNext, int level) throws Exception{
         if (level < jsonPath.length - 1) {
             JSONArray jsonArray1 = new JSONArray();
             try {
                 JSONObject jsonNext1 = jsonNext.getJSONObject(jsonPath[level]);
                 jsonArray1.put(jsonNext1);
             } catch (Exception e) {
-                jsonArray1 = jsonNext.getJSONArray(jsonPath[level]);
+                try{
+                    jsonArray1 = jsonNext.getJSONArray(jsonPath[level]);
+                }catch(Exception e2){
+                    String path = "";
+                    for (int l=0;l<=level;l++){
+                        path= path+"/"+jsonPath[l];
+                    }
+                    throw new Exception("no path " + path);
+                }
             }
             level++;
             if (jsonArray1 != null) {
