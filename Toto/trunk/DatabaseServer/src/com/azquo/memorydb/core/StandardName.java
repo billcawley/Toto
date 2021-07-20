@@ -3,6 +3,7 @@ package com.azquo.memorydb.core;
 import com.azquo.StringLiterals;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.service.NameService;
+import com.google.common.collect.Lists;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 
 import java.nio.BufferOverflowException;
@@ -1061,13 +1062,28 @@ public final class StandardName extends Name {
                 if (noChildren > ARRAYTHRESHOLD) {
                     this.childrenAsSet = Collections.newSetFromMap(new ConcurrentHashMap<>(noChildren));
                     for (int i = 0; i < noChildren; i++) {
-                        this.childrenAsSet.add(getAzquoMemoryDB().getNameById(byteBuffer.getInt(i * 4)));
+                        if (getAzquoMemoryDB().getNameById(byteBuffer.getInt(i * 4)) == null){
+                            System.out.println("can't find name with id : " + byteBuffer.getInt(i * 4) + " while linking");
+                        } else {
+                            this.childrenAsSet.add(getAzquoMemoryDB().getNameById(byteBuffer.getInt(i * 4)));
+                        }
                     }
                 } else {
+                    boolean removeNull = false;
                     Name[] newChildren = new Name[noChildren];
                     for (int i = 0; i < noChildren; i++) {
                         newChildren[i] = getAzquoMemoryDB().getNameById(byteBuffer.getInt(i * 4));
+                        if (newChildren[i] == null){
+                            System.out.println("can't find name with id : " + byteBuffer.getInt(i * 4) + " while linking");
+                            removeNull = true;
+                        }
                     }
+                    if (removeNull){
+                        List<Name> check = Lists.newArrayList(newChildren);
+                        while (check.remove(null));
+                        newChildren = check.toArray(new Name[0]);
+                    }
+
                     this.children = newChildren;
                 }
             }

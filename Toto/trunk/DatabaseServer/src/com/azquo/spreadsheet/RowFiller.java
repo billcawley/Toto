@@ -55,7 +55,7 @@ class RowFiller implements Callable<List<AzquoCell>> {
     @Override
     public List<AzquoCell> call() throws Exception {
         try {
-            //System.out.println("Filling " + startRow + " to " + endRow);
+            //System.out.println("Filli\ng " + startRow + " to " + endRow);
             List<DataRegionHeading> rowHeadings = headingsForEachRow.get(row);
             List<AzquoCell> returnRow = new ArrayList<>(headingsForEachColumn.size());
             int colNo = 0;
@@ -72,7 +72,8 @@ class RowFiller implements Callable<List<AzquoCell>> {
         } catch (Exception e) {
             if (lastErrorPrintMillis < (System.currentTimeMillis() - (1_000 * 10))){ // only log this kind of error once every 10 seconds, it can cause havok!
                 lastErrorPrintMillis = System.currentTimeMillis();
-                System.out.println("in row filler, tostring : " + toString());
+//                System.out.println("in row filler, tostring : " + toString());
+                System.out.println("in row filler");
                 e.printStackTrace();
             }
             throw e;

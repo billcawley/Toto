@@ -128,5 +128,6 @@ public class StringLiterals {
     // on an upload file, should this file be flagged as one that moves with backups and is available for non admin users to download
     public static final String AZFILETYPE = "az_filetype";
 
+    public static final String AZCSVDOWNLOADNAME = "az_csvdownloadname";
 
 }

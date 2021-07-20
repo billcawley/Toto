@@ -151,7 +151,13 @@ class ZKComposerUtils {
                             }
                             csvWriter.flush();
                             csvWriter.close();
-                            toZip.add(new FileSource(region + "export.csv", newTempFile));
+                            SName downloadName = BookUtils.getNameByName(StringLiterals.AZCSVDOWNLOADNAME + region, sheet);
+                            if (downloadName != null){
+                                toZip.add(new FileSource(BookUtils.getRegionValue(sheet, downloadName.getRefersToCellRegion()) + ".csv", newTempFile));
+                            } else {
+                                toZip.add(new FileSource(region + "export.csv", newTempFile));
+
+                            }
                         }
                     }
                 }

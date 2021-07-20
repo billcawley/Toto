@@ -1,3 +1,13 @@
+16-07-21
+
+Dev has its own BSX directories
+
+No limits to region size on csv download, run the followon execute when downloading/modifying/uploading a report with data in it,
+
+fixed 'getUniqueName' problem
+
+with capability to handle parameter USDATES on import file
+
 07-07-21
 
 stop stack overflow where the children levels go into thousands

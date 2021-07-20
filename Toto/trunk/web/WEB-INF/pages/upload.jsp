@@ -28,6 +28,16 @@
                 document.getElementById("imagename").value = fileName.substring(0, fileName.indexOf("."));
             }
         }
+
+        function showHideDiv(div) {
+            var x = document.getElementById(div);
+            if (x.style.display === "none") {
+                x.style.display = "block";
+            } else {
+                x.style.display = "none";
+            }
+        }
+
     </script>
 </head>
 <body>
@@ -39,14 +49,16 @@
 
         <div>
             <label for="uploadfile">Choose the file</label>
+            <div id="working" class="loading" style="display:none">
+                <div class="loader"><span class="fa fa-spin fa-cog"></span><h3>Working...</h3>
+            </div>
             <input type="file" id="uploadfile"  onchange="checkFile()" name="uploadfile" required/>
         </div>
         <div id="imageNameDiv" style="display:none;">
             Save as: <input type="text" name="imagename" id="imagename" style="width:250px;" value=""/>
         </div>
         <div class="centeralign">
-
-            <input type="submit" name="submit" value="Upload" class="button" />
+            <input type="submit" name="submit" value="Upload" class="button" onclick="showHideDiv('working')" />
         </div>
     </form>
 </main>

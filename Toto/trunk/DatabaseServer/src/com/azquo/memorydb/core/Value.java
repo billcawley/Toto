@@ -2,6 +2,8 @@ package com.azquo.memorydb.core;
 
 //import org.apache.log4j.Logger;
 
+import com.google.common.collect.Lists;
+
 import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import java.util.*;
@@ -68,9 +70,20 @@ public final class Value extends AzquoMemoryDBEntity {
         ByteBuffer byteBuffer = ByteBuffer.wrap(namesCache);
         // we assume the names are loaded (though they may not be linked yet)
         Name[] newNames = new Name[noNames];
+        boolean removeNull = false;
         for (int i = 0; i < noNames; i++) {
             newNames[i] = getAzquoMemoryDB().getNameById(byteBuffer.getInt(i * 4));
+            if (newNames[i] == null){
+                System.out.println("can't find name with id : " + byteBuffer.getInt(i * 4) + " while loading a value");
+                removeNull = true;
+            }
         }
+        if (removeNull){
+            List<Name> check = Lists.newArrayList(newNames);
+            while (check.remove(null));
+            newNames = check.toArray(new Name[0]);
+        }
+
         this.names = newNames;
         // this should be fine being handled here while loading a db - was storing this against the name but too much space
         for (Name newName : this.names) {
