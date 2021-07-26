@@ -237,11 +237,20 @@ public class AzquoCellResolver {
                  }
 
             } else if (expressionFunctionHeadings.get(0).getFunction() == DataRegionHeading.FUNCTION.NAMECOUNT) { // a straight set but with [ROWHEADING] as part of the criteria
-                Set<Name
-                        > namesToCount = HashObjSets.newMutableSet(); // I think this will be faster for purpose
+                Set<Name> namesToCount = HashObjSets.newMutableSet(); // I think this will be faster for purpose
                 NameQueryParser.parseQuery(connection, expressions.get(0), languages, namesToCount, false);
                 doubleValue = namesToCount.size();
                 stringValue = doubleValue + "";
+            } else if (expressionFunctionHeadings.get(0).getFunction() == DataRegionHeading.FUNCTION.NAMELIST) { // a straight set but with [ROWHEADING] as part of the criteria
+                Set<Name> namesToCount = HashObjSets.newMutableSet(); // I think this will be faster for purpose
+                NameQueryParser.parseQuery(connection, expressions.get(0), languages, namesToCount, false);
+                StringBuffer sb = new StringBuffer();
+                if (namesToCount.size()> 0) {
+                    for (Name name : namesToCount) {
+                        sb.append(name.getDefaultDisplayName() + ", ");
+                    }
+                    stringValue = sb.substring(0, sb.length() - 2);
+                }
             } else if (expressionFunctionHeadings.get(0).getFunction() == DataRegionHeading.FUNCTION.PATHCOUNT) { // new syntax, before it was name, set now it's set, set. Sticking to very basic , split
                 //todo - this parsing needs to happen in the DateRegionHeadingService and needs to be robust to commas in names!
                 String[] twoSets = expressionFunctionHeadings.get(0).getStringParameter().split(","); // we assume this will give an array of two, I guess see if this is a problem

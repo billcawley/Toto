@@ -99,8 +99,8 @@ public class ProvenanceService {
         Name nameCountHeading = null;
         for (DataRegionHeading rowHeading : azquoCell.getRowHeadings()) {
             if (rowHeading != null) { // apparently it can be . . . is this a concern? Well NPE is no good, could error maggage on the else if this is a problem
-                if (rowHeading.getFunction() == DataRegionHeading.FUNCTION.NAMECOUNT) {
-                    provString.append("namecount(").append(rowHeading.getStringParameter());
+                if (rowHeading.getFunction() == DataRegionHeading.FUNCTION.NAMECOUNT  || rowHeading.getFunction() == DataRegionHeading.FUNCTION.NAMELIST)  {
+                    provString.append(rowHeading.getFunction() + "(").append(rowHeading.getStringParameter());
                     nameCountHeading = rowHeading.getName();
                 }
                 if (rowHeading.getName() != null) {
@@ -114,8 +114,8 @@ public class ProvenanceService {
                 System.out.println("row headings " + azquoCell.getRowHeadings());
                 System.out.println("context " + azquoCell.getContexts());
             }
-            if (colHeading.getFunction() == DataRegionHeading.FUNCTION.NAMECOUNT) {
-                provString.append("namecount(").append(colHeading.getStringParameter());
+            if (colHeading.getFunction() == DataRegionHeading.FUNCTION.NAMECOUNT || colHeading.getFunction()==DataRegionHeading.FUNCTION.NAMELIST) {
+                provString.append(colHeading.getFunction()+"(").append(colHeading.getStringParameter());
                 nameCountHeading = colHeading.getName();
                 break;
             }
