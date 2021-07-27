@@ -386,7 +386,7 @@ class AzquoMemoryDBTransport {
         return !namesToPersist.isEmpty();
     }
 
-    /* now, this is only called by the AzquoMemoryDB and is synchronized against that object so two can't run conncurrently
+    /* now, this is only called by the AzquoMemoryDB and is synchronized against that object so two can't run concurrently
     BUT at the moment I'm allowing the database to be modified while persisting, this function should be robust to that
      */
     void persistDatabase() {

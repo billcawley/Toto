@@ -90,6 +90,9 @@ public final class Value extends AzquoMemoryDBEntity {
             newName.checkValue(this, forceIdForBackup);
         }
         getAzquoMemoryDB().addValueToDb(this);
+        if (removeNull){
+            azquoMemoryDB.forceValueNeedsPersisting(this);
+        }
     }
 
     public Provenance getProvenance() {

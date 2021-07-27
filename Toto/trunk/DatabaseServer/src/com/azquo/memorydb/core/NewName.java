@@ -692,6 +692,10 @@ public final class NewName extends Name {
             throw new Exception("error cannot assign child due to circular reference, " + child + " cannot be added to " + this);
         }
         */
+        // circular references are becoming a problem on JB so a compromise - check for a close circular reference. Hopefully won't cause a big performance hit
+        if (getParents().contains(child)) {
+            throw new Exception("error cannot assign child due to circular reference, " + child + " cannot be added to " + this);
+        }
         // NOTE! for the set version we're now just using a set backed by a concurrent hash map, for large child sets ordering will be ignored.
         // While childrenAsSet is thread safe I think I'm going to need to synchronize the lot to make make state more consistent, at least with itself
         boolean changed = false; // only do the after stuff if something changed

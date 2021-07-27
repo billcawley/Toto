@@ -4,6 +4,7 @@ import com.azquo.StringLiterals;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.Value;
+import net.openhft.koloboke.collect.set.hash.HashObjSets;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -29,6 +30,9 @@ class NameEditFunctions {
         if (setFormula.startsWith("cleanroot")) {
             cleanRoot(azquoMemoryDBConnection);
             return Collections.emptyList();
+        }
+        if (setFormula.startsWith("circularreferencecheck")) {
+            return circularReferenceCheck(azquoMemoryDBConnection);
         }
         if (setFormula.startsWith("zapattributes")) {
             zapAttributes(azquoMemoryDBConnection, setFormula.substring(14).trim());
@@ -297,6 +301,7 @@ class NameEditFunctions {
     private static AtomicInteger cleanRootCount = new AtomicInteger(0);
 
     private static void cleanRoot(AzquoMemoryDBConnection azquoMemoryDBConnection) throws Exception {
+        cleanRootCount.incrementAndGet();
         List<Name> topNames = azquoMemoryDBConnection.getAzquoMemoryDBIndex().findTopNames(StringLiterals.DEFAULT_DISPLAY_NAME); // should be a big list
         boolean deleted = false;
         for (Name topName : topNames) {
@@ -308,6 +313,39 @@ class NameEditFunctions {
         if (deleted) {
             new Thread(azquoMemoryDBConnection::persist).start();
         }
+    }
+
+    private static AtomicInteger circularReferenceCheckCount = new AtomicInteger(0);
+
+    private static List<Name> circularReferenceCheck(AzquoMemoryDBConnection azquoMemoryDBConnection) throws Exception {
+        circularReferenceCheckCount.incrementAndGet();
+        Set<Name> candidates = HashObjSets.newMutableSet();
+        Set<Name> notLooped = HashObjSets.newMutableSet();
+//        List<List<Name>> loops = new ArrayList<>();
+        for (Name name : azquoMemoryDBConnection.getAzquoMemoryDB().getAllNames()){
+            if (name.hasChildren() && name.hasParents()){
+                candidates.add(name);
+            } else {
+                notLooped.add(name);
+            }
+        }
+        boolean go = true;
+        while (go){
+            go = false;
+            Iterator<Name> names = candidates.iterator();
+            while (names.hasNext()){
+                Name name = names.next();
+                if (notLooped.containsAll(name.getChildren()) || notLooped.containsAll(name.getParents())){
+                    go = true;
+                    notLooped.add(name);
+                    names.remove();
+                }
+            }
+            System.out.println("number of candidates : " + candidates.size());
+        }
+        // so now candidates is stripped down - can we break it into loops?
+
+        return new ArrayList<>(candidates);
     }
 
     private static void zapAttributes(AzquoMemoryDBConnection azquoMemoryDBConnection, String attList) throws Exception {

@@ -297,7 +297,7 @@ public final class AzquoMemoryDB {
         return nameByIdMap.size();
     }
 
-    Collection<Name> getAllNames() {
+    public Collection<Name> getAllNames() {
         return nameByIdMap.values();
     }
 
@@ -451,6 +451,14 @@ public final class AzquoMemoryDB {
     void forceNameNeedsPersisting(Name name) {
         forceNameNeedsPersistingCount.incrementAndGet();
         azquoMemoryDBTransport.setNameNeedsPersisting(name);
+    }
+
+    // for DB check on load
+    private static AtomicInteger forceValueNeedsPersistingCount = new AtomicInteger(0);
+
+    void forceValueNeedsPersisting(Value value) {
+        forceNameNeedsPersistingCount.incrementAndGet();
+        azquoMemoryDBTransport.setValueNeedsPersisting(value);
     }
 
 
