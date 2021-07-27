@@ -125,18 +125,18 @@ class ImportCellWithHeading {
                 if (only.startsWith("*")) {
                     if (only.endsWith("*")) {
                         if (!lineValue.contains(only.substring(1, only.length() - 1))) {
-                            throw new LineRejectionException("not in only, " + only);
+                            throw new LineRejectionException(lineValue + " not in only, " + only);
                         }
                     } else if (!lineValue.endsWith(only.substring(1))) {
-                        throw new LineRejectionException("not in only, " + only);
+                        throw new LineRejectionException(lineValue + " not in only, " + only);
                     }
                 } else if (only.endsWith("*")) {
                     if (!lineValue.startsWith(only.substring(0, only.length() - 1))) {
-                        throw new LineRejectionException("not in only, " + only);
+                        throw new LineRejectionException(lineValue + " not in only, " + only);
                     }
                 } else {
                     if (!lineValue.equals(only)) {
-                        throw new LineRejectionException("not in only, " + only);
+                        throw new LineRejectionException(lineValue + " not in only, " + only);
                     }
                 }
             }
