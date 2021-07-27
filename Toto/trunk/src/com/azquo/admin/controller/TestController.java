@@ -1,10 +1,8 @@
 package com.azquo.admin.controller;
 
-import com.azquo.admin.onlinereport.UserActivity;
 import com.azquo.dataimport.*;
 import com.csvreader.CsvWriter;
 import com.ecwid.maleorang.MailchimpException;
-import com.ecwid.maleorang.annotation.*;
 import com.extractagilecrm.ExtractContacts;
 import com.extractdotdigital.ExtractDotDigital;
 import com.extractmailchimp.ExtractMailchimp;
@@ -16,7 +14,6 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.ValueNode;
 import com.github.rcaller.rstuff.RCaller;
 import com.github.rcaller.rstuff.RCode;
-import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.util.PDFTextStripper;
@@ -26,8 +23,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.*;
@@ -42,10 +37,9 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
-import com.ecwid.maleorang.MailchimpClient;
-import com.ecwid.maleorang.MailchimpObject;
-import com.ecwid.maleorang.method.v3_0.lists.members.MemberInfo;
-import com.ecwid.maleorang.method.v3_0.lists.members.GetMembersMethod;
+import org.zkoss.poi.xssf.usermodel.XSSFRow;
+import org.zkoss.poi.xssf.usermodel.XSSFSheet;
+import org.zkoss.poi.xssf.usermodel.XSSFWorkbook;
 
 /**
  * Created by EFC on 17/11/20.
@@ -282,7 +276,7 @@ public class TestController {
         // need to do 8 and 10, there will be some copy pasting. Probably will be able to factor later but it will involve some thinking
         if (classifications.isEmpty()) {
             for (String sku : skuCoordinates.keySet()) {
-                pagePercentages.put(sku, 17);
+                pagePercentages.put(sku, 12);
                 if (skuCoordinates.get(sku).getX() > .45) { // right
                     if (skuCoordinates.get(sku).getY() > .70) { // bottom
                         classifications.put(sku, "BottomRight");
@@ -376,8 +370,8 @@ public class TestController {
         if ("mailchimp".equals(something)) {
             try {
 // azquo                ExtractMailchimp.extractData("516f98d1f28e8cc97a2b8da9025d3b78-us1");
-                ExtractMailchimp.extractData("7098a7c3111522fa3efcea3aff87d976-us19","micro scooter");
-            } catch (IOException | MailchimpException e) {
+                ExtractMailchimp.extractData("7098a7c3111522fa3efcea3aff87d976-us19");
+            } catch (IOException | MailchimpException | InterruptedException e) {
                 e.printStackTrace();
             }
         }
@@ -404,78 +398,98 @@ public class TestController {
             toprow.createCell(2).setCellValue("Location");
             toprow.createCell(3).setCellValue("Page %");*/
 
-            Map<Integer, Map<String, XYPair>> skuCoordinates = new HashMap<>();
+            try (Stream<Path> transferDir = Files.list(Paths.get("/home/edward/Downloads/Transfer"))) {
+                Iterator<Path> transferDirIterator = transferDir.iterator();
+                // go through the main directory looking for directories that match a DB name
+                while (transferDirIterator.hasNext()) {
+                    Path p = transferDirIterator.next();
+                    if (p.toString().endsWith(".pdf")){
+                        Map<Integer, Map<String, XYPair>> skuCoordinates = new HashMap<>();
 
-            PDDocument pdDoc = null;
-            PDFTextStripper pdfStripper;
+                        PDDocument pdDoc = null;
+                        PDFTextStripper pdfStripper;
 
-            String fileName = "/home/edward/Downloads/scooter.pdf";
-            File file = new File(fileName);
-            try {
-                pdfStripper = new PDFTextStripper();
-                pdfStripper.setStartPage(1);
-                pdfStripper.setEndPage(1);
-                pdDoc = PDDocument.load(new FileInputStream(file));
+                        String pdfName = p.toFile().getName();
+                        File file = p.toFile();
+                        try {
+                            pdfStripper = new PDFTextStripper();
+                            pdfStripper.setStartPage(1);
+                            pdfStripper.setEndPage(1);
+                            pdDoc = PDDocument.load(new FileInputStream(file));
+                            XSSFWorkbook wb = new XSSFWorkbook();
+                            XSSFSheet user_activity = wb.createSheet("Classsifications");
+                            int rownum = 0;
+                            XSSFRow toprow = user_activity.createRow(rownum);
+                            toprow.createCell(0).setCellValue("Page");
+                            toprow.createCell(1).setCellValue("SKU");
+                            toprow.createCell(2).setCellValue("Location");
+                            toprow.createCell(3).setCellValue("Percentage");
+
 
 
 //                System.out.println(pdfStripper.getText(pdDoc));
 
-                List<PDPage> pages = pdDoc.getDocumentCatalog().getAllPages();
-                int pageNo = 1;
-                for (PDPage page : pages) {
-                    Map<String, XYPair> skuCoordinatesForPage = new HashMap<>();
-                    PrintTextLocator locator = new PrintTextLocator(skuCoordinatesForPage);
-                    locator.setStartPage(pageNo);
-                    locator.setEndPage(pageNo);
-                    float height = page.getMediaBox().getHeight();
-                    float width = page.getMediaBox().getWidth();
-                    locator.getText(pdDoc);
-                    Map<String, XYPair> percentageSkuCoordinatesForPage = new HashMap<>();
-                    for (String sku : skuCoordinatesForPage.keySet()) {
-                        XYPair xyPair = skuCoordinatesForPage.get(sku);
-                        percentageSkuCoordinatesForPage.put(sku, new XYPair(xyPair.getX() / width, xyPair.getY() / height));
-                    }
-                    skuCoordinates.put(pageNo, percentageSkuCoordinatesForPage);
-                    pageNo++;
-                }
-                NumberFormat percentInstance = NumberFormat.getPercentInstance();
-                for (Integer page : skuCoordinates.keySet()) {
+                            List<PDPage> pages = pdDoc.getDocumentCatalog().getAllPages();
+                            int pageNo = 1;
+                            for (PDPage page : pages) {
+                                Map<String, XYPair> skuCoordinatesForPage = new HashMap<>();
+                                PrintTextLocator locator = new PrintTextLocator(skuCoordinatesForPage);
+                                locator.setStartPage(pageNo);
+                                locator.setEndPage(pageNo);
+                                float height = page.getMediaBox().getHeight();
+                                float width = page.getMediaBox().getWidth();
+                                locator.getText(pdDoc);
+                                Map<String, XYPair> percentageSkuCoordinatesForPage = new HashMap<>();
+                                for (String sku : skuCoordinatesForPage.keySet()) {
+                                    XYPair xyPair = skuCoordinatesForPage.get(sku);
+                                    percentageSkuCoordinatesForPage.put(sku, new XYPair(xyPair.getX() / width, xyPair.getY() / height));
+                                }
+                                skuCoordinates.put(pageNo, percentageSkuCoordinatesForPage);
+                                pageNo++;
+                            }
+                            NumberFormat percentInstance = NumberFormat.getPercentInstance();
+                            for (Integer page : skuCoordinates.keySet()) {
 
-                    System.out.println("page : " + page);
-                    Map<String, String> skusclassifications = new HashMap<>();
-                    Map<String, Integer> skuspercentages = new HashMap<>();
-                    classifySKUPagePositions(skuCoordinates.get(page), skusclassifications, skuspercentages);
-                    for (String sku : skuCoordinates.get(page).keySet()) {
-/*                        rownum++;
-                        XSSFRow row = user_activity.createRow(rownum);
-                        row.createCell(0).setCellValue(page);
-                        row.createCell(1).setCellValue(sku);
-                        row.createCell(2).setCellValue(skusclassifications.get(sku) != null ? skusclassifications.get(sku) : "X " + percentInstance.format(skuCoordinates.get(page).get(sku).getX()) + " Y " + percentInstance.format(skuCoordinates.get(page).get(sku).getY()));
-                        row.createCell(3).setCellValue(skuspercentages.get(sku) != null ? skuspercentages.get(sku) : 0);*/
-                        System.out.print(page);
+                                System.out.println("page : " + page);
+                                Map<String, String> skusclassifications = new HashMap<>();
+                                Map<String, Integer> skuspercentages = new HashMap<>();
+                                classifySKUPagePositions(skuCoordinates.get(page), skusclassifications, skuspercentages);
+                                for (String sku : skuCoordinates.get(page).keySet()) {
+                                    rownum++;
+                                    XSSFRow row = user_activity.createRow(rownum);
+                                    row.createCell(0).setCellValue(page);
+                                    row.createCell(1).setCellValue(sku);
+                                    row.createCell(2).setCellValue(skusclassifications.get(sku) != null ? skusclassifications.get(sku) : "X " + percentInstance.format(skuCoordinates.get(page).get(sku).getX()) + " Y " + percentInstance.format(skuCoordinates.get(page).get(sku).getY()));
+                                    row.createCell(3).setCellValue(skuspercentages.get(sku) != null ? skuspercentages.get(sku) : 0);
+/*                        System.out.print(page);
                         System.out.print(" ");
                         System.out.print(sku);
                         System.out.print(" ");
                         System.out.print(skusclassifications.get(sku) != null ? skusclassifications.get(sku) : "X " + percentInstance.format(skuCoordinates.get(page).get(sku).getX()) + " Y " + percentInstance.format(skuCoordinates.get(page).get(sku).getY()));
                         System.out.print(" ");
-                        System.out.println("" + (skuspercentages.get(sku) != null ? skuspercentages.get(sku) : 0));
-                    }
-                }
+                        System.out.println("" + (skuspercentages.get(sku) != null ? skuspercentages.get(sku) : 0));*/
+                                }
+                            }
 /*                response.setContentType("application/vnd.ms-excel"); // Set up mime type
                 response.addHeader("Content-Disposition", "attachment; filename=catalogueparse.xlsx");
                 OutputStream out = response.getOutputStream();
                 wb.write(out);
                 out.close();*/
-
-            } catch (Exception e) {
-                e.printStackTrace();
-                try {
-                    if (pdDoc != null)
-                        pdDoc.close();
-                } catch (Exception e1) {
-                    e1.printStackTrace();
+                            wb.write(new FileOutputStream("/home/edward/Downloads/Transfer/" + pdfName.substring(0, pdfName.length() - 4) + ".xlsx"));
+                            pdDoc.close();
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                            try {
+                                if (pdDoc != null)
+                                    pdDoc.close();
+                            } catch (Exception e1) {
+                                e1.printStackTrace();
+                            }
+                        }
+                    }
                 }
-
+            } catch (IOException e) {
+                e.printStackTrace();
             }
         }
 
@@ -487,17 +501,17 @@ public class TestController {
                 builder = factory.newDocumentBuilder();
                 Files.walkFileTree(Paths.get("/home/edward/Downloads/artest/"), new FileVisitor<Path>() {
                     @Override
-                    public FileVisitResult preVisitDirectory(Path path, BasicFileAttributes basicFileAttributes) throws IOException {
+                    public FileVisitResult preVisitDirectory(Path path, BasicFileAttributes basicFileAttributes) {
                         return FileVisitResult.CONTINUE;
                     }
 
                     @Override
-                    public FileVisitResult visitFile(Path path, BasicFileAttributes basicFileAttributes) throws IOException {
+                    public FileVisitResult visitFile(Path path, BasicFileAttributes basicFileAttributes) {
                         return FileVisitResult.CONTINUE;
                     }
 
                     @Override
-                    public FileVisitResult visitFileFailed(Path path, IOException e) throws IOException {
+                    public FileVisitResult visitFileFailed(Path path, IOException e) {
                         return FileVisitResult.CONTINUE;
                     }
 
