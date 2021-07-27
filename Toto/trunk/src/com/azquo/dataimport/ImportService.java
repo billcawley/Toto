@@ -591,7 +591,7 @@ public final class ImportService {
                     try{
                         oneRange(ppBook, ppSheet.getRow(rowNo++),book);
                     }catch(Exception e){
-                        throw new Exception("cannot read row " + (rowNo + 1) + " in the preprocessor");
+                        throw new Exception("cannot read row " + (rowNo) + " in the preprocessor");
                     }
 
                 }
@@ -706,58 +706,62 @@ public final class ImportService {
 
                 for (XSSFShape shape : drawing.getShapes()) {
                     // possible:   XSSFConnector, XSSFGraphicFrame, XSSFPicture, XSSFShapeGroup, XSSFSimpleShape
-                    if (shape instanceof XSSFTextBox) {
-                        if (shape.getShapeName().equals(anchor.substring(1, anchor.length() - 1))) {
-                            text = ((XSSFTextBox) shape).getText();
-                            break;
-                        }
+                    if (shape.getShapeName().equalsIgnoreCase(anchor.substring(1, anchor.length() - 1))) {
+                        //text =  (XSSFTextBox)shape.getText();
+                        break;
                     }
                 }
             }
         }catch(Exception e){
             //anchor is null!
         }
-        int rowOffset = getIntorNull(row.getCell(3));
-        int colOffset = getIntorNull(row.getCell(4));
-        int columns = getIntorNull(row.getCell(5));
-        String endRowString = null;
-        int endRow = 0;
-        try{
-            endRowString = row.getCell(6).getStringCellValue().trim();
-        }catch(Exception e){
-            endRow = getIntorNull(row.getCell(6));
-
-        }
         Cell topLeft= null;
+        int endRow = 0;
+        int columns = 1;
+        if (text==null) {
+            int rowOffset = getIntorNull(row.getCell(3));
+            int colOffset = getIntorNull(row.getCell(4));
+            String endRowString = null;
+            try{
+                endRowString = row.getCell(6).getStringCellValue().trim();
+            }catch(Exception e){
+                endRow = getIntorNull(row.getCell(6));
 
-        if (anchor!=null) {
-            Cell found = findCell(inputBook, sheetName, anchor);
-            if (found==null){
-                throw new Exception("cannot find anchor " + anchor);
             }
-            topLeft = sheet.getRow(found.getRowIndex() + rowOffset).getCell(found.getColumnIndex() + colOffset);
-        }else {
-            topLeft = sheet.getRow(rowOffset - 1).getCell(colOffset - 1);
-        }
-        if (endRow==0) {
-            for (endRow = topLeft.getRowIndex(); endRow <= topLeft.getSheet().getLastRowNum(); endRow++) {
-                if (sheet.getRow(endRow) != null) {
-                    Cell cell = sheet.getRow(endRow).getCell(topLeft.getColumnIndex());
-                    if ((endRowString==null && cell==null)||(cell != null && cell.getCellType() == STRING && cell.getStringCellValue().trim().equalsIgnoreCase(endRowString))){
-                        break;
+
+            if (anchor != null) {
+                Cell found = findCell(inputBook, sheetName, anchor);
+                if (found == null) {
+                    throw new Exception("cannot find anchor " + anchor);
+                }
+                topLeft = sheet.getRow(found.getRowIndex() + rowOffset).getCell(found.getColumnIndex() + colOffset);
+            } else {
+                topLeft = sheet.getRow(rowOffset - 1).getCell(colOffset - 1);
+            }
+            if (endRow == 0 && text == null) {
+                for (endRow = topLeft.getRowIndex(); endRow <= topLeft.getSheet().getLastRowNum(); endRow++) {
+                    if (sheet.getRow(endRow) != null) {
+                        Cell cell = sheet.getRow(endRow).getCell(topLeft.getColumnIndex());
+                        if ((endRowString == null && cell == null) || (cell != null && cell.getCellType() == STRING && cell.getStringCellValue().trim().equalsIgnoreCase(endRowString))) {
+                            break;
+                        }
                     }
                 }
-            }
-            if (endRow >topLeft.getSheet().getLastRowNum()){
-                endRow = 0;
+                if (endRow > topLeft.getSheet().getLastRowNum()) {
+                    endRow = 0;
+                }
             }
         }
-        if (endRow > 0){
+        if (endRow > 0 || text != null) {
             Sheet outputSheet = ppBook.getSheet(rangeName);
-            if (outputSheet != null){
-                copyRange(topLeft, endRow - topLeft.getRowIndex() + 1, columns, outputSheet);
+            if (outputSheet != null) {
+                if (text != null) {
+                    outputSheet.getRow(0).getCell(0).setCellValue(text);
+                } else {
+                    copyRange(topLeft, endRow - topLeft.getRowIndex() + 1, columns, outputSheet);
+                }
             }
-        }
+         }
     }
 
 
@@ -775,7 +779,7 @@ public final class ImportService {
             if (sheet.getRow(rowNo)!= null){
                 Row row = sheet.getRow(rowNo);
                 for (int cellNo= row.getFirstCellNum();cellNo<row.getLastCellNum();cellNo++){
-                    if (row.getCell(cellNo)!=null && row.getCell(cellNo).getCellType()== STRING && row.getCell(cellNo).getStringCellValue().equalsIgnoreCase(cellVal)){
+                    if (row.getCell(cellNo)!=null && row.getCell(cellNo).getCellType()== STRING && row.getCell(cellNo).getStringCellValue().trim().equalsIgnoreCase(cellVal)){
                         return row.getCell(cellNo);
                     }
                 }
@@ -2175,12 +2179,14 @@ fr.close();
             }
             List<String> ignoreSheetList = getList(ppBook, "az_IgnoreSheets");
             if (ignoreSheetList.size() > 0) {
-                String sheetName = uploadedFile.getFileNames().get(uploadedFile.getFileNames().size() - 1).toLowerCase(Locale.ROOT);
-                for (String ignoreSheet : ignoreSheetList) {
-                    if (ignoreSheet.length() > 0 && sheetName.contains(ignoreSheet)) {
-                        //using 'contains' - maybe should check wildcards
-                        uploadedFile.setPath(null);
-                        return;
+                 for (String ignoreSheet : ignoreSheetList) {
+                    if (ignoreSheet.length() > 0) {
+                        for (String fName : uploadedFile.getFileNames()) {
+                            if (nameApplies(ignoreSheet.toLowerCase(Locale.ROOT), fName.toLowerCase(Locale.ROOT))){
+                                uploadedFile.setPath(null);
+                                return;
+                            }
+                        }
                     }
                 }
             }
@@ -2415,6 +2421,7 @@ fr.close();
             int headingsFound = 0;
             int backwardCount = 0;
             List<String[]> backwardLines = new ArrayList<>();
+            String[] lastline = null;
             while (lineIterator.hasNext() || backwardCount > 0) {
                 while (!isNewHeadings && lineNo < topRow && lineIterator.hasNext()) {
                     lineIterator.next();
@@ -2430,7 +2437,7 @@ fr.close();
                     backwardCount = backwardLines.size();
                 }
                 clearRow(inputSheet.getRow(inputRow));
-                String[] line;
+                String[] line = null;
                 if (backwardCount > 0)
                     line = backwardLines.get(--backwardCount);
                 else {
@@ -2472,6 +2479,10 @@ fr.close();
                             String cellVal = line[col];
                             if (existingHeadingRows > 1 && cellVal == "" && col > 0) {
                                 cellVal = newHeadings.get(col - 1).get(0);
+                            }else{
+                                if (cellVal=="" && lastline != null && lastline.length>col){
+                                    cellVal = lastline[col];
+                                }
                             }
                             newHeading.add(cellVal);
                             newHeadings.add(newHeading);
@@ -2593,6 +2604,7 @@ fr.close();
                     }
 
                 }
+                lastline = line;
                 lineNo++;
                 if (lineNo % 200 == 0) {
                     RMIClient.getServerInterface(loggedInUser.getDatabaseServer().getIp()).addToLog(loggedInUser.getDataAccessToken(), "Preprocessing line: " + lineNo);
@@ -2601,20 +2613,20 @@ fr.close();
             fileWriter.flush();
             fileWriter.close();
             uploadedFile.setPath(outFile);
-            opcPackage.revert();
-            /*debug lines below
-            outFile = "c:\\users\\billc\\Downloads\\Corrupt.xlsx";
+            //opcPackage.revert();
+            //debug lines below
+            outFile = "c:\\users\\test\\Downloads\\Corrupt.xlsx";
             writeFile = new File(outFile);
             writeFile.delete(); // to avoid confusion
 
             OutputStream outputStream = new FileOutputStream(writeFile) ;
             ppBook.write(outputStream);
+             //end debug
 
             opcPackage.revert();
 
-             */
-        } catch (Exception e) {
-            String outFile = "c:\\users\\billc\\Downloads\\Corrupt.xlsx";
+         } catch (Exception e) {
+            String outFile = "c:\\users\\test\\Downloads\\Corrupt.xlsx";
             File writeFile = new File(outFile);
             writeFile.delete(); // to avoid confusion
 
@@ -2625,6 +2637,23 @@ fr.close();
             throw e;
         }
     }
+
+    private static boolean nameApplies(String possibleName, String toTest){
+        if (possibleName.endsWith("*")) {
+            if (possibleName.startsWith("*")) {
+                return (toTest.contains(possibleName.substring(1, possibleName.length() - 1)));
+            } else {
+                return (toTest.startsWith(possibleName.substring(0,possibleName.length()-1)));
+            }
+        }
+        if (possibleName.startsWith("*")) {
+            return toTest.endsWith(possibleName.substring(1));
+        }
+        return toTest.equals(possibleName);
+
+    }
+
+
 
     private static List<String> getList(Workbook ppBook, String rangeName) {
 
