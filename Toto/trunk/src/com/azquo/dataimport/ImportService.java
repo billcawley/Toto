@@ -2615,12 +2615,15 @@ fr.close();
             uploadedFile.setPath(outFile);
             //opcPackage.revert();
             //debug lines below
+            /*
             outFile = "c:\\users\\test\\Downloads\\Corrupt.xlsx";
             writeFile = new File(outFile);
             writeFile.delete(); // to avoid confusion
 
             OutputStream outputStream = new FileOutputStream(writeFile) ;
             ppBook.write(outputStream);
+
+             */
              //end debug
 
             opcPackage.revert();
