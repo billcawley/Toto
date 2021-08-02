@@ -16,6 +16,7 @@ import org.apache.poi.poifs.crypt.Decryptor;
 import org.apache.poi.poifs.crypt.EncryptionInfo;
 import org.apache.poi.poifs.filesystem.POIFSFileSystem;
 import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.xslf.usermodel.XSLFTextShape;
 import org.apache.poi.xssf.usermodel.*;
 import org.bouncycastle.jce.provider.JDKKeyFactory;
 import org.springframework.ui.ModelMap;
@@ -80,6 +81,7 @@ import java.util.*;
 import static org.apache.poi.ss.usermodel.CellType.*;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.zkoss.zul.A;
 
 /**
  * Copyright (C) 2016 Azquo Ltd.
@@ -586,12 +588,20 @@ public final class ImportService {
                 Workbook ppBook = new XSSFWorkbook(opcPackage1);
                 // need to set values, need to be careful of what space there is on the output book
                 Sheet ppSheet = ppBook.getSheetAt(0);
+                org.apache.poi.ss.usermodel.Name workbookNameRegion = BookUtils.getName(ppBook, "az_workbookname");
+
+                if (workbookNameRegion!=null){
+                    AreaReference wname = new AreaReference(workbookNameRegion.getRefersToFormula(), null);
+                    ppSheet.getRow(wname.getFirstCell().getRow()).getCell(wname.getFirstCell().getCol()).setCellValue(uploadedFile.getFileName());
+
+                }
                 int rowNo = 1;
+                String error ="";
                 while (ppSheet.getRow(rowNo)!=null){
                     try{
                         oneRange(ppBook, ppSheet.getRow(rowNo++),book);
                     }catch(Exception e){
-                        throw new Exception("cannot read row " + (rowNo) + " in the preprocessor");
+                        error += e.getMessage() + ",";//to do - show errors
                     }
 
                 }
@@ -606,6 +616,14 @@ public final class ImportService {
                     }
                 }
                 opcPackage1.revert();
+                //debug lines
+                String oFile = "c:\\users\\test\\Downloads\\Corrupt.xlsx";
+                File wFile = new File(oFile);
+                wFile.delete(); // to avoid confusion
+
+                OutputStream outputStream = new FileOutputStream(wFile) ;
+                ppBook.write(outputStream);
+
             }
         } else { // normal
             for (int sheetNo = 0; sheetNo < book.getNumberOfSheets(); sheetNo++) {
@@ -623,35 +641,38 @@ public final class ImportService {
     }
 
 
-    private static void copyRange(Cell firstCell, int rows, int cols, Sheet outputSheet){
-        for (int rowNo = outputSheet.getFirstRowNum();rowNo <= outputSheet.getLastRowNum();rowNo++){
+    private static void zapValuesInSheet(Sheet outputSheet){
+        for (int rowNo = 0;rowNo <= outputSheet.getLastRowNum();rowNo++){
             Row row = outputSheet.getRow(rowNo);
-            for (int colNo = row.getFirstCellNum();colNo <= row.getLastCellNum(); colNo++){
-                Cell cell = row.getCell(colNo);
-                if (cell!=null){
-                    cell.setCellValue("");
+            if (row != null) {
+                for (int colNo = row.getFirstCellNum(); colNo <= row.getLastCellNum(); colNo++) {
+                    Cell cell = row.getCell(colNo);
+                    if (cell != null) {
+                        cell.setCellValue("");
+                    }
                 }
             }
         }
-        int fRow = firstCell.getRowIndex();
+
+    }
+
+    private static void copyRange(Cell firstCell, int rows, int cols, Sheet outputSheet){
+         int fRow = firstCell.getRowIndex();
         int lRow = fRow + rows;
         int olRow = outputSheet.getLastRowNum();
         Sheet inputSheet = firstCell.getSheet();
         int ofRow = 0;
         for (int iRow = fRow; iRow <= lRow; iRow++) {
             Row inputRow = inputSheet.getRow(iRow);
-            int oRow = iRow;
+            int oRow = iRow - fRow;
             if (oRow < olRow) {
                 Row outputRow = outputSheet.getRow(oRow);
                 int fCell = firstCell.getColumnIndex();
                 int lCell = fCell + cols;
                 for (int iCell = fCell; iCell < lCell; iCell++) {
                     Cell cell = inputRow.getCell(iCell);
-                    Cell oCell = outputRow.getCell(iCell);
-                    if (oCell == null) {
-                        oCell = outputRow.createCell(iCell);
-                    }
-                    if (cell != null) {
+                    Cell oCell = outputRow.getCell(iCell - fCell);
+                    if (cell != null) {//don't bother to fill in cells that do not already exist
                         switch (cell.getCellType()) {
                             case BLANK:
                                 oCell.setBlank();
@@ -707,7 +728,8 @@ public final class ImportService {
                 for (XSSFShape shape : drawing.getShapes()) {
                     // possible:   XSSFConnector, XSSFGraphicFrame, XSSFPicture, XSSFShapeGroup, XSSFSimpleShape
                     if (shape.getShapeName().equalsIgnoreCase(anchor.substring(1, anchor.length() - 1))) {
-                        //text =  (XSSFTextBox)shape.getText();
+                        XSSFSimpleShape sshape = (XSSFSimpleShape) shape;
+                        text =  sshape.getText();
                         break;
                     }
                 }
@@ -715,12 +737,14 @@ public final class ImportService {
         }catch(Exception e){
             //anchor is null!
         }
+        Cell found = null;
         Cell topLeft= null;
         int endRow = 0;
         int columns = 1;
         if (text==null) {
             int rowOffset = getIntorNull(row.getCell(3));
             int colOffset = getIntorNull(row.getCell(4));
+            columns = getIntorNull(row.getCell(5));
             String endRowString = null;
             try{
                 endRowString = row.getCell(6).getStringCellValue().trim();
@@ -730,7 +754,7 @@ public final class ImportService {
             }
 
             if (anchor != null) {
-                Cell found = findCell(inputBook, sheetName, anchor);
+                found = findCell(inputBook, sheetName, anchor);
                 if (found == null) {
                     throw new Exception("cannot find anchor " + anchor);
                 }
@@ -739,7 +763,7 @@ public final class ImportService {
                 topLeft = sheet.getRow(rowOffset - 1).getCell(colOffset - 1);
             }
             if (endRow == 0 && text == null) {
-                for (endRow = topLeft.getRowIndex(); endRow <= topLeft.getSheet().getLastRowNum(); endRow++) {
+                for (endRow = found.getRowIndex(); endRow <= topLeft.getSheet().getLastRowNum(); endRow++) {
                     if (sheet.getRow(endRow) != null) {
                         Cell cell = sheet.getRow(endRow).getCell(topLeft.getColumnIndex());
                         if ((endRowString == null && cell == null) || (cell != null && cell.getCellType() == STRING && cell.getStringCellValue().trim().equalsIgnoreCase(endRowString))) {
@@ -752,9 +776,10 @@ public final class ImportService {
                 }
             }
         }
+        Sheet outputSheet = ppBook.getSheet(rangeName);
+        zapValuesInSheet(outputSheet);
         if (endRow > 0 || text != null) {
-            Sheet outputSheet = ppBook.getSheet(rangeName);
-            if (outputSheet != null) {
+             if (outputSheet != null) {
                 if (text != null) {
                     outputSheet.getRow(0).getCell(0).setCellValue(text);
                 } else {
@@ -775,7 +800,7 @@ public final class ImportService {
             }
         }
         Sheet sheet = book.getSheet(sheetName);
-        for (int rowNo= sheet.getTopRow(); rowNo<=sheet.getLastRowNum();rowNo++){
+        for (int rowNo= 0; rowNo<=sheet.getLastRowNum();rowNo++){
             if (sheet.getRow(rowNo)!= null){
                 Row row = sheet.getRow(rowNo);
                 for (int cellNo= row.getFirstCellNum();cellNo<row.getLastCellNum();cellNo++){
@@ -797,7 +822,7 @@ public final class ImportService {
         for (int rNo = startRow; rNo <= endRow; rNo++) {
             for (int cNo = startCol; cNo <= endCol; cNo++) {
                 String val = getCellValue(sheet, rNo, cNo).getString();
-                csvW.write(val.replace("\n", "\\\\n").replace(",", "").replace("\t", "\\\\t"));//nullify the tabs and carriage returns.  Note that the double slash is deliberate so as not to confuse inserted \\n with existing \n
+                csvW.write(zapCRs(val));
             }
             csvW.endRecord();
         }
@@ -821,7 +846,7 @@ public final class ImportService {
                         val = val.replaceAll("`" + knownNameValue.getKey() + "`", knownNameValue.getValue());
                     }
                 }
-                csvW.write(val.replace("\n", "\\\\n").replace("\t", "\\\\t"));//nullify the tabs and carriage returns.  Note that the double slash is deliberate so as not to confuse inserted \\n with existing \n
+                csvW.write(zapCRs(val));
             }
             csvW.endRecord();
         }
@@ -865,8 +890,7 @@ public final class ImportService {
                         }
                     }
                     final String cellValue = getCellValueUS(cell, usDates);
-                    csvW.write(cellValue.replace("\n", "\\\\n").replace("\r", "")
-                            .replace("\t", "\\\\t"));
+                    csvW.write(zapCRs(cellValue));
                 }
                 csvW.endRecord();
             }
@@ -3027,6 +3051,7 @@ fr.close();
     }
     public static void preProcessJSON(LoggedInUser loggedInUser, UploadedFile uploadedFile, Workbook ppBook) throws Exception {
 
+        HashMap<String, ImportTemplateData> templateCache = new HashMap<>();
          org.apache.poi.ss.usermodel.Name jsonRulesRegion = BookUtils.getName(ppBook, "az_jsonrules");
         AreaReference jsonRulesAreaRef = new AreaReference(jsonRulesRegion.getRefersToFormula(), null);
         Sheet jSheet = ppBook.getSheet(jsonRulesRegion.getSheetName());
@@ -3084,7 +3109,7 @@ fr.close();
                         if (outvalue!=null && jsonRule.format.length() > 0) {
                             if (jsonRule.format.equals("text")){
                                 //remove line feeds and tabs
-                                outvalue = outvalue.replace("\t"," ").replace("\n",";");
+                                outvalue = outvalue.replace("\t"," ").replace("\n",";").replace(";;",";");
                             }
                             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm");
                             try {
@@ -3101,7 +3126,7 @@ fr.close();
                             }
                          }
                         if (outvalue!=null &&outvalue.length() > 0){
-                            fileWriter.write(outvalue);
+                            fileWriter.write(zapCRs(outvalue));
                         }
                         fileWriter.write("\t");
                     }
@@ -3115,6 +3140,7 @@ fr.close();
             fileWriter.flush();
             fileWriter.close();
             uploadedFile.setPath(outFile);
+            readPreparedFile(loggedInUser, uploadedFile, false, null, templateCache);
 
 
         } catch (Exception e) {
@@ -3123,6 +3149,9 @@ fr.close();
         }
     }
 
+    private static String zapCRs(String text){
+        return text.replace("\n", "\\\\n").replace("\r", "").replace("\t", "\\\\t");
+    }
 
     private static void traverseJSON(JsonRule jsonRule,String[] jsonPath,JSONObject jsonNext, int level) throws Exception{
         if (level < jsonPath.length - 1) {
