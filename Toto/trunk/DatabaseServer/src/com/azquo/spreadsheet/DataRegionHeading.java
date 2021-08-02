@@ -36,6 +36,7 @@ public class DataRegionHeading {
         , LAST
         , NAMECOUNT//                           Name function       The number of elements of the set
         , NAMELIST //                           Name function       The names of the elements above as a comma-separated list
+        , EXISTS //                             Name function       returns 1 if the set has elements
         , PATHCOUNT//                           Name function       The number of paths between the sets (e.g. the number of mailings sent to a specified group of customers)
         , PERMUTE//                             Heading function    The system will find all the combinations of the immediate children of the list to be permuted, selected on the basis of sharing common descendants
         , EXACT//                               Value function      exact meaning get only values that match exactly the name passed. Generally would only be one value

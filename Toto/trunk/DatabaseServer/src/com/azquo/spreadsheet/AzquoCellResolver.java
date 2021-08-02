@@ -236,11 +236,19 @@ public class AzquoCellResolver {
                     stringValue = "";
                  }
 
-            } else if (expressionFunctionHeadings.get(0).getFunction() == DataRegionHeading.FUNCTION.NAMECOUNT) { // a straight set but with [ROWHEADING] as part of the criteria
+            } else if (expressionFunctionHeadings.get(0).getFunction() == DataRegionHeading.FUNCTION.NAMECOUNT || expressionFunctionHeadings.get(0).getFunction() == DataRegionHeading.FUNCTION.EXISTS) { // a straight set but with [ROWHEADING] as part of the criteria
                 Set<Name> namesToCount = HashObjSets.newMutableSet(); // I think this will be faster for purpose
                 NameQueryParser.parseQuery(connection, expressions.get(0), languages, namesToCount, false);
                 doubleValue = namesToCount.size();
+                if (expressionFunctionHeadings.get(0).getFunction()!=DataRegionHeading.FUNCTION.NAMECOUNT){
+                    if (doubleValue > 0){
+                        doubleValue = 1;
+                    }
+                }
                 stringValue = doubleValue + "";
+                if (stringValue.endsWith(".0")){
+                    stringValue = stringValue.substring(0,stringValue.length()-2);
+                }
             } else if (expressionFunctionHeadings.get(0).getFunction() == DataRegionHeading.FUNCTION.NAMELIST) { // a straight set but with [ROWHEADING] as part of the criteria
                 Set<Name> namesToCount = HashObjSets.newMutableSet(); // I think this will be faster for purpose
                 NameQueryParser.parseQuery(connection, expressions.get(0), languages, namesToCount, false);
