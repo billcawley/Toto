@@ -210,6 +210,7 @@ public class DataRegionHeading {
     static boolean isExpressionFunction(FUNCTION function){
         return (function == FUNCTION.NAMECOUNT
                 || function == FUNCTION.NAMELIST
+                || function == FUNCTION.EXISTS
                 || function == FUNCTION.PATHCOUNT
                 || function == FUNCTION.SET
                 || function == FUNCTION.FIRST
