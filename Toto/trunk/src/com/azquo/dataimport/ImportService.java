@@ -3112,11 +3112,17 @@ fr.close();
                                 outvalue = outvalue.replace("\t"," ").replace("\n",";").replace(";;",";");
                             }
                             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+                            int zonePos = jsonRule.format.toLowerCase().indexOf("timezone");
+                            if (zonePos > 0){
+                                sdf.setTimeZone(TimeZone.getTimeZone(jsonRule.format.substring(zonePos+8).trim()));
+
+                            }
                             try {
-                                if (jsonRule.format.equals("seconds")) {
+                                if (jsonRule.format.startsWith("seconds")) {
                                     outvalue = sdf.format(new Date(Long.parseLong(outvalue)*1000));
+
                                 }else {
-                                    if (jsonRule.format.equals("milliseconds")) {
+                                    if (jsonRule.format.startsWith("milliseconds")) {
                                         outvalue = sdf.format(new Date(Long.parseLong(outvalue)));
                                     }
                                 }
