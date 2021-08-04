@@ -33,6 +33,7 @@ public class DownloadBackupController {
             , HttpServletResponse response
             , @RequestParam(value = "id", required = false) String id
             , @RequestParam(value = "justreports", required = false) String justreports
+            , @RequestParam(value = "namesubset", required = false) String namesubset
     ) {
         final LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
         if (loggedInUser != null) {
@@ -42,7 +43,7 @@ public class DownloadBackupController {
                 if (db != null) {
                     DatabaseServer dbs = DatabaseServerDAO.findById(db.getDatabaseServerId());
                     loggedInUser.setDatabaseWithServer(dbs, db);
-                    File tempzip = BackupService.createDBandReportsAndTemplateBackup(loggedInUser, "true".equals(justreports));
+                    File tempzip = BackupService.createDBandReportsAndTemplateBackup(loggedInUser, namesubset, "true".equals(justreports));
                     DownloadController.streamFileToBrowser(Paths.get(tempzip.getAbsolutePath()), response, db.getName() + ".zip");
                 }
                 request.getSession().removeAttribute("working");

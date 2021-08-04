@@ -21,7 +21,7 @@ class FastDAO {
 
     // this value is not picked randomly, tests have it faster than 1k or 10k. It seems with imports bigger is not necessarily better. Possibly to do with query parsing overhead.
 
-    static final int UPDATELIMIT = 2500; // going to 2.5k as now some of the records can be quite large! Also simultaneous.
+    static final int UPDATELIMIT = 1000; // going to 1k, JB broke limits
 
     // possibly very similar to what's in JsonRecordDAO. Not sure if it's worth factoring (if so use a list of ids)
 

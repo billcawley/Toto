@@ -260,6 +260,26 @@ Created by IntelliJ IDEA.
                     </tbody>
                 </table>
             </form>
+            <h3>Download Custom Backup.</h3>
+            For advanced users - specify a subset of a database to download.
+            <form action="/api//DownloadBackup" method="get">
+                <table>
+                    <tbody>
+                    <tr>
+                        <td>Database:                                 <select name="id" >
+                            <c:forEach items="${databases}" var="database">
+                                <option value="${database.id}" <c:if
+                                        test="${database.name == lastSelected}"> selected </c:if>>${database.name}</option>
+                            </c:forEach>
+                        </select>
+
+                        </td>
+                        <td>Name subset <input type="text" name="namesubset" value=""/></td>
+                        <td><input type="submit" name="Download" value="Download" class="button "/></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </form>
             <h3>Memory/CPU report for servers:</h3>
             <div class="well">
                 <c:forEach items="${databaseServers}" var="databaseServer">

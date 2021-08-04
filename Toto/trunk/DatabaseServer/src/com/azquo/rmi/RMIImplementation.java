@@ -537,25 +537,15 @@ class RMIImplementation implements RMIInterface {
     }
 
     @Override
-    public List<NameForBackup> getBatchOfNamesForBackup(DatabaseAccessToken databaseAccessToken, int batchNumber) {
-        return AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken).getAzquoMemoryDB().getBackupTransport().getBatchOfNamesForBackup(batchNumber);
+    public String getBackupFileForDatabase(String databaseName, String subsetName, DatabaseAccessToken databaseAccessToken) throws RemoteException {
+        try {
+            AzquoMemoryDBConnection connectionFromAccessToken = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
+            return connectionFromAccessToken.getAzquoMemoryDB().getBackupTransport().createDBBackupFile(databaseName,
+                subsetName != null ? NameService.findByName(connectionFromAccessToken, subsetName) : null);
+        } catch (Exception e) {
+            throw new RemoteException("Database Server Exception", e);
+        }
     }
-
-    @Override
-    public List<ValueForBackup> getBatchOfValuesForBackup(DatabaseAccessToken databaseAccessToken, int batchNumber) {
-        return AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken).getAzquoMemoryDB().getBackupTransport().getBatchOfValuesForBackup(batchNumber);
-    }
-
-    @Override
-    public List<ValueForBackup> getBatchOfValuesHistoryForBackup(DatabaseAccessToken databaseAccessToken, int batchNumber) {
-        return AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken).getAzquoMemoryDB().getBackupTransport().getBatchOfValuesHistoryForBackup(batchNumber);
-    }
-
-    @Override
-    public List<ProvenanceForBackup> getBatchOfProvenanceForBackup(DatabaseAccessToken databaseAccessToken, int batchNumber) {
-        return AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken).getAzquoMemoryDB().getBackupTransport().getBatchOfProvenanceForBackup(batchNumber);
-    }
-
 
     @Override
     public void sendBatchOfNamesFromBackup(DatabaseAccessToken dataAccessToken, List<NameForBackup> namesForBackup) throws RemoteException {

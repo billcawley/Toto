@@ -42,6 +42,7 @@ public final class AzquoMemoryDB {
     private static final String GROOVYDIR = "groovydir";
     private static final String RMIIP = "rmiip";
     private static final String MAXTHREADS = "maxthreads";
+    private static final String SFTPTEMPDIR = "sftptempdir";
 
     // no point doing this on every constructor!
     static {
@@ -95,6 +96,18 @@ public final class AzquoMemoryDB {
             }
         }
         return maxthreads;
+    }
+
+    private static String sftpTempDir = null;
+
+    public static String getSftpTempDir() {
+        if (sftpTempDir == null) {
+            sftpTempDir = azquoProperties.getProperty(host + "." + SFTPTEMPDIR);
+            if (sftpTempDir == null) {
+                sftpTempDir = azquoProperties.getProperty(SFTPTEMPDIR);
+            }
+        }
+        return sftpTempDir;
     }
 
 //    private static final Logger logger = Logger.getLogger(AzquoMemoryDB.class);

@@ -28,6 +28,7 @@ import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.dataformat.csv.CsvMapper;
 import com.fasterxml.jackson.dataformat.csv.CsvParser;
 import com.fasterxml.jackson.dataformat.csv.CsvSchema;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.math.NumberUtils;
 import org.zeroturnaround.zip.FileSource;
 import org.zeroturnaround.zip.ZipEntrySource;
@@ -49,18 +50,11 @@ public class BackupService {
     private static final String CATEGORYBREAKOLD = "|||"; // tripped up windows
     private static final String TYPEBREAK = "~~T~~"; // I'm not proud of this
 
-    public static File createDBandReportsAndTemplateBackup(LoggedInUser loggedInUser, boolean justReports) throws Exception {
+    public static File createDBandReportsAndTemplateBackup(LoggedInUser loggedInUser, String nameSubset, boolean justReports) throws Exception {
         // ok, new code to dump a database and all reports. The former being the more difficult bit.
-        String dname = loggedInUser.getDatabase().getName();
-        if (dname.length() < 3) {
-            dname += "---";
-        }
         File dbFile = null;
         if (!justReports) {
-            dbFile = File.createTempFile(dname, ".db");
-            String tempPath = dbFile.getPath();
-            createDBBackupFile(loggedInUser.getDatabase().getName(), loggedInUser.getDataAccessToken(), tempPath, loggedInUser.getDatabaseServer().getIp());
-            dbFile.deleteOnExit();
+            dbFile = createDBBackupFile(loggedInUser.getDatabase().getName(), nameSubset, loggedInUser.getDataAccessToken(), loggedInUser.getDatabaseServer());
         }
         // rather than guessing the size of the array just do this
         List<ZipEntrySource> toZip = new ArrayList<>();
@@ -160,6 +154,10 @@ public class BackupService {
         toZip.toArray(zes);
         ZipUtil.pack(zes, tempzip);
         tempzip.deleteOnExit();
+        if (dbFile != null) {
+            dbFile.delete();// may as well clear it up now
+        }
+
         return tempzip;
     }
 
@@ -411,94 +409,17 @@ public class BackupService {
     }
 
     // todo - use Path for paths? applies everywhere!
-    public static void createDBBackupFile(String databaseName, DatabaseAccessToken databaseAccessToken, String filePath, String databaseServerIP) throws Exception {
-        System.out.println("attempting to create backup file " + filePath);
-        FileOutputStream fos = new FileOutputStream(filePath);
-        CsvWriter csvW = new CsvWriter(fos, '\t', StandardCharsets.UTF_8);
-        csvW.setUseTextQualifier(false);
-        csvW.write(databaseName);
-        csvW.endRecord();
-// we start with provenance now
-        int batchNumber = 0;
-        List<ProvenanceForBackup> provenancesForBackup =
-                RMIClient.getServerInterface(databaseServerIP).getBatchOfProvenanceForBackup(databaseAccessToken, batchNumber);
-        while (!provenancesForBackup.isEmpty()) {
-            for (ProvenanceForBackup provenanceForBackup : provenancesForBackup) {
-                csvW.write(provenanceForBackup.getId() + "");
-                csvW.write(provenanceForBackup.getJson() + "");
-                csvW.endRecord();
-            }
-            batchNumber++;
-            provenancesForBackup =
-                    RMIClient.getServerInterface(databaseServerIP).getBatchOfProvenanceForBackup(databaseAccessToken, batchNumber);
+    public static File createDBBackupFile(String databaseName, String subsetName, DatabaseAccessToken databaseAccessToken, DatabaseServer databaseServer) throws Exception {
+        String path = RMIClient.getServerInterface(databaseServer.getIp()).getBackupFileForDatabase(databaseName, subsetName, databaseAccessToken);
+        File file;
+        if (!databaseServer.getIp().equals(ImportService.LOCALIP)) {// the call via RMI is the same the question is whether the path refers to this machine or another
+            String url = databaseServer.getSftpUrl();
+            int slashAfterAt = url.indexOf( "/", url.indexOf("@"));
+            url = url.substring(0, slashAfterAt);
+            file = SFTPUtilities.copyFromDatabaseServer(url + path, true);
+        } else {
+            file = new File(path);
         }
-        csvW.write("NAMES");
-        csvW.endRecord();
-        batchNumber = 0;
-        List<NameForBackup> namesForBackup =
-                RMIClient.getServerInterface(databaseServerIP).getBatchOfNamesForBackup(databaseAccessToken, batchNumber);
-        while (!namesForBackup.isEmpty()) {
-            for (NameForBackup nameForBackup : namesForBackup) {
-                csvW.write(nameForBackup.getId() + "");
-                csvW.write(nameForBackup.getProvenanceId() + "");
-                // attributes could have unhelpful chars
-                csvW.write(nameForBackup.getAttributes().replace("\n", "\\\\n").replace("\r", "").replace("\t", "\\\\t"));
-                //base 64 encode the bytes
-                byte[] encodedBytes = Base64.getEncoder().encode(nameForBackup.getChildren());
-                String string64 = new String(encodedBytes);
-                csvW.write(string64);
-                csvW.write(nameForBackup.getNoParents() + "");
-                csvW.write(nameForBackup.getNoValues() + "");
-                csvW.endRecord();
-            }
-            batchNumber++;
-            namesForBackup = RMIClient.getServerInterface(databaseServerIP).getBatchOfNamesForBackup(databaseAccessToken, batchNumber);
-        }
-        csvW.write("VALUES");
-        csvW.endRecord();
-        batchNumber = 0;
-        List<ValueForBackup> valuessForBackup =
-                RMIClient.getServerInterface(databaseServerIP).getBatchOfValuesForBackup(databaseAccessToken, batchNumber);
-        while (!valuessForBackup.isEmpty()) {
-            for (ValueForBackup valueForBackup : valuessForBackup) {
-                csvW.write(valueForBackup.getId() + "");
-                csvW.write(valueForBackup.getProvenanceId() + "");
-                // attributes could have unhelpful chars
-                csvW.write(valueForBackup.getText());
-                //base 64 encode the bytes
-                byte[] encodedBytes = Base64.getEncoder().encode(valueForBackup.getNames());
-                String string64 = new String(encodedBytes);
-                csvW.write(string64);
-                csvW.endRecord();
-            }
-            batchNumber++;
-            valuessForBackup =
-                    RMIClient.getServerInterface(databaseServerIP).getBatchOfValuesForBackup(databaseAccessToken, batchNumber);
-        }
-
-        csvW.write("VALUEHISTORY");
-        csvW.endRecord();
-        batchNumber = 0;
-        valuessForBackup =
-                RMIClient.getServerInterface(databaseServerIP).getBatchOfValuesHistoryForBackup(databaseAccessToken, batchNumber);
-        while (!valuessForBackup.isEmpty()) {
-            for (ValueForBackup valueForBackup : valuessForBackup) {
-                csvW.write(valueForBackup.getId() + "");
-                csvW.write(valueForBackup.getProvenanceId() + "");
-                // attributes could have unhelpful chars
-                csvW.write(valueForBackup.getText());
-                //base 64 encode the bytes
-                byte[] encodedBytes = Base64.getEncoder().encode(valueForBackup.getNames());
-                String string64 = new String(encodedBytes);
-                csvW.write(string64);
-                csvW.endRecord();
-            }
-            batchNumber++;
-            valuessForBackup =
-                    RMIClient.getServerInterface(databaseServerIP).getBatchOfValuesHistoryForBackup(databaseAccessToken, batchNumber);
-        }
-        csvW.close();
-        fos.close();
-
+        return file;
     }
 }

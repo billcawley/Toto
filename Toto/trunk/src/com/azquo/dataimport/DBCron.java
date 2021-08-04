@@ -16,6 +16,7 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
+import org.zeroturnaround.zip.commons.FileUtils;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -67,8 +68,10 @@ public class DBCron {
                  */
                 String dbBackupsDir = getDBBackupsDirectory(toBackUp);
                 if (!Files.exists(Paths.get(dbBackupsDir + "/" + backupname))) { // then we need to make a backup . . .
-                    String serverIp = DatabaseServerDAO.findById(toBackUp.getDatabaseServerId()).getIp();
-                    BackupService.createDBBackupFile(toBackUp.getName(), new DatabaseAccessToken("", "", serverIp, toBackUp.getPersistenceName()), dbBackupsDir + "/" + backupname, serverIp);
+                    DatabaseServer server = DatabaseServerDAO.findById(toBackUp.getDatabaseServerId());
+                    File dbBackupFile = BackupService.createDBBackupFile(toBackUp.getName(), null, new DatabaseAccessToken("", "", server.getIp(), toBackUp.getPersistenceName()), server);
+                    FileUtils.copyFile(dbBackupFile, new File(dbBackupsDir + "/" + backupname));
+                    dbBackupFile.delete();
                 }
             }
         }

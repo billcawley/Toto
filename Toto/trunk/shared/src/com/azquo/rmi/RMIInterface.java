@@ -131,13 +131,7 @@ public interface RMIInterface extends Remote {
 
     // backup functions
 
-    List<NameForBackup> getBatchOfNamesForBackup(DatabaseAccessToken dataAccessToken, int batchNumber) throws RemoteException;
-
-    List<ValueForBackup> getBatchOfValuesForBackup(DatabaseAccessToken dataAccessToken, int batchNumber) throws RemoteException;
-
-    List<ValueForBackup> getBatchOfValuesHistoryForBackup(DatabaseAccessToken dataAccessToken, int batchNumber) throws RemoteException;
-
-    List<ProvenanceForBackup> getBatchOfProvenanceForBackup(DatabaseAccessToken dataAccessToken, int batchNumber) throws RemoteException;
+    String getBackupFileForDatabase(String databasseName, String subsetName, DatabaseAccessToken dataAccessToken) throws RemoteException;
 
     void sendBatchOfNamesFromBackup(DatabaseAccessToken dataAccessToken, List<NameForBackup> namesForBackup) throws RemoteException;
 

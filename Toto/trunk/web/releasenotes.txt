@@ -1,3 +1,13 @@
+28-07-21
+
+Remove debug code
+
+27-07-21
+
+Functions to try to fix corruption on load and detect/stop circular references
+
+When there is a blank column heading on one-line headings, will be prepared to look at the cell above in case that is the heading
+
 16-07-21
 
 Dev has its own BSX directories
