@@ -973,6 +973,21 @@ public final class ImportService {
             templateName = templateName.substring(0, blankPos);
         }
         String preProcessor = null;
+        if (uploadedFile.getParameter(PREPROCESSOR) != null && uploadedFile.getParameter(IMPORTVERSION) == null) {
+            try {
+                preProcessor = uploadedFile.getParameter(PREPROCESSOR);
+                //maybe import version is second last word (as in `thistype otherword claims preprocessor')
+                int word2End = preProcessor.lastIndexOf(" ");
+                int word2Start = preProcessor.lastIndexOf(" ", word2End - 1);
+                Map<String, String> parameters = uploadedFile.getParameters();
+                parameters.put(IMPORTVERSION, preProcessor.substring(word2Start + 1, word2End));
+                uploadedFile.setParameters(parameters);
+            } catch (Exception e) {
+                //cannot guess importversion
+            }
+
+        }
+
         String importVersion = uploadedFile.getParameter(IMPORTVERSION);
         if (!templateName.toLowerCase().startsWith("sets") && !importTemplateUsedAlready) {
             ImportTemplateData importTemplateData = getImportTemplateForUploadedFile(loggedInUser, uploadedFile, templateCache);
@@ -1034,21 +1049,6 @@ public final class ImportService {
                 Map<String, String> templateParameters = new HashMap<>(); // things like pre processor, file encoding etc
                 if (preProcessor != null) {
                     templateParameters.put(PREPROCESSOR, preProcessor);
-                }
-                if (uploadedFile.getParameter(PREPROCESSOR) != null && uploadedFile.getParameter(IMPORTVERSION) == null) {
-                    try {
-                        preProcessor = uploadedFile.getParameter(PREPROCESSOR);
-                        //maybe import version is second last word (as in `thistype otherword claims preprocessor')
-                        int word2End = preProcessor.lastIndexOf(" ");
-                        int word2Start = preProcessor.lastIndexOf(" ", word2End - 1);
-                        Map<String, String> parameters = uploadedFile.getParameters();
-                        parameters.put(IMPORTVERSION, preProcessor.substring(word2Start + 1, word2End));
-                        importVersion = preProcessor.substring((word2Start + 1), word2End);
-                        uploadedFile.setParameters(parameters);
-                    } catch (Exception e) {
-                        //cannot guess importversion
-                    }
-
                 }
 
                 List<List<String>> standardHeadings = new ArrayList<>();
@@ -1304,7 +1304,7 @@ public final class ImportService {
         if (preProcessor == null) {
             preProcessor = uploadedFile.getTemplateParameter(PREPROCESSOR);
         }
-        if (preProcessor != null) {
+        if (preProcessor != null && !uploadedFile.getPath().endsWith("converted")) {
             if (!preProcessor.toLowerCase().endsWith(".groovy")) {
                 if (!preProcessor.toLowerCase().endsWith(".xlsx")) {
                     preProcessor += ".xlsx";
