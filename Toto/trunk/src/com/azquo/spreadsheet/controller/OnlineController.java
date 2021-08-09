@@ -19,9 +19,7 @@ import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.*;
 import com.azquo.spreadsheet.transport.CellForDisplay;
 import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
-import com.azquo.spreadsheet.zk.ReportExecutor;
-import com.azquo.spreadsheet.zk.ReportRenderer;
-import com.azquo.spreadsheet.zk.BookUtils;
+import com.azquo.spreadsheet.zk.*;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.ServletRequestUtils;
@@ -133,6 +131,7 @@ public class OnlineController {
             , @RequestParam(value = "database", required = false, defaultValue = "") String database
             , @RequestParam(value = "imagename", required = false, defaultValue = "") String imageName
             , @RequestParam(value = "submit", required = false, defaultValue = "") String submit
+            , @RequestParam(value = "externalcall", required = false) String externalcall
             , @RequestParam(value = "uploadfile", required = false) MultipartFile uploadfile
 
     ) {
@@ -147,8 +146,11 @@ public class OnlineController {
             //long startTime = System.currentTimeMillis();
             try {
                 LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
-                if (loggedInUser == null) {
-                    return "redirect:/api/Login";// I guess redirect to login page
+                   if (loggedInUser == null) {
+                       if (externalcall!=null){
+                           request.getSession().setAttribute("externalcall", externalcall);
+                       }
+                       return "redirect:/api/Login";// I guess redirect to login page
                 }
                 // dealing with the report/database combo WAS below but I see no reason for this, try and resolve it now
                 OnlineReport onlineReport = null;
@@ -162,6 +164,23 @@ public class OnlineController {
                         String value = request.getParameter(paramName);
                         SpreadsheetService.setUserChoice(loggedInUser, paramName.substring(7), value);
                     }
+                }
+                if (externalcall==null || externalcall.length()==0){
+                    externalcall = (String)request.getSession().getAttribute("externalcall");
+                    request.getSession().setAttribute("externalCall",null);
+                }
+                if (externalcall!=null && externalcall.length()>0){
+                    externalcall = externalcall.replace("_"," ");
+                    String reportName = externalcall;
+                      if (externalcall.contains(" with ")) {
+                        reportName = externalcall.substring(0, externalcall.indexOf(" with ")).replace("`", "");
+                        String context = externalcall.substring(externalcall.indexOf(" with ") + 6).replace(".","`.`"); //our quote marks are not allowed in parameters, but are used to detect attributes
+                        ChoicesService.setChoices(loggedInUser,context);
+                    }
+                    OnlineReport or = OnlineReportDAO.findForDatabaseIdAndName(loggedInUser.getDatabase().getId(), reportName.replace("_"," "));
+                    reportId = "" + or.getId();
+                    externalcall = null;
+
                 }
 
                 if ((loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()) && reportId != null && reportId.length() > 0 && !reportId.equals("1")) { // admin, we allow a report and possibly db to be set
@@ -308,6 +327,7 @@ public class OnlineController {
                         if (logo == null || logo.length() == 0) logo = "logo_alt.png";
                         model.addAttribute("bannerColor", bannerColor);
                         model.addAttribute("logo", logo);
+                        model.addAttribute("externalcall",null);
                         return "zsshowsheet";// show the sheet
                     }
                     // ok now I need to set the sheet loading but on a new thread
@@ -407,8 +427,10 @@ public class OnlineController {
             , @RequestParam(value = "database", required = false, defaultValue = "") String database
             , @RequestParam(value = "imagename", required = false, defaultValue = "") String imageName
             , @RequestParam(value = "submit", required = false, defaultValue = "") String submit
+            , @RequestParam(value = "externalcall", required = false, defaultValue = "") String externalcall
+
     ) {
-        return handleRequest(model, request, reportId, databaseId, permissionId, opcode, database, imageName, submit, null);
+        return handleRequest(model, request, reportId, databaseId, permissionId, opcode, database, imageName, submit, externalcall,null);
     }
 
     // these functions probably should be booted into a service but they make more sense in here than the ImportService
