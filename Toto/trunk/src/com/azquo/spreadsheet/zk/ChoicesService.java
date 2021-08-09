@@ -502,26 +502,35 @@ public class ChoicesService {
 
     static Map<String, String> parseChoicesFromDrillDownContextString(String context) {
         Map<String, String> map = new HashMap<>();
-        int equalsPos = context.indexOf(" = ");
+        int equalsPos = context.indexOf("=");//used to have spaces in case names contained '=', but this resulted in confusion
         while (equalsPos > 0) {
             int endParam = context.indexOf(";");//todo - maybe consider using comma here as alternative
             if (endParam < 0) endParam = context.length();
             String paramName = context.substring(0, equalsPos).trim();
-            String paramValue = context.substring(equalsPos + 3, endParam).trim();
+            String paramValue = context.substring(equalsPos + 1, endParam).trim();
             map.put(paramName, paramValue);
             context = context.substring(endParam);
             if (context.length() > 0) context = context.substring(1);//remove the semicolon
-            equalsPos = context.indexOf(" = ");
+            equalsPos = context.indexOf("=");
         }
         return map;
     }
 
-    static void setChoices(LoggedInUser loggedInUser, String context) {
+    public static void setChoices(LoggedInUser loggedInUser, String context) {
         Map<String, String> stringStringMap = parseChoicesFromDrillDownContextString(context);
         for (Map.Entry<String, String> choiceChosen : stringStringMap.entrySet()) {
             // EFC note 07/04/2021 we need to support attributes here e.g. in spreadsheet Customer Record with customer = `[rowheading]`.`all customers`
             // so by here (this function is only used for drilldown) we'll be at something like `DFKKHJKJH`.`all customers`. Try to resolve it.
+            String choice = choiceChosen.getKey();
+            String language = null;
+            if (choice.contains("`.`")){
+                int dotPos = choice.indexOf("`.`");
+                language = choice.substring(dotPos + 3).replace("`","").trim();
+                choice = choice.substring(0,dotPos).replace("`","").trim();
+            }
+
             String chosen = choiceChosen.getValue();
+
             if (chosen.contains("`.`")){
                 DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
                 try{
@@ -531,7 +540,7 @@ public class ChoicesService {
                 }
             }
 
-            SpreadsheetService.setUserChoice(loggedInUser, choiceChosen.getKey(), chosen);
+            SpreadsheetService.setUserChoice(loggedInUser, choice, chosen, language);
         }
     }
 }
