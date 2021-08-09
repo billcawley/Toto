@@ -95,7 +95,7 @@ public class AzquoCellService {
         return sortedValues;
     }
 
-    private static List<Integer> sortDoubleValues(Map<Integer, Double> sortTotals, final boolean sortRowsUp) {
+    public static List<Integer> sortDoubleValues(Map<Integer, Double> sortTotals, final boolean sortRowsUp) {
         final List<Integer> sortedValues = new ArrayList<>(sortTotals.size());
         List<Map.Entry<Integer, Double>> list = new ArrayList<>(sortTotals.entrySet());
         // sort list based on
