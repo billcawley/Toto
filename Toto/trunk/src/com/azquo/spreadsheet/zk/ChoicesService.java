@@ -522,12 +522,6 @@ public class ChoicesService {
             // EFC note 07/04/2021 we need to support attributes here e.g. in spreadsheet Customer Record with customer = `[rowheading]`.`all customers`
             // so by here (this function is only used for drilldown) we'll be at something like `DFKKHJKJH`.`all customers`. Try to resolve it.
             String choice = choiceChosen.getKey();
-            String language = null;
-            if (choice.contains("`.`")){
-                int dotPos = choice.indexOf("`.`");
-                language = choice.substring(dotPos + 3).replace("`","").trim();
-                choice = choice.substring(0,dotPos).replace("`","").trim();
-            }
 
             String chosen = choiceChosen.getValue();
 
@@ -540,7 +534,7 @@ public class ChoicesService {
                 }
             }
 
-            SpreadsheetService.setUserChoice(loggedInUser, choice, chosen, language);
+            SpreadsheetService.setUserChoice(loggedInUser, choice, chosen);
         }
     }
 }
