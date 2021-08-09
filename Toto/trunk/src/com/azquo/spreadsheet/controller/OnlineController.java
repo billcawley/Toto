@@ -174,7 +174,7 @@ public class OnlineController {
                     String reportName = externalcall;
                       if (externalcall.contains(" with ")) {
                         reportName = externalcall.substring(0, externalcall.indexOf(" with ")).replace("`", "");
-                        String context = externalcall.substring(externalcall.indexOf(" with ") + 6).replace(".","`.`"); //our quote marks are not allowed in parameters, but are used to detect attributes
+                        String context = externalcall.substring(externalcall.indexOf(" with ") + 6);
                         ChoicesService.setChoices(loggedInUser,context);
                     }
                     OnlineReport or = OnlineReportDAO.findForDatabaseIdAndName(loggedInUser.getDatabase().getId(), reportName.replace("_"," "));
