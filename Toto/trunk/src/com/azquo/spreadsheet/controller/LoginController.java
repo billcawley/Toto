@@ -51,7 +51,7 @@ public class LoginController {
             , @RequestParam(value = "connectionid", required = false) String connectionid // only for the magento plugin and Javascript (connectionId = "javascript")
             , @RequestParam(value = "userid", required = false) String userid // if a user exists in more than one business then
             , @RequestParam(value = "select", required = false) String select
-    ) throws Exception {
+     ) throws Exception {
 
         // edd temporary hack
 /*
@@ -135,7 +135,8 @@ public class LoginController {
                         session.setAttribute(LOGGED_IN_USER_SESSION, loggedInUser);
                         loggedInUser.userLog("Login", new HashMap<>());
                         if (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()) {
-                            return "redirect:/api/ManageReports";
+                            return "/api/Online?reportid=1";//in case there is an external call that needs handling
+                            //return "redirect:/api/ManageReports";
                         } else {
                             return "redirect:/api/Online?reportid=1"; // redirect to menu, will need to be changed when we sort the parameters out
                         }
@@ -167,7 +168,9 @@ public class LoginController {
                 session.setAttribute(LOGGED_IN_USER_SESSION, loggedInUser);
                 request.getServletContext().removeAttribute(connectionid); // take it off the context
                 if (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()) {
-                    return "redirect:/api/ManageReports";
+                    return "redirect:/api/Online?reportid=1"; // in case of external calls
+
+                    //return "redirect:/api/ManageReports";
                 } else {
                     return "redirect:/api/Online?reportid=1"; // redirect to menu, will need to be changed when we sort the parameters out
                 }
@@ -223,8 +226,9 @@ public class LoginController {
                         return "utf8page";
 
                     } else {
-                        if (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()) {
-                            return "redirect:/api/ManageReports";
+                       if (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()) {
+                            return "redirect:/api/Online?reportid=1"; // redirect to menu, will need to be changed when we sort the parameters out
+                           // return "redirect:/api/ManageReports";
                         } else {
                             return "redirect:/api/Online?reportid=1"; // redirect to menu, will need to be changed when we sort the parameters out
                         }
