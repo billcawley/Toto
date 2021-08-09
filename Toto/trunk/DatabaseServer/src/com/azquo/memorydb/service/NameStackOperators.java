@@ -200,7 +200,33 @@ class NameStackOperators {
         for (Name n : nameSetList.getAsCollection()) {
             rowHeadings.add(Collections.singletonList(new DataRegionHeading(n, true, null, null, null, null, null, 0)));
         }
-        List<List<DataRegionHeading>> colHeadings = new ArrayList<>(1);
+        boolean sorted = false;
+        boolean sortRowsUp = true;
+        boolean percent = false;
+        int sortCount= 0;
+        if (filterByCriteria.toLowerCase().startsWith("(top ")){
+            filterByCriteria = filterByCriteria.substring(5).trim();
+            sortRowsUp = false;
+            sorted = true;
+        }else if(filterByCriteria.toLowerCase().startsWith("(bottom ")){
+            filterByCriteria = filterByCriteria.substring(8).trim();
+            sorted = true;
+         }
+        if (sorted){
+            int nextBlank = filterByCriteria.indexOf(" ");
+            try {
+                String sortCountSt =filterByCriteria.substring(0, nextBlank);
+                if (sortCountSt.endsWith("%")){
+                    percent = true;
+                    sortCountSt = sortCountSt.substring(0, sortCountSt.length() - 1);
+                }
+                sortCount = Integer.parseInt(sortCountSt);
+                filterByCriteria = "("+ filterByCriteria.substring(nextBlank).trim();
+            }catch (Exception e){
+                //see below
+            }
+        }
+         List<List<DataRegionHeading>> colHeadings = new ArrayList<>(1);
          colHeadings.add(Collections.singletonList(new DataRegionHeading(null, false, null, null, null, null, null, 0, filterByCriteria)));
         final List<DataRegionHeading> contextHeadings = DataRegionHeadingService.getContextHeadings(azquoMemoryDBConnection, contextSource, languages);
         // note - this won't set no limit based on being a csv download. Change if it becomes a problem
@@ -208,12 +234,35 @@ class NameStackOperators {
         //a set being built as a result of a value being non zero, a set being true
         Iterator<List<AzquoCell>> rowIt = dataToShow.iterator();
         List<Name> result = new ArrayList<>();
-        for (List<DataRegionHeading> row : rowHeadings) {
-            List<AzquoCell> dataRow = rowIt.next();
-            DataRegionHeading dataRegionHeading = row.iterator().next();
-            AzquoCell cell = dataRow.iterator().next();
-            if (cell.getDoubleValue() > 0) {
-                result.add(dataRegionHeading.getName());
+        if (sortCount > 0){
+             int found = 0;
+            Map<Integer,Double> sortList = new HashMap<>();
+            Map<Integer,Name> namesFound = new HashMap<>();
+            for (List<DataRegionHeading> row:rowHeadings){
+                List<AzquoCell>dataRow = rowIt.next();
+                DataRegionHeading dataRegionHeading = row.iterator().next();
+                namesFound.put(found, dataRegionHeading.getName());
+                sortList.put(found++,dataRow.iterator().next().getDoubleValue());
+            }
+            if (percent){
+                sortCount = found * sortCount / 100;
+            }
+            List<Integer>sortedItems = AzquoCellService.sortDoubleValues(sortList, sortRowsUp);
+            if (sortCount>sortedItems.size()){
+                sortCount = sortedItems.size();
+
+            }
+            for (int i=0;i<sortCount;i++){
+                result.add(namesFound.get(sortedItems.get(i)));
+            }
+        }else{
+            for (List<DataRegionHeading> row : rowHeadings) {
+                List<AzquoCell> dataRow = rowIt.next();
+                DataRegionHeading dataRegionHeading = row.iterator().next();
+                AzquoCell cell = dataRow.iterator().next();
+                if (cell.getDoubleValue() > 0) {
+                    result.add(dataRegionHeading.getName());
+                }
             }
         }
         // simply replace
