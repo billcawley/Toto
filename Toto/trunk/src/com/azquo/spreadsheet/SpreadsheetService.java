@@ -221,6 +221,12 @@ public class SpreadsheetService {
         choiceName = choiceName.replace(" ","");
         UserChoice userChoice = UserChoiceDAO.findForUserIdAndChoice(userId, choiceName);
         if (choiceValue != null && choiceValue.length() > 0) {
+            if (choiceValue.contains(StringLiterals.languageIndicator)){
+                List<String> results = CommonReportUtils.getDropdownListForQuery(loggedInUser,choiceValue);
+                if (results!=null){
+                    choiceValue = results.get(0);
+                }
+            }
              if (userChoice == null) {
                 userChoice = new UserChoice(0, userId, choiceName, choiceValue, LocalDateTime.now());
                 UserChoiceDAO.store(userChoice);
