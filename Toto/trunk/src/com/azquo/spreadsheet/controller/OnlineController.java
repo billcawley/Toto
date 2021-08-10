@@ -167,7 +167,7 @@ public class OnlineController {
                 }
                 if (externalcall==null || externalcall.length()==0){
                     externalcall = (String)request.getSession().getAttribute("externalcall");
-                    request.getSession().setAttribute("externalCall",null);
+                    request.getSession().setAttribute("externalcall",null);
                 }
                 if (externalcall!=null && externalcall.length()>0){
                     externalcall = externalcall.replace("_"," ");
@@ -217,7 +217,7 @@ public class OnlineController {
                             }
                         }
                     }
-                    if (database != null) {
+                    if (database != null && database.length()>0) {
                         LoginService.switchDatabase(loggedInUser, database);
                     }
                 } else if (permissionId != null && permissionId.length() > 0) {
