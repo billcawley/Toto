@@ -278,7 +278,11 @@ public class ProvenanceService {
         if (p.getContext() != null && p.getContext().length() > 1) method += " with " + p.getContext();
         TreeNode toReturn = new TreeNode(source, method, null, 0, getTreeNodesFromValues(azquoMemoryDBConnection, values, maxSize));
         addNodeValues(toReturn);
+        if (values.size()==1 && values.iterator().next().getText().length()>0){
+            toReturn.setValue(values.iterator().next().getText());
+        }
         return toReturn;
+
     }
 
     private static List<TreeNode> getTreeNodesFromValues(AzquoMemoryDBConnection azquoMemoryDBConnection, Set<Value> values, int maxSize) {
@@ -448,6 +452,12 @@ public class ProvenanceService {
     }
 
     public static void addNodeValues(TreeNode t) {
+        if (t.getChildren().size()==1){
+            TreeNode child = t.getChildren().get(0);
+            t.setValue(child.getValue());
+            t.setDvalue(child.getDvalue());
+            return;
+        }
         double d = 0;
         for (TreeNode child : t.getChildren()) {
             d += child.getDvalue();
