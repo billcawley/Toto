@@ -919,6 +919,9 @@ public final class StandardName extends Name {
     private static String findParentAttributes(StandardName child, String attributeName, Set<Name> checked, Name origName, int level) {
         findParentAttributesCount.incrementAndGet();
         Name[] refCopy = child.parents;
+        if (refCopy==null) {
+            return null;
+        }
         for (Name parent : refCopy) {
             if (!checked.contains(parent)) {
                 checked.add(parent);
