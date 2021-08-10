@@ -745,9 +745,11 @@ public final class ImportService {
             int rowOffset = getIntorNull(row.getCell(3));
             int colOffset = getIntorNull(row.getCell(4));
             columns = getIntorNull(row.getCell(5));
-            String endRowString = null;
+            String[] endRowStrings = null;
             try{
-                endRowString = row.getCell(6).getStringCellValue().trim();
+                String endRowString = row.getCell(6).getStringCellValue().trim();
+                endRowStrings = endRowString.split("\\|");
+
             }catch(Exception e){
                 endRow = getIntorNull(row.getCell(6));
 
@@ -766,7 +768,7 @@ public final class ImportService {
                 for (endRow = found.getRowIndex(); endRow <= topLeft.getSheet().getLastRowNum(); endRow++) {
                     if (sheet.getRow(endRow) != null) {
                         Cell cell = sheet.getRow(endRow).getCell(topLeft.getColumnIndex());
-                        if ((endRowString == null && cell == null) || (cell != null && cell.getCellType() == STRING && cell.getStringCellValue().trim().equalsIgnoreCase(endRowString))) {
+                        if ((endRowStrings == null && cell == null) || (cell != null && cell.getCellType() == STRING && tryall(cell.getStringCellValue().trim(),endRowStrings))) {
                             break;
                         }
                     }
@@ -812,6 +814,15 @@ public final class ImportService {
 
         }
         return null;
+    }
+
+    private static boolean tryall(String toTest, String[] possibles){
+        for (String possible:possibles){
+            if (toTest.equalsIgnoreCase(possible)){
+                return true;
+            }
+        }
+        return false;
     }
 
     public static void rangeToCSV(io.keikai.api.model.Sheet sheet, AreaReference areaReference, CsvWriter csvW) throws Exception {
