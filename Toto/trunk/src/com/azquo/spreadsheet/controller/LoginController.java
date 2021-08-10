@@ -135,7 +135,7 @@ public class LoginController {
                         session.setAttribute(LOGGED_IN_USER_SESSION, loggedInUser);
                         loggedInUser.userLog("Login", new HashMap<>());
                         if (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()) {
-                            return "/api/Online?reportid=1";//in case there is an external call that needs handling
+                            return "redirect:/api/Online?reportid=1";//in case there is an external call that needs handling
                             //return "redirect:/api/ManageReports";
                         } else {
                             return "redirect:/api/Online?reportid=1"; // redirect to menu, will need to be changed when we sort the parameters out
