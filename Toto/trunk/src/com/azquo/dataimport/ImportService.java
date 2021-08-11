@@ -684,7 +684,15 @@ public final class ImportService {
                                 oCell.setCellErrorValue(cell.getErrorCellValue());
                                 break;
                             case FORMULA:
-                                oCell.setCellFormula(cell.getCellFormula());
+                                try {
+                                    oCell.setCellValue(cell.getNumericCellValue());
+                                }catch(Exception e){
+                                    try{
+                                        oCell.setCellValue(cell.getStringCellValue());
+                                    }catch(Exception e2){
+                                        oCell.setCellValue("");
+                                    }
+                                }
                                 break;
                             case NUMERIC:
                                 oCell.setCellValue(cell.getNumericCellValue());
@@ -746,14 +754,17 @@ public final class ImportService {
             int colOffset = getIntorNull(row.getCell(4));
             columns = getIntorNull(row.getCell(5));
             String[] endRowStrings = null;
-            try{
-                String endRowString = row.getCell(6).getStringCellValue().trim();
-                endRowStrings = endRowString.split("\\|");
+            String endRowString = null;
+            Cell endCell = row.getCell(6);
+            if (endCell!=null && endCell.getCellType()!=CellType.BLANK){
+                 try{
+                    endRowString = row.getCell(6).getStringCellValue().trim();
+                    endRowStrings = endRowString.split("\\|");
 
-            }catch(Exception e){
-                endRow = getIntorNull(row.getCell(6));
-
-            }
+                }catch(Exception e){
+                    endRow = getIntorNull(row.getCell(6));
+                }
+           }
 
             if (anchor != null) {
                 found = findCell(inputBook, sheetName, anchor);
@@ -817,6 +828,9 @@ public final class ImportService {
     }
 
     private static boolean tryall(String toTest, String[] possibles){
+        if(possibles==null){
+            return false;
+        }
         for (String possible:possibles){
             if (toTest.equalsIgnoreCase(possible)){
                 return true;
