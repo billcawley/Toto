@@ -720,7 +720,7 @@ public final class ImportService {
     private static void oneRange(Workbook ppBook, Row row, Workbook inputBook)throws Exception{
         String rangeName = row.getCell(0).getStringCellValue().trim();
         String sheetName = row.getCell(1).getStringCellValue().trim();
-        String anchor = null;
+        String[] anchors = null;
         Sheet sheet = inputBook.getSheet(sheetName);
         if (sheet == null){
             throw new Exception ("cannot find " + sheetName);
@@ -728,7 +728,9 @@ public final class ImportService {
         String text = null;
         try{
 
-            anchor = row.getCell(2).getStringCellValue().trim();
+            String anchor = row.getCell(2).getStringCellValue().trim();
+            anchors = anchor.split("\\|");
+
             if (anchor.startsWith("[")&& anchor.endsWith("]")) {
                 //anchor is the text in a shape
                 XSSFDrawing drawing = (XSSFDrawing) sheet.getDrawingPatriarch();
@@ -766,10 +768,10 @@ public final class ImportService {
                 }
            }
 
-            if (anchor != null) {
-                found = findCell(inputBook, sheetName, anchor);
+            if (anchors != null) {
+                found = findCell(inputBook, sheetName, anchors);
                 if (found == null) {
-                    throw new Exception("cannot find anchor " + anchor);
+                    throw new Exception("cannot find anchor " + anchors[0]);
                 }
                 topLeft = sheet.getRow(found.getRowIndex() + rowOffset).getCell(found.getColumnIndex() + colOffset);
             } else {
@@ -803,10 +805,10 @@ public final class ImportService {
     }
 
 
-    private static Cell findCell(Workbook book, String sheetName, String cellVal){
+    private static Cell findCell(Workbook book, String sheetName, String[] cellVals){
         if (sheetName == null){
             for (Sheet sheet:book){
-                Cell  cell = findCell(book, sheet.getSheetName(), cellVal);
+                Cell  cell = findCell(book, sheet.getSheetName(), cellVals);
                 if(cell!=null){
                     return cell;
                 }
@@ -817,7 +819,7 @@ public final class ImportService {
             if (sheet.getRow(rowNo)!= null){
                 Row row = sheet.getRow(rowNo);
                 for (int cellNo= row.getFirstCellNum();cellNo<row.getLastCellNum();cellNo++){
-                    if (row.getCell(cellNo)!=null && row.getCell(cellNo).getCellType()== STRING && row.getCell(cellNo).getStringCellValue().trim().equalsIgnoreCase(cellVal)){
+                    if (row.getCell(cellNo)!=null && row.getCell(cellNo).getCellType()== STRING && tryall(row.getCell(cellNo).getStringCellValue().trim(), cellVals)){
                         return row.getCell(cellNo);
                     }
                 }
