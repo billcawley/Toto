@@ -365,6 +365,9 @@ public class BackupService {
                     RMIClient.getServerInterface(loggedInUser.getDatabaseServer().getIp()).sendBatchOfValuesFromBackup(loggedInUser.getDataAccessToken(), valuesForBackup);
                     break;
                 }
+                if (lineValues.length < 4){
+                    System.out.println("line valuee : " + lineValues[0]);
+                }
                 byte[] decodedBytes = Base64.getDecoder().decode(lineValues[3]);
                 ValueForBackup valueForBackup = new ValueForBackup(
                         Integer.parseInt(lineValues[0])

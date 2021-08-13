@@ -171,19 +171,19 @@ public class TestController {
             }
         }
 
-        // .45 based on careco thresholds
+        // .45 based on careco thresholds, y adjusted to .47
         if (skuCoordinates.size() == 4 || skuCoordinates.size() == 3) {
             // check for a basic split 4 ways
             for (String sku : skuCoordinates.keySet()) {
                 pagePercentages.put(sku, 25);
                 if (skuCoordinates.get(sku).getX() > .45) { // right
-                    if (skuCoordinates.get(sku).getY() > .45) { // bottom
+                    if (skuCoordinates.get(sku).getY() > .47) { // bottom
                         classifications.put(sku, "BottomRight");
                     } else {
                         classifications.put(sku, "TopRight");
                     }
                 } else { // left
-                    if (skuCoordinates.get(sku).getY() > .45) { // bottom
+                    if (skuCoordinates.get(sku).getY() > .47) { // bottom
                         classifications.put(sku, "BottomLeft");
                     } else {
                         classifications.put(sku, "TopLeft");
@@ -398,7 +398,7 @@ public class TestController {
             toprow.createCell(2).setCellValue("Location");
             toprow.createCell(3).setCellValue("Page %");*/
 
-            try (Stream<Path> transferDir = Files.list(Paths.get("/home/edward/Downloads/Transfer"))) {
+            try (Stream<Path> transferDir = Files.list(Paths.get("/home/edward/Downloads/tocheck"))) {
                 Iterator<Path> transferDirIterator = transferDir.iterator();
                 // go through the main directory looking for directories that match a DB name
                 while (transferDirIterator.hasNext()) {
@@ -475,7 +475,7 @@ public class TestController {
                 OutputStream out = response.getOutputStream();
                 wb.write(out);
                 out.close();*/
-                            wb.write(new FileOutputStream("/home/edward/Downloads/Transfer/" + pdfName.substring(0, pdfName.length() - 4) + ".xlsx"));
+                            wb.write(new FileOutputStream("/home/edward/Downloads/tocheck/" + pdfName.substring(0, pdfName.length() - 4) + ".xlsx"));
                             pdDoc.close();
                         } catch (Exception e) {
                             e.printStackTrace();

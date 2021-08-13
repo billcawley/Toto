@@ -262,7 +262,7 @@ Created by IntelliJ IDEA.
             </form>
             <h3>Download Custom Backup.</h3>
             For advanced users - specify a subset of a database to download.
-            <form action="/api//DownloadBackup" method="get">
+            <form onsubmit="$('#working').show();" action="/api//DownloadBackup" method="get">
                 <table>
                     <tbody>
                     <tr>

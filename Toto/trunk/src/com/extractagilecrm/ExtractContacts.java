@@ -80,7 +80,7 @@ public class ExtractContacts {
         }
     }
 
-    static String agileFile = "/home/edward/charterhouse.txt";
+    static String agileFile = "/home/edward/bonza.txt";
 
     public static String extract() {
         System.out.print("current time millis : " + System.currentTimeMillis());
@@ -95,7 +95,13 @@ public class ExtractContacts {
             ContactAPI contactApi = apiManager.getContactAPI();
             String cursor = "first_page";
             while (cursor != null){
-                JSONArray contacts = contactApi.getContacts("150", cursor);
+                JSONArray contacts = contactApi.getContacts("100", cursor);
+                int tries = 0;
+                while (contacts == null && tries < 5){
+                    contacts = contactApi.getContacts("100", cursor);
+                    tries++;
+                    System.out.println("tries : " + tries);
+                }
                 FileUtils.writeStringToFile(new File("/home/edward/Downloads/" + System.currentTimeMillis() + "contacts.json"), contacts.toString());
                 cursor = null;
                 for (Object contact : contacts){
@@ -108,7 +114,13 @@ public class ExtractContacts {
             }
             cursor = "first_page";
             while (cursor != null){
-                JSONArray deals = getDeals("150", cursor);
+                JSONArray deals = getDeals("100", cursor);
+                int tries = 0;
+                while (deals == null && tries < 5){
+                    deals = contactApi.getContacts("100", cursor);
+                    tries++;
+                    System.out.println("tries : " + tries);
+                }
                 FileUtils.writeStringToFile(new File("/home/edward/Downloads/" + System.currentTimeMillis() + "deals.json"), deals.toString());
                 cursor = null;
                 for (Object deal : deals){

@@ -117,7 +117,7 @@ public class BackupTransport {
             csvW.write(valueForBackup.getId() + "");
             csvW.write(valueForBackup.getProvenance().getId() + "");
             // attributes could have unhelpful chars
-            csvW.write(valueForBackup.getText());
+            csvW.write(valueForBackup.getText().replace("\n", "\\\\n").replace("\r", "").replace("\t", "\\\\t"));
             //base 64 encode the bytes
             byte[] encodedBytes;
             if (subsetNames != null){ // we have to chop children we can't find
@@ -147,7 +147,7 @@ public class BackupTransport {
                     csvW.write(valueForBackup.getId() + "");
                     csvW.write(valueForBackup.getProvenance().getId() + "");
                     // attributes could have unhelpful chars
-                    csvW.write(valueForBackup.getText());
+                    csvW.write(valueForBackup.getText().replace("\n", "\\\\n").replace("\r", "").replace("\t", "\\\\t"));
                     //base 64 encode the bytes
                     byte[] encodedBytes = Base64.getEncoder().encode(valueForBackup.getNameIdsAsBytes());
                     String string64 = new String(encodedBytes);
@@ -170,7 +170,7 @@ public class BackupTransport {
     // ok, we need to create new names in a style similar to loading a database
     public synchronized void setBatchOfNamesFromBackup(List<NameForBackup> backupBatch) throws Exception {
         for (NameForBackup nameForBackup : backupBatch) {
-            namesFromBackup.add(new StandardName(azquoMemoryDB, nameForBackup.getId(), nameForBackup.getProvenanceId(), null, nameForBackup.getAttributes(), nameForBackup.getNoParents(), nameForBackup.getNoValues(), true));
+            namesFromBackup.add(new StandardName(azquoMemoryDB, nameForBackup.getId(), nameForBackup.getProvenanceId(), null, nameForBackup.getAttributes().replace("\\\\n", "\n").replace("\\\\t", "\t"), nameForBackup.getNoParents(), nameForBackup.getNoValues(), true));
             azquoMemoryDB.setNextId(nameForBackup.getId());
             if (nameForBackup.getChildren().length > 1_000_000) {
                 System.out.println("name with more than a million children : " + nameForBackup.getAttributes());
@@ -197,7 +197,7 @@ public class BackupTransport {
 
     public synchronized void setBatchOfValuesFromBackup(List<ValueForBackup> backupBatch) throws Exception {
         for (ValueForBackup valueForBackup : backupBatch) {
-            new Value(azquoMemoryDB, valueForBackup.getId(), valueForBackup.getProvenanceId(), valueForBackup.getText(), valueForBackup.getNames(), true);
+            new Value(azquoMemoryDB, valueForBackup.getId(), valueForBackup.getProvenanceId(), valueForBackup.getText().replace("\\\\n", "\n").replace("\\\\t", "\t"), valueForBackup.getNames(), true);
             azquoMemoryDB.setNextId(valueForBackup.getId());
         }
     }

@@ -251,7 +251,7 @@ public class ValueDAO {
                         .append("), ");
                 namedParams.addValue(FastDAO.ID + count, vh.getId());
                 namedParams.addValue(PROVENANCEID + count, vh.getProvenanceId());
-                namedParams.addValue(TEXT + count, vh.getText());
+                namedParams.addValue(TEXT + count, vh.getText().replace("\\\\n", "\n").replace("\\\\t", "\t"));
                     namedParams.addValue(NAMES + count, vh.getNames());
                 count++;
             }
