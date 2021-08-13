@@ -740,7 +740,7 @@ The set ‘recent sales by postcode area` will contain a selection of the postco
                 }
             }
         }
-        Name tempNames = NameService.findByName(azquoMemoryDBConnection,"Temporary names");
+        Name tempNames = NameService.findByName(azquoMemoryDBConnection,StringLiterals.TEMPORARYNAMES);
         Name tempSet = newTemporaryName(azquoMemoryDBConnection,"temporary categorisation",tempNames, language);
 
         for (Name name : headlineNames) {

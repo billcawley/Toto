@@ -407,7 +407,7 @@ class NameEditFunctions {
     }
 
     private static void clearTemporary(AzquoMemoryDBConnection azquoMemoryDBConnection)throws Exception{
-            Name temporaryNames = NameService.findByName(azquoMemoryDBConnection,"Temporary Names");
+            Name temporaryNames = NameService.findByName(azquoMemoryDBConnection, StringLiterals.TEMPORARYNAMES);
             if (temporaryNames==null){
                 return;
             }
