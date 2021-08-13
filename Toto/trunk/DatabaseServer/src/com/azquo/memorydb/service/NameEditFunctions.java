@@ -38,6 +38,10 @@ class NameEditFunctions {
             zapAttributes(azquoMemoryDBConnection, setFormula.substring(14).trim());
             return Collections.emptyList();
         }
+        if (setFormula.startsWith("cleartemporary")) {
+            clearTemporary(azquoMemoryDBConnection);
+            return Collections.emptyList();
+        }
 
 
 // todo, finish and make it work
@@ -400,5 +404,28 @@ class NameEditFunctions {
         toReturn.add(rubbishBin);
         new Thread(azquoMemoryDBConnection::persist).start();
         return toReturn;
+    }
+
+    private static void clearTemporary(AzquoMemoryDBConnection azquoMemoryDBConnection)throws Exception{
+            Name temporaryNames = NameService.findByName(azquoMemoryDBConnection,"Temporary Names");
+            if (temporaryNames==null){
+                return;
+            }
+            Collection<Name> names = temporaryNames.getChildren();
+            Set<Name> toBeDeleted = new HashSet<>();
+            for (Name name:names){
+                for (Name child: name.getChildren()){
+                    if (child.getDefaultDisplayName()==null){
+                        toBeDeleted.add(child);
+                    }else{
+                        break;
+                    }
+                }
+                toBeDeleted.add(name);
+            }
+            for (Name name:toBeDeleted){
+                name.delete(azquoMemoryDBConnection);
+            }
+            azquoMemoryDBConnection.persist();
     }
 }
