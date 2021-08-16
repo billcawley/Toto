@@ -17,7 +17,7 @@
   function updateStatus(){
     if (window.skipMarker <= 0){
       jq.post("/api/SpreadsheetStatus?action=log", function(data){
-        var objDiv = document.getElementById("serverStatus");
+      	var objDiv = document.getElementById("serverStatus");
         if (objDiv.innerHTML != data){ // it was updated
           objDiv.innerHTML = data;
           objDiv.style.backgroundColor = '#EEFFEE'; // highlight the change
@@ -25,7 +25,8 @@
           // assume there could be more stuff!
           window.skipSetting = 0;
           window.skipMarker = 0;
-        } else {
+			document.getElementById("chosen").innerHTML = extractChoices(data);
+		} else {
           objDiv.style.backgroundColor = 'white';
           if (window.skipSetting == 0){
             window.skipSetting = 1;
@@ -39,6 +40,28 @@
     } else {
       window.skipMarker--;
     }
+  }
+
+
+  function extractChoices(data){
+	  var choices = new Map();
+	  const dataLines = data.split("<br>");
+	  var firstline = true;
+	  for (var dataLine of dataLines) {
+		  if (firstline) {
+			  firstline = false;//first line may be chopped
+		  } else {
+			  var choice = dataLine.split(" : ");
+			  if (choice.length > 1 && choice[0].indexOf(" finishing") < 0) {
+				  choices.set(choice[0].trim(), choice[1].trim());
+			  }
+		  }
+	  }
+	  var toReturn = "";
+	  for (let ch of choices.keys()){
+		  toReturn+= ch + " = " + choices.get(ch) + "</br>";
+	  }
+	  return toReturn;
   }
 
   setInterval(function(){ updateStatus(); }, 1000);
@@ -56,6 +79,7 @@
 		</div>
 		<div class="basic-box">
 			<h3>User Log</h3>
+			<div id="chosen"></div>
 			<div id="serverStatus"></div>
 			<a href="javascript:void(0)" id="abort" onclick='jq.post("/api/SpreadsheetStatus?action=stop", null)' class="button alt small"><span class="fa fa-times-circle"></span>Send Stop Command</a>
 		</div>
