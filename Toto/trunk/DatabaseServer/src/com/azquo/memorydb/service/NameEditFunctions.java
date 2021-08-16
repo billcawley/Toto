@@ -426,6 +426,7 @@ class NameEditFunctions {
             for (Name name:toBeDeleted){
                 name.delete(azquoMemoryDBConnection);
             }
-            azquoMemoryDBConnection.persist();
+            cleanRoot(azquoMemoryDBConnection);
+            new Thread(azquoMemoryDBConnection::persist).start();
     }
 }
