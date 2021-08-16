@@ -520,10 +520,23 @@ public class ReportRenderer {
     }
 
     private static void CopySheet(Range range, String suggestedName) {
+        if (suggestedName.length()> 31){
+            suggestedName = suggestedName.substring(0,31);
+            if (range.getBook().getSheet(suggestedName)!=null){
+                int i = 0;
+                for (i=0;i<10;i++){//more than 9 - anything goes!
+                    if (range.getBook().getSheet(suggestedName.substring(0,30)+ i)==null){
+                        suggestedName = suggestedName.substring(0,30) + i;
+                        break;
+                    }
+                }
+            }
+        }
+        final String chosenName = suggestedName;
         range.sync(range1 -> {
             // this little bracketed bit is what I added to the ZK code
-            if (suggestedName != null && !suggestedName.isEmpty()) {
-                range1.cloneSheet(suggestSheetName(range1.getBook(), suggestedName));
+            if (chosenName != null && !chosenName.isEmpty()) {
+                range1.cloneSheet(suggestSheetName(range1.getBook(), chosenName));
             } else {
                 range1.cloneSheet(suggestSheetName(range1.getBook(), range1.getSheetName()));
             }
@@ -841,7 +854,10 @@ public class ReportRenderer {
             Range paste = CellOperationUtil.paste(copySource, insertRange);
 
             if (columnsFormattingPatternWidth > 1){
+                //..needs to be done twice - not sure why.
                 paste = CellOperationUtil.pasteSpecial(copySource, insertRange, Range.PasteType.COLUMN_WIDTHS,Range.PasteOperation.NONE, false,false);
+                insertRange = Ranges.range(sheet,topRow, displayDataRegion.getColumn() + columnsFormattingPatternWidth, maxRow, displayDataRegion.getColumn()+ 2 * columnsFormattingPatternWidth-1);
+                paste = CellOperationUtil.pasteSpecial(copySource, insertRange,Range.PasteType.COLUMN_WIDTHS, Range.PasteOperation.NONE,false,false);
             }
             int originalWidth = sheet.getInternalSheet().getColumn(insertCol - 1).getWidth();
             if (originalWidth != sheet.getInternalSheet().getColumn(insertCol).getWidth()) { // height may not match on insert
