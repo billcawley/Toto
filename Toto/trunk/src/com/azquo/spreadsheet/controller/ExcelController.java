@@ -812,7 +812,7 @@ public class ExcelController {
                                                 }
                                             }
                                             // should we bother to report on the post processing result?
-                                            uploadedFile.setPostProcessingResult(ReportExecutor.runExecute(loggedInUser, postProcessor, null, uploadedFile.getProvenanceId(), false).toString());
+                                            uploadedFile.setPostProcessingResult(ReportExecutor.runExecuteText(loggedInUser, postProcessor, null, uploadedFile.getProvenanceId(), false).toString());
                                         }
                                         return "ok";
                                     }
@@ -977,7 +977,7 @@ public class ExcelController {
                     book.getInternalBook().setAttribute(REPORT_ID, or.getId());
                     ReportRenderer.populateBook(book, 0);
                     // ok this crashes due to no book path but I think I'll allow no book path itnernally as
-                    ReportExecutor.runExecuteCommandForBook(book, StringLiterals.FOLLOWON); // that SHOULD do it. It will fail gracefully in the vast majority of times there is no followon
+                    ReportExecutor.runExecuteCommandForBook(loggedInUser,book, StringLiterals.FOLLOWON); // that SHOULD do it. It will fail gracefully in the vast majority of times there is no followon
                 }
                 return result;
             }

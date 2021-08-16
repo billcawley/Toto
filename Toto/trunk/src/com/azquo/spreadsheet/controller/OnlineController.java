@@ -377,7 +377,7 @@ public class OnlineController {
                                 }
 
                                 if (executeNow) {
-                                    book = ReportExecutor.runExecuteCommandForBook(book, StringLiterals.EXECUTE); // standard, there's the option to execute the contents of a different names
+                                    book = ReportExecutor.runExecuteCommandForBook(loggedInUser, book, StringLiterals.EXECUTE); // standard, there's the option to execute the contents of a different names
                                     session.setAttribute(finalReportId + SAVE_FLAG, false); // no save button after an execute
                                 }
                                 long newHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
@@ -616,7 +616,7 @@ public class OnlineController {
                     try {
                         final String result = SpreadsheetService.saveData(loggedInUser, onlineReport.getId(), onlineReport.getReportName(), sName.getRefersToSheetName(), regionName);
                         sourceBook.getInternalBook().setAttribute(OnlineController.LOGGED_IN_USER, loggedInUser);
-                        ReportExecutor.runExecuteCommandForBook(sourceBook, StringLiterals.FOLLOWON); // followon should work after an upload of this type
+                        ReportExecutor.runExecuteCommandForBook(loggedInUser,sourceBook, StringLiterals.FOLLOWON); // followon should work after an upload of this type
                         if (!result.startsWith("true")) {// unlikely to fail here I think but catch it anyway . . .
                             errorMessage.append("- in region ").append(regionName).append(" -").append(result);
                         } else {

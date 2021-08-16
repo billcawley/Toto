@@ -546,7 +546,7 @@ public class SpreadsheetService {
                 // execute ignores the email unless it should send
                 if ("Execute".equalsIgnoreCase(reportSchedule.getType())){
                     System.out.println("execute from report scheduler");
-                    ReportExecutor.runExecuteCommandForBook(book, StringLiterals.EXECUTE); // standard, there's the option to execute the contents of a different names
+                    ReportExecutor.runExecuteCommandForBook(loggedInUser,book, StringLiterals.EXECUTE); // standard, there's the option to execute the contents of a different names
                     // so, can I have my PDF or XLS? Very similar to other the download code in the spreadsheet command controller
                 } else if ("PDF".equals(reportSchedule.getType())) {
                     Exporter exporter = Exporters.getExporter("pdf");

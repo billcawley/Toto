@@ -179,7 +179,7 @@ public final class ImportService {
                 loggedInUser.copyMode = true;
             }
             try {
-                System.out.println(ReportExecutor.runExecute(loggedInUser, pendingUploadConfig.getPendingDataClearCommand(), null, uploadedFile.getProvenanceId(), false));
+                System.out.println(ReportExecutor.runExecuteText(loggedInUser, pendingUploadConfig.getPendingDataClearCommand(), null, uploadedFile.getProvenanceId(), false));
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -1424,7 +1424,7 @@ public final class ImportService {
             }
             loggedInUser.copyMode = uploadedFile.isValidationTest();
             try {
-                uploadedFile.setPostProcessingResult(ReportExecutor.runExecute(loggedInUser, uploadedFile.getTemplateParameter(POSTPROCESSOR), systemData2DArrays, uploadedFile.getProvenanceId(), false).toString());
+                uploadedFile.setPostProcessingResult(ReportExecutor.runExecuteText(loggedInUser, uploadedFile.getTemplateParameter(POSTPROCESSOR), systemData2DArrays, uploadedFile.getProvenanceId(), false).toString());
             } catch (Exception e) {
                 loggedInUser.copyMode = false;
                 throw e;
@@ -1439,7 +1439,7 @@ public final class ImportService {
             }
             loggedInUser.copyMode = true;
             try {
-                ReportExecutor.runExecute(loggedInUser, uploadedFile.getTemplateParameter(VALIDATION), systemData2DArrays, uploadedFile.getProvenanceId(), false);
+                ReportExecutor.runExecuteText(loggedInUser, uploadedFile.getTemplateParameter(VALIDATION), systemData2DArrays, uploadedFile.getProvenanceId(), false);
             } catch (Exception e) {
                 loggedInUser.copyMode = false;
                 throw e;
