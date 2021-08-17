@@ -2657,8 +2657,8 @@ fr.close();
                     }
                     if (!ignore) {
                          int oRow = outputRow + 1;
-                         String firstOut = getCellValue(outputSheet,outputRow,0);
-                        while (oRow==outputRow + 1 || (outputSheet.getRow(oRow)!=null && getCellValue(outputSheet,oRow,0).length()>0 &&!getCellValue(outputSheet,oRow,0).equals(firstOut) )){
+                         String firstOut = getCellValue(outputSheet, oRow,0);
+                        while (oRow==outputRow + 1 || ( getCellValue(outputSheet,oRow,0).length()>0 &&getCellValue(outputSheet,oRow,0).equals(firstOut) )){
                             for (colNo = outputCol; colNo < lastOutputCol; colNo++) {
                                 String cellVal = getCellValue(outputSheet,oRow,colNo);
                                 if (colNo > 0) {
