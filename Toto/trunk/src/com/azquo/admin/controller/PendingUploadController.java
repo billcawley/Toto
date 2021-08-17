@@ -402,12 +402,12 @@ public class PendingUploadController {
                                 int identifierIndex = 0;
                                 for (Row row : warnings) {
                                     if (inData) {
-                                        int fileIndex = Integer.parseInt(ImportService.getCellValue(row.getCell(fileIndexIndex)));
-                                        int lineIndex = Integer.parseInt(ImportService.getCellValue(row.getCell(lineIndexIndex)));
-                                        String identifier = ImportService.getCellValue(row.getCell(identifierIndex));
+                                        int fileIndex = Integer.parseInt(ImportService.getkCellValue(row.getCell(fileIndexIndex)));
+                                        int lineIndex = Integer.parseInt(ImportService.getkCellValue(row.getCell(lineIndexIndex)));
+                                        String identifier = ImportService.getkCellValue(row.getCell(identifierIndex));
                                         // load and comment will always be the first and second cells
-                                        String load = ImportService.getCellValue(row.getCell(0));
-                                        String comment = ImportService.getCellValue(row.getCell(1));
+                                        String load = ImportService.getkCellValue(row.getCell(0));
+                                        String comment = ImportService.getkCellValue(row.getCell(1));
                                         // ok first deal with the comment
                                         dealWithComment(pu, identifier, comment);
                                         // now the line, the question being whether it's to be rejected
@@ -416,13 +416,13 @@ public class PendingUploadController {
                                         }
                                     } else if (row.getCell(0).getStringCellValue().equalsIgnoreCase("load")) {
                                         for (Cell cell : row) {
-                                            if (ImportService.getCellValue(cell).equalsIgnoreCase("file index")) {
+                                            if (ImportService.getkCellValue(cell).equalsIgnoreCase("file index")) {
                                                 fileIndexIndex = cell.getColumnIndex();
                                             }
-                                            if (ImportService.getCellValue(cell).equalsIgnoreCase("line no")) {
+                                            if (ImportService.getkCellValue(cell).equalsIgnoreCase("line no")) {
                                                 lineIndexIndex = cell.getColumnIndex();
                                             }
-                                            if (ImportService.getCellValue(cell).equalsIgnoreCase("identifier")) {
+                                            if (ImportService.getkCellValue(cell).equalsIgnoreCase("identifier")) {
                                                 identifierIndex = cell.getColumnIndex();
                                             }
                                         }

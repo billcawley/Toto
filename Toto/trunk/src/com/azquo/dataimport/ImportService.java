@@ -1754,12 +1754,28 @@ public final class ImportService {
     // POI 4.0 version EFC pasted, I really don't like doing this but it's required at the moment
     private static org.apache.poi.ss.usermodel.DataFormatter df2 = new org.apache.poi.ss.usermodel.DataFormatter();
 
-    public static String getCellValue(Sheet sheet, AreaReference areaRef) {
-        return getCellValue(sheet.getRow(areaRef.getFirstCell().getRow()).getCell(areaRef.getFirstCell().getCol()));
+    public static String getACellValue(Sheet sheet, AreaReference areaRef) {
+        return getCellValue(sheet,areaRef.getFirstCell().getRow(),areaRef.getFirstCell().getCol());
     }
 
+    private static String getCellValue(Sheet sheet, int row, int col) {
+        try{
+            Cell cell = sheet.getRow(row).getCell(col);
+            try{
+                return cell.getStringCellValue();
+            }catch(Exception e){
+                String st = cell.getNumericCellValue()+ "";
+                if (st.endsWith(".0")){
+                    return st.substring(0,st.length()-2);
+                }
+                return st;
+            }
+        }catch(Exception e){
+            return "";
+        }
+     }
 
-    public static String getCellValue(org.apache.poi.ss.usermodel.Cell cell) {
+    public static String getkCellValue(org.apache.poi.ss.usermodel.Cell cell) {
         return getCellValueUS(cell, false);
     }
 
@@ -1868,7 +1884,7 @@ public final class ImportService {
                         /*&& rowIndex >= region.getFirstRow()
                         && rowIndex <= region.getLastRow()*/
                 ) {
-                    returnString = getCellValue(cell.getSheet().getRow(region.getFirstRow()).getCell(region.getFirstColumn()));
+                    returnString = getCellValue(cell.getSheet(),region.getFirstRow(),region.getFirstColumn());
                 }
             }
         }
@@ -2290,7 +2306,7 @@ fr.close();
             boolean backwards = false;
             Sheet inputSheet = ppBook.getSheet(inputLineRegion.getSheetName());
             if (optionsRegion != null) {
-                options = getCellValue(inputSheet, new AreaReference(optionsRegion.getRefersToFormula(), null));
+                options = getACellValue(inputSheet, new AreaReference(optionsRegion.getRefersToFormula(), null));
                 if (options.toLowerCase().contains("backward")) {
                     backwards = true;
                 }
@@ -2314,8 +2330,8 @@ fr.close();
                 Sheet includesSheet = ppBook.getSheet(includesLineRegion.getSheetName());
 
                 for (int inRow = includesAreaRef.getFirstCell().getRow(); inRow <= includesAreaRef.getLastCell().getRow(); inRow++) {
-                    String sourceName = getCellValue(includesSheet.getRow(inRow).getCell(0));
-                    String existingSheetName = getCellValue(includesSheet.getRow(inRow).getCell(1));
+                    String sourceName = getCellValue(includesSheet,inRow,0);
+                    String existingSheetName = getCellValue(includesSheet,inRow,1);
                     if (existingSheetName.length() > 0) {
                         Sheet includeSheet = ppBook.getSheet(existingSheetName);
                         if (includeSheet != null) {
@@ -2427,7 +2443,7 @@ fr.close();
             org.apache.poi.ss.usermodel.Name topRowRegion = BookUtils.getName(ppBook, "az_toprow");
             if (topRowRegion != null) {
                 try {
-                    topRow = Integer.parseInt(getCellValue(inputSheet, new AreaReference(topRowRegion.getRefersToFormula(), null))) - 1;
+                    topRow = Integer.parseInt(getACellValue(inputSheet, new AreaReference(topRowRegion.getRefersToFormula(), null))) - 1;
                 } catch (Exception e) {
                     // if they have not written a number, assume 0
                 }
@@ -2445,13 +2461,13 @@ fr.close();
 
             Map<Integer, String> inputColumns = new HashMap();
             int inputHeadingCount = 0;
-            String heading = getCellValue(inputSheet.getRow(headingStartRow + existingHeadingRows - 1).getCell(inputHeadingCount));
+            String heading = getCellValue(inputSheet,headingStartRow + existingHeadingRows - 1,inputHeadingCount);
             int lastCellNum = inputSheet.getRow(headingStartRow).getLastCellNum();
             while (inputHeadingCount <= lastCellNum) {
                 if (heading.length() > 0) {
                     heading = "";
                     for (int row = 0; row < existingHeadingRows; row++) {
-                        heading += getCellValue(inputSheet.getRow(headingStartRow).getCell(inputHeadingCount));
+                        heading += getCellValue(inputSheet,headingStartRow,inputHeadingCount);
 
                     }
                     heading = headingFrom(heading, headingsLookups);
@@ -2459,10 +2475,10 @@ fr.close();
                     inputColumns.put(inputHeadingCount, heading);
 
                 }
-                heading = getCellValue(inputSheet.getRow(headingStartRow + existingHeadingRows - 1).getCell(++inputHeadingCount));
+                heading = getCellValue(inputSheet,headingStartRow + existingHeadingRows - 1,++inputHeadingCount);
             }
             int lastOutputCol = outputSheet.getRow(outputRow).getLastCellNum();
-            while (getCellValue(outputSheet.getRow(outputRow).getCell(lastOutputCol + 1)).length() > 0) {
+            while (getCellValue(outputSheet,outputRow,lastOutputCol + 1).length() > 0) {
                 lastOutputCol++;
             }
             //Map <Integer,Integer> colOnInputRange = new HashMap<>();
@@ -2615,11 +2631,11 @@ fr.close();
 
 
                     boolean ignore = false;
-                    if (ignoreRef != null && getCellValue(inputSheet, ignoreRef).equals("true")) {
+                    if (ignoreRef != null && getACellValue(inputSheet, ignoreRef).equals("true")) {
                         ignore = true;
                     }
                     for (AreaReference persistSource : persistNames.keySet()) {
-                        String persistString = getCellValue(inputSheet, persistSource);
+                        String persistString = getACellValue(inputSheet, persistSource);
                         if (persistString != null && persistString.length() > 0) {
                             AreaReference target = persistNames.get(persistSource);
                             setCellValue(inputSheet, target.getFirstCell().getRow(), target.getFirstCell().getCol(), persistString);
@@ -2629,7 +2645,7 @@ fr.close();
 
                     if (isNewHeadings) {
                         for (colNo = outputCol; colNo <= lastOutputCol; colNo++) {
-                            String cellVal = getCellValue(outputSheet.getRow(outputRow).getCell(colNo));
+                            String cellVal = getCellValue(outputSheet,outputRow,colNo);
                             if (colNo > 0) {
                                 fileWriter.write("\t" + normalise(cellVal));
                             } else {
@@ -2640,18 +2656,21 @@ fr.close();
                         isNewHeadings = false;
                     }
                     if (!ignore) {
-                        int oRow = outputRow + 1;
-                        for (colNo = outputCol; colNo < lastOutputCol; colNo++) {
-                            String cellVal = getCellValue(outputSheet.getRow(oRow).getCell(colNo));
-                            if (colNo > 0) {
-                                fileWriter.write("\t" + normalise(cellVal));
-                            } else {
-                                if (normalise(cellVal).length() > 0) {
-                                    fileWriter.write(normalise(cellVal));
+                         int oRow = outputRow + 1;
+                        while (oRow==outputRow + 1 || (outputSheet.getRow(oRow)!=null && getCellValue(outputSheet,oRow,0).length()>0)){
+                            for (colNo = outputCol; colNo < lastOutputCol; colNo++) {
+                                String cellVal = getCellValue(outputSheet,oRow,colNo);
+                                if (colNo > 0) {
+                                    fileWriter.write("\t" + normalise(cellVal));
+                                } else {
+                                    if (normalise(cellVal).length() > 0) {
+                                        fileWriter.write(normalise(cellVal));
+                                    }
                                 }
                             }
+                            oRow++;
+                            fileWriter.write("\r\n");
                         }
-                        fileWriter.write("\r\n");
                     }
 
                 }
@@ -2718,7 +2737,7 @@ fr.close();
 
             AreaReference area = new AreaReference(region.getRefersToFormula(), null);
             for (int rowNo = area.getFirstCell().getRow(); rowNo <= area.getLastCell().getRow(); rowNo++) {
-                String cellVal = getCellValue(ppBook.getSheet(region.getSheetName()).getRow(rowNo).getCell(area.getFirstCell().getCol()));
+                String cellVal = getCellValue(ppBook.getSheet(region.getSheetName()),rowNo,area.getFirstCell().getCol());
                 if (cellVal != null) {
                     toReturn.add(cellVal.toLowerCase(Locale.ROOT));
                 }
@@ -2763,8 +2782,8 @@ fr.close();
         int firstCol = nameArea.getFirstCell().getCol();
         int lastRow = nameArea.getLastCell().getRow();
         for (int rowNo = nameArea.getFirstCell().getRow(); rowNo <= lastRow; rowNo++) {
-            String source = standardise(getCellValue(hSheet.getRow(rowNo).getCell(firstCol)));
-            String target = standardise(getCellValue(hSheet.getRow(rowNo).getCell(firstCol + 1)));
+            String source = standardise(getCellValue(hSheet,rowNo,firstCol));
+            String target = standardise(getCellValue(hSheet,rowNo,firstCol + 1));
             if (headingsLookups.get(source) != null) {
                 headingsLookups.put(target, headingsLookups.get(source));
             } else {
@@ -3027,7 +3046,7 @@ fr.close();
                                             cellIndex++;
                                         }
                                     }
-                                    final String cellValue = ImportService.getCellValue(cell);
+                                    final String cellValue = ImportService.getCellValue(sheet, cell.getRowIndex(), cell.getColumnIndex());//this is slightly odd
                                     if (!sheet.isColumnHidden(cellIndex)) {
                                         csvW.write(cellValue.replace("\n", "\\\\n").replace("\r", "")
                                                 .replace("\t", "\\\\t"));
@@ -3089,7 +3108,7 @@ fr.close();
         Set<String> relevantPaths = new HashSet();
         for (int rowNo = jsonRulesAreaRef.getFirstCell().getRow(); rowNo <= lastRow; rowNo++) {
             Row row = jSheet.getRow(rowNo);
-            JsonRule jsonRule = new JsonRule(getCellValue(row.getCell(firstCol)), getCellValue(row.getCell(firstCol + 1)), getCellValue(row.getCell(firstCol + 2)), getCellValue(row.getCell(firstCol + 3)));
+            JsonRule jsonRule = new JsonRule(getCellValue(jSheet, rowNo, firstCol), getCellValue(jSheet,rowNo,firstCol + 1), getCellValue(jSheet,rowNo,firstCol + 2), getCellValue(jSheet,rowNo, firstCol + 3));
             jsonRules.add(jsonRule);
             List<String> jPath = Arrays.asList(jsonRule.sourceTerm.split(JSONFIELDDIVIDER));
             relevantPaths.add(jPath.get(0));
