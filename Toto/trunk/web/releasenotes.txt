@@ -1,3 +1,21 @@
+18-08-21
+
+new function 'Exists'
+
+Code which changes how the backups are created allowing a subset of a database to be downloaded
+
+allows for 'filterby(top/bottom <number> <expression>)'
+
+including edit:cleartemporary
+
+Altered the ReportExecutor so as to read the line to be executed immediately before execution - allowing spreadsheet formulae to adjust it.
+
+Allows the preprocessor to output more than one line for each input line by checking whether the first cell in the line is not blank.
+
+getCellValue has been adapted to take Sheet, row, col rather than cell as this is less likely to create exceptions
+
+upgrade keikai, dealock diagnostics
+
 28-07-21
 
 Remove debug code

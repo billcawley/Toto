@@ -158,29 +158,19 @@ public final class StandardName extends Name {
         return provenance;
     }
 
-    /*
-
-pool-4-thread-1" prio=5 Id=61 BLOCKED on com.azquo.memorydb.core.StandardName@704621c4 owned by "RMI TCP Connection(124)-192.168.1.16" Id=205
-       at com.azquo.memorydb.core.StandardName.setProvenanceWillBePersisted(StandardName.java:162)
-       -  blocked on com.azquo.memorydb.core.StandardName@704621c4
-       at com.azquo.memorydb.core.StandardName.setProvenanceWillBePersisted(StandardName.java:166)
-       -  locked com.azquo.memorydb.core.StandardName@72f3d8ab
-       at com.azquo.memorydb.core.StandardName.setAttributeWillBePersisted(StandardName.java:883)
-       -  locked com.azquo.memorydb.core.StandardName@72f3d8ab
-       at com.azquo.dataimport.BatchImporter.interpretLine(BatchImporter.java:1170)
-       at com.azquo.dataimport.BatchImporter.call(BatchImporter.java:146)
-       at com.azquo.dataimport.BatchImporter.call(BatchImporter.java:38)
-       at java.base@15.0.2/java.util.concurrent.FutureTask.run(FutureTask.java:264)
-       at java.base@15.0.2/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1130)
-
-     */
-
-    synchronized void setProvenanceWillBePersisted(final Provenance provenance) {
-        if (this.provenance == null || !this.provenance.equals(provenance)) {
-            this.provenance = provenance;
-            setNeedsPersisting();
+    void setProvenanceWillBePersisted(final Provenance provenance, boolean setParents) {
+        boolean changed = false;
+        synchronized (this){
+            if (this.provenance == null || !this.provenance.equals(provenance)) {
+                changed = true;
+                this.provenance = provenance;
+                setNeedsPersisting();
+            }
+        }
+        // get the modification of parents out of the synchronized block, dangerous for it to be in there. Also only go up one level - all the way up makes no sense
+        if (changed && setParents){
             for (Name n : getParents()){
-                n.setProvenanceWillBePersisted(provenance);
+                n.setProvenanceWillBePersisted(provenance, false);
             }
         }
     }
@@ -416,23 +406,11 @@ pool-4-thread-1" prio=5 Id=61 BLOCKED on com.azquo.memorydb.core.StandardName@70
     }
 
     private static final AtomicInteger removeFromParentsCount = new AtomicInteger(0);
-/*
-at com.azquo.memorydb.core.StandardName.removeFromParents(StandardName.java:405)
--  blocked on com.azquo.memorydb.core.StandardName@72f3d8ab
-at com.azquo.memorydb.core.StandardName.removeFromChildrenWillBePersistedNoCacheClear(StandardName.java:803)
--  locked com.azquo.memorydb.core.StandardName@704621c4
-at com.azquo.memorydb.core.StandardName.setChildrenWillBePersisted(StandardName.java:703)
--  locked com.azquo.memorydb.core.StandardName@704621c4
-at com.azquo.memorydb.service.NameStackOperators.assignSetAsName(NameStackOperators.java:297)
-at com.azquo.memorydb.service.NameQueryParser.parseQuery(NameQueryParser.java:248)
-at com.azquo.memorydb.service.NameQueryParser.parseQuery(NameQueryParser.java:48)
-at com.azquo.spreadsheet.UserChoiceService.resolveQuery(UserChoiceService.java:291)
-at com.azquo.rmi.RMIImplementation.resolveQuery(RMIImplementation.java:297)
 
- */
-     void removeFromParents(final Name name) {
+    void removeFromParents(final Name name) {
         removeFromParentsCount.incrementAndGet();
-        synchronized (this) { // just sync on this object to protect the lists
+         // todo - synchronise on something else?
+        synchronized (this) {
             parents = NameUtils.nameArrayRemoveIfExists(parents, name);
         }
         setNeedsPersisting();

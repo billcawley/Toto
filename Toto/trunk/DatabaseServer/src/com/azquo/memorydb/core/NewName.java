@@ -210,12 +210,19 @@ public final class NewName extends Name {
         return provenance;
     }
 
-    synchronized void setProvenanceWillBePersisted(final Provenance provenance) {
-        if (this.provenance == null || !this.provenance.equals(provenance)) {
-            this.provenance = provenance;
-            setNeedsPersisting();
-            for (Name n : getParents()) {
-                n.setProvenanceWillBePersisted(provenance);
+    void setProvenanceWillBePersisted(final Provenance provenance, boolean setParents) {
+        boolean changed = false;
+        synchronized (this){
+            if (this.provenance == null || !this.provenance.equals(provenance)) {
+                changed = true;
+                this.provenance = provenance;
+                setNeedsPersisting();
+            }
+        }
+        // get the modification of parents out of the synchronized block, dangerous for it to be in there
+        if (changed && setParents){
+            for (Name n : getParents()){
+                n.setProvenanceWillBePersisted(provenance, false);
             }
         }
     }
