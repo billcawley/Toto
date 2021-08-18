@@ -7,7 +7,6 @@ import com.azquo.dataimport.DSImportService;
 import com.azquo.memorydb.*;
 import com.azquo.memorydb.core.AzquoMemoryDB;
 import com.azquo.memorydb.core.Name;
-import com.azquo.memorydb.core.NameUtils;
 import com.azquo.memorydb.service.DSAdminService;
 import com.azquo.memorydb.service.NameQueryParser;
 import com.azquo.memorydb.service.NameService;
@@ -23,6 +22,8 @@ import com.azquo.spreadsheet.transport.json.JsonChildren;
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.OperatingSystemMXBean;
+import java.lang.management.ThreadInfo;
+import java.lang.management.ThreadMXBean;
 import java.rmi.RemoteException;
 import java.text.NumberFormat;
 import java.util.Collections;
@@ -413,6 +414,16 @@ class RMIImplementation implements RMIInterface {
         // variable here is a bit easier to read and makes intellij happier
         String message = "--- MEMORY USED :  " + nf.format((runtime.totalMemory() - runtime.freeMemory()) / mb) + "MB of " + nf.format(runtime.totalMemory() / mb) + "MB, max allowed " + nf.format(runtime.maxMemory() / mb);
         toReturn.append(message);
+        // while we're here report on the threads, could be very useful for checking on deadlocks
+        ThreadMXBean tmx = ManagementFactory.getThreadMXBean();
+        long[] ids = tmx.findDeadlockedThreads();
+        if (ids != null) {
+            ThreadInfo[] infos = tmx.getThreadInfo(ids, true, true);
+            System.out.println("Following Threads are deadlocked");
+            for (ThreadInfo info : infos) {
+                System.out.println(info);
+            }
+        }
         return toReturn.toString();
     }
 

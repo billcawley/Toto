@@ -158,6 +158,23 @@ public final class StandardName extends Name {
         return provenance;
     }
 
+    /*
+
+pool-4-thread-1" prio=5 Id=61 BLOCKED on com.azquo.memorydb.core.StandardName@704621c4 owned by "RMI TCP Connection(124)-192.168.1.16" Id=205
+       at com.azquo.memorydb.core.StandardName.setProvenanceWillBePersisted(StandardName.java:162)
+       -  blocked on com.azquo.memorydb.core.StandardName@704621c4
+       at com.azquo.memorydb.core.StandardName.setProvenanceWillBePersisted(StandardName.java:166)
+       -  locked com.azquo.memorydb.core.StandardName@72f3d8ab
+       at com.azquo.memorydb.core.StandardName.setAttributeWillBePersisted(StandardName.java:883)
+       -  locked com.azquo.memorydb.core.StandardName@72f3d8ab
+       at com.azquo.dataimport.BatchImporter.interpretLine(BatchImporter.java:1170)
+       at com.azquo.dataimport.BatchImporter.call(BatchImporter.java:146)
+       at com.azquo.dataimport.BatchImporter.call(BatchImporter.java:38)
+       at java.base@15.0.2/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+       at java.base@15.0.2/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1130)
+
+     */
+
     synchronized void setProvenanceWillBePersisted(final Provenance provenance) {
         if (this.provenance == null || !this.provenance.equals(provenance)) {
             this.provenance = provenance;
@@ -399,7 +416,20 @@ public final class StandardName extends Name {
     }
 
     private static final AtomicInteger removeFromParentsCount = new AtomicInteger(0);
+/*
+at com.azquo.memorydb.core.StandardName.removeFromParents(StandardName.java:405)
+-  blocked on com.azquo.memorydb.core.StandardName@72f3d8ab
+at com.azquo.memorydb.core.StandardName.removeFromChildrenWillBePersistedNoCacheClear(StandardName.java:803)
+-  locked com.azquo.memorydb.core.StandardName@704621c4
+at com.azquo.memorydb.core.StandardName.setChildrenWillBePersisted(StandardName.java:703)
+-  locked com.azquo.memorydb.core.StandardName@704621c4
+at com.azquo.memorydb.service.NameStackOperators.assignSetAsName(NameStackOperators.java:297)
+at com.azquo.memorydb.service.NameQueryParser.parseQuery(NameQueryParser.java:248)
+at com.azquo.memorydb.service.NameQueryParser.parseQuery(NameQueryParser.java:48)
+at com.azquo.spreadsheet.UserChoiceService.resolveQuery(UserChoiceService.java:291)
+at com.azquo.rmi.RMIImplementation.resolveQuery(RMIImplementation.java:297)
 
+ */
      void removeFromParents(final Name name) {
         removeFromParentsCount.incrementAndGet();
         synchronized (this) { // just sync on this object to protect the lists
