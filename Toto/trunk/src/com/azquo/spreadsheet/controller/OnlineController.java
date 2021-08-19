@@ -165,7 +165,8 @@ public class OnlineController {
                         SpreadsheetService.setUserChoice(loggedInUser, paramName.substring(7), value);
                     }
                 }
-                if (externalcall!=null && externalcall.length()>0){
+                boolean isExternal = false;
+                 if (externalcall!=null && externalcall.length()>0){
                     externalcall = externalcall.replace("_"," ");
                     String reportName = externalcall;
                       if (externalcall.contains(" with ")) {
@@ -175,9 +176,10 @@ public class OnlineController {
                     }
                     OnlineReport or = OnlineReportDAO.findForDatabaseIdAndName(loggedInUser.getDatabase().getId(), reportName.replace("_"," "));
                     reportId = "" + or.getId();
-                    externalcall = null;
+                    isExternal = true;
 
                 }
+                 final boolean external = isExternal;
 
                 if ((loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()) && reportId != null && reportId.length() > 0 && !reportId.equals("1")) { // admin, we allow a report and possibly db to be set
                     //report id is assumed to be integer - sent from the website
@@ -323,7 +325,6 @@ public class OnlineController {
                         if (logo == null || logo.length() == 0) logo = "logo_alt.png";
                         model.addAttribute("bannerColor", bannerColor);
                         model.addAttribute("logo", logo);
-                        model.addAttribute("externalcall",null);
                         return "zsshowsheet";// show the sheet
                     }
                     // ok now I need to set the sheet loading but on a new thread
@@ -342,12 +343,14 @@ public class OnlineController {
                                 long oldHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
                                 String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + finalOnlineReport.getFilenameForDisk();
                                 Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
-                                String deflectReport = SpreadsheetService.findDeflects(loggedInUser, book);
-                                if (deflectReport!=null){
-                                    OnlineReport or2 = OnlineReportDAO.findForNameAndBusinessId(deflectReport,loggedInUser.getUser().getBusinessId());
-                                    if (or2!=null){
-                                        bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + or2.getFilenameForDisk();
-                                        book = Importers.getImporter().imports(new File(bookPath), "Report name");
+                                if (external) {
+                                    String deflectReport = SpreadsheetService.findDeflects(loggedInUser, book);
+                                    if (deflectReport != null) {
+                                        OnlineReport or2 = OnlineReportDAO.findForNameAndBusinessId(deflectReport, loggedInUser.getUser().getBusinessId());
+                                        if (or2 != null) {
+                                            bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + or2.getFilenameForDisk();
+                                            book = Importers.getImporter().imports(new File(bookPath), "Report name");
+                                        }
                                     }
                                 }
                                 book.getInternalBook().setAttribute(BOOK_PATH, bookPath);
