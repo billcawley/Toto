@@ -165,10 +165,6 @@ public class OnlineController {
                         SpreadsheetService.setUserChoice(loggedInUser, paramName.substring(7), value);
                     }
                 }
-                if (externalcall==null || externalcall.length()==0){
-                    externalcall = (String)request.getSession().getAttribute("externalcall");
-                    request.getSession().setAttribute("externalcall",null);
-                }
                 if (externalcall!=null && externalcall.length()>0){
                     externalcall = externalcall.replace("_"," ");
                     String reportName = externalcall;
@@ -346,6 +342,14 @@ public class OnlineController {
                                 long oldHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
                                 String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + finalOnlineReport.getFilenameForDisk();
                                 Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
+                                String deflectReport = SpreadsheetService.findDeflects(loggedInUser, book);
+                                if (deflectReport!=null){
+                                    OnlineReport or2 = OnlineReportDAO.findForNameAndBusinessId(deflectReport,loggedInUser.getUser().getBusinessId());
+                                    if (or2!=null){
+                                        bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + or2.getFilenameForDisk();
+                                        book = Importers.getImporter().imports(new File(bookPath), "Report name");
+                                    }
+                                }
                                 book.getInternalBook().setAttribute(BOOK_PATH, bookPath);
                                 book.getInternalBook().setAttribute(LOGGED_IN_USER, loggedInUser);
                                 // todo, address allowing multiple books open for one user. I think this could be possible. Might mean passing a DB connection not a logged in one
@@ -390,7 +394,7 @@ public class OnlineController {
                                 session.setAttribute(finalReportId + "error", e.getMessage()); // put it here to puck up instead of the report
                                 // todo - put an error book here? That could hold the results of an exception . . .
                             }
-                            session.removeAttribute(finalReportId + "loading");
+                             session.removeAttribute(finalReportId + "loading");
                         }).start();
                     }
                     model.addAttribute("reportid", reportId); // why not? should block on refreshes then
