@@ -2,10 +2,13 @@ package com.azquo.spreadsheet.controller;
 
 import com.azquo.admin.business.Business;
 import com.azquo.admin.business.BusinessDAO;
+import com.azquo.admin.onlinereport.OnlineReport;
+import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.user.User;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.SpreadsheetService;
+import com.azquo.spreadsheet.zk.ChoicesService;
 import com.azquo.util.AzquoMailer;
 import org.apache.commons.lang.math.NumberUtils;
 import org.springframework.stereotype.Controller;
@@ -134,9 +137,14 @@ public class LoginController {
                         }
                         session.setAttribute(LOGGED_IN_USER_SESSION, loggedInUser);
                         loggedInUser.userLog("Login", new HashMap<>());
+                        String  externalcall = (String)request.getSession().getAttribute("externalcall");
+                        if (externalcall!=null && externalcall.length()>0){
+                            request.getSession().removeAttribute("externalcall");
+                            return "redirect:/api/Online?externalcall=" + externalcall;//in case there is an external call that needs handling
+
+                        }
                         if (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()) {
-                            return "redirect:/api/Online?reportid=1";//in case there is an external call that needs handling
-                            //return "redirect:/api/ManageReports";
+                            return "redirect:/api/ManageReports";
                         } else {
                             return "redirect:/api/Online?reportid=1"; // redirect to menu, will need to be changed when we sort the parameters out
                         }
@@ -168,9 +176,7 @@ public class LoginController {
                 session.setAttribute(LOGGED_IN_USER_SESSION, loggedInUser);
                 request.getServletContext().removeAttribute(connectionid); // take it off the context
                 if (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()) {
-                    return "redirect:/api/Online?reportid=1"; // in case of external calls
-
-                    //return "redirect:/api/ManageReports";
+                    return "redirect:/api/ManageReports";
                 } else {
                     return "redirect:/api/Online?reportid=1"; // redirect to menu, will need to be changed when we sort the parameters out
                 }
@@ -226,9 +232,14 @@ public class LoginController {
                         return "utf8page";
 
                     } else {
-                       if (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()) {
-                            return "redirect:/api/Online?reportid=1"; // redirect to menu, will need to be changed when we sort the parameters out
-                           // return "redirect:/api/ManageReports";
+                        String  externalcall = (String)request.getSession().getAttribute("externalcall");
+                        if (externalcall!=null && externalcall.length()>0){
+                            request.getSession().removeAttribute("externalcall");
+                            return "redirect:/api/Online?externalcall=" + externalcall;//in case there is an external call that needs handling
+
+                        }
+                        if (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()) {
+                            return "redirect:/api/ManageReports";
                         } else {
                             return "redirect:/api/Online?reportid=1"; // redirect to menu, will need to be changed when we sort the parameters out
                         }
@@ -260,5 +271,7 @@ public class LoginController {
             model.put("logonmessage", SpreadsheetService.getLogonPageMessage());
         }
         return page;
-    }
+
+     }
+
 }
