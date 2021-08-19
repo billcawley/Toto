@@ -17,9 +17,13 @@ import com.azquo.spreadsheet.transport.CellForDisplay;
 import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
 import com.azquo.spreadsheet.transport.ProvenanceDetailsForDisplay;
 import com.azquo.spreadsheet.transport.RegionOptions;
+import com.azquo.spreadsheet.zk.BookUtils;
 import com.azquo.spreadsheet.zk.ReportExecutor;
 import com.azquo.spreadsheet.zk.ReportRenderer;
 import com.azquo.util.AzquoMailer;
+import io.keikai.model.CellRegion;
+import io.keikai.model.SCell;
+import io.keikai.model.SName;
 import org.apache.commons.lang.math.NumberUtils;
 import io.keikai.api.Exporter;
 import io.keikai.api.Exporters;
@@ -223,7 +227,7 @@ public class SpreadsheetService {
         if (choiceValue != null && choiceValue.length() > 0) {
             if (choiceValue.contains(StringLiterals.languageIndicator)){
                 List<String> results = CommonReportUtils.getDropdownListForQuery(loggedInUser,choiceValue);
-                if (results!=null){
+                if (results!=null&& results.size()==1){//this list trips up where there is not an exact match, but some values for inexact match are found....
                     choiceValue = results.get(0);
                 }
             }
@@ -615,10 +619,29 @@ public class SpreadsheetService {
     }
     /* comment for the mo, might be useful later
     public static List<String> nameAutoComplete(LoggedInUser loggedInUser, String name) throws Exception {
-        DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
+        DatabaseAccessTken databaseAccessToken = loggedInUser.getDataAccessToken();
         return RMIClient.getServerInterface(databaseAccessToken.getServerIp()).nameAutoComplete(databaseAccessToken, name, 100);
     }*/
 
+    public static String findDeflects(LoggedInUser loggedInUser, Book book)throws Exception{
+        for (SName sName:book.getInternalBook().getNames()){
+            String nameSt = sName.getName().toLowerCase(Locale.ROOT);
+            if (nameSt.startsWith("az_") && nameSt.endsWith("unknownaction")){
+                String choice = nameSt.substring(0,nameSt.length()-13);
+                SName choiceRegion = BookUtils.getNameByName(choice + "choice", book.getSheet(sName.getRefersToSheetName()));
+                String choiceSet = BookUtils.getSnameCell(choiceRegion).getStringValue();
+                UserChoice uc = UserChoiceDAO.findForUserIdAndChoice(loggedInUser.getUser().getId(),choice.substring(3));
+                if (choiceSet!=null && uc !=null){
+                    List<String > choices = CommonReportUtils.getDropdownListForQuery(loggedInUser,choiceSet);
+                    if (!choices.contains(uc.getChoiceValue())){
+                        SCell actionCell = BookUtils.getSnameCell(sName);
+                        return actionCell.getStringValue();
+                    }
+                }
+            }
+        }
+        return null;
+    }
 
 
 }
