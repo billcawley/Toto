@@ -812,7 +812,8 @@ public class ExcelController {
                                                 }
                                             }
                                             // should we bother to report on the post processing result?
-                                            uploadedFile.setPostProcessingResult(ReportExecutor.runExecuteText(loggedInUser, postProcessor, null, uploadedFile.getProvenanceId(), false).toString());
+                                            uploadedFile.setPostProcessingResult(ReportExecutor.runExecute(loggedInUser, postProcessor, null, uploadedFile.getProvenanceId(), false).toString());
+                                            //uploadedFile.setPostProcessingResult(ReportExecutor.runExecuteText(loggedInUser, postProcessor, null, uploadedFile.getProvenanceId(), false).toString());
                                         }
                                         return "ok";
                                     }
