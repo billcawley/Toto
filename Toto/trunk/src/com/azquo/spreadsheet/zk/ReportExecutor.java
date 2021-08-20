@@ -16,6 +16,7 @@ import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.controller.OnlineController;
 import com.azquo.spreadsheet.transport.CellForDisplay;
 import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
+import io.keikai.model.SSheet;
 import org.apache.commons.lang.math.NumberUtils;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -28,6 +29,8 @@ import io.keikai.api.model.Sheet;
 import io.keikai.model.CellRegion;
 import io.keikai.model.SCell;
 import io.keikai.model.SName;
+import org.zkoss.poi.ss.usermodel.Workbook;
+import org.zkoss.poi.xssf.usermodel.XSSFWorkbook;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -54,6 +57,9 @@ import java.util.regex.Pattern;
  * <p>
  * Breaking up the old ZKAzquoBookUtils, functions to run execute commands go in here
  */
+
+
+
 public class ReportExecutor {
 
     static final String EXECUTERESULTS = "az_ExecuteResults";
@@ -66,32 +72,46 @@ public class ReportExecutor {
     // not so sold on the second but can write then modify
     static final String EXPORT = "az_Export";
 
+    static class ExecInfo{
+        String exportPath;
+        StringBuilder loopsLog;
+        List<List<List<String>>> systemData2DArrays;
+        int provenanceId;
+        AtomicInteger count;
+
+        ExecInfo(StringBuilder loopsLog, List<List<List<String>>>systemData2DArrays,int provenanceId){
+            this.exportPath = null;
+            this.loopsLog = loopsLog;
+            this.systemData2DArrays = systemData2DArrays;
+            this.provenanceId = provenanceId;
+            this.count = new AtomicInteger(0);
+        }
+    }
+
+
+
     // now returns a book as it will need to be reloaded at the end
     // provenance id means when you select choices they will be constrained to
     public static Book runExecuteCommandForBook(LoggedInUser loggedInUser, Book book, String sourceNamedRegion) throws Exception {
-        StringBuilder executeCommand = null;
+        loggedInUser.setBook(book);
+        StringBuilder loops = new StringBuilder();
+        ExecInfo execInfo = new ExecInfo(loops,null, 0);
         for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {
             Sheet sheet = book.getSheetAt(sheetNumber);
             List<SName> namesForSheet = BookUtils.getNamesForSheet(sheet);
             for (SName sName : namesForSheet) {
                 if (sName.getName().equalsIgnoreCase(sourceNamedRegion)) {
-                    executeCommand = new StringBuilder();
                     //;now allowing executes to be on multiple lines...
                     CellRegion region = sName.getRefersToCellRegion();
-                    for (int rowNo = 0; rowNo < region.getRowCount(); rowNo++) {
-                        executeCommand.append(sheet.getInternalSheet().getCell(region.getRow() + rowNo, region.getColumn()).getStringValue()).append("\n");
+                    int lastRow = region.getLastRow() + 1;
+                    for (int rowNo = region.getRow(); rowNo < lastRow; rowNo++) {
+                        DoubleAndOrString result =  execCommand(loggedInUser, sheet, rowNo,region.getColumn(),lastRow, execInfo);
                     }
                     break;
                 }
             }
         }
-        if (executeCommand == null || (executeCommand.length() == 0)) { // just return false for the moment, no executing
-            return book; // unchanged, nothing to run
-        }
-        //now passed through.......not needed, but left for the moment
-        loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
-        loggedInUser.setBook(book);
-        StringBuilder loops = runExecute(loggedInUser, executeCommand.toString(), null, -1, true);
+        //LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
         if (book.getInternalBook().getAttribute(OnlineController.BOOK_PATH) != null) { // it might be null in the case of the Excel Controller, not a problem, return null
             final Book newBook = Importers.getImporter().imports(new File((String) book.getInternalBook().getAttribute(OnlineController.BOOK_PATH)), "Report name");
             for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes over
@@ -106,6 +126,11 @@ public class ReportExecutor {
                 List<SName> namesForSheet = BookUtils.getNamesForSheet(sheet);
                 for (SName sName : namesForSheet) {
                     if (sName.getName().equalsIgnoreCase(EXECUTERESULTS)) {
+                        CellRegion region = sName.getRefersToCellRegion();
+                        int lastRow2 = region.getLastRow() + 1;
+                        for (int rowNo2 = region.getRow(); rowNo2 < lastRow2; rowNo2++) {
+                            DoubleAndOrString result =  execCommand(loggedInUser, sheet, rowNo2,region.getColumn(),lastRow2, execInfo);
+                        }
                         final SCell cell = sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow(), sName.getRefersToCellRegion().getColumn());
                         BookUtils.setValue(cell, loops.toString());
                     }
@@ -118,18 +143,23 @@ public class ReportExecutor {
     }
 
     public static StringBuilder runExecute(LoggedInUser loggedInUser, String executeCommand, List<List<List<String>>> systemData2DArrays, int provenanceId, boolean persist) throws Exception {
-        List<String> commands = new ArrayList<>();
+
+        StringBuilder loops = new StringBuilder();
+        ExecInfo execInfo = new ExecInfo(loops,systemData2DArrays,provenanceId);
+        //Workbook workbook = new XSSFWorkbook();
+        Book book = Books.createBook("workbook");
+        SSheet sSheet = book.getInternalBook().createSheet("workspace");
+        Sheet sheet = book.getSheet("workspace");
         StringTokenizer st = new StringTokenizer(executeCommand, "\n");
+        int lastRow = 0;
         while (st.hasMoreTokens()) {
             String line = st.nextToken();
             if (!line.trim().isEmpty()) {
-                commands.add(line);
+                sSheet.getCell(lastRow++,0).setStringValue(line);
             }
         }
-        //RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).clearTemporaryNames(loggedInUser.getDataAccessToken());
         RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).addToLog(loggedInUser.getDataAccessToken(), "Starting execute");
-        StringBuilder loops = new StringBuilder();
-        executeCommands(loggedInUser, commands, null, loops, systemData2DArrays, new AtomicInteger(0), provenanceId);
+        DoubleAndOrString result =  execCommand(loggedInUser, sheet, 0,0, lastRow,  execInfo);
         // it won't have cleared while executing
         if (persist) {
             RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).clearSessionLog(loggedInUser.getDataAccessToken());
@@ -141,310 +171,327 @@ public class ReportExecutor {
 
     // we assume cleansed of blank lines
     // now can return the outcome if there's an az_Outcome cell. Assuming a loop or list of "do"s then the String returned is the last.
-    private static DoubleAndOrString executeCommands(LoggedInUser loggedInUser, List<String> commands, String exportPath, StringBuilder loopsLog, List<List<List<String>>> systemData2DArrays, AtomicInteger count, int provenanceId) throws Exception {
+    private static DoubleAndOrString execCommand(LoggedInUser loggedInUser, Sheet sheet, int rowNo, int colNo, int lastRow, ExecInfo execInfo) throws Exception {
         String filterContext = null;
         String filterItems = null;
         DoubleAndOrString toReturn = null;
-        if (commands.size() > 0 && commands.get(0) != null) {
-            String firstLine = commands.get(0);
-            int startingIndent = getIndent(firstLine);
-            for (int i = 0; i < startingIndent; i++) {
-                loopsLog.append("  ");
+        String command = sheet.getInternalSheet().getCell(rowNo, colNo).getStringValue();
+        int startingIndent = getIndent(command);
+        for (int i = 0; i < startingIndent; i++) {
+            execInfo.loopsLog.append("  ");
+        }
+        String trimmedLine = CommonReportUtils.replaceUserChoicesInQuery(loggedInUser, command);//replaces [choice] with chosen
+        if (trimmedLine.contains("\\n")){
+            SSheet ssheet = sheet.getBook().getInternalBook().createSheet("workspace");//assuming that this only happens once!
+            List<String> commands = new ArrayList<>();
+            StringTokenizer st = new StringTokenizer(trimmedLine, "\n");
+            int newLastRow = 0;
+            while (st.hasMoreTokens()) {
+                String line = st.nextToken();
+                if (!line.trim().isEmpty()) {
+                    ssheet.getCell(newLastRow++,0).setStringValue(line);
+                }
             }
-            for (int lineNo = 0; lineNo < commands.size(); lineNo++) { // makes checking ahead easier
-                String line = commands.get(lineNo);
-                String trimmedLine = CommonReportUtils.replaceUserChoicesInQuery(loggedInUser, line);//replaces [choice] with chosen
-                String message = "Executing: " + trimmedLine;
-                System.out.println(message);
-                if (trimmedLine.toLowerCase().startsWith("for each")) {
-                    // gather following lines - what we'll be executing
-                    int onwardLineNo = lineNo + 1;
-                    List<String> subCommands = new ArrayList<>();
-                    while (onwardLineNo < commands.size() && getIndent(commands.get(onwardLineNo)) > startingIndent) {
-                        subCommands.add(commands.get(onwardLineNo));
-                        onwardLineNo++;
+            for (int newRowNo = 0;newRowNo< newLastRow;newRowNo++){
+                execCommand(loggedInUser,sheet.getBook().getSheet("workspace"),newRowNo, 0, newLastRow, execInfo);
+            }
+            return null;
+
+        }
+        String message = "Executing: " + trimmedLine;
+        System.out.println(message);
+        if (trimmedLine.toLowerCase().startsWith("for each") && rowNo < lastRow - 1) {
+            // gather following lines - what we'll be executing
+            int onwardLineNo = nextLineAtSameLevel(sheet, rowNo,colNo,lastRow);
+            int inPos = findString(trimmedLine, " in ");
+            String choiceName = trimmedLine.substring("for each".length(), inPos).trim();
+            if (choiceName.startsWith("`") || choiceName.startsWith("[")) {
+                choiceName = choiceName.substring(1, choiceName.length() - 1);
+            }
+            String choiceQuery = trimmedLine.substring(inPos + 4).trim();
+            execInfo.loopsLog.append(choiceName).append(" : ").append(choiceQuery).append("\r\n");
+            final List<String> dropdownListForQuery = CommonReportUtils.getDropdownListForQuery(loggedInUser, choiceQuery, loggedInUser.getUser().getEmail(), false, execInfo.provenanceId);
+            if (dropdownListForQuery.size() > 0 && !dropdownListForQuery.get(0).startsWith("Error :")) {
+                for (String choiceValue : dropdownListForQuery) { // run the "for" :)
+                    RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).addToLog(loggedInUser.getDataAccessToken(), choiceName + " : " + choiceValue);
+                    SpreadsheetService.setUserChoice(loggedInUser, choiceName.replace("`", ""), choiceValue);
+                    SName n = BookUtils.getNameByName("az_" + choiceValue.toLowerCase() +  "chosen", sheet);
+                    if (n!=null){
+                        //trigger potential changes in lines
+                        sheet.getInternalSheet().getCell(n.getRefersToCellRegion().getRow(), n.getRefersToCellRegion().getColumn()).setStringValue(choiceValue);
+                        BookUtils.notifyChangeOnRegion(sheet,n.getRefersToCellRegion());
                     }
-                    lineNo = onwardLineNo - 1; // put line back to where it is now
-                    int inPos = findString(trimmedLine, " in ");
-                    String choiceName = trimmedLine.substring("for each".length(), inPos).trim();
-                    if (choiceName.startsWith("`") || choiceName.startsWith("[")) {
-                        choiceName = choiceName.substring(1, choiceName.length() - 1);
+                    execInfo.loopsLog.append(choiceValue).append("\r\n");
+                    for (int subRow=rowNo+1;subRow< onwardLineNo;subRow++){
+                        toReturn = execCommand(loggedInUser, sheet,subRow, colNo,lastRow, execInfo);
                     }
-                    String choiceQuery = trimmedLine.substring(inPos + 4).trim();
-                    loopsLog.append(choiceName).append(" : ").append(choiceQuery).append("\r\n");
-                    final List<String> dropdownListForQuery = CommonReportUtils.getDropdownListForQuery(loggedInUser, choiceQuery, loggedInUser.getUser().getEmail(), false, provenanceId);
-                    if (dropdownListForQuery.size() > 0 && !dropdownListForQuery.get(0).startsWith("Error :")) {
-                        for (String choiceValue : dropdownListForQuery) { // run the "for" :)
-                            RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).addToLog(loggedInUser.getDataAccessToken(), choiceName + " : " + choiceValue);
-                            SpreadsheetService.setUserChoice(loggedInUser, choiceName.replace("`", ""), choiceValue);
-                            loopsLog.append(choiceValue).append("\r\n");
-                            if (!subCommands.isEmpty()) { // then we have something to run for the for each!
-                                toReturn = executeCommands(loggedInUser, subCommands, exportPath, loopsLog, systemData2DArrays, count, provenanceId);
+                }
+            }
+            // if not a for each I guess we just execute? Will check for "do"
+        } else if (trimmedLine.toLowerCase().startsWith("execute ")) {
+            SName sName = BookUtils.getNameByName(trimmedLine.substring(8).trim(), sheet);
+            if (sName!=null){
+                CellRegion region = sName.getRefersToCellRegion();
+                int lastRow2 = region.getLastRow() + 1;
+                for (int rowNo2 = region.getRow(); rowNo2 < lastRow2; rowNo2++) {
+                    DoubleAndOrString result =  execCommand(loggedInUser, sheet, rowNo2,region.getColumn(),lastRow2,execInfo);
+                }
+            }
+        } else if (trimmedLine.toLowerCase().startsWith("do")) {
+            boolean debug = false;
+            if (trimmedLine.toLowerCase().endsWith("debug")) {
+                debug = true;
+                trimmedLine = trimmedLine.substring(0, trimmedLine.length() - "debug".length()).trim();
+            }
+            String reportToRun = trimmedLine.substring(2).trim();
+            Database oldDatabase = null;
+            OnlineReport onlineReport;
+            // so, first try to get the report based off permissions, if so it might override the current database
+            // note this is a BAD idea e.g. for temporary databases, todo, stop it then
+            if (loggedInUser.getPermission(reportToRun.toLowerCase()) != null) {
+                LoggedInUser.ReportDatabase permission = loggedInUser.getPermission(reportToRun.toLowerCase());
+                onlineReport = permission.getReport();
+                if (permission.getDatabase() != null) {
+                    oldDatabase = loggedInUser.getDatabase();
+                    loggedInUser.setDatabaseWithServer(loggedInUser.getDatabaseServer(), permission.getDatabase());
+                }
+            } else { // otherwise try a straight lookup - stick on whatever db we're currently on
+                onlineReport = OnlineReportDAO.findForDatabaseIdAndName(loggedInUser.getDatabase().getId(), reportToRun);
+                if (onlineReport == null) {
+                    onlineReport = OnlineReportDAO.findForNameAndBusinessId(reportToRun, loggedInUser.getUser().getBusinessId());
+                }
+            }
+            if (onlineReport != null) { // need to prepare it as in the controller todo - factor?
+                execInfo.loopsLog.append("Run : ").append(onlineReport.getReportName());
+                RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).addToLog(loggedInUser.getDataAccessToken(), execInfo.count.incrementAndGet() + " " + loggedInUser.getUser().getName() + " Running " + onlineReport.getReportName() + " ,");
+                String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + onlineReport.getFilenameForDisk();
+                final Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
+                book.getInternalBook().setAttribute(OnlineController.BOOK_PATH, bookPath);
+                book.getInternalBook().setAttribute(OnlineController.LOGGED_IN_USER, loggedInUser);
+                book.getInternalBook().setAttribute(OnlineController.REPORT_ID, onlineReport.getId());
+                StringBuilder errorLog = new StringBuilder();
+                final boolean save = ReportRenderer.populateBook(book, 0, false, true, errorLog); // note true at the end here - keep on logging so users can see changes as they happen
+                System.out.println("save flag : " + save);
+                if (errorLog.length() > 0) {
+                    execInfo.loopsLog.append(" ERROR : ").append(errorLog.toString());
+                    return null;
+                    // todo - how to stop all the way to the top? Can set count as -1 but this is hacky
+                }
+                ReportService.extractEmailInfo(book);
+                if (save) { // so the data was changed and if we save from here it will make changes to the DB
+                    fillSpecialRegions(loggedInUser, book, onlineReport.getId());
+                    for (SName name : book.getInternalBook().getNames()) {
+                        if (name.getName().toLowerCase().startsWith(StringLiterals.AZDATAREGION)) { // I'm saving on all sheets, this should be fine with zk
+                            String region = name.getName().substring(StringLiterals.AZDATAREGION.length());
+                            // possibly the nosave check could be factored, in report service around line 230
+                            // this is a bit annoying given that I should be able to get the options from the sent cells but there may be no sent cells. Need to investigate this - nosave is currently being used for different databases, that's the problem
+                            SName optionsRegion = BookUtils.getNameByName(StringLiterals.AZOPTIONS + region, book.getSheet(name.getRefersToSheetName()));
+                            boolean noSave = false;
+                            if (optionsRegion != null) {
+                                String optionsSource = BookUtils.getSnameCell(optionsRegion).getStringValue();
+                                UserRegionOptions userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), onlineReport.getId(), region, optionsSource);
+                                noSave = userRegionOptions.getNoSave();
+                            }
+                            if (!noSave) {
+                                System.out.println("saving for : " + region);
+                                SpreadsheetService.saveData(loggedInUser, onlineReport.getId(), onlineReport.getReportName(), name.getRefersToSheetName(), region.toLowerCase(), false); // to not persist right now
                             }
                         }
                     }
-                    // if not a for each I guess we just execute? Will check for "do"
-                }else if (trimmedLine.toLowerCase().startsWith("execute ")){
-                    runExecuteCommandForBook(loggedInUser, loggedInUser.getBook(), trimmedLine.substring(8).trim());
+                    AdminService.updateNameAndValueCounts(loggedInUser, loggedInUser.getDatabase());
+                }
+                // here we try to get an outcome to return
+                SName outcomeName = book.getInternalBook().getNameByName(OUTCOME); // I assume only one
+                if (outcomeName != null) {
+                    final CellRegion refersToCellRegion = outcomeName.getRefersToCellRegion();
+                    SCell outcomeCell = book.getInternalBook().getSheetByName(outcomeName.getRefersToSheetName()).getCell(refersToCellRegion.getRow(), refersToCellRegion.getColumn());
+                    // ok now I think I need to be careful of the cell type
+                    if ((outcomeCell.getType() == SCell.CellType.FORMULA && outcomeCell.getFormulaResultType() == SCell.CellType.NUMBER) || outcomeCell.getType() == SCell.CellType.NUMBER) { // I think a decent enough way to number detect?
+                        toReturn = new DoubleAndOrString(outcomeCell.getNumberValue(), null);
+                    } else {
+                        toReturn = new DoubleAndOrString(null, outcomeCell.getStringValue());
+                    }
+                }
+                // revert database if it was changed
+                if (oldDatabase != null) {
+                    loggedInUser.setDatabaseWithServer(loggedInUser.getDatabaseServer(), oldDatabase);
                 }
 
-                else if (trimmedLine.toLowerCase().startsWith("do")) {
-                    boolean debug = false;
-                    if (trimmedLine.toLowerCase().endsWith("debug")) {
-                        debug = true;
-                        trimmedLine = trimmedLine.substring(0, trimmedLine.length() - "debug".length()).trim();
+                SName systemDataName = book.getInternalBook().getNameByName(SYSTEMDATA);
+                if (systemDataName != null && execInfo.systemData2DArrays != null) {
+                    // gather debug info
+                    execInfo.systemData2DArrays.add(BookUtils.nameToStringLists(systemDataName));
+                }
+
+                //stuff added by edd, need an option for the user to see these files for debug purposes
+                if (debug) {
+                    Exporter exporter = Exporters.getExporter();
+                    File file = File.createTempFile("debug" + System.currentTimeMillis(), "temp.xlsx");
+                    try (FileOutputStream fos = new FileOutputStream(file)) {
+                        exporter.export(book, fos);
                     }
-                    String reportToRun = trimmedLine.substring(2).trim();
-                    Database oldDatabase = null;
-                    OnlineReport onlineReport;
-                    // so, first try to get the report based off permissions, if so it might override the current database
-                    // note this is a BAD idea e.g. for temporary databases, todo, stop it then
-                    if (loggedInUser.getPermission(reportToRun.toLowerCase()) != null) {
-                        LoggedInUser.ReportDatabase permission = loggedInUser.getPermission(reportToRun.toLowerCase());
-                        onlineReport = permission.getReport();
-                        if (permission.getDatabase() != null) {
-                            oldDatabase = loggedInUser.getDatabase();
-                            loggedInUser.setDatabaseWithServer(loggedInUser.getDatabaseServer(), permission.getDatabase());
+                }
+
+                // check for XML, in the context of execute we run it automatically
+                if (book.getInternalBook().getAttribute(OnlineController.XML) != null) {
+                    Path destdir = Paths.get(SpreadsheetService.getXMLDestinationDir());
+                    // note - I'm just grabbing the first sheet at the moment - this may need changing later
+                    ReportExecutor.generateXMLFilesAndSupportingReports(loggedInUser, book.getSheetAt(0), destdir);
+                }
+                // and now check new export criteria
+                if (execInfo.exportPath != null) {
+                    SName export = book.getInternalBook().getNameByName(EXPORT);
+                    if (export != null) { // then we have some data to read
+                        boolean existsAlready = Files.exists(Paths.get(execInfo.exportPath));
+                        String exportFirstLine = null;
+                        if (existsAlready) {
+                            try (BufferedReader br = Files.newBufferedReader(Paths.get(execInfo.exportPath), StandardCharsets.UTF_8)) {
+                                exportFirstLine = br.readLine();
+                            }
                         }
-                    } else { // otherwise try a straight lookup - stick on whatever db we're currently on
-                        onlineReport = OnlineReportDAO.findForDatabaseIdAndName(loggedInUser.getDatabase().getId(), reportToRun);
-                        if (onlineReport == null) {
-                            onlineReport = OnlineReportDAO.findForNameAndBusinessId(reportToRun, loggedInUser.getUser().getBusinessId());
-                        }
-                    }
-                    if (onlineReport != null) { // need to prepare it as in the controller todo - factor?
-                        loopsLog.append("Run : ").append(onlineReport.getReportName());
-                        RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).addToLog(loggedInUser.getDataAccessToken(), count.incrementAndGet() + " " + loggedInUser.getUser().getName() + " Running " + onlineReport.getReportName() + " ,");
-                        String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + onlineReport.getFilenameForDisk();
-                        final Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
-                        book.getInternalBook().setAttribute(OnlineController.BOOK_PATH, bookPath);
-                        book.getInternalBook().setAttribute(OnlineController.LOGGED_IN_USER, loggedInUser);
-                        book.getInternalBook().setAttribute(OnlineController.REPORT_ID, onlineReport.getId());
-                        StringBuilder errorLog = new StringBuilder();
-                        final boolean save = ReportRenderer.populateBook(book, 0, false, true, errorLog); // note true at the end here - keep on logging so users can see changes as they happen
-                        System.out.println("save flag : " + save);
-                        if (errorLog.length() > 0) {
-                            loopsLog.append(" ERROR : ").append(errorLog.toString());
-                            return null;
-                            // todo - how to stop all the way to the top? Can set count as -1 but this is hacky
-                        }
-                        ReportService.extractEmailInfo(book);
-                        if (save) { // so the data was changed and if we save from here it will make changes to the DB
-                            fillSpecialRegions(loggedInUser, book, onlineReport.getId());
-                            for (SName name : book.getInternalBook().getNames()) {
-                                if (name.getName().toLowerCase().startsWith(StringLiterals.AZDATAREGION)) { // I'm saving on all sheets, this should be fine with zk
-                                    String region = name.getName().substring(StringLiterals.AZDATAREGION.length());
-                                    // possibly the nosave check could be factored, in report service around line 230
-                                    // this is a bit annoying given that I should be able to get the options from the sent cells but there may be no sent cells. Need to investigate this - nosave is currently being used for different databases, that's the problem
-                                    SName optionsRegion = BookUtils.getNameByName(StringLiterals.AZOPTIONS + region, book.getSheet(name.getRefersToSheetName()));
-                                    boolean noSave = false;
-                                    if (optionsRegion != null) {
-                                        String optionsSource = BookUtils.getSnameCell(optionsRegion).getStringValue();
-                                        UserRegionOptions userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), onlineReport.getId(), region, optionsSource);
-                                        noSave = userRegionOptions.getNoSave();
+                        Sheet sheetExport = book.getSheet(export.getRefersToSheetName());
+                        try (BufferedWriter bufferedWriter = Files.newBufferedWriter(Paths.get(execInfo.exportPath), StandardCharsets.UTF_8, existsAlready ? StandardOpenOption.APPEND : StandardOpenOption.CREATE)) {
+                            CellRegion refersToCellRegion = export.getRefersToCellRegion();
+                            for (int rNo = refersToCellRegion.row; rNo <= refersToCellRegion.lastRow; rNo++) {
+                                if (exportFirstLine != null && rNo == refersToCellRegion.row) {
+                                    StringBuilder test = new StringBuilder();
+                                    for (int cNo = refersToCellRegion.column; cNo <= refersToCellRegion.lastColumn; cNo++) {
+                                        String val = "";
+                                        if (sheetExport.getInternalSheet().getRow(rNo) != null) {
+                                            val = ImportService.getCellValue(sheetExport, rNo, cNo).getString();
+                                        }
+                                        test.append(val).append("\t");
                                     }
-                                    if (!noSave) {
-                                        System.out.println("saving for : " + region);
-                                        SpreadsheetService.saveData(loggedInUser, onlineReport.getId(), onlineReport.getReportName(), name.getRefersToSheetName(), region.toLowerCase(), false); // to not persist right now
+                                    if (test.toString().equals(exportFirstLine)) {
+                                        if (rNo < refersToCellRegion.lastRow) {
+                                            rNo++;// skip the first line if it's already on file
+                                        } else { // break if there's no second line to skip to
+                                            break;
+                                        }
                                     }
                                 }
-                            }
-                            AdminService.updateNameAndValueCounts(loggedInUser, loggedInUser.getDatabase());
-                        }
-                        // here we try to get an outcome to return
-                        SName outcomeName = book.getInternalBook().getNameByName(OUTCOME); // I assume only one
-                        if (outcomeName != null) {
-                            final CellRegion refersToCellRegion = outcomeName.getRefersToCellRegion();
-                            SCell outcomeCell = book.getInternalBook().getSheetByName(outcomeName.getRefersToSheetName()).getCell(refersToCellRegion.getRow(), refersToCellRegion.getColumn());
-                            // ok now I think I need to be careful of the cell type
-                            if ((outcomeCell.getType() == SCell.CellType.FORMULA && outcomeCell.getFormulaResultType() == SCell.CellType.NUMBER) || outcomeCell.getType() == SCell.CellType.NUMBER) { // I think a decent enough way to number detect?
-                                toReturn = new DoubleAndOrString(outcomeCell.getNumberValue(), null);
-                            } else {
-                                toReturn = new DoubleAndOrString(null, outcomeCell.getStringValue());
-                            }
-                        }
-                        // revert database if it was changed
-                        if (oldDatabase != null) {
-                            loggedInUser.setDatabaseWithServer(loggedInUser.getDatabaseServer(), oldDatabase);
-                        }
-
-                        SName systemDataName = book.getInternalBook().getNameByName(SYSTEMDATA);
-                        if (systemDataName != null && systemData2DArrays != null) {
-                            // gather debug info
-                            systemData2DArrays.add(BookUtils.nameToStringLists(systemDataName));
-                        }
-
-                        //stuff added by edd, need an option for the user to see these files for debug purposes
-                        if (debug) {
-                            Exporter exporter = Exporters.getExporter();
-                            File file = File.createTempFile("debug" + System.currentTimeMillis(), "temp.xlsx");
-                            try (FileOutputStream fos = new FileOutputStream(file)) {
-                                exporter.export(book, fos);
-                            }
-                        }
-
-                        // check for XML, in the context of execute we run it automatically
-                        if (book.getInternalBook().getAttribute(OnlineController.XML) != null) {
-                            Path destdir = Paths.get(SpreadsheetService.getXMLDestinationDir());
-                            // note - I'm just grabbing the first sheet at the moment - this may need changing later
-                            ReportExecutor.generateXMLFilesAndSupportingReports(loggedInUser, book.getSheetAt(0), destdir);
-                        }
-                        // and now check new export criteria
-                        if (exportPath != null) {
-                            SName export = book.getInternalBook().getNameByName(EXPORT);
-                            if (export != null) { // then we have some data to read
-                                boolean existsAlready = Files.exists(Paths.get(exportPath));
-                                String exportFirstLine = null;
-                                if (existsAlready) {
-                                    try (BufferedReader br = Files.newBufferedReader(Paths.get(exportPath), StandardCharsets.UTF_8)) {
-                                        exportFirstLine = br.readLine();
+                                for (int cNo = refersToCellRegion.column; cNo <= refersToCellRegion.lastColumn; cNo++) {
+                                    String val = "";
+                                    if (sheetExport.getInternalSheet().getRow(rNo) != null) {
+                                        val = ImportService.getCellValue(sheetExport, rNo, cNo).getString();
                                     }
+                                    bufferedWriter.write(val + "\t");
                                 }
-                                Sheet sheet = book.getSheet(export.getRefersToSheetName());
-                                try (BufferedWriter bufferedWriter = Files.newBufferedWriter(Paths.get(exportPath), StandardCharsets.UTF_8, existsAlready ? StandardOpenOption.APPEND : StandardOpenOption.CREATE)) {
-                                    CellRegion refersToCellRegion = export.getRefersToCellRegion();
-                                    for (int rNo = refersToCellRegion.row; rNo <= refersToCellRegion.lastRow; rNo++) {
-                                        if (exportFirstLine != null && rNo == refersToCellRegion.row) {
-                                            StringBuilder test = new StringBuilder();
-                                            for (int cNo = refersToCellRegion.column; cNo <= refersToCellRegion.lastColumn; cNo++) {
-                                                String val = "";
-                                                if (sheet.getInternalSheet().getRow(rNo) != null) {
-                                                    val = ImportService.getCellValue(sheet, rNo, cNo).getString();
-                                                }
-                                                test.append(val).append("\t");
-                                            }
-                                            if (test.toString().equals(exportFirstLine)) {
-                                                if (rNo < refersToCellRegion.lastRow) {
-                                                    rNo++;// skip the first line if it's already on file
-                                                } else { // break if there's no second line to skip to
-                                                    break;
-                                                }
-                                            }
-                                        }
-                                        for (int cNo = refersToCellRegion.column; cNo <= refersToCellRegion.lastColumn; cNo++) {
-                                            String val = "";
-                                            if (sheet.getInternalSheet().getRow(rNo) != null) {
-                                                val = ImportService.getCellValue(sheet, rNo, cNo).getString();
-                                            }
-                                            bufferedWriter.write(val + "\t");
-                                        }
-                                        bufferedWriter.newLine();
-                                    }
-                                }
+                                bufferedWriter.newLine();
                             }
                         }
                     }
-                }else if (trimmedLine.toLowerCase().startsWith("repeat until outcome")) { // new conditional logic
-                    // similar to the for each - gather sub commands
-                    String condition = trimmedLine.substring("repeat until outcome".length()).trim();
-                    if (condition.contains(" ")) {
-                        String operator = condition.substring(0, condition.indexOf(" "));
-                        String constant = condition.substring(condition.indexOf(" ") + 1);
-                        double constantDouble = 0;
-                        if (constant.startsWith("`") && constant.endsWith("`")) {
-                            constant = constant.replace("`", "");
-                        } else { // try for a number
-                            try {
-                                constantDouble = Double.parseDouble(constant.replace(",", "")); // zap the commas to try to parse
-                                constant = null; // null the string if we have a parsed number
-                            } catch (Exception ignored) {
-                            }
-                        }
-                        int onwardLineNo = lineNo + 1;
-                        List<String> subCommands = new ArrayList<>();
-                        while (onwardLineNo < commands.size() && getIndent(commands.get(onwardLineNo)) > startingIndent) {
-                            subCommands.add(commands.get(onwardLineNo));
-                            onwardLineNo++;
-                        }
-                        lineNo = onwardLineNo - 1; // put line back to where it is now
-                        int counter = 0;
-                        // todo - max clause
-                        int limit = 10_000;
-                        if (!subCommands.isEmpty()) { // then we have something to run for the for each!
-                            boolean stop = true; // make the default be to stop e.g. in the case of bad syntax or whatever . . .
-                            do {
-                                counter++;
-                                final DoubleAndOrString stringDouble = executeCommands(loggedInUser, subCommands, exportPath, loopsLog, systemData2DArrays, count, provenanceId);
-                                if (stringDouble != null) {
-                                    // ok I'm going to assume type matching - if the types don't match then forget the comparison
-                                    if ((stringDouble.getString() != null && constant != null)) { // string, equals not equals comparison
-                                        switch (operator) {
-                                            case "=":
-                                                stop = stringDouble.getString().equalsIgnoreCase(constant);
-                                                break;
-                                            case "!=":
-                                                stop = !stringDouble.getString().equalsIgnoreCase(constant);
-                                                break;
-                                            default:  // error for dodgy operator??
-                                                loopsLog.append("Unknown operator for repeat until outcome string : ").append(operator);
-                                                break;
-                                        }
-                                    } else if (stringDouble.getString() == null && constant == null) { // assume numbers are set
-                                        // '=', '>'. '<'. '<=' '>=' '!='
-                                        switch (operator) {
-                                            case "=":
-                                                stop = stringDouble.getDouble() == constantDouble;
-                                                break;
-                                            case ">":
-                                                stop = stringDouble.getDouble() > constantDouble;
-                                                break;
-                                            case "<":
-                                                stop = stringDouble.getDouble() < constantDouble;
-                                                break;
-                                            case ">=":
-                                                stop = stringDouble.getDouble() >= constantDouble;
-                                                break;
-                                            case "<=":
-                                                stop = stringDouble.getDouble() <= constantDouble;
-                                                break;
-                                            case "!=":
-                                                stop = stringDouble.getDouble() != constantDouble;
-                                                break;
-                                            default:
-                                                loopsLog.append("Unknown operator for repeat until outcome number : ").append(operator);
-                                        }
+                }
+            }
+        }else if (trimmedLine.toLowerCase().startsWith("repeat until outcome")) { // new conditional logic
+            // similar to the for each - gather sub commands
+            String condition = trimmedLine.substring("repeat until outcome".length()).trim();
+            if (condition.contains(" ")) {
+                String operator = condition.substring(0, condition.indexOf(" "));
+                String constant = condition.substring(condition.indexOf(" ") + 1);
+                double constantDouble = 0;
+                if (constant.startsWith("`") && constant.endsWith("`")) {
+                    constant = constant.replace("`", "");
+                } else { // try for a number
+                    try {
+                        constantDouble = Double.parseDouble(constant.replace(",", "")); // zap the commas to try to parse
+                        constant = null; // null the string if we have a parsed number
+                    } catch (Exception ignored) {
+                    }
+                }
+                int onwardLineNo = nextLineAtSameLevel(sheet, rowNo,colNo,lastRow);
 
-                                    } else { // mismatched types, error message?
-                                        loopsLog.append("Mismatched String/Number for repeat until outcome : ").append(trimmedLine);
-                                    }
-                                } else {
-                                    loopsLog.append("Null return on execute for repeat until outcome : ").append(trimmedLine);
+                int counter = 0;
+                // todo - max clause
+                int limit = 10_000;
+                if (onwardLineNo > rowNo + 1) { // then we have something to run for the for each!
+                    boolean stop = true; // make the default be to stop e.g. in the case of bad syntax or whatever . . .
+                    do {
+                        counter++;
+                        DoubleAndOrString stringDouble = null;
+                        for (int rowNo2 = rowNo + 1;rowNo2 < onwardLineNo;rowNo2++) {
+                            stringDouble = execCommand(loggedInUser, sheet, rowNo2, colNo, onwardLineNo, execInfo);
+                        }
+                        if (stringDouble != null) {
+                            // ok I'm going to assume type matching - if the types don't match then forget the comparison
+                            if ((stringDouble.getString() != null && constant != null)) { // string, equals not equals comparison
+                                switch (operator) {
+                                    case "=":
+                                        stop = stringDouble.getString().equalsIgnoreCase(constant);
+                                        break;
+                                    case "!=":
+                                        stop = !stringDouble.getString().equalsIgnoreCase(constant);
+                                        break;
+                                    default:  // error for dodgy operator??
+                                        execInfo.loopsLog.append("Unknown operator for repeat until outcome string : ").append(operator);
+                                        break;
                                 }
-                            } while (!stop && counter < limit);
+                            } else if (stringDouble.getString() == null && constant == null) { // assume numbers are set
+                                // '=', '>'. '<'. '<=' '>=' '!='
+                                switch (operator) {
+                                    case "=":
+                                        stop = stringDouble.getDouble() == constantDouble;
+                                        break;
+                                    case ">":
+                                        stop = stringDouble.getDouble() > constantDouble;
+                                        break;
+                                    case "<":
+                                        stop = stringDouble.getDouble() < constantDouble;
+                                        break;
+                                    case ">=":
+                                        stop = stringDouble.getDouble() >= constantDouble;
+                                        break;
+                                    case "<=":
+                                        stop = stringDouble.getDouble() <= constantDouble;
+                                        break;
+                                    case "!=":
+                                        stop = stringDouble.getDouble() != constantDouble;
+                                        break;
+                                    default:
+                                        execInfo.loopsLog.append("Unknown operator for repeat until outcome number : ").append(operator);
+                                }
+
+                            } else { // mismatched types, error message?
+                                execInfo.loopsLog.append("Mismatched String/Number for repeat until outcome : ").append(trimmedLine);
+                            }
+                        } else {
+                            execInfo.loopsLog.append("Null return on execute for repeat until outcome : ").append(trimmedLine);
                         }
-                    } else {
-                        loopsLog.append("badly formed repeat until outcome : ").append(trimmedLine);
-                    }
-                } else if (trimmedLine.toLowerCase().startsWith("delete ")) {
-                    // zapdata is put through to the name query parser - this is not great practice really . . . .
-                    RMIClient.getServerInterface(loggedInUser.getDatabaseServer().getIp())
-                            .getJsonChildren(loggedInUser.getDataAccessToken(), 0, 0, false, "edit:zapdata " + trimmedLine.substring(7), StringLiterals.DEFAULT_DISPLAY_NAME, 0);
+                    } while (!stop && counter < limit);
+                }
+            } else {
+                execInfo.loopsLog.append("badly formed repeat until outcome : ").append(trimmedLine);
+            }
+        } else if (trimmedLine.toLowerCase().startsWith("delete ")) {
+            // zapdata is put through to the name query parser - this is not great practice really . . . .
+            RMIClient.getServerInterface(loggedInUser.getDatabaseServer().getIp())
+                    .getJsonChildren(loggedInUser.getDataAccessToken(), 0, 0, false, "edit:zapdata " + trimmedLine.substring(7), StringLiterals.DEFAULT_DISPLAY_NAME, 0);
 
-                } else if (trimmedLine.toLowerCase().startsWith("filtercontext")) {
-                    filterContext = trimmedLine.substring("filtercontext".length()).trim();
-                } else if (trimmedLine.toLowerCase().startsWith("filteritems")) {
-                    filterItems = trimmedLine.substring("filteritems".length()).trim();
-                } else if (trimmedLine.toLowerCase().startsWith("exportpath")) { // note unlike filtercontext and filteritems this goes down the recursive levels, it's not just at this level
-                    // when this is set then zap the file if it exists
-                    String checkPath = trimmedLine.substring("exportpath".length()).trim();
-                    int last = checkPath.lastIndexOf("\\");
-                    if (checkPath.lastIndexOf("/") > last) {
-                        last = checkPath.lastIndexOf("/");
-                    }
-                    if (last > 0) {
-                        checkPath = checkPath.substring(0, last + 1) + SpreadsheetService.host + checkPath.substring(last + 1);
-                    }
-                    Path path = Paths.get(checkPath);
-                    // new logic according to Ed Broking requirements - preface the filename with the host
-                    if (Files.exists(path)) {
-                        Files.delete(path);
-                        // if it existed then we know it's a reasonable path
-                        exportPath = checkPath;
-                    } else if (Files.isDirectory(path.getParent())) { // does the directory exist
-                        exportPath = checkPath;
-                    }
+        } else if (trimmedLine.toLowerCase().startsWith("filtercontext")) {
+            filterContext = trimmedLine.substring("filtercontext".length()).trim();
+        } else if (trimmedLine.toLowerCase().startsWith("filteritems")) {
+            filterItems = trimmedLine.substring("filteritems".length()).trim();
+        } else if (trimmedLine.toLowerCase().startsWith("exportpath")) { // note unlike filtercontext and filteritems this goes down the recursive levels, it's not just at this level
+            // when this is set then zap the file if it exists
+            String checkPath = trimmedLine.substring("exportpath".length()).trim();
+            int last = checkPath.lastIndexOf("\\");
+            if (checkPath.lastIndexOf("/") > last) {
+                last = checkPath.lastIndexOf("/");
+            }
+            if (last > 0) {
+                checkPath = checkPath.substring(0, last + 1) + SpreadsheetService.host + checkPath.substring(last + 1);
+            }
+            Path path = Paths.get(checkPath);
+            // new logic according to Ed Broking requirements - preface the filename with the host
+            if (Files.exists(path)) {
+                Files.delete(path);
+                // if it existed then we know it's a reasonable path
+                execInfo.exportPath = checkPath;
+            } else if (Files.isDirectory(path.getParent())) { // does the directory exist
+                execInfo.exportPath = checkPath;
+            }
 
-                } else if (trimmedLine.toLowerCase().startsWith("set ")) {
+        } else if (trimmedLine.toLowerCase().startsWith("set ")) {
                     /*
                     there are now two versions:
                     1) Set <expression> as[global]  name  -     this is creating a set
@@ -458,86 +505,75 @@ public class ReportExecutor {
                         in the instance above, the system first calculates the `Commission %`|`Affiliate Items` as a constant, then applies this formula to `commission` which is saved. `
 
                      */
-                    Pattern p = Pattern.compile("" + StringLiterals.QUOTE + "[^" + StringLiterals.QUOTE + "]*" + StringLiterals.QUOTE + " ="); //`name`=
-                    Matcher m = p.matcher(trimmedLine.substring(4));
-                    if (m.find() && m.start() == 0) {
-                        List<List<String>> colHeadings = makeNewListList("");
-                        colHeadings.get(0).set(0, trimmedLine);
-                        List<List<String>> rowHeadings = makeNewListList(filterItems);
-                        List<List<String>> context = makeNewListList(filterContext);
-                        String region = "autoexecute";
-                        //note that this routine gets the data twice - once here, and once before saving.  This is unnecessary, but quicker to program for the moment.
-                        UserRegionOptions userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), 0, "", "execute");//must have userRegionOptions
-                        CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = SpreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser, region, 0, rowHeadings, colHeadings,
-                                context, userRegionOptions, true);
-                        loggedInUser.setSentCells(loggedInUser.getOnlineReport().getId(), region, region, cellsAndHeadingsForDisplay);
-                        for (List<CellForDisplay> row : cellsAndHeadingsForDisplay.getData()) {
-                            row.get(0).setNewStringValue(row.get(1).getStringValue());
-                            row.get(0).setChanged();
-                            row.get(0).setNewDoubleValue(row.get(1).getDoubleValue());
-                        }
+            Pattern p = Pattern.compile("" + StringLiterals.QUOTE + "[^" + StringLiterals.QUOTE + "]*" + StringLiterals.QUOTE + " ="); //`name`=
+            Matcher m = p.matcher(trimmedLine.substring(4));
+            if (m.find() && m.start() == 0) {
+                List<List<String>> colHeadings = makeNewListList("");
+                colHeadings.get(0).set(0, trimmedLine);
+                List<List<String>> rowHeadings = makeNewListList(filterItems);
+                List<List<String>> context = makeNewListList(filterContext);
+                String region = "autoexecute";
+                //note that this routine gets the data twice - once here, and once before saving.  This is unnecessary, but quicker to program for the moment.
+                UserRegionOptions userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), 0, "", "execute");//must have userRegionOptions
+                CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = SpreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser, region, 0, rowHeadings, colHeadings,
+                        context, userRegionOptions, true);
+                loggedInUser.setSentCells(loggedInUser.getOnlineReport().getId(), region, region, cellsAndHeadingsForDisplay);
+                for (List<CellForDisplay> row : cellsAndHeadingsForDisplay.getData()) {
+                    row.get(0).setNewStringValue(row.get(1).getStringValue());
+                    row.get(0).setChanged();
+                    row.get(0).setNewDoubleValue(row.get(1).getDoubleValue());
+                }
 
-                        System.out.println("saving for : " + region);
-                        OnlineReport onlineReport = loggedInUser.getOnlineReport();
-                        // EFC note 22/02/21 - this was persisting every time, why???
-                        SpreadsheetService.saveData(loggedInUser, onlineReport.getId(), onlineReport.getReportName(), region, region.toLowerCase(), false);
+                System.out.println("saving for : " + region);
+                // EFC note 22/02/21 - this was persisting every time, why???
+                SpreadsheetService.saveData(loggedInUser, loggedInUser.getOnlineReport().getId(), loggedInUser.getOnlineReport().getReportName(), region, region.toLowerCase(), false);
 
 
-                    } else {
+            } else {
 
-                        String result = null;
-                        try {
-                            result = CommonReportUtils.resolveQuery(loggedInUser, trimmedLine.substring(4), null);
-                        } catch (Exception e) {
-                            return new DoubleAndOrString(0.0,result + "Not found:" + trimmedLine.substring(4));
-                        }
+                String result = null;
+                try {
+                    result = CommonReportUtils.resolveQuery(loggedInUser, trimmedLine.substring(4), null);
+                } catch (Exception e) {
+                    return new DoubleAndOrString(0.0,result + "Not found:" + trimmedLine.substring(4));
+                }
 
-                        RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).addToLog(loggedInUser.getDataAccessToken(), result);
-                    }
-                } else if (trimmedLine.toLowerCase().startsWith("if ")) {
-                    String result = CommonReportUtils.resolveQuery(loggedInUser, trimmedLine.substring(4), null);
-                    if (result.toLowerCase().startsWith("error")) {
-                        throw (new Exception(result));
-                    }
-                    String lastLine = "";
-                    lineNo++;
-                    List<String> subCommands = new ArrayList<>();
-                    while (lineNo < commands.size() && getIndent(commands.get(lineNo)) > startingIndent) {
-                        lastLine = commands.get(lineNo);
-                        subCommands.add(lastLine);
-                        lineNo++;
-                    }
-                    lineNo--; // put line back to where it is now
-
-                    if (result.equals("true")) {
-                        if (!subCommands.isEmpty()) {
-                            toReturn = executeCommands(loggedInUser, subCommands, exportPath, loopsLog, systemData2DArrays, count, provenanceId);
-
-                        }
-                        if (lastLine.toLowerCase().equals("else")) {
-                            while (lineNo < commands.size() && getIndent(commands.get(lineNo)) > startingIndent) {
-                                lineNo++;
-                            }
-                        }
-                        lineNo--;
-                    } else {
-                        subCommands = new ArrayList<>();
-                        while (lineNo < commands.size() && getIndent(commands.get(lineNo)) > startingIndent) {
-                            lastLine = commands.get(lineNo);
-                            subCommands.add(lastLine);
-                            lineNo++;
-                        }
-                        lineNo--; // put line back to where it is now
-                        if (!subCommands.isEmpty()) {
-                            toReturn = executeCommands(loggedInUser, subCommands, exportPath, loopsLog, systemData2DArrays, count, provenanceId);
-                        }
-                    }
-                } else {
-                    loopsLog.append("badly formed execute line  : ").append(trimmedLine);
+                RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).addToLog(loggedInUser.getDataAccessToken(), result);
+            }
+        } else if (trimmedLine.toLowerCase().startsWith("if ")) {
+            String result = CommonReportUtils.resolveQuery(loggedInUser, trimmedLine.substring(4), null);
+            if (result.toLowerCase().startsWith("error")) {
+                throw (new Exception(result));
+            }
+            int onwardLineNo = nextLineAtSameLevel(sheet, rowNo,colNo,lastRow);
+            int elseLine = -1;
+            if (onwardLineNo< lastRow){
+                String nextLine = sheet.getInternalSheet().getCell(onwardLineNo,colNo).getStringValue().trim();
+                if (nextLine.toLowerCase().equals("else")){
+                    elseLine = nextLineAtSameLevel(sheet,onwardLineNo,colNo, lastRow);
                 }
             }
+            if (result.equals("true")) {
+                rowNo++;
+                while (rowNo < onwardLineNo) {
+                    execCommand(loggedInUser, sheet, rowNo++, colNo, onwardLineNo, execInfo);
+
+                }
+            }else{
+                rowNo = onwardLineNo + 1;
+                if (elseLine > 0){
+                    while (rowNo < elseLine) {
+                        execCommand(loggedInUser, sheet, rowNo++, colNo, onwardLineNo, execInfo);
+
+                    }
+
+                }
+            }
+        } else {
+            execInfo.loopsLog.append("badly formed execute line  : ").append(trimmedLine);
         }
-        loopsLog.append("\r\n");
+
+        execInfo.loopsLog.append("\r\n");
         return toReturn;
     }
 
@@ -1031,6 +1067,17 @@ public class ReportExecutor {
         }
         return fileCount;
     }
+
+    private static int nextLineAtSameLevel(Sheet sheet, int rowNo, int colNo, int lastRow){
+        int startingIndent = getIndent(sheet.getInternalSheet().getCell(rowNo, colNo).getStringValue());
+        int onwardLineNo = rowNo + 1;
+        while (onwardLineNo < lastRow && getIndent(sheet.getInternalSheet().getCell(onwardLineNo,colNo).getStringValue()) > startingIndent) {
+            onwardLineNo++;
+        }
+        return onwardLineNo;
+
+    }
+
 
     static DecimalFormat df = new DecimalFormat("00000000");
 
