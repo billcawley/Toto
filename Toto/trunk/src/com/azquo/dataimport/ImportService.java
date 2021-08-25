@@ -2631,7 +2631,7 @@ fr.close();
 
 
                     boolean ignore = false;
-                    if (ignoreRef != null && getACellValue(inputSheet, ignoreRef).equalsIgnoreCase("true")) {
+                    if (ignoreRef != null && inputSheet.getRow(ignoreRef.getFirstCell().getRow()).getCell(ignoreRef.getFirstCell().getCol()).getBooleanCellValue()) {
                         ignore = true;
                     }
                     for (AreaReference persistSource : persistNames.keySet()) {
