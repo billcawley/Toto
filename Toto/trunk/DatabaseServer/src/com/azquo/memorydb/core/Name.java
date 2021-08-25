@@ -41,12 +41,6 @@ public abstract class Name extends AzquoMemoryDBEntity implements Collection<Nam
 
     public abstract void findAllParents(final Set<Name> allParents, int level);
 
-    void setProvenanceWillBePersisted(final Provenance provenance){
-        setProvenanceWillBePersisted(provenance, true);
-    }
-
-    abstract void setProvenanceWillBePersisted(final Provenance provenance, boolean setParents);
-
     public abstract void addParentNamesToCollection(Collection<Name> names, final int currentLevel, final int level);
 
     public abstract void addChildrenToCollection(Collection<Name> namesFound, final int currentLevel, final int level);

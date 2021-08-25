@@ -158,19 +158,11 @@ public final class StandardName extends Name {
         return provenance;
     }
 
-    void setProvenanceWillBePersisted(final Provenance provenance, boolean setParents) {
-        boolean changed = false;
+    void setProvenanceWillBePersisted(final Provenance provenance) {
         synchronized (this){
             if (this.provenance == null || !this.provenance.equals(provenance)) {
-                changed = true;
                 this.provenance = provenance;
                 setNeedsPersisting();
-            }
-        }
-        // get the modification of parents out of the synchronized block, dangerous for it to be in there. Also only go up one level - all the way up makes no sense
-        if (changed && setParents){
-            for (Name n : getParents()){
-                n.setProvenanceWillBePersisted(provenance, false);
             }
         }
     }
@@ -409,7 +401,7 @@ public final class StandardName extends Name {
 
     void removeFromParents(final Name name) {
         removeFromParentsCount.incrementAndGet();
-         // todo - synchronise on something else?
+         // todo - synchronise on something else? this was part of a JB deadlock, the other hal
         synchronized (this) {
             parents = NameUtils.nameArrayRemoveIfExists(parents, name);
         }
