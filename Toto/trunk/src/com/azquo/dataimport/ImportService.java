@@ -313,19 +313,19 @@ public final class ImportService {
                                     if (row.getCell(0) == null || row.getCell(0).getStringCellValue().isEmpty()) {
                                         parametersMode = false;
                                     } else {
-                                        if (row.getCell(0).getStringCellValue().equals(StringLiterals.PARAMETERS)) {
+                                        if (row.getCell(0).getStringCellValue().equalsIgnoreCase(StringLiterals.PARAMETERS)) {
                                             parametersMode = true;
-                                        } else if (row.getCell(0).getStringCellValue().equals(StringLiterals.MANUALLYREJECTEDLINES)) {
+                                        } else if (row.getCell(0).getStringCellValue().equalsIgnoreCase(StringLiterals.MANUALLYREJECTEDLINES)) {
                                             lineSkipCol = -1;
                                             readingRejectedLinesMode = true;
                                         } else if (parametersMode) {
                                             lookupValuesForFiles.computeIfAbsent(fileName, t -> new HashMap<>()).put(row.getCell(0).getStringCellValue(), row.getCell(1).getStringCellValue());
-                                        } else if (row.getCell(0).getStringCellValue().equals(uploadedFile.getFileName())) {// it's a line indicating the next (or first) file
+                                        } else if (row.getCell(0).getStringCellValue().equalsIgnoreCase(uploadedFile.getFileName())) {// it's a line indicating the next (or first) file
                                             sheetCounter++;
                                             readingRejectedLinesMode = false;
                                             // if it goes down further levels this might get tripped up
                                             fileName = row.getCell(1).getStringCellValue();
-                                            if (row.getCell(3) != null && StringLiterals.REJECTEDBYUSER.equals(row.getCell(3).getStringCellValue())) {
+                                            if (row.getCell(3) != null && StringLiterals.REJECTEDBYUSER.equalsIgnoreCase(row.getCell(3).getStringCellValue())) {
                                                 fileRejectFlags.add(sheetCounter);
                                             }
                                         }
@@ -2631,7 +2631,7 @@ fr.close();
 
 
                     boolean ignore = false;
-                    if (ignoreRef != null && getACellValue(inputSheet, ignoreRef).equals("true")) {
+                    if (ignoreRef != null && getACellValue(inputSheet, ignoreRef).equalsIgnoreCase("true")) {
                         ignore = true;
                     }
                     for (AreaReference persistSource : persistNames.keySet()) {
@@ -3154,7 +3154,7 @@ fr.close();
                             }
                         }
                         if (outvalue!=null && jsonRule.format.length() > 0) {
-                            if (jsonRule.format.equals("text")){
+                            if (jsonRule.format.equalsIgnoreCase("text")){
                                 //remove line feeds and tabs
                                 outvalue = outvalue.replace("\t"," ").replace("\n",";").replace(";;",";");
                             }
