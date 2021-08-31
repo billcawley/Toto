@@ -93,7 +93,7 @@ class AzquoMemoryDBTransport {
                 loadTracker.addAndGet(dataToLoad.size());
             }
             if (minId % 1_000_000 == 0) {
-                logInSessionLogAndSystem("loaded " + loadTracker.get());
+                logInSessionLogAndSystem("loaded " + NumberFormat.getInstance().format(loadTracker.get()));
             }
             return null;
         }
@@ -120,7 +120,7 @@ class AzquoMemoryDBTransport {
             }
             loadTracker.addAndGet(names.size());
             if (minId % 1_000_000 == 0) {
-                logInSessionLogAndSystem("loaded " + loadTracker.get());
+                logInSessionLogAndSystem("loaded " + NumberFormat.getInstance().format(loadTracker.get()));
             }
             return null;
         }
@@ -145,7 +145,7 @@ class AzquoMemoryDBTransport {
             }
             loadTracker.addAndGet(values.size());
             if (minId % 1_000_000 == 0) {
-                logInSessionLogAndSystem("loaded " + loadTracker.get());
+                logInSessionLogAndSystem("loaded " + NumberFormat.getInstance().format(loadTracker.get()));
             }
             return null;
         }
