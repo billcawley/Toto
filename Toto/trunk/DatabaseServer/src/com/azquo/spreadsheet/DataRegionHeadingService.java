@@ -257,7 +257,9 @@ public class DataRegionHeadingService {
                                     row.add(dataRegionHeadingsFromNames(names, function, suffix, null, null, 0));
                                 }
                             } catch (Exception e) {
-                                if (ignoreHeadingErrors) { // the ignore is only for vanilla queries, functions probably should error regardless
+                                if (ignoreHeadingErrors) { // the ignore is only for vanilla queries, functions probably should error regardless - N
+                                    e=null;
+                                    sourceCell = null;
                                     List<DataRegionHeading> single = new ArrayList<>();
                                     single.add(new DataRegionHeading("[unknown]", false, null, null,sourceCell,null,null,0));// we say that an attribute heading defaults to writable, it will defer to the name
                                     row.add(single);

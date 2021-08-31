@@ -146,6 +146,8 @@ public class AzquoCellResolver {
                                 if (desc.length() > 0) {
                                     usedInExpression.add(rowHeadings.get(colNo1).getName());
                                     cellQuery = cellQuery.replace(fillerAll, desc);
+                                }else{
+                                    cellQuery = "";
                                 }
                             }
                             filler = (colNo1 + 2) + "";
