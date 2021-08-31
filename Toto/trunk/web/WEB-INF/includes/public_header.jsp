@@ -106,7 +106,7 @@
 				<span id="lockedResult"><c:if test="${not empty lockedResult}"><textarea class="public" style="height:60px;width:400px;font:10px monospace;overflow:auto;font-family:arial;background:#f58030;color:#fff;font-size:14px;border:0">${lockedResult}</textarea></c:if></span>
 			<nav class="nav">
 				<ul>
-					<li ><a href="/api/Online?reportid=1" >View Reports</a></li>
+					<li ><a href="/api/Online?reportid=1" >Reports</a></li>
 <!--					<li><span class="tickspanpublic">Excel<input name="excel" type="checkbox" id="excelinterface" <c:if test="${sessionScope.excelToggle}"> checked</c:if> onchange="pingExcelInterfaceFlag(this.checked)"></span></li>-->
 					<c:if test="${templateMode == true}">
 						<li ><a href="#" onclick="postAjax('SaveTemplate'); return false;">Save Template</a></li>
@@ -129,6 +129,7 @@
 						<ul>
 							<li><a href="#" onclick="postAjax('XLS'); return false;" title="Download as XLSX (Excel)"><span class="fa fa-file-excel-o"></span> Download as XLSX (Excel)</a></li>
 							<!-- <li><a href="#" onclick="postAjax('PDF'); return false;" title="Download as PDF"><span class="fa fa-file-pdf-o"></span> Download as PDF</a></li> -->
+							<c:if test="${showTemplate == true}"><li><a href="#" onclick="window.location.assign(window.location.href+='&opcode=template')">View Template</a></li></c:if>
 							<li><a href="#" onclick="return inspectDatabase();" title="Inspect database"><span class="fa fa-eye"></span> Inspect database</a></li>
 							<li><a href="#" onclick="return uploadFile();" title="Upload file"><span class="fa fa-cloud-upload"></span> Upload file</a></li>
 							<li><a href="#" onclick="return postAjax('FREEZE');" title="Upload file"><span class="fa fa-link"></span> Freeze</a></li>
