@@ -81,6 +81,7 @@ public class ChoicesService {
                 if (name.getRefersToCellRegion() != null && chosen != null) {
                     CellRegion chosenRegion = chosen.getRefersToCellRegion();
                     if (chosenRegion != null) {
+                        // EFC note - I made a hack for bonza to check this wasn't null but
                         List<String> choiceOptions = choiceOptionsMap.get(name.getName().toLowerCase());
                         boolean dataRegionDropdown = !BookUtils.getNamedDataRegionForRowAndColumnSelectedSheet(chosenRegion.getRow(), chosenRegion.getColumn(), sheet).isEmpty();
                         if (choiceCell.getType() != SCell.CellType.ERROR && (choiceCell.getType() != SCell.CellType.FORMULA || choiceCell.getFormulaResultType() != SCell.CellType.ERROR)) {

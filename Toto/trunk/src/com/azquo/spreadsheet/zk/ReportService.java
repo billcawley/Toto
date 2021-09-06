@@ -354,7 +354,7 @@ public class ReportService {
             Map<String, String> params = new HashMap<>();
             params.put("Report", (onlineReport != null ? onlineReport.getReportName() : ""));
             loggedInUser.userLog("Save",  params);
-            ReportExecutor.runExecuteCommandForBook(loggedInUser, book, StringLiterals.FOLLOWON); // that SHOULD do it. It will fail gracefully in the vast majority of times there is no followon
+            ReportExecutor.runExecuteCommandForBook(book, StringLiterals.FOLLOWON); // that SHOULD do it. It will fail gracefully in the vast majority of times there is no followon
             // unlock here makes sense think, if duff save probably leave locked
             SpreadsheetService.unlockData(loggedInUser);
             return error;

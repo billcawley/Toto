@@ -831,7 +831,9 @@ public class ExcelController {
 
             if (op.equals("loadregion")) {
                 // since this expects a certain type of json format returned then we need to wrap the error in one of those objects
-                System.out.println("json : " + json);
+                if (json.length() < 10_000){
+                    System.out.println("json : " + json);
+                }
                 ExcelJsonRequest excelJsonRequest = jacksonMapper.readValue(json, ExcelJsonRequest.class);
                 try {
                     long time = System.currentTimeMillis();
@@ -977,7 +979,7 @@ public class ExcelController {
                     book.getInternalBook().setAttribute(REPORT_ID, or.getId());
                     ReportRenderer.populateBook(book, 0);
                     // ok this crashes due to no book path but I think I'll allow no book path itnernally as
-                    ReportExecutor.runExecuteCommandForBook(loggedInUser,book, StringLiterals.FOLLOWON); // that SHOULD do it. It will fail gracefully in the vast majority of times there is no followon
+                    ReportExecutor.runExecuteCommandForBook(book, StringLiterals.FOLLOWON); // that SHOULD do it. It will fail gracefully in the vast majority of times there is no followon
                 }
                 return result;
             }
