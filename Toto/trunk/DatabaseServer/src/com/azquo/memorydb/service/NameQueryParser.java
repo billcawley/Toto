@@ -245,7 +245,13 @@ public class NameQueryParser {
                 if (totalName.getAttribute(StringLiterals.DEFAULT_DISPLAY_NAME) != null) {
                     defChanged = totalName.getAttribute(StringLiterals.DEFAULT_DISPLAY_NAME).toLowerCase();
                 }
-                NameStackOperators.assignSetAsName(azquoMemoryDBConnection, attributeNames, nameStack, stackCount, false);
+                if (totalName.hasParents()){
+                    Name parent = totalName.getParents().iterator().next();
+                    if (totalName.getDefaultDisplayName()!=null && !parent.getDefaultDisplayName().equals(StringLiterals.TEMPORARYNAMES)){
+                        global = true;
+                    }
+                }
+                NameStackOperators.assignSetAsName(azquoMemoryDBConnection, attributeNames, nameStack, stackCount, global);
             } else if (op == StringLiterals.ASGLOBALSYMBOL) {
                 Name totalName = nameStack.get(stackCount).getAsCollection().iterator().next();// get(0) relies on list, this works on a collection
                 if (totalName.getAttribute(StringLiterals.DEFAULT_DISPLAY_NAME) != null) {
@@ -510,9 +516,27 @@ public class NameQueryParser {
             // typically used with as, a bunch of sets may be created as part of a report but we then sap them when the report has finished loading
             nameString = nameString.replace(StringLiterals.QUOTE + "", "");
             if (toAdd == null && temporaryName) {
-                Name temporaryNames = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, StringLiterals.TEMPORARYNAMES, null, false); // make if it's not there, I guess no harm in it hanging around
-                // create the temporary name to be used later in an "as" no doubt
-                toAdd = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, nameString, temporaryNames, true);
+                //new behaviour.  If a parent is specified on a temporary name, will create a permanent name
+                if (nameString.contains(StringLiterals.MEMBEROF)){
+                    Name parent = NameService.findNameAndAttribute(azquoMemoryDBConnection,nameString.substring(0,nameString.indexOf(StringLiterals.MEMBEROF)),attributeNames);
+                    if (parent==null){
+                        throw new Exception("Cannot resolve reference to a name " + nameString);
+                    }
+                    while (nameString.contains(StringLiterals.MEMBEROF)){
+                        nameString = nameString.substring(nameString.indexOf(StringLiterals.MEMBEROF)+ StringLiterals.MEMBEROF.length());
+                        if (nameString.contains(StringLiterals.MEMBEROF)){
+                            parent = NameService.findOrCreateNameInParent(azquoMemoryDBConnection,nameString.substring(0,nameString.indexOf(StringLiterals.MEMBEROF)),parent,true);
+                        }else{
+                            toAdd = NameService.findOrCreateNameInParent(azquoMemoryDBConnection,nameString,parent,true);
+                        }
+                    }
+                }else {
+
+
+                    Name temporaryNames = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, StringLiterals.TEMPORARYNAMES, null, false); // make if it's not there, I guess no harm in it hanging around
+                    // create the temporary name to be used later in an "as" no doubt
+                    toAdd = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, nameString, temporaryNames, true);
+                }
             }
             if (toAdd == null) {
                 throw new Exception("Cannot resolve reference to a name " + nameString);
@@ -563,6 +587,8 @@ public class NameQueryParser {
                 String attVal = name.getAttribute(attributeString);
                 if (attVal != null) {
                     attribute = attVal;//replaces with a name (an element of a string
+                }else{
+                    attribute = "";
                 }
             }
             modifiedStatement.append(attribute);
