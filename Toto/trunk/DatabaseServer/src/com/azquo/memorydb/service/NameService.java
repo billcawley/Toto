@@ -152,6 +152,10 @@ public final class NameService {
         // note if qualifiedName is null this will NPE - not sure if this is a problem
         int langPos = qualifiedName.indexOf(StringLiterals.languageIndicator);
         if (langPos > 0) {
+            if (qualifiedName.startsWith(StringLiterals.QUOTE+"")&& qualifiedName.endsWith(StringLiterals.QUOTE+"")){
+                qualifiedName = qualifiedName.substring(1,qualifiedName.length()-1);
+                langPos--;
+            }
             int quotePos = qualifiedName.indexOf(StringLiterals.QUOTE);
             if (quotePos < 0 || quotePos > langPos) {
                 attributeNames = Collections.singletonList(qualifiedName.substring(0,langPos));
