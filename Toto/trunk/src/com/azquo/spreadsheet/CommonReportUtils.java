@@ -166,7 +166,7 @@ public class CommonReportUtils {
             }
 
         }
-        return query.trim();
+        return query.trim().replace("  "," ");//remove double spaces
     }
 
     public static List<FilterTriple> getFilterListForQuery(LoggedInUser loggedInUser, String selectionList, String selectionName) throws Exception{
