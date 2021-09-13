@@ -1,3 +1,9 @@
+25-08-21
+
+removed case sensitivity to some tests - including 'az_ignore'
+
+Further deadlock code
+
 18-08-21
 
 new function 'Exists'

@@ -4,6 +4,7 @@ import com.azquo.dataimport.*;
 import com.csvreader.CsvWriter;
 import com.ecwid.maleorang.MailchimpException;
 import com.extractagilecrm.ExtractContacts;
+import com.extractappointedd.ExtractAppointedd;
 import com.extractdotdigital.ExtractDotDigital;
 import com.extractmailchimp.ExtractMailchimp;
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -386,6 +387,14 @@ public class TestController {
 
         if ("agilecrm".equals(something)) {
             ExtractContacts.extract();
+        }
+
+        if ("appointedd".equals(something)) {
+            try {
+                ExtractAppointedd.extract();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
 
         if ("pdfbox".equals(something)) {
