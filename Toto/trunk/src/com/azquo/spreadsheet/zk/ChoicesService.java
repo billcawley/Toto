@@ -265,13 +265,18 @@ public class ChoicesService {
                     String query = choiceCell.getStringValue();
                     if (userChoice != null){
                         // we need to check if this choice is in the tree that would be shown
-                        if (RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).nameValidForChosenTree(loggedInUser.getDataAccessToken(), userChoice, query)){
-                            BookUtils.setValue(resultCell, userChoice);
-                        } else { // set default
+                        try{
+                            if (RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).nameValidForChosenTree(loggedInUser.getDataAccessToken(), userChoice, query)) {
+                                BookUtils.setValue(resultCell, userChoice);
+                                choicesSet.put(choiceLookup, userChoice);
+
+                            } else { // set default
+                                BookUtils.setValue(resultCell, RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).getFirstChoiceForChosenTree(loggedInUser.getDataAccessToken(), query));
+                            }
+                        }catch(Exception e){
                             BookUtils.setValue(resultCell, RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).getFirstChoiceForChosenTree(loggedInUser.getDataAccessToken(), query));
+
                         }
-                    } else { // set default
-                        BookUtils.setValue(resultCell, RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).getFirstChoiceForChosenTree(loggedInUser.getDataAccessToken(), query));
 
                     }
                 }
