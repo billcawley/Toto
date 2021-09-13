@@ -114,12 +114,16 @@ public class ZKSpreadsheetCommandController {
                     try (FileOutputStream fos = new FileOutputStream(file)) {
                         exporter.export(book, fos);
                     }
-                    int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
-                    OnlineReport onlineReport = OnlineReportDAO.findById(reportId);
-                    Map<String, String> params = new HashMap<>();
-                    params.put("File", onlineReport.getReportName() + ".xlsx");
-                    loggedInUser.userLog("Save", params);
-                    Filedownload.save(new AMedia(onlineReport.getReportName().replace("/", "").replace("\\", "") + ".xlsx", null, null, file, true));
+                    if (book.getInternalBook().getAttribute(OnlineController.REPORT_ID) != null){
+                        int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
+                        OnlineReport onlineReport = OnlineReportDAO.findById(reportId);
+                        Map<String, String> params = new HashMap<>();
+                        params.put("File", onlineReport.getReportName() + ".xlsx");
+                        loggedInUser.userLog("Save", params);
+                        Filedownload.save(new AMedia(onlineReport.getReportName().replace("/", "").replace("\\", "") + ".xlsx", null, null, file, true));
+                    } else { // for test.jsp
+                        Filedownload.save(new AMedia(book.getBookName(), null, null, file, true));
+                    }
                     Clients.clearBusy(ss);
                 }
 
