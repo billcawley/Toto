@@ -3109,13 +3109,14 @@ fr.close();
         Set<String> relevantPaths = new HashSet();
         for (int rowNo = jsonRulesAreaRef.getFirstCell().getRow(); rowNo <= lastRow; rowNo++) {
             Row row = jSheet.getRow(rowNo);
-            JsonRule jsonRule = new JsonRule(getCellValue(jSheet, rowNo, firstCol), getCellValue(jSheet,rowNo,firstCol + 1), getCellValue(jSheet,rowNo,firstCol + 2), getCellValue(jSheet,rowNo, firstCol + 3));
+            String first = getCellValue(jSheet, rowNo, firstCol);
+            JsonRule jsonRule = new JsonRule(first, getCellValue(jSheet, rowNo, firstCol + 1), getCellValue(jSheet, rowNo, firstCol + 2), getCellValue(jSheet, rowNo, firstCol + 3));
             jsonRules.add(jsonRule);
             List<String> jPath = Arrays.asList(jsonRule.sourceTerm.split(JSONFIELDDIVIDER));
             relevantPaths.add(jPath.get(0));
             String path = jPath.get(0);
-            for (int i = 0;i<jPath.size();i++){
-                path+=JSONFIELDDIVIDER + jPath.get(i);
+            for (int i = 0; i < jPath.size(); i++) {
+                path += JSONFIELDDIVIDER + jPath.get(i);
                 relevantPaths.add(path);
             }
         }
@@ -3206,7 +3207,7 @@ fr.close();
         return text.replace("\n", "\\\\n").replace("\r", "").replace("\t", "\\\\t");
     }
 
-    private static void traverseJSON(JsonRule jsonRule,String[] jsonPath,JSONObject jsonNext, int level) throws Exception{
+    private static boolean traverseJSON(JsonRule jsonRule,String[] jsonPath,JSONObject jsonNext, int level) throws Exception{
         if (level < jsonPath.length - 1) {
             JSONArray jsonArray1 = new JSONArray();
             try {
@@ -3220,17 +3221,20 @@ fr.close();
                     for (int l=0;l<=level;l++){
                         path= path+"/"+jsonPath[l];
                     }
-                    throw new Exception("no path " + path);
+                    jsonRule.found.add("");
+                    return false;
                 }
             }
             level++;
             if (jsonArray1 != null) {
                 for (Object o1 : jsonArray1) {
                     jsonNext = (JSONObject) o1;
-                    traverseJSON(jsonRule, jsonPath, jsonNext, level);
+                    if (!traverseJSON(jsonRule, jsonPath, jsonNext, level)){
+                        break;
+                    };
                 }
             }
-            return;
+            return true;
         }
         String found = null;
         try {
@@ -3238,7 +3242,7 @@ fr.close();
         } catch (Exception e) {
         }
         if(found==null){
-            return;
+            return true;
         }
         if (jsonRule.condition.length() > 0) {
             if (jsonRule.condition.toLowerCase(Locale.ROOT).startsWith("contains")) {
@@ -3260,6 +3264,7 @@ fr.close();
         if (found != null) {
             jsonRule.found.add(found);
         }
+        return true;
     }
 
 
@@ -3268,7 +3273,13 @@ fr.close();
     public static JSONArray readJSON(String filePath, String page_size, String cursor)
             throws Exception {
         String data = new String(Files.readAllBytes(Paths.get(filePath)), Charset.defaultCharset());
-        JSONArray jsonArray = null;
+        //strip away spurious fields
+        try{
+            data = data.substring(data.indexOf("["), data.lastIndexOf("]")+1);
+        }catch(Exception e){
+            throw new Error("no array of data in JSON");
+        }
+         JSONArray jsonArray = null;
         try {
             jsonArray = new JSONArray(data.replace("\n",""));//remove line feeds
         } catch (Exception e) {
