@@ -21,6 +21,7 @@
                 'Content-Type': 'application/json',
             },
             method: 'POST',
+            credentials: 'include',
             // 'myzss' is the id specified on kkjsp tag
             body: JSON.stringify(kkjsp.prepare('myzss', {action: action})) // preparing Keikai's request data
         })
@@ -39,6 +40,7 @@
                 'Content-Type': 'application/json',
             },
             method: 'POST',
+            credentials: 'include',
             // 'myzss' is the id specified on kkjsp tag
             body: JSON.stringify(kkjsp.prepare('myzss', {action: "nameIdForChosenTree", nameIdForChosenTree: String(nameId)})) // preparing Keikai's request data, it wants strings
         })
