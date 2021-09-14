@@ -77,6 +77,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.regex.Pattern;
 
 import static org.apache.poi.ss.usermodel.CellType.*;
 import org.json.JSONArray;
@@ -3133,9 +3134,15 @@ fr.close();
             for (Object o : jsonArray) {
                 JSONObject jsonObject = (JSONObject) o;
                 for (JsonRule jsonRule:jsonRules) {
-                    String[] jsonPath = jsonRule.sourceTerm.split("\\" + JSONFIELDDIVIDER);
+                    boolean useRule = true;
+                    if (jsonRule.condition!=null && jsonRule.condition.startsWith("only")){
+                        useRule = hasCondition(jsonRules, jsonRule.condition);
+                    }
+                    if (useRule) {
+                        String[] jsonPath = jsonRule.sourceTerm.split("\\" + JSONFIELDDIVIDER);
 
-                    traverseJSON(jsonRule, jsonPath, jsonObject, 0);
+                        traverseJSON(jsonRule, jsonPath, jsonObject, 0, jsonRules);
+                    }
                 }
                 int maxRecord = 0;
                 for (JsonRule jsonRule:jsonRules){
@@ -3207,7 +3214,7 @@ fr.close();
         return text.replace("\n", "\\\\n").replace("\r", "").replace("\t", "\\\\t");
     }
 
-    private static boolean traverseJSON(JsonRule jsonRule,String[] jsonPath,JSONObject jsonNext, int level) throws Exception{
+    private static boolean traverseJSON(JsonRule jsonRule,String[] jsonPath,JSONObject jsonNext, int level, List<JsonRule>  jsonRules) throws Exception{
         if (level < jsonPath.length - 1) {
             JSONArray jsonArray1 = new JSONArray();
             try {
@@ -3229,7 +3236,7 @@ fr.close();
             if (jsonArray1 != null) {
                 for (Object o1 : jsonArray1) {
                     jsonNext = (JSONObject) o1;
-                    if (!traverseJSON(jsonRule, jsonPath, jsonNext, level)){
+                    if (!traverseJSON(jsonRule, jsonPath, jsonNext, level, jsonRules)){
                         break;
                     };
                 }
@@ -3245,9 +3252,8 @@ fr.close();
             return true;
         }
         if (jsonRule.condition.length() > 0) {
-            if (jsonRule.condition.toLowerCase(Locale.ROOT).startsWith("contains")) {
-                String toFind = jsonRule.condition.substring(8).replace("\"", "").trim();
-                if (!found.contains(toFind)) {
+            if (jsonRule.condition.toLowerCase(Locale.ROOT).startsWith("regex ")) {
+                if (!Pattern.matches(jsonRule.condition.substring(6).trim(), found)){
                     found = null;
                 }
             }
@@ -3265,6 +3271,18 @@ fr.close();
             jsonRule.found.add(found);
         }
         return true;
+    }
+
+    private static boolean hasCondition(List<JsonRule>jsonRules, String condition){
+        if(condition.toLowerCase(Locale.ROOT).startsWith("only ")) {
+            condition = condition.substring(5);
+        }
+        for (JsonRule jsonRule1:jsonRules){
+            if (jsonRule1.target.equalsIgnoreCase(condition)  && jsonRule1.found!=null){
+                return true;
+            }
+        }
+        return false;
     }
 
 
