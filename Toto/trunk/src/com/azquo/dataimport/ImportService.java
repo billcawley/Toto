@@ -3278,7 +3278,7 @@ fr.close();
             condition = condition.substring(5);
         }
         for (JsonRule jsonRule1:jsonRules){
-            if (jsonRule1.target.equalsIgnoreCase(condition)  && jsonRule1.found!=null){
+            if (jsonRule1.target.equalsIgnoreCase(condition)  && jsonRule1.found.size()>0){
                 return true;
             }
         }
