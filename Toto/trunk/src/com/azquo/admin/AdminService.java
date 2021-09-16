@@ -218,10 +218,10 @@ this may now not work at all, perhaps delete?
         if (loggedInUser.getUser().isMaster()) {
             toReturn = UserDAO.findForBusinessIdAndCreatedBy(loggedInUser.getUser().getBusinessId(), loggedInUser.getUser().getEmail());
         }
-        if (toReturn != null){
-            for (User u : toReturn){
+        if (toReturn != null) {
+            for (User u : toReturn) {
                 UserActivity ua = UserActivityDAO.findMostRecentForUserAndBusinessId(loggedInUser.getUser().getBusinessId(), u.getEmail());
-                if (ua != null){
+                if (ua != null) {
                     u.setRecentActivity(ua.getTimeStamp().toString());
                 }
             }
@@ -278,12 +278,12 @@ this may now not work at all, perhaps delete?
             }
         }
         reportList.sort(Comparator.comparing(o -> (o.getDatabase() + getVal(o.getCategory()) + getVal(o.getExplanation()))));
-        if (webFormat){ // for the web interface, don't do it for the plugin for example
+        if (webFormat) { // for the web interface, don't do it for the plugin for example
             // for formatting purposes, displaying the report list with useful categories
             // - notably this could cause problems if one of these were saved but I'm not that bothered for the moment
             String c = null;
-            for (OnlineReport or : reportList){
-                if (or.getCategory() == null || or.getCategory().equals(c)){
+            for (OnlineReport or : reportList) {
+                if (or.getCategory() == null || or.getCategory().equals(c)) {
                     or.setCategory("");
                 } else {
                     c = or.getCategory();
@@ -294,10 +294,11 @@ this may now not work at all, perhaps delete?
         return reportList;
     }
 
-    private static String getVal(String value){
-        if (value==null || value.isEmpty()) return "zzz";
+    private static String getVal(String value) {
+        if (value == null || value.isEmpty()) return "zzz";
         return value;
     }
+
     public static List<ReportSchedule> getReportScheduleList(final LoggedInUser loggedInUser) {
         List<ReportSchedule> toReturn = new ArrayList<>();
         List<Database> databases = DatabaseDAO.findForBusinessId(loggedInUser.getUser().getBusinessId());
@@ -346,10 +347,10 @@ this may now not work at all, perhaps delete?
                 }
             }
             String fileName = null;
-            for (UploadRecord.UploadRecordForDisplay uploadRecordForDisplay:uploadRecordsForDisplay){
-                if (fileName==null){
+            for (UploadRecord.UploadRecordForDisplay uploadRecordForDisplay : uploadRecordsForDisplay) {
+                if (fileName == null) {
                     fileName = uploadRecordForDisplay.getFileName();
-                }else{
+                } else {
                     if (!uploadRecordForDisplay.getFileName().equals(fileName)) {
                         //if there is more than one report name reduce the list to the latest uploads only
                         uploadRecordsForDisplay.sort((o1, o2) -> ((o2.getFileName() + o2.getTextOrderedDate()).compareTo((o1.getFileName() + o1.getTextOrderedDate()))));
@@ -360,17 +361,17 @@ this may now not work at all, perhaps delete?
                         for (UploadRecord.UploadRecordForDisplay uRFD : uploadRecordsForDisplay) {
                             if (!uRFD.getFileName().equals(fileName)) {
                                 fileName = uRFD.getFileName();
-                                if (fileCount > 0){
+                                if (fileCount > 0) {
                                     lastURFD.setCount(fileCount);
                                 }
                                 fileCount = 1;
                                 newList.add(uRFD);
                                 lastURFD = uRFD;
-                            }else{
+                            } else {
                                 fileCount++;
                             }
                         }
-                        if (fileCount > 0){
+                        if (fileCount > 0) {
                             lastURFD.setCount(fileCount);
                         }
                         uploadRecordsForDisplay = newList;
@@ -379,7 +380,6 @@ this may now not work at all, perhaps delete?
                     }
                 }
             }
-
 
 
             return uploadRecordsForDisplay;
@@ -391,7 +391,7 @@ this may now not work at all, perhaps delete?
         List<UploadRecord> forDatabaseIdWithFileType = UploadRecordDAO.findForDatabaseIdWithFileType(loggedInUser.getDatabase().getId());// limited to 10k for the mo
         // ducplication, factor later, todo
         List<UploadRecord.UploadRecordForDisplay> uploadRecordsForDisplay = new ArrayList<>();
-        for (UploadRecord uploadRecord : forDatabaseIdWithFileType){
+        for (UploadRecord uploadRecord : forDatabaseIdWithFileType) {
             String dbName = "";
             if (uploadRecord.getDatabaseId() > 0) {
                 Database database = DatabaseDAO.findById(uploadRecord.getDatabaseId());
@@ -436,9 +436,9 @@ this may now not work at all, perhaps delete?
         }
 
         // new logic - since all users can access this I'll now constrain the list if the user isn't admin
-        if (!loggedInUser.getUser().isAdministrator()){
+        if (!loggedInUser.getUser().isAdministrator()) {
             List<Integer> okDatabaseIds = new ArrayList<>();
-            for (LoggedInUser.ReportIdDatabaseId securityPair : loggedInUser.getReportIdDatabaseIdPermissions().values()){
+            for (LoggedInUser.ReportIdDatabaseId securityPair : loggedInUser.getReportIdDatabaseIdPermissions().values()) {
                 okDatabaseIds.add(securityPair.getDatabaseId());
             }
             pendingUploads.removeIf(next -> !okDatabaseIds.contains(next.getDatabaseId()));
@@ -587,15 +587,15 @@ this may now not work at all, perhaps delete?
     public static void updateNameAndValueCounts(LoggedInUser loggedInUser, Database database) throws Exception {
         // security can cause a problem here hence the ifs
         int nameCount = AdminService.getNameCountWithBasicSecurity(loggedInUser, database);
-        if (nameCount >= 0){
+        if (nameCount >= 0) {
             database.setNameCount(nameCount);
         }
         int valueCount = AdminService.getValueCountWithBasicSecurity(loggedInUser, database);
-        if (valueCount >= 0){
+        if (valueCount >= 0) {
             database.setValueCount(valueCount);
         }
         String recentProvenance = getMostRecentProvenance(loggedInUser, database);
-        if (recentProvenance != null){
+        if (recentProvenance != null) {
             database.setLastProvenance(recentProvenance);
         }
         DatabaseDAO.store(database);
@@ -671,8 +671,19 @@ this may now not work at all, perhaps delete?
         String logo = business.getLogo();
         if (logo == null || logo.length() == 0) logo = "logo_admin.png";
         model.addAttribute("bannerColor", bannerColor);
-        model.addAttribute("logo", logo);
+        model.addAttribute("logo", getLogoPath(logo));
 
+    }
+
+
+
+
+    public static String getLogoPath(String logo){
+        if (logo.startsWith("templates-")){
+            return "/api/Download?image=" +logo;
+        }else{
+            return "/images/" + logo;
+        }
     }
 
     public static void toggleAutoBackupWithBasicSecurity(LoggedInUser loggedInUser, int databaseId) {

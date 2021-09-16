@@ -56,7 +56,7 @@
     <div class="basic-box-container">
         <div class="basic-head" style="background-color:${bannerColor}">
             <div class="logo">
-                <img src="/images/${logo}" alt="azquo">
+                <img src="${logo}" alt="azquo">
             </div>
         </div>
         <div class="basic-box">

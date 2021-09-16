@@ -409,6 +409,7 @@ Created by IntelliJ IDEA.
                     <tr>
                         <td>Uploader</td>
                         <td>Template Name</td>
+                        <td>Notes</td>
                         <td>Date Uploaded</td>
                         <td></td>
                     </tr>
@@ -418,6 +419,7 @@ Created by IntelliJ IDEA.
                         <tr>
                             <td>${template.user}</td>
                             <td>${template.templateName}</td>
+                            <td>${template.notes}</td>
                             <td>${template.dateCreated}</td>
                             <td>
                                 <a href="/api/ManageDatabases?deleteTemplateId=${template.id}#tab5"

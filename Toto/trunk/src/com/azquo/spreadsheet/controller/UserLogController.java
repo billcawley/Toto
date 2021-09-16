@@ -1,5 +1,6 @@
 package com.azquo.spreadsheet.controller;
 
+import com.azquo.admin.AdminService;
 import com.azquo.admin.business.Business;
 import com.azquo.admin.business.BusinessDAO;
 import com.azquo.spreadsheet.LoggedInUser;
@@ -23,10 +24,7 @@ public class UserLogController {
         if (loggedInUser == null) {
             return "redirect:/api/Login";
         }
-        Business business = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
-        String logo = business.getLogo();
-        if (logo == null || logo.length() == 0) logo = "logo_alt.png";
-        model.addAttribute("logo", logo);
+        AdminService.setBanner(model,loggedInUser);
         return "userlog";
     }
 

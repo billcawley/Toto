@@ -201,7 +201,7 @@ public class UserUploadController {
                             if (!isImportTemplate) {
                                 warning = "</br>That does not appear to be an import template.  Assuming that it's an 'include' file";
                             }
-                            String error = ManageDatabasesController.formatUploadedFiles(Collections.singletonList(ImportService.uploadImportTemplate(uploadedFile, loggedInUser, assignTemplateToDatabase)), -1, false, null);
+                            String error = ManageDatabasesController.formatUploadedFiles(Collections.singletonList(ImportService.uploadImportTemplate(uploadedFile, loggedInUser, "")), -1, false, null);
                             model.put("error", error + warning);
 
                          } catch (Exception e) {
@@ -279,14 +279,7 @@ public class UserUploadController {
             }
         }).start();
         // edd pasting in here to get the banner colour working
-        Business business = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
-        String bannerColor = business.getBannerColor();
-        if (bannerColor == null || bannerColor.length() == 0) bannerColor = "#F58030";
-        String logo = business.getLogo();
-        if (logo == null || logo.length() == 0) logo = "logo_admin.png";
-        model.addAttribute("bannerColor", bannerColor);
-        model.addAttribute("logo", logo);
-        model.addAttribute("targetController", "UserUpload");
+        AdminService.setBanner(model,loggedInUser);
         return "importrunning";
     }
 }

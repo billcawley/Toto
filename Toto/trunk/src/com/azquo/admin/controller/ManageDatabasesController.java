@@ -407,7 +407,7 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
                             if (!isImportTemplate) {
                                 model.put("error", "That does not appear to be an import template.");
                             } else {
-                                model.put("error", formatUploadedFiles(Collections.singletonList(ImportService.uploadImportTemplate(uploadedFile, loggedInUser, assignTemplateToDatabase)), -1, false, null));
+                                model.put("error", formatUploadedFiles(Collections.singletonList(ImportService.uploadImportTemplate(uploadedFile, loggedInUser, userComment)), -1, false, null));
                             }
                         } catch (Exception e) {
                             model.put("error", e.getMessage());
@@ -539,13 +539,7 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
         }
 
         // edd pasting in here to get the banner colour working
-        Business business = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
-        String bannerColor = business.getBannerColor();
-        if (bannerColor == null || bannerColor.length() == 0) bannerColor = "#F58030";
-        String logo = business.getLogo();
-        if (logo == null || logo.length() == 0) logo = "logo_admin.png";
-        model.addAttribute("bannerColor", bannerColor);
-        model.addAttribute("logo", logo);
+        AdminService.setBanner(model,loggedInUser);
         model.addAttribute("targetController", "ManageDatabases");
         return "importrunning";
     }

@@ -44,7 +44,7 @@
 <header>
 	<div class="headerContainer">
 	<div class="logo">
-		<img src="/images/${logo}" alt="azquo">
+		<img src="${logo}" alt="azquo">
 	</div>
 	<nav class="nav">
 	<ul>

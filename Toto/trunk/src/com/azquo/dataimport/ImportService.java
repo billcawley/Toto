@@ -2,6 +2,7 @@ package com.azquo.dataimport;
 
 import com.agilecrm.api.APIManager;
 import com.azquo.*;
+import com.azquo.admin.business.BusinessDAO;
 import com.azquo.spreadsheet.transport.HeadingWithInterimLookup;
 import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.dataformat.csv.CsvMapper;
@@ -200,7 +201,7 @@ public final class ImportService {
         tempFile.toFile().deleteOnExit();
         Files.copy(Paths.get(uploadedFile.getPath()), tempFile, StandardCopyOption.REPLACE_EXISTING);
         uploadedFile.setPath(tempFile.toString()); // I'm now allowing adjustment of paths like this - having the object immutable became impractical
-        List<UploadedFile> processedUploadedFiles = checkForCompressionAndImport(loggedInUser, uploadedFile, session, pendingUploadConfig, new HashMap<>());
+        List<UploadedFile> processedUploadedFiles = checkForCompressionAndImport(loggedInUser, uploadedFile, session, pendingUploadConfig, new HashMap<>(), userComment);
         if (!uploadedFile.isValidationTest()) {
             // persist on the database server
             SpreadsheetService.databasePersist(loggedInUser);
@@ -226,7 +227,7 @@ public final class ImportService {
     }
 
     // deals with unzipping if required - recursive in case there's a zip in a zip
-    private static List<UploadedFile> checkForCompressionAndImport(final LoggedInUser loggedInUser, final UploadedFile uploadedFile, HttpSession session, PendingUploadConfig pendingUploadConfig, HashMap<String, ImportTemplateData> templateCache) throws Exception {
+    private static List<UploadedFile> checkForCompressionAndImport(final LoggedInUser loggedInUser, final UploadedFile uploadedFile, HttpSession session, PendingUploadConfig pendingUploadConfig, HashMap<String, ImportTemplateData> templateCache, String userComment) throws Exception {
         List<UploadedFile> processedUploadedFiles = new ArrayList<>();
         if (uploadedFile.getFileName().toLowerCase().endsWith(".zip") || uploadedFile.getFileName().toLowerCase().endsWith(".7z")) {
             try {
@@ -367,21 +368,24 @@ public final class ImportService {
                         }
                     }
                     UploadedFile zipEntryUploadFile = new UploadedFile(f.getPath(), names, fileNameParams, false, uploadedFile.isValidationTest());
-                    processedUploadedFiles.addAll(checkForCompressionAndImport(loggedInUser, zipEntryUploadFile, session, pendingUploadConfig, templateCache));
+                    processedUploadedFiles.addAll(checkForCompressionAndImport(loggedInUser, zipEntryUploadFile, session, pendingUploadConfig, templateCache, userComment));
                 }
                 counter++;
             }
         } else { // nothing to decompress
             // simple checks in case the wrong type of file is being uploaded here - will probably be removed later
+            String suffix = uploadedFile.getFileName().toLowerCase(Locale.ROOT).substring(uploadedFile.getFileName().length()-4);
             if (uploadedFile.getFileName().startsWith(CreateExcelForDownloadController.USERSFILENAME) && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster())) { // then it's not a normal import, users/permissions upload. There may be more conditions here if so might need to factor off somewhere
                 uploadedFile.setError("Please upload the users file in the users tab.");
                 processedUploadedFiles.add(uploadedFile);
             } else if (uploadedFile.getFileName().equals(CreateExcelForDownloadController.REPORTSCHEDULESFILENAME) && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster())) {
                 uploadedFile.setError("Please upload the report schedules file in the schedules tab.");
                 processedUploadedFiles.add(uploadedFile);
-            } else if (uploadedFile.getFileName().toLowerCase().endsWith(".xls") || uploadedFile.getFileName().toLowerCase().endsWith(".xlsx")) {
-                processedUploadedFiles.addAll(readBook(loggedInUser, uploadedFile, pendingUploadConfig, templateCache));
-            } else {
+            } else if (suffix.equals(".xls") || suffix.equals("xlsx")) {
+                processedUploadedFiles.addAll(readBook(loggedInUser, uploadedFile, pendingUploadConfig, templateCache, userComment));
+            } else if (suffix.equals(".jpg") || suffix.equals(".png")) {
+                return Collections.singletonList(uploadImportTemplate(uploadedFile, loggedInUser, userComment));
+            }else{
                 processedUploadedFiles.add(readPreparedFile(loggedInUser, uploadedFile, false, pendingUploadConfig, templateCache));
             }
         }
@@ -392,7 +396,7 @@ public final class ImportService {
 
 
     // a book will be a report to upload or a workbook which has to be converted into a csv for each sheet
-    private static List<UploadedFile> readBook(LoggedInUser loggedInUser, UploadedFile uploadedFile, PendingUploadConfig pendingUploadConfig, HashMap<String, ImportTemplateData> templateCache) throws Exception {
+    private static List<UploadedFile> readBook(LoggedInUser loggedInUser, UploadedFile uploadedFile, PendingUploadConfig pendingUploadConfig, HashMap<String, ImportTemplateData> templateCache, String userComment) throws Exception {
         long time = System.currentTimeMillis();
         org.apache.poi.ss.usermodel.Workbook book;
         org.apache.poi.openxml4j.opc.OPCPackage opcPackage = null;
@@ -465,14 +469,14 @@ public final class ImportService {
                 if (sheet.getSheetName().equalsIgnoreCase(ImportService.IMPORTMODEL)) {
                     if ((loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
                         if (opcPackage != null) opcPackage.revert();
-                        return Collections.singletonList(uploadImportTemplate(uploadedFile, loggedInUser, true));
+                        return Collections.singletonList(uploadImportTemplate(uploadedFile, loggedInUser, userComment));
                     }
                 }
                 // Import Model is one way to detect a template but it's not always there - names beginning az_Headings are a sign also
                 for (org.apache.poi.ss.usermodel.Name name : BookUtils.getNamesForSheet(sheet)) {
                     if (name.getNameName().startsWith(AZHEADINGS)) {
                         if (opcPackage != null) opcPackage.revert();
-                        return Collections.singletonList(uploadImportTemplate(uploadedFile, loggedInUser, true));
+                        return Collections.singletonList(uploadImportTemplate(uploadedFile, loggedInUser, userComment));
                     }
                 }
             }
@@ -482,7 +486,7 @@ public final class ImportService {
                 if ((loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
                     if (opcPackage != null) opcPackage.revert();
                     //preprocessors are not assigned to the file, import templates are assigned
-                    return Collections.singletonList(uploadImportTemplate(uploadedFile, loggedInUser, lcName.contains("import templates")));
+                    return Collections.singletonList(uploadImportTemplate(uploadedFile, loggedInUser, userComment));
                 }
             }
 
@@ -1964,10 +1968,12 @@ public final class ImportService {
     }
 
     // similar to uploading a report
-    public static UploadedFile uploadImportTemplate(UploadedFile uploadedFile, LoggedInUser loggedInUser, boolean assignToLoggedInUserDB) throws
+
+    public static UploadedFile uploadImportTemplate(UploadedFile uploadedFile, LoggedInUser loggedInUser, String userComment) throws
             IOException {
         //rule put in by WFC Jan-21
-        assignToLoggedInUserDB = uploadedFile.getFileName().toLowerCase().contains("import templates");
+        String suffix = uploadedFile.getFileName().toLowerCase(Locale.ROOT).substring(uploadedFile.getFileName().length()-4);
+        boolean assignToLoggedInUserDB = uploadedFile.getFileName().toLowerCase().contains("import templates");
         long time = System.currentTimeMillis();
         uploadedFile.setDataModified(true); // ok so it's not technically data modified but the file has been processed correctly.
         int businessId = loggedInUser.getUser().getBusinessId();
@@ -1983,11 +1989,21 @@ public final class ImportService {
             }
             importTemplate.setFilename(uploadedFile.getFileName()); // it might have changed, I don't think much else under these circumstances
             importTemplate.setDateCreated(LocalDateTime.now());
+            importTemplate.setNotes(userComment);
         } else {
-            importTemplate = new ImportTemplate(0, LocalDateTime.now(), businessId, loggedInUser.getUser().getId(), uploadedFile.getFileName(), uploadedFile.getFileName(), ""); // default to ZK now
+            importTemplate = new ImportTemplate(0, LocalDateTime.now(), businessId, loggedInUser.getUser().getId(), uploadedFile.getFileName(), uploadedFile.getFileName(),  userComment); // default to ZK now
         }
         ImportTemplateDAO.store(importTemplate);
         // right here is a problem - what about other users currently logged in with that database? todo
+        if (suffix.equals(".png")|| suffix.equals(".jpg")){
+            //business logo
+            loggedInUser.getBusiness().setLogo("templates-" + importTemplate.getId());
+            if (userComment!=null && userComment.length()==7){
+                loggedInUser.getBusiness().setBannerColor(userComment);
+            }
+             BusinessDAO.store(loggedInUser.getBusiness());
+        }
+
         if (assignToLoggedInUserDB) {
             Database database = loggedInUser.getDatabase();
             database.setImportTemplateId(importTemplate.getId());

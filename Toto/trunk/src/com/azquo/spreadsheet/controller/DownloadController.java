@@ -3,8 +3,7 @@ package com.azquo.spreadsheet.controller;
 import com.azquo.admin.AdminService;
 import com.azquo.admin.controller.PendingUploadController;
 import com.azquo.admin.database.DatabaseServer;
-import com.azquo.dataimport.PendingUpload;
-import com.azquo.dataimport.PendingUploadDAO;
+import com.azquo.dataimport.*;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
 import org.apache.commons.lang.math.NumberUtils;
@@ -21,6 +20,7 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Locale;
 
 /*
  * Copyright (C) 2016 Azquo Ltd.
@@ -49,10 +49,17 @@ public class DownloadController {
             response.setContentType("image/png"); // Set up mime type
             DatabaseServer databaseServer = loggedInUser.getDatabaseServer();
             String LOCALIP = "127.0.0.1";
-            if (databaseServer.getIp().equals(LOCALIP)) {
-                String pathOffset = loggedInUser.getBusinessDirectory() + "/images/" + image;
-                String dbPath = "/databases/";
-                Path filePath = Paths.get(SpreadsheetService.getHomeDir() + dbPath + pathOffset);
+            if (databaseServer.getIp().equals(LOCALIP) || image.startsWith("templates-")) {
+                Path filePath = null;
+                if (image.startsWith("templates")) {
+                    int templateId = NumberUtils.toInt(image.substring(10));
+                    ImportTemplate importTemplate = ImportTemplateDAO.findById(templateId);
+                    filePath = Paths.get(SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.importTemplatesDir + importTemplate.getFilenameForDisk());
+                }else {
+                    String pathOffset = loggedInUser.getBusinessDirectory() + "/images/" + image;
+                    String dbPath = "/databases/";
+                    filePath = Paths.get(SpreadsheetService.getHomeDir() + dbPath + pathOffset);
+                }
                 try {
                     streamFileToBrowser(filePath, response);
                 } catch (IOException ex) {
