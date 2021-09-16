@@ -9,6 +9,7 @@ import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.transport.UploadedFile;
+import com.extractagilecrm.ExtractContacts;
 import org.apache.commons.lang.math.NumberUtils;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.w3c.dom.Document;
@@ -21,6 +22,7 @@ import org.zeroturnaround.zip.commons.FileUtils;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.*;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -48,6 +50,63 @@ public class DBCron {
     @Scheduled(cron = "0 * * * * *")
     public void demoServiceMethod() {
 //        System.out.println("every minute?" + LocalDateTime.now());
+    }
+
+    // every hour, check imports that may need to be run then
+    @Scheduled(cron = "0 0 * * * *")
+    public static void checkHourlyImport() {
+        Path cronDir = Paths.get(SpreadsheetService.getHomeDir() + "/cron");
+        if (Files.exists(cronDir)) {
+            try (Stream<Path> list = Files.list(cronDir)) {
+                list.forEach(path -> {
+                    // Do stuff
+                    if (!Files.isDirectory(path) && path.getFileName().toString().toLowerCase().startsWith("hourly")) { // skip any directories
+                        runCronFile(path);
+                    }
+                });
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    // every day, check imports that may need to be run then
+    @Scheduled(cron = "0 0 0 * * *")
+    public static void checkDailyImport() {
+        Path cronDir = Paths.get(SpreadsheetService.getHomeDir() + "/cron");
+        if (Files.exists(cronDir)) {
+            try (Stream<Path> list = Files.list(cronDir)) {
+                list.forEach(path -> {
+                    // Do stuff
+                    if (!Files.isDirectory(path) && path.getFileName().toString().toLowerCase().startsWith("daily")) { // skip any directories
+                        runCronFile(path);
+                    }
+                });
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private static void runCronFile(Path path){
+        try {
+            List<String> config = Files.readAllLines(path, Charset.defaultCharset());
+            String type = config.get(0);
+            String destination = config.get(1);
+            String baseUrl = config.get(2);
+            String userEmail = config.get(3);
+            String restAPIKey = config.get(4);
+            if (type.startsWith("agilecontacts")){
+                int since = Integer.parseInt(type.substring(type.indexOf("-") + 1));
+                ExtractContacts.extractContacts(baseUrl, userEmail, restAPIKey, destination, since);
+            }
+            if (type.startsWith("agiledeals")){
+                ExtractContacts.extractDeals(baseUrl, userEmail, restAPIKey, destination);
+            }
+        } catch (IOException e) {
+
+        }
+
     }
 
     @Scheduled(cron = "0 */15 * * * *")// 15 mins as per ed broking requirements

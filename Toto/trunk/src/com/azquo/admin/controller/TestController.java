@@ -386,7 +386,8 @@ public class TestController {
         }
 
         if ("agilecrm".equals(something)) {
-            ExtractContacts.extract();
+//            DBCron.checkHourlyImport();
+            DBCron.checkDailyImport();
         }
 
         if ("appointedd".equals(something)) {

@@ -150,6 +150,8 @@ public final class ImportService {
 
 
     public static List<UploadedFile> importTheFile(final LoggedInUser loggedInUser, final UploadedFile uploadedFile, HttpSession session, PendingUploadConfig pendingUploadConfig, String userComment) throws Exception { // setup just to flag it
+        String logId = System.currentTimeMillis() + session.getId() + uploadedFile.getFileName();
+        SpreadsheetService.monitorLog(logId, loggedInUser.getBusiness().getBusinessName(), loggedInUser.getUser().getEmail(), "IMPORT", "START", uploadedFile.getFileName());
         if (session != null) {
             session.removeAttribute(ManageDatabasesController.IMPORTSTATUS);
         }
@@ -219,6 +221,7 @@ public final class ImportService {
             System.out.println("Zapping temporary copy");
             RMIClient.getServerInterface(loggedInUser.getDatabaseServer().getIp()).zapTemporaryCopy(loggedInUser.getDataAccessToken());
         }
+        SpreadsheetService.monitorLog(logId, loggedInUser.getBusiness().getBusinessName(), loggedInUser.getUser().getEmail(), "IMPORT", "END", uploadedFile.getFileName());
         return processedUploadedFiles;
     }
 

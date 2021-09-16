@@ -80,29 +80,20 @@ public class ExtractContacts {
         }
     }
 
-    static String agileFile = "/home/edward/bonza.txt";
-
-    public static String extract() {
+    public static void extractContacts(String url, String user, String password, String targetFile, int lastDays) {
         System.out.print("current time millis : " + System.currentTimeMillis());
-        Gson gson = new Gson();
         try {
-            List<String> config = Files.readAllLines(Paths.get(agileFile), Charset.defaultCharset());
-            String baseUrl = config.get(0);
-            String userEmail = config.get(1);
-            String restAPIKey = config.get(2);
-            // Create a connection to Agile CRM
-            APIManager apiManager = new APIManager(baseUrl, userEmail, restAPIKey);
-            ContactAPI contactApi = apiManager.getContactAPI();
             String cursor = "first_page";
+
             while (cursor != null){
-                JSONArray contacts = contactApi.getContacts("100", cursor);
+                JSONArray contacts = getByFilter(100, cursor, lastDays, "PERSON",url,user,password);
                 int tries = 0;
                 while (contacts == null && tries < 5){
-                    contacts = contactApi.getContacts("100", cursor);
+                    contacts = getByFilter(100, cursor, lastDays, "PERSON",url,user,password);
                     tries++;
                     System.out.println("tries : " + tries);
                 }
-                FileUtils.writeStringToFile(new File("/home/edward/Downloads/" + System.currentTimeMillis() + "contacts.json"), contacts.toString());
+                FileUtils.writeStringToFile(new File(targetFile + System.currentTimeMillis()), contacts.toString());
                 cursor = null;
                 for (Object contact : contacts){
                     JSONObject jcontact = (JSONObject) contact;
@@ -112,16 +103,27 @@ public class ExtractContacts {
                 }
                 System.out.println("+++++++++++++++++++ cursor : " + cursor);
             }
-            cursor = "first_page";
+        } catch (Exception e) {
+            System.out.println("message" + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+
+    public static void extractDeals(String url, String user, String password, String targetFile) {
+        System.out.print("current time millis : " + System.currentTimeMillis());
+        int lastDays = 20;
+        try {
+            String cursor = "first_page";
             while (cursor != null){
-                JSONArray deals = getDeals("100", cursor);
+                JSONArray deals = getDeals("100", cursor,url,user,password);
                 int tries = 0;
                 while (deals == null && tries < 5){
-                    deals = contactApi.getContacts("100", cursor);
+                    deals = getDeals("100", cursor,url,user,password);
                     tries++;
                     System.out.println("tries : " + tries);
                 }
-                FileUtils.writeStringToFile(new File("/home/edward/Downloads/" + System.currentTimeMillis() + "deals.json"), deals.toString());
+                FileUtils.writeStringToFile(new File(targetFile + System.currentTimeMillis()), deals.toString());
                 cursor = null;
                 for (Object deal : deals){
                     JSONObject jdeal = (JSONObject) deal;
@@ -132,60 +134,44 @@ public class ExtractContacts {
                 System.out.println("+++++++++++++++++++ cursor : " + cursor);
             }
 
-/*            Iterator<String> headingsIterator = headings.iterator();
-            while (headingsIterator.hasNext()){
-                String heading  = headingsIterator.next();
-                if (heading.contains("[")){
-                    if (Integer.parseInt(heading.substring(heading.indexOf("[") + 1, heading.indexOf("]"))) > 10){
-                        headingsIterator.remove();
-                    }
-                }
-            }
-
-            TestController.writeCSV("/home/edward/bonzacontacts.tsv",new ArrayList<>(headings), lines);*/
-
-/*
-            cursor = "first_page";
-            headings = new HashSet<>();
-            lines = new ArrayList<>();
-            // remove campaign status + a certain amount? there are a lot . . .
-            while (cursor != null){
-                // List of tags to add it to contact
-                // --------------------- Get contacts -----------------------------
-                JSONArray deals = getDeals("500", cursor);
-                cursor = null;
-                for (Object deal : deals){
-                    //System.out.println(contact);
-                    JSONObject deal1 = (JSONObject) deal;
-                    Map<String, Object> stringObjectMap = JsonFlattener.flattenAsMap(deal1.toString());
-                    //System.out.println(contacts.toString());
-                    Map<String, String> line = new HashMap<>();
-                    for (String key : stringObjectMap.keySet()){
-                        headings.add(key);
-                        //System.out.println(key + " : " + stringObjectMap.get(key));
-                        line.put(key, stringObjectMap.get(key) + "");
-                    }
-                    cursor = line.get("cursor");
-                    lines.add(line);
-                }
-                System.out.println("+++++++++++++++++++ cursor : " + cursor);
-            }
-            TestController.writeCSV("/home/edward/bonzadeals.tsv",new ArrayList<>(headings), lines);*/
         } catch (Exception e) {
             System.out.println("message" + e.getMessage());
             e.printStackTrace();
         }
-        return "";
     }
 
 
-    public static JSONArray getDeals(String page_size, String cursor)
+    public static JSONArray getByFilter(int page_size, String cursor, int daysAgo, String type, String baseUrl, String userEmail, String restAPIKey)
             throws Exception {
-        // todo - don't do this every time
-        List<String> config = Files.readAllLines(Paths.get(agileFile), Charset.defaultCharset());
-        String baseUrl = config.get(0);
-        String userEmail = config.get(1);
-        String restAPIKey = config.get(2);
+        APIManager apiManager = new APIManager(baseUrl, userEmail, restAPIKey);
+        System.out.println("Getting " + type + " by page and cursor-----------------------");
+        // EFC commenting - we want a filter
+/*
+        params.add("page_size", page_size);
+        params.add("global_sort_key", "-created_time");
+
+        if (!cursor.isEmpty() && !cursor.equalsIgnoreCase("first_page"))
+            params.add("cursor", cursor);
+ClientResponse clientResponse = apiManager.getResource().path("/api/opportunity")
+                .queryParams(params).accept(MediaType.APPLICATION_JSON)
+                .get(ClientResponse.class);*/
+
+        ClientResponse clientResponse = apiManager.getResource().path("/api/filters/filter/dynamic-filter").type("application/x-www-form-urlencoded")
+                .accept(MediaType.APPLICATION_JSON)
+                .post(ClientResponse.class, "page_size=" + page_size + "&global_sort_key=-created_time" + (cursor != null && !cursor.isEmpty() && !"first_page".equalsIgnoreCase(cursor) ? "&cursor=" + cursor : "") + "&filterJson={\"rules\":[{\"LHS\":\"updated_time\",\"CONDITION\":\"LAST\",\"RHS\":\"" + daysAgo + "\"}],\"or_rules\":[],\"contact_type\":\"" + type + "\"}");
+
+        System.out.println("Status of API = " + clientResponse);
+        JSONArray response = null;
+        try {
+            response = new JSONArray(clientResponse.getEntity(String.class));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return response;
+    }
+
+    public static JSONArray getDeals(String page_size, String cursor, String baseUrl, String userEmail, String restAPIKey)
+            throws Exception {
         APIManager apiManager = new APIManager(baseUrl, userEmail, restAPIKey);
         System.out
                 .println("Getting opportunities by page and cursor-----------------------");
@@ -213,6 +199,5 @@ public class ExtractContacts {
         }
         return contacts;
     }
-
 
 }

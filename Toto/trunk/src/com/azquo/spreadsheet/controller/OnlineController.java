@@ -339,6 +339,8 @@ public class OnlineController {
                         new Thread(() -> {
                             // so in here the new thread we set up the loading as it was originally before
                             try {
+                                String logId = System.currentTimeMillis() + session.getId() + finalReportId;
+                                SpreadsheetService.monitorLog(logId, loggedInUser.getBusiness().getBusinessName(), loggedInUser.getUser().getEmail(), "REPORT", "START", finalOnlineReport.getReportName());
                                 boolean executeNow = executeMode;
                                 long oldHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
                                 String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + finalOnlineReport.getFilenameForDisk();
@@ -392,6 +394,7 @@ public class OnlineController {
                                 System.out.println(logDf.format(new Date()) + " - " + loggedInUser.getUser().getEmail() + " Heap cost to populate book : " + (newHeapMarker - oldHeapMarker) / mb);
                                 System.out.println();
                                 session.setAttribute(finalReportId, book);
+                                SpreadsheetService.monitorLog(logId, loggedInUser.getBusiness().getBusinessName(), loggedInUser.getUser().getEmail(), "REPORT", "END", finalOnlineReport.getReportName());
                             } catch (Exception e) { // changed to overall exception handling
                                 e.printStackTrace(); // Could be when importing the book, just log it
                                 session.setAttribute(finalReportId + "error", e.getMessage()); // put it here to puck up instead of the report

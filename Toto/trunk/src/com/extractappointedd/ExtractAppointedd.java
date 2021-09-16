@@ -45,19 +45,19 @@ public class ExtractAppointedd {
                 .header("X-API-KEY", "TmpFeU5tSTBaRFJqWkRJeVlXRXdNelV3Tnpsa09HVXo6ZUZjelVHRldZMHRUTVhkaWFVZEpaMm81ZVVKMGNHVlA=")
                 .get(String.class);
 
-        FileUtils.writeStringToFile(new File("/home/edward/Downloads/" + System.currentTimeMillis() + "bookings.json"), result);
+        FileUtils.writeStringToFile(new File("/home/edward/Downloads/" + System.currentTimeMillis() + "(preprocessor=Charter House Bookings Preprocessor)bookings.json"), result);
 
         result = resource.path("/v1/resources").queryParams(params)
                 .header("X-API-KEY", "TmpFeU5tSTBaRFJqWkRJeVlXRXdNelV3Tnpsa09HVXo6ZUZjelVHRldZMHRUTVhkaWFVZEpaMm81ZVVKMGNHVlA=")
                 .get(String.class);
 
-        FileUtils.writeStringToFile(new File("/home/edward/Downloads/" + System.currentTimeMillis() + "resources.json"), result);
+        FileUtils.writeStringToFile(new File("/home/edward/Downloads/" + System.currentTimeMillis() + "(preprocessor=Charter House Resources Preprocessor)resources.json"), result);
 
         result = resource.path("/v1/customers").queryParams(params)
                 .header("X-API-KEY", "TmpFeU5tSTBaRFJqWkRJeVlXRXdNelV3Tnpsa09HVXo6ZUZjelVHRldZMHRUTVhkaWFVZEpaMm81ZVVKMGNHVlA=")
                 .get(String.class);
 
-        FileUtils.writeStringToFile(new File("/home/edward/Downloads/" + System.currentTimeMillis() + "customers.json"), result);
+        FileUtils.writeStringToFile(new File("/home/edward/Downloads/" + System.currentTimeMillis() + "(preprocessor=Charter House Customer Preprocessor)customers.json"), result);
 
         System.out.println("extract appointedd result : " + result);
 

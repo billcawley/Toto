@@ -194,7 +194,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                     }
                 }
             }
-            final SCell cell = myzss.getSelectedSheet().getInternalSheet().getCell(event.getRow(), event.getColumn());// we care about the contents of the left most cell
+            final SCell cell = myzss.getSelectedSheet().getInternalSheet().getCell(event.getRow(), event.getColumn());
             if (!cell.isNull() && cell.getType().equals(SCell.CellType.FORMULA)) {
                 String formula = cell.getFormulaValue();
                 if (formula.contains("HYPERLINK")){
@@ -203,7 +203,6 @@ public class ZKComposer extends SelectorComposer<Component> {
                     String linkName = formula.substring(startIndex,endIndex);
                     SName linkSName = event.getSheet().getBook().getInternalBook().getNameByName(linkName);
                     if (linkSName != null){
-
                         Clients.evalJavaScript("window.open(\"" + BookUtils.getRegionValue(myzss.getSelectedSheet(), linkSName.getRefersToCellRegion()) + "\")");
                     }
                 }

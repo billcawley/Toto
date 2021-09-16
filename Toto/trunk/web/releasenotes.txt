@@ -1,3 +1,9 @@
+13-09-21
+
+more poi hacking to enable keikai to function
+
+adjusted Json import so that it will detect an array of data
+
 25-08-21
 
 removed case sensitivity to some tests - including 'az_ignore'

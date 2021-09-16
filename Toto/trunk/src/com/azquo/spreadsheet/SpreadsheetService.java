@@ -35,8 +35,15 @@ import serilogj.events.LogEventLevel;
 
 import java.io.*;
 import java.net.InetAddress;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.rmi.RemoteException;
+import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -98,6 +105,27 @@ public class SpreadsheetService {
                 .setMinimumLevel(LogEventLevel.Verbose)
                 .createLogger());
     }
+
+    static SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
+
+    // event id matches start and finish e.g. upload started/ended
+    // synchronsed hmmm
+    public static synchronized void monitorLog(String eventId, String business, String user, String type, String event, String identifier) {
+        String dateString = format.format(new Date());
+        try {
+            if (!Files.exists(Paths.get(SpreadsheetService.getHomeDir() + "/azquoevents" + dateString + ".log"))){
+                Files.write(Paths.get(SpreadsheetService.getHomeDir() + "/azquoevents" + dateString + ".log"),
+                        ("TIMESTAMP\tEVENTID\tBUSINESS\tUSER\tTYPE\tEVENT\tIDENTIFIER\n")
+                                .getBytes(StandardCharsets.UTF_8), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+            }
+            Files.write(Paths.get(SpreadsheetService.getHomeDir() + "/azquoevents" + dateString + ".log"),
+                    (System.currentTimeMillis() + "\t" + eventId + "\t" + business + "\t" + user + "\t" + type +  "\t" + event +  "\t" + identifier + "\n")
+                            .getBytes(StandardCharsets.UTF_8), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
 
     private static final Map<String, String> properties = new ConcurrentHashMap<>();
 
