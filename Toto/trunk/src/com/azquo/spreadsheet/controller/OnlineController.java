@@ -339,7 +339,7 @@ public class OnlineController {
                         new Thread(() -> {
                             // so in here the new thread we set up the loading as it was originally before
                             try {
-                                String logId = System.currentTimeMillis() + session.getId() + finalReportId;
+                                String logId = System.currentTimeMillis() + (session != null ? session.getId() : "nosession") + finalReportId;
                                 SpreadsheetService.monitorLog(logId, loggedInUser.getBusiness().getBusinessName(), loggedInUser.getUser().getEmail(), "REPORT", "START", finalOnlineReport.getReportName());
                                 boolean executeNow = executeMode;
                                 long oldHeapMarker = (runtime.totalMemory() - runtime.freeMemory());

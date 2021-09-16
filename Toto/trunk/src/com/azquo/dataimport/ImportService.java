@@ -150,7 +150,7 @@ public final class ImportService {
 
 
     public static List<UploadedFile> importTheFile(final LoggedInUser loggedInUser, final UploadedFile uploadedFile, HttpSession session, PendingUploadConfig pendingUploadConfig, String userComment) throws Exception { // setup just to flag it
-        String logId = System.currentTimeMillis() + session.getId() + uploadedFile.getFileName();
+        String logId = System.currentTimeMillis() + (session != null ? session.getId() : "nosession") + uploadedFile.getFileName();
         SpreadsheetService.monitorLog(logId, loggedInUser.getBusiness().getBusinessName(), loggedInUser.getUser().getEmail(), "IMPORT", "START", uploadedFile.getFileName());
         if (session != null) {
             session.removeAttribute(ManageDatabasesController.IMPORTSTATUS);
