@@ -1979,6 +1979,9 @@ public final class ImportService {
         int businessId = loggedInUser.getUser().getBusinessId();
         String pathName = loggedInUser.getBusinessDirectory();
         ImportTemplate importTemplate = ImportTemplateDAO.findForNameAndBusinessId(uploadedFile.getFileName(), loggedInUser.getUser().getBusinessId());
+        if (userComment==null){
+            userComment = "";
+        }
         if (importTemplate != null) {
             // zap the old one first
             try {
@@ -1987,7 +1990,7 @@ public final class ImportService {
                 System.out.println("problem deleting old template");
                 e.printStackTrace();
             }
-            importTemplate.setFilename(uploadedFile.getFileName()); // it might have changed, I don't think much else under these circumstances
+             importTemplate.setFilename(uploadedFile.getFileName()); // it might have changed, I don't think much else under these circumstances
             importTemplate.setDateCreated(LocalDateTime.now());
             importTemplate.setNotes(userComment);
         } else {
