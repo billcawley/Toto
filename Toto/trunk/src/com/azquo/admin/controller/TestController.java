@@ -3,7 +3,6 @@ package com.azquo.admin.controller;
 import com.azquo.dataimport.*;
 import com.csvreader.CsvWriter;
 import com.ecwid.maleorang.MailchimpException;
-import com.extractagilecrm.ExtractContacts;
 import com.extractappointedd.ExtractAppointedd;
 import com.extractdotdigital.ExtractDotDigital;
 import com.extractmailchimp.ExtractMailchimp;
@@ -391,11 +390,7 @@ public class TestController {
         }
 
         if ("appointedd".equals(something)) {
-            try {
-                ExtractAppointedd.extract();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            DBCron.check5MinsImport();
         }
 
         if ("pdfbox".equals(something)) {

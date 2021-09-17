@@ -1,28 +1,25 @@
 package com.extractappointedd;
 
 import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.api.client.config.ClientConfig;
 import com.sun.jersey.api.client.config.DefaultClientConfig;
-import com.sun.jersey.api.client.filter.HTTPBasicAuthFilter;
 import com.sun.jersey.core.util.MultivaluedMapImpl;
 import org.apache.commons.io.FileUtils;
-import org.json.JSONArray;
 import org.json.JSONObject;
 
-import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.Charset;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.List;
 
 public class ExtractAppointedd {
 
-    public static void extract() throws IOException {
+    /* todo
+
+string <date-time>
+Filters the returned bookings by the date and time they were last updated on, returning only those that were last updated on or after this date and time.
+     */
+    public static void extract(String baseUrl, String path, String restAPIKey, String destination) throws IOException {
 
 /*        List<String> localconfig = Files.readAllLines(Paths.get("/home/edward/Downloads/dotdigital.txt"), Charset.defaultCharset());
         String baseUrl = localconfig.get(0);
@@ -34,32 +31,30 @@ public class ExtractAppointedd {
 
         Client client = Client.create(config);
 //	client.addFilter(new LoggingFilter(System.out));
-        WebResource resource = client.resource("https://api.appointedd.com");
+        WebResource resource = client.resource(baseUrl);
 
         //resource.addFilter(new HTTPBasicAuthFilter("", password));
+        StringBuilder sb = new StringBuilder();
 
         MultivaluedMap<String, String> params = new MultivaluedMapImpl();
         params.add("limit", "100");
 
-        String result = resource.path("/v1/bookings").queryParams(params)
-                .header("X-API-KEY", "TmpFeU5tSTBaRFJqWkRJeVlXRXdNelV3Tnpsa09HVXo6ZUZjelVHRldZMHRUTVhkaWFVZEpaMm81ZVVKMGNHVlA=")
+        String result = resource.path(path).queryParams(params)
+                .header("X-API-KEY", restAPIKey)
                 .get(String.class);
+        sb.append(result);
+        JSONObject activity = new JSONObject(result);
 
-        FileUtils.writeStringToFile(new File("/home/edward/Downloads/" + System.currentTimeMillis() + "(preprocessor=Charter House Bookings Preprocessor)bookings.json"), result);
-
-        result = resource.path("/v1/resources").queryParams(params)
-                .header("X-API-KEY", "TmpFeU5tSTBaRFJqWkRJeVlXRXdNelV3Tnpsa09HVXo6ZUZjelVHRldZMHRUTVhkaWFVZEpaMm81ZVVKMGNHVlA=")
-                .get(String.class);
-
-        FileUtils.writeStringToFile(new File("/home/edward/Downloads/" + System.currentTimeMillis() + "(preprocessor=Charter House Resources Preprocessor)resources.json"), result);
-
-        result = resource.path("/v1/customers").queryParams(params)
-                .header("X-API-KEY", "TmpFeU5tSTBaRFJqWkRJeVlXRXdNelV3Tnpsa09HVXo6ZUZjelVHRldZMHRUTVhkaWFVZEpaMm81ZVVKMGNHVlA=")
-                .get(String.class);
-
-        FileUtils.writeStringToFile(new File("/home/edward/Downloads/" + System.currentTimeMillis() + "(preprocessor=Charter House Customer Preprocessor)customers.json"), result);
-
-        System.out.println("extract appointedd result : " + result);
+        while (activity.get("next") != JSONObject.NULL){
+            params.remove("start");
+            params.add("start", activity.get("next").toString());
+            result = resource.path(path).queryParams(params)
+                    .header("X-API-KEY", restAPIKey)
+                    .get(String.class);
+            activity = new JSONObject(result);
+            sb.append(result);
+        }
+        FileUtils.writeStringToFile(new File(destination + System.currentTimeMillis()), sb.toString());
 
 
     }

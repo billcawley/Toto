@@ -10,6 +10,7 @@ import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.transport.UploadedFile;
 import com.extractagilecrm.ExtractContacts;
+import com.extractappointedd.ExtractAppointedd;
 import org.apache.commons.lang.math.NumberUtils;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.w3c.dom.Document;
@@ -50,6 +51,24 @@ public class DBCron {
     @Scheduled(cron = "0 * * * * *")
     public void demoServiceMethod() {
 //        System.out.println("every minute?" + LocalDateTime.now());
+    }
+
+    // every 5 mins, check imports that may need to be run then
+    @Scheduled(cron = "0 */5 * * * *")
+    public static void check5MinsImport() {
+        Path cronDir = Paths.get(SpreadsheetService.getHomeDir() + "/cron");
+        if (Files.exists(cronDir)) {
+            try (Stream<Path> list = Files.list(cronDir)) {
+                list.forEach(path -> {
+                    // Do stuff
+                    if (!Files.isDirectory(path) && path.getFileName().toString().toLowerCase().startsWith("5mins")) { // skip any directories
+                        runCronFile(path);
+                    }
+                });
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     // every hour, check imports that may need to be run then
@@ -102,6 +121,15 @@ public class DBCron {
             }
             if (type.startsWith("agiledeals")){
                 ExtractContacts.extractDeals(baseUrl, userEmail, restAPIKey, destination);
+            }
+            if (type.startsWith("appointeddcustomers")){
+                ExtractAppointedd.extract(baseUrl,"/v1/customers", restAPIKey, destination);
+            }
+            if (type.startsWith("appointeddresources")){
+                ExtractAppointedd.extract(baseUrl,"/v1/resources", restAPIKey, destination);
+            }
+            if (type.startsWith("appointeddbookings")){
+                ExtractAppointedd.extract(baseUrl,"/v1/bookings", restAPIKey, destination);
             }
         } catch (IOException e) {
 

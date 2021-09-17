@@ -55,15 +55,11 @@ public class DownloadController {
                     int templateId = NumberUtils.toInt(image.substring(10));
                     ImportTemplate importTemplate = ImportTemplateDAO.findById(templateId);
                     filePath = Paths.get(SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.importTemplatesDir + importTemplate.getFilenameForDisk());
-                }else {
-                    String pathOffset = loggedInUser.getBusinessDirectory() + "/images/" + image;
-                    String dbPath = "/databases/";
-                    filePath = Paths.get(SpreadsheetService.getHomeDir() + dbPath + pathOffset);
-                }
-                try {
-                    streamFileToBrowser(filePath, response);
-                } catch (IOException ex) {
-                    ex.printStackTrace();
+                    try {
+                        streamFileToBrowser(filePath, response);
+                    } catch (IOException ex) {
+                        ex.printStackTrace();
+                    }
                 }
             }
         }
