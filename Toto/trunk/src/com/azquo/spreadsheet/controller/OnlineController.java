@@ -381,8 +381,8 @@ public class OnlineController {
 
                                 if (executeNow) {
                                     session.removeAttribute("ExecuteResult");
-                                    ReportExecutor.runExecuteCommandForBook(book, StringLiterals.EXECUTE); // standard, there's the option to execute the contents of a different names
-//                                    session.setAttribute("ExecuteResult", execResult);
+                                    String execResult = ReportExecutor.runExecuteCommandForBook(book, StringLiterals.EXECUTE); // standard, there's the option to execute the contents of a different names
+                                    session.setAttribute("ExecuteResult", execResult);
                                  }
                                 session.setAttribute(finalReportId + SAVE_FLAG, false); // no save button after an execute
                                 long newHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
