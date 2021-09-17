@@ -398,4 +398,14 @@ java.lang.IllegalStateException: is ERROR, not the one of [STRING, BLANK]
 
     }
 
+    public static void setNameValue(Book book, String name, String value)throws Exception{
+        SName sName = getNameByName(name, book.getSheetAt(0));
+        if (sName!=null){
+            SCell resultCell = getSnameCell(sName);
+            resultCell.setStringValue(value);
+
+        }
+
+    }
+
 }
