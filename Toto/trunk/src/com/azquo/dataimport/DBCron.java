@@ -378,7 +378,7 @@ public class DBCron {
                                                     String fileName = fileToUpload.toFile().getName();
                                                     Files.move(fileToUpload, moved);
                                                     // now . . .we need a user to upload it. Initially copying broaksure code above, this may need to be changed in time
-                                                    LoggedInUser loggedInUser = new LoggedInUser(new User(0, LocalDateTime.now(), b.getId(), "brokasure", "", "", "", "", "", 0, 0, "", "")
+                                                    LoggedInUser loggedInUser = new LoggedInUser(new User(0, LocalDateTime.now(), b.getId(), "directupload", "", "", "", "", "", 0, 0, "", "")
                                                             , DatabaseServerDAO.findById(matchingDBdir.getDatabaseServerId()), matchingDBdir, null, b);
                                                     final Map<String, String> fileNameParams = new HashMap<>();
                                                     ImportService.addFileNameParametersToMap(fileName, fileNameParams);

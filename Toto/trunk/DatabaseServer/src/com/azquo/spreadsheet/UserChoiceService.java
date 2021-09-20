@@ -227,6 +227,13 @@ public class UserChoiceService {
                 // ok the provenance id >= looks a bit hacky - if something updated it after (e.g. a validation sheet) then it's fair game also
                 if (name.getProvenance().getId() >= provenanceId) {
                     remove = false;
+                } else {
+                    for (Name n : name.findAllChildren()) {
+                        if (n.getProvenance().getId() >= provenanceId) {
+                            remove = false;
+                            break;
+                        }
+                    }
                 }
                 if (remove){
                     for (Value v : name.getValues()) {
