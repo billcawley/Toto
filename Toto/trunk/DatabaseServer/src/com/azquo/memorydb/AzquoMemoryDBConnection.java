@@ -2,6 +2,8 @@ package com.azquo.memorydb;
 
 import com.azquo.memorydb.core.*;
 import com.azquo.memorydb.dao.StatisticsDAO;
+import com.azquo.memorydb.service.NameService;
+import com.azquo.spreadsheet.transport.AuditCounts;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -130,7 +132,6 @@ public class AzquoMemoryDBConnection {
         }
         this.provenance = new Provenance(getAzquoMemoryDB(), user, method, name, context);
     }
-
     public void setProvenance(final Provenance p)  {
         this.provenance = p;
     }

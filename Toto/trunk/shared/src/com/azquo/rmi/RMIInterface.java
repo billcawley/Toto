@@ -81,6 +81,8 @@ public interface RMIInterface extends Remote {
 
     TreeNode getJstreeDataForOutputUsingIds(DatabaseAccessToken databaseAccessToken, Set<Integer> nameIds, int maxSize) throws RemoteException;
 
+    TreeNode getIndividualProvenanceCounts(DatabaseAccessToken databaseAccessToken, int maxCount, String pChosen) throws RemoteException;
+
     boolean isDatabaseLoaded(String persistenceName) throws RemoteException;
 
     int getNameCount(String persistenceName) throws RemoteException;
@@ -129,6 +131,8 @@ public interface RMIInterface extends Remote {
 
     ProvenanceDetailsForDisplay getListOfChangedValues(DatabaseAccessToken databaseAccessToken, int limit) throws RemoteException;
 
+    ProvenanceDetailsForDisplay getDatabaseAuditList(DatabaseAccessToken databaseAccessToken, String dateTime, int maxCount) throws  RemoteException;
+
     // backup functions
 
     String getBackupFileForDatabase(String databasseName, String subsetName, DatabaseAccessToken dataAccessToken) throws RemoteException;
@@ -144,5 +148,7 @@ public interface RMIInterface extends Remote {
     void sendBatchOfProvenanceFromBackup(DatabaseAccessToken dataAccessToken, List<ProvenanceForBackup> provenanceForBackup) throws RemoteException;
 
     String getMostRecentProvenance(String persistenceName) throws RemoteException;
+
+
 
 }

@@ -131,6 +131,7 @@
 							<!-- <li><a href="#" onclick="postAjax('PDF'); return false;" title="Download as PDF"><span class="fa fa-file-pdf-o"></span> Download as PDF</a></li> -->
 							<c:if test="${showTemplate == true}"><li><a href="#" onclick="window.location.assign(window.location.href+='&opcode=template')">View Template</a></li></c:if>
 							<li><a href="#" onclick="return inspectDatabase();" title="Inspect database"><span class="fa fa-eye"></span> Inspect database</a></li>
+							<li><a href="#" onclick="return auditDatabase();" title="Audit Database"><span class="fa fa-eye"></span> Audit Database</a></li>
 							<li><a href="#" onclick="return uploadFile();" title="Upload file"><span class="fa fa-cloud-upload"></span> Upload file</a></li>
 							<li><a href="#" onclick="return postAjax('FREEZE');" title="Upload file"><span class="fa fa-link"></span> Freeze</a></li>
 							<li><a href="#" onclick="return postAjax('UNFREEZE');" title="Upload file"><span class="fa fa-unlink"></span> Unfreeze</a></li>

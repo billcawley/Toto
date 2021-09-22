@@ -316,6 +316,15 @@ class RMIImplementation implements RMIInterface {
         }
     }
 
+    public TreeNode getIndividualProvenanceCounts(DatabaseAccessToken databaseAccessToken, int maxSize, String pChosen) throws RemoteException {
+        try {
+            return ProvenanceService.getIndividualProvenanceCounts(databaseAccessToken,maxSize,pChosen);
+        } catch (Exception e) {
+            throw new RemoteException("Database Server Exception", e);
+        }
+    }
+
+
     @Override
     public ProvenanceDetailsForDisplay getProvenanceDetailsForDisplay(DatabaseAccessToken databaseAccessToken, String user, List<List<String>> rowHeadingsSource, List<List<String>> colHeadingsSource, List<List<String>> contextSource, RegionOptions regionOptionsForTransport, int unsortedRow, int unsortedCol, int maxSize) throws RemoteException {
         try {
@@ -546,6 +555,16 @@ class RMIImplementation implements RMIInterface {
             throw new RemoteException("Database Server Exception", e);
         }
     }
+
+    @Override
+    public ProvenanceDetailsForDisplay getDatabaseAuditList(DatabaseAccessToken databaseAccessToken, String dateTime, int maxCount) throws  RemoteException {
+        try {
+            return ProvenanceService.getDatabaseAuditList(databaseAccessToken, dateTime, maxCount);
+        } catch (Exception e) {
+            throw new RemoteException("Database Server Exception", e);
+        }
+    }
+
 
     @Override
     public String getBackupFileForDatabase(String databaseName, String subsetName, DatabaseAccessToken databaseAccessToken) throws RemoteException {

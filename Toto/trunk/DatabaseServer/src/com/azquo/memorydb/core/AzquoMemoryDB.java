@@ -3,6 +3,7 @@ package com.azquo.memorydb.core;
 import com.azquo.StringLiterals;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.service.DSAdminService;
+import com.azquo.spreadsheet.transport.AuditCounts;
 import net.openhft.koloboke.collect.map.hash.HashObjObjMaps;
 
 import java.io.IOException;
@@ -193,6 +194,9 @@ public final class AzquoMemoryDB {
     // replace the caches held against each name, should save memory
     private final Map<Name, Set<Name>> findAllChildrenCacheMap;
     private final Map<Name, Set<Value>> valuesIncludingChildrenCacheMap;
+
+    private Map<Provenance, AuditCounts> auditMap = new TreeMap();
+
 
 
     /*
@@ -550,6 +554,17 @@ public final class AzquoMemoryDB {
     public Map<Name, Set<Value>> getValuesIncludingChildrenCacheMap() {
         return valuesIncludingChildrenCacheMap;
     }
+
+    public void setAuditMap(Map<Provenance, AuditCounts>auditMap){
+        this.auditMap = auditMap;
+    }
+
+    public Map<Provenance,AuditCounts> getAuditMap(){
+        return auditMap;
+    }
+
+
+
 
 /*
     private static void printFunctionCountStats() {

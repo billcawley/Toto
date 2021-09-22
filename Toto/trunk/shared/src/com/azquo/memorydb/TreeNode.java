@@ -15,6 +15,7 @@ import java.util.List;
  *
  */
 public class TreeNode implements Serializable{
+    private String names;
     private String heading;
     private String name;
     private String value;
@@ -34,6 +35,7 @@ public class TreeNode implements Serializable{
 
     // for a single value, it's here that it will have a value id
     public TreeNode(String name, String value, double dValue, int valueId, List<String> valueHistory) {
+        this.names = null;
         this.heading = null;
         this.children = new ArrayList<>();
         this.name = name;
@@ -52,6 +54,10 @@ public class TreeNode implements Serializable{
         this.valueId = 0;
         this.valueHistory = null;
     }
+
+    public void setNames(String names){this.names = names; }
+
+    public String getNames(){ return names; };
 
     public void setHeading(String heading){
         this.heading = heading;

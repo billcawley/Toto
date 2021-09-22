@@ -22,6 +22,11 @@ public class ProvenanceForDisplay implements Serializable {
      // now what can be attached to each provenance in this context?
     private List<ValueDetailsForProvenance> valueDetailsForProvenances;
     private List<String> names;
+    private int nameCount;
+    private int valueCount;
+    private int provenanceCount;
+    private String displayDate;
+    private int id;
 
     public ProvenanceForDisplay(boolean inSpreadsheet, String user, String method, String name, String context, LocalDateTime date ) {
         this.inSpreadsheet = inSpreadsheet;
@@ -32,6 +37,9 @@ public class ProvenanceForDisplay implements Serializable {
         this.date = date;
         names = null;
         valueDetailsForProvenances = null;
+        nameCount = -1;
+        valueCount = -1;
+        provenanceCount = -1;
     }
 
     public void setInSpreadsheet(boolean inSpreadsheet) {
@@ -88,6 +96,26 @@ public class ProvenanceForDisplay implements Serializable {
         this.valueDetailsForProvenances = valueDetailsForProvenances;
     }
 
+    public void setNameCount(int nameCount) {this.nameCount = nameCount; }
+
+    public int getNameCount(){return this.nameCount; }
+
+    public void setValueCount(int valueCount) {this.valueCount = valueCount; }
+
+    public int getValueCount(){ return this.valueCount; }
+
+    public void setProvenanceCount(int provenanceCount) {this.provenanceCount = provenanceCount;  }
+
+    public int getProvenanceCount() { return this.provenanceCount; }
+
+    public void setDisplayDate(String displayDate) {this.displayDate = displayDate; }
+
+    public String getDisplayDate() {return this.displayDate; }
+
+    public void setId(int id) {this.id = id; }
+
+    public int getId(){ return this.id; }
+
     private final static DateTimeFormatter df = DateTimeFormatter.ofPattern("dd/MM/yy HH:mm:ss");
 
     @Override
@@ -100,6 +128,9 @@ public class ProvenanceForDisplay implements Serializable {
         }
         if (context != null && context.length() > 0){
             toReturn.append(" with ").append(context);
+        }
+        if (nameCount>=0){
+            toReturn.append("\t" + nameCount + "\t" + valueCount);
         }
         return toReturn.toString();
     }

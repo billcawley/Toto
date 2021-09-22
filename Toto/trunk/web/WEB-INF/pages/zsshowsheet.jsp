@@ -78,6 +78,12 @@
         // window.open("/api/Jstree?op=new", "_blank", "toolbar=no, status=no,scrollbars=yes, resizable=yes, top=150, left=200, width=600, height=600")
     }
 
+    function auditDatabase(){
+        // can be passed database
+        window.open("/api/AuditDatabase", "_blank", "toolbar=no, status=no,scrollbars=yes, resizable=yes, top=100, left=100, width=1600, height=1000")
+    }
+
+
     // a more advanced choice option as opposed to the dropdown
     function chosenTree(query){
         // can be passed database

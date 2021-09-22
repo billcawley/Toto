@@ -44,6 +44,7 @@ class NameEditFunctions {
         }
 
 
+
 // todo, finish and make it work
 
         if (setFormula.startsWith("orphan")) {
@@ -215,6 +216,11 @@ class NameEditFunctions {
             }
             //TO DO - ZAP THE OTHER VALUES TOO
             new Thread(azquoMemoryDBConnection::persist).start();
+        }
+
+        if (setFormula.startsWith("auditdatabase")){
+            ProvenanceService.getProvenanceCounts(azquoMemoryDBConnection,2000);
+            return Collections.emptyList();
         }
         throw new Exception(setFormula + " not understood");
     }
@@ -429,4 +435,6 @@ class NameEditFunctions {
             cleanRoot(azquoMemoryDBConnection);
             new Thread(azquoMemoryDBConnection::persist).start();
     }
+
+
 }

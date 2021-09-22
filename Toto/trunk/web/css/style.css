@@ -251,3 +251,4 @@ table.edit td label{min-width:100px;}
 .contextUser {color:#770000;}
 .context     {color:#0000ff;}
 .contextValues {color:#ddeeff; font-size:10px}
+.treenode    {position:relative; left:50px;text-align:left}

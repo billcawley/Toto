@@ -1,5 +1,6 @@
 package com.azquo.memorydb.service;
 
+import com.azquo.StringLiterals;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.TreeNode;
@@ -12,14 +13,15 @@ import com.azquo.spreadsheet.AzquoCell;
 import com.azquo.spreadsheet.DSSpreadsheetService;
 import com.azquo.spreadsheet.DataRegionHeading;
 import com.azquo.spreadsheet.ListOfValuesOrNamesAndAttributeName;
-import com.azquo.spreadsheet.transport.ProvenanceDetailsForDisplay;
-import com.azquo.spreadsheet.transport.ProvenanceForDisplay;
-import com.azquo.spreadsheet.transport.RegionOptions;
-import com.azquo.spreadsheet.transport.ValueDetailsForProvenance;
+import com.azquo.spreadsheet.transport.*;
 
+import java.rmi.RemoteException;
 import java.text.NumberFormat;
+import java.text.SimpleDateFormat;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -254,7 +256,7 @@ public class ProvenanceService {
     }
 
 
-    private static DateTimeFormatter df = DateTimeFormatter.ofPattern("dd/MM/yy HH:mm");
+    private static DateTimeFormatter df = DateTimeFormatter.ofPattern("dd/MM/yy HH:mm:ss");
 
     private static ProvenanceDetailsForDisplay attributeProvenance(Name name, String attribute) {
         attribute = attribute.substring(1).replace("`", "");
@@ -495,6 +497,214 @@ public class ProvenanceService {
             }
             toReturn.add(ProvenanceService.getTreeNode(azquoMemoryDBConnection, oneUpdate, p, maxSize));
         }
+        return toReturn;
+    }
+
+    public static ProvenanceDetailsForDisplay getDatabaseAuditList(DatabaseAccessToken databaseAccessToken, String dateTime, int maxCount) throws RemoteException{
+        /*
+        Three instances
+
+        1) No dateString is specified.   Provenance counts to be by day.
+        2) DateString is specified, but not single - the counts for individual provenances for that day will be separately listed
+        3) Single is set - individual names and values will be shown - maxCount will be used.
+         */
+        AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
+        List<ProvenanceForDisplay> pList = new ArrayList<>();
+        Map<Provenance, AuditCounts> auditList = azquoMemoryDBConnection.getAzquoMemoryDB().getAuditMap();
+        String startDate = null;
+        AuditCounts auditTotal = null;
+        int pCount = 0;
+        LocalDateTime firstTime = null;
+        String firstTimeDisp = null;
+        String user = "";
+        int id = 0;
+        String auditTime = null;
+        String method = "";
+        for (Provenance auditItem:auditList.keySet()) {
+
+            AuditCounts auditCounts = null;
+            auditTime = auditItem.getTimeStamp().format(df);
+            if (dateTime == null || dateTime.equals(auditTime.substring(0,dateTime.length()))) {
+                if (dateTime!=null && dateTime.length()>8) {
+                    ProvenanceForDisplay pd = new ProvenanceForDisplay(false, auditItem.getUser(), auditItem.getName(), auditItem.getMethod(), auditItem.getContext(), auditItem.getTimeStamp());
+                    auditCounts = auditList.get(auditItem);
+                    pd.setNameCount(auditCounts.nameCount);
+                    pd.setValueCount(auditCounts.valueCount);
+                    pd.setProvenanceCount(1);
+                    pd.setDisplayDate(auditTime);
+                    pd.setId(++id);
+                    pList.add(pd);
+                    break;
+                }
+
+                String auditUser = auditItem.getUser();
+                if (auditUser == null || auditUser.length() == 0) {
+                    auditUser = "{blank}";
+                }
+                String auditMethod =auditItem.getMethod();
+                if (auditMethod == null || auditMethod.length()==0){
+                    auditMethod = "{blank}";
+                }
+                if (dateTime!=null && dateTime.length() == 8) {
+
+                    ProvenanceForDisplay pd = new ProvenanceForDisplay(false, auditUser,  auditItem.getMethod(),auditItem.getName(), auditItem.getContext(), auditItem.getTimeStamp());
+                    auditCounts = auditList.get(auditItem);
+                    pd.setNameCount(auditCounts.nameCount);
+                    pd.setValueCount(auditCounts.valueCount);
+                    pd.setProvenanceCount(1);
+                    pd.setDisplayDate(auditTime);
+                    pd.setId(++id);
+                    pList.add(pd);
+                    if (pList.size()== maxCount){
+                        break;
+                    }
+                } else {
+
+                    if (!(auditTime.substring(0, 8).equals(startDate))) {
+                        if (dateTime == null && startDate != null) {
+                            ProvenanceForDisplay pd = new ProvenanceForDisplay(false, user, method,"","", firstTime);
+                            pd.setNameCount(auditTotal.nameCount);
+                            pd.setValueCount(auditTotal.valueCount);
+                            pd.setProvenanceCount(pCount);
+                            pd.setId(++id);
+                            if (pCount > 1) {
+                                pd.setDisplayDate(firstTimeDisp.substring(0, 8));
+                            } else {
+                                pd.setDisplayDate(firstTimeDisp);
+
+                            }
+                            pList.add(pd);
+                            if (pList.size()== maxCount){
+                                break;
+                            }
+                        }
+                        firstTime = auditItem.getTimeStamp();
+                        firstTimeDisp = firstTime.format(df);
+                        startDate = auditTime.substring(0, 8);
+                        auditTotal = new AuditCounts();
+                        auditCounts = auditList.get(auditItem);
+                        auditTotal.nameCount = auditCounts.nameCount;
+                        auditTotal.valueCount = auditCounts.valueCount;
+                        user = auditUser;
+                        method = auditMethod;
+                        pCount = 1;
+                    } else {
+                        auditCounts = auditList.get(auditItem);
+                        auditTotal.nameCount += auditCounts.nameCount;
+                        auditTotal.valueCount += auditCounts.valueCount;
+                        if (!user.contains(auditUser)) {
+                            user += "," + auditUser;
+                        }
+                        if (!method.contains(auditMethod)){
+                            method += "," + auditMethod;
+                        }
+                        pCount++;
+                    }
+                }
+            }
+        }
+        if (dateTime==null && startDate!=null){
+            ProvenanceForDisplay pd = new ProvenanceForDisplay(false, user, method,"","",firstTime);
+
+            pd.setValueCount(auditTotal.valueCount);
+            pd.setNameCount(auditTotal.nameCount);
+            pd.setProvenanceCount(pCount);
+            pd.setId(++id);
+            if (pCount > 1){
+                pd.setDisplayDate(auditTime.substring(0, 8));
+            }else{
+                pd.setDisplayDate(auditTime);
+
+            }
+            pList.add(pd);
+
+        }
+        ProvenanceDetailsForDisplay pdd = new ProvenanceDetailsForDisplay(dateTime,null, pList);
+
+
+        return pdd;
+    }
+    public static void  getProvenanceCounts(AzquoMemoryDBConnection azquoMemoryDBConnection, int maxCount){
+
+
+        Set<Value> values = new HashSet<>();
+
+        Map <Provenance,AuditCounts> auditMap = new TreeMap<>(new Comparator<Provenance>() {
+            @Override
+            public int compare(Provenance p1, Provenance p2) {
+                return p2.getTimeStamp().compareTo(p1.getTimeStamp());
+            }
+        });
+
+        Collection<Name> names = azquoMemoryDBConnection.getAzquoMemoryDBIndex().namesForAttribute(StringLiterals.DEFAULT_DISPLAY_NAME);
+        try {
+            for (Name name : names) {
+                for (Value value : name.getValues()) {
+                    values.add(value);
+                }
+                Provenance p = name.getProvenance();
+                if (auditMap.get(p) == null) {
+                    AuditCounts auditCounts = new AuditCounts();
+                    auditMap.put(p, auditCounts);
+                }
+                auditMap.get(p).nameCount++;
+            }
+            for (Value value : values) {
+                Provenance p = value.getProvenance();
+                if (auditMap.get(p) == null) {
+                    auditMap.put(p, new AuditCounts());
+                }
+                auditMap.get(p).valueCount++;
+            }
+        }catch(Exception e){
+            int k=1;//DEBUG
+        }
+        azquoMemoryDBConnection.getAzquoMemoryDB().setAuditMap(auditMap);
+
+    }
+    public static TreeNode  getIndividualProvenanceCounts(DatabaseAccessToken databaseAccessToken, int maxCount, String pChosenString) {
+        AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
+        TreeNode toReturn = new TreeNode();
+        Set<Value> values = new HashSet<>();
+        TreeSet<String> namesFound = new TreeSet<>();
+        Collection<Name> names = azquoMemoryDBConnection.getAzquoMemoryDBIndex().namesForAttribute(StringLiterals.DEFAULT_DISPLAY_NAME);
+
+
+        for (Name name : names) {
+            for (Value value : name.getValues()) {
+                if (value.getProvenance().getTimeStamp().format(df).equals(pChosenString)) {
+                    values.add(value);
+                }
+            }
+            Provenance p = name.getProvenance();
+            if (p.getTimeStamp().format(df).equals(pChosenString)) {
+                namesFound.add(name.getDefaultDisplayName());
+            }
+
+        }
+        StringBuffer namesList = new StringBuffer();
+        if (namesFound.size() > 0){
+            int count = 0;
+            for(String name:namesFound){
+                if (count++ > 40){
+                    namesList.append("..." + (namesFound.size() - count) + " more...");
+                    break;
+                }
+                namesList.append(name + "</br>");
+            }
+            toReturn.setNames("Names affected: </br>" + namesList.toString());
+            toReturn.setValue(namesFound.size()+"");
+
+        }
+         if (values.size()>0){
+             toReturn.setHeading("Values affected:");
+             List<Value> valuesList = new ArrayList<>();
+             valuesList.addAll(values);
+             List<TreeNode> valuesNode = nodify(azquoMemoryDBConnection,valuesList,2000);
+            toReturn.setChildren(valuesNode);
+
+        }
+        addNodeValues(toReturn);
         return toReturn;
     }
 }
