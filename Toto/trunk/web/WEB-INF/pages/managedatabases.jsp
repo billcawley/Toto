@@ -389,6 +389,7 @@ Created by IntelliJ IDEA.
                     <tr>
                         <td><label for="uploadFile">Upload Template:</label> <input type="file" name="uploadFile">
                         </td>
+                        <td><label for="templateComment">Comment:</label><input id="templateComment" size="40" name="userComment" required pattern="(.|\s)*\S(.|\s)*"></td>
                         <td>
                             <label for="uploadDatabase1">Database:</label>
                             <select name="database" id="uploadDatabase1">
