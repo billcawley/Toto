@@ -74,6 +74,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.text.SimpleDateFormat;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -1772,11 +1773,19 @@ public final class ImportService {
             try{
                 return cell.getStringCellValue();
             }catch(Exception e){
-                String st = cell.getNumericCellValue()+ "";
-                if (st.endsWith(".0")){
-                    return st.substring(0,st.length()-2);
+
+                if (cell.getCellStyle().getDataFormatString().contains("mm")) {
+                    Long l =  ((long)cell.getNumericCellValue()-25569) * 86400000;
+                    LocalDateTime dt = LocalDateTime.ofInstant(Instant.ofEpochMilli(l),
+                            TimeZone.getDefault().toZoneId());
+                    return DateTimeFormatter.ofPattern("yyyy-MM-dd").format(dt);
+                }else{
+                    String st = cell.getNumericCellValue()+ "";
+                    if (st.endsWith(".0")) {
+                        return st.substring(0, st.length() - 2);
+                    }
+                    return st;
                 }
-                return st;
             }
         }catch(Exception e){
             return "";
