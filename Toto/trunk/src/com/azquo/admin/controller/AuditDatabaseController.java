@@ -1,5 +1,6 @@
 package com.azquo.admin.controller;
 
+import com.azquo.admin.AdminService;
 import com.azquo.dataimport.UploadRecord;
 import com.azquo.dataimport.UploadRecordDAO;
 import com.azquo.memorydb.DatabaseAccessToken;
@@ -30,6 +31,9 @@ public class AuditDatabaseController {
             if (dateTime==null) {
                 CommonReportUtils.getDropdownListForQuery(loggedInUser, "edit:auditdatabase");
             }
+            if (dateTime!=null && dateTime.equals("back")){
+                dateTime = null;
+            }
             ProvenanceDetailsForDisplay provenanceDetailsForDisplay = null;
             TreeNode treeNode = null;
             try{
@@ -41,6 +45,7 @@ public class AuditDatabaseController {
             }catch(Exception e){
                 //unhandled at present
             }
+            AdminService.setBanner(model,loggedInUser);
             if (provenanceDetailsForDisplay!=null){
                 model.put("date", dateTime);
                 model.put("provenanceForDisplays", provenanceDetailsForDisplay.getAuditForDisplayList());

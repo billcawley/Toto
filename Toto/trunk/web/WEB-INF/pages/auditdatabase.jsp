@@ -1,10 +1,27 @@
 <%-- Copyright (C) 2021 Azquo Holdings Ltd. --%><%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
 <c:set var="title" scope="request" value="Audit Database" />
-<%@ include file="../includes/admin_header.jsp" %>
+<%@ include file="../includes/public_header.jsp" %>
 <%@ taglib tagdir="/WEB-INF/tags" prefix="azquoTags"%>
 <main>
-    <h1>Audit Database</h1><br/>
+    <Table><tr><td><h1>Audit Database</h1></td><td text-align:right>
+        <c:if test="${date==null}">
+            <a onclick="window.close()"
+               ><span class="fa fa-close" title="Back"></span></a>
+        </c:if>
+        <c:if test="${date.length() == 8}">
+            <a href="/api/AuditDatabase?datetime=back"
+               ><span class="fa fa-arrow-left" title="Back"></span></a>
+        </c:if>
+        <c:if test="${date.length() > 8}">
+            <a href="/api/AuditDatabase?datetime=${date.substring(0,8)}"
+               ><span class="fa fa-arrow-left" title="Back"></span></a>
+        </c:if>
+
+
+
+    </td></tr></Table>
+
     <form action="/api/AuditDatabase" method="post">
         <div class="error">${error}</div>
         <table>
@@ -47,4 +64,4 @@
     </div>
     --->
 </main>
-<%@ include file="../includes/admin_footer.jsp" %>
+<%@ include file="../includes/public_footer.jsp" %>
