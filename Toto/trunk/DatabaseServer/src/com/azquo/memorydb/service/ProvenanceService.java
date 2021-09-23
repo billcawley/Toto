@@ -510,7 +510,7 @@ public class ProvenanceService {
          */
         AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
         List<ProvenanceForDisplay> pList = new ArrayList<>();
-        Map<Provenance, AuditCounts> auditList = azquoMemoryDBConnection.getAzquoMemoryDB().getAuditMap();
+        Map<Provenance, AuditCounts> auditList = azquoMemoryDBConnection.getAuditMap();
         String startDate = null;
         AuditCounts auditTotal = null;
         int pCount = 0;
@@ -659,7 +659,7 @@ public class ProvenanceService {
         }catch(Exception e){
             int k=1;//DEBUG
         }
-        azquoMemoryDBConnection.getAzquoMemoryDB().setAuditMap(auditMap);
+        azquoMemoryDBConnection.setAuditMap(auditMap);
 
     }
     public static TreeNode  getIndividualProvenanceCounts(DatabaseAccessToken databaseAccessToken, int maxCount, String pChosenString) {

@@ -42,6 +42,8 @@ public class AzquoMemoryDBConnection {
     private String provenanceMethodSuggestion = "";
     private String provenanceNameSuggestion = "";
     private String provenanceContextSuggestion = "";
+    private Map<Provenance, AuditCounts> auditMap = new TreeMap();
+
 
     private AzquoMemoryDBConnection(AzquoMemoryDB azquoMemoryDB, StringBuffer userLog) {
         this.azquoMemoryDB = azquoMemoryDB;
@@ -207,4 +209,13 @@ public class AzquoMemoryDBConnection {
                 ", unusedProvenance=" + unusedProvenance +
                 '}';
     }
+
+    public void setAuditMap(Map<Provenance, AuditCounts>auditMap){
+        this.auditMap = auditMap;
+    }
+
+    public Map<Provenance,AuditCounts> getAuditMap(){
+        return auditMap;
+    }
+
 }

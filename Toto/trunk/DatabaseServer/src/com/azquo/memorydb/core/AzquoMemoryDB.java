@@ -195,7 +195,6 @@ public final class AzquoMemoryDB {
     private final Map<Name, Set<Name>> findAllChildrenCacheMap;
     private final Map<Name, Set<Value>> valuesIncludingChildrenCacheMap;
 
-    private Map<Provenance, AuditCounts> auditMap = new TreeMap();
 
 
 
@@ -555,13 +554,6 @@ public final class AzquoMemoryDB {
         return valuesIncludingChildrenCacheMap;
     }
 
-    public void setAuditMap(Map<Provenance, AuditCounts>auditMap){
-        this.auditMap = auditMap;
-    }
-
-    public Map<Provenance,AuditCounts> getAuditMap(){
-        return auditMap;
-    }
 
 
 
