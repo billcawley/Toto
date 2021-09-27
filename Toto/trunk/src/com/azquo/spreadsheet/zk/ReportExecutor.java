@@ -294,6 +294,8 @@ public class ReportExecutor {
                     }
 
                 }
+            }else{
+                execInfo.nextLine = onwardLineNo;
             }
             // if not a for each I guess we just execute? Will check for "do"
         } else if (trimmedLine.toLowerCase().startsWith("execute ")) {
