@@ -270,11 +270,8 @@ public class ReportExecutor {
             }
             String choiceQuery = trimmedLine.substring(inPos + 4).trim();
              final List<String> dropdownListForQuery = CommonReportUtils.getDropdownListForQuery(loggedInUser, choiceQuery, loggedInUser.getUser().getEmail(), false, execInfo.provenanceId);
-             if (dropdownListForQuery.size()==1 && dropdownListForQuery.get(0).startsWith("Error :")){
-                 return dropdownListForQuery.get(0);
-             }
-            if (dropdownListForQuery.size() > 0) {
-                for (String choiceValue : dropdownListForQuery) { // run the "for" :)
+             if (dropdownListForQuery.size() > 1 || (dropdownListForQuery.size()==1 && !dropdownListForQuery.get(0).startsWith("Error :"))){
+                 for (String choiceValue : dropdownListForQuery) { // run the "for" :)
                     RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).addToLog(loggedInUser.getDataAccessToken(), choiceName + " : " + choiceValue);
                     SpreadsheetService.setUserChoice(loggedInUser, choiceName.replace("`", ""), choiceValue);
                     SName n = BookUtils.getNameByName("az_" + choiceValue.toLowerCase() +  "chosen", sheet);
