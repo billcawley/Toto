@@ -4,10 +4,7 @@ import com.azquo.StringLiterals;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.TreeNode;
-import com.azquo.memorydb.core.Name;
-import com.azquo.memorydb.core.Provenance;
-import com.azquo.memorydb.core.Value;
-import com.azquo.memorydb.core.ValueHistory;
+import com.azquo.memorydb.core.*;
 import com.azquo.memorydb.dao.ValueDAO;
 import com.azquo.spreadsheet.AzquoCell;
 import com.azquo.spreadsheet.DSSpreadsheetService;
@@ -256,7 +253,7 @@ public class ProvenanceService {
     }
 
 
-    private static DateTimeFormatter df = DateTimeFormatter.ofPattern("dd/MM/yy HH:mm:ss");
+    private static DateTimeFormatter df = DateTimeFormatter.ofPattern("dd/MM/yy HH:mm:ss.SSS");
 
     private static ProvenanceDetailsForDisplay attributeProvenance(Name name, String attribute) {
         attribute = attribute.substring(1).replace("`", "");
@@ -327,7 +324,7 @@ public class ProvenanceService {
                 break;
             }
             count++;
-            if (count > maxSize) {
+            if (count > 100) {
                 nodeList.add(new TreeNode((values.size() - maxSize) + " more...", "", 0, 0, null));
                 break;
             }
@@ -510,24 +507,24 @@ public class ProvenanceService {
          */
         AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
         List<ProvenanceForDisplay> pList = new ArrayList<>();
-        Map<Provenance, AuditCounts> auditList = azquoMemoryDBConnection.getAuditMap();
+        Map<LocalDateTime, AuditCounts> auditList = azquoMemoryDBConnection.getAzquoMemoryDB().getAuditMap();
         String startDate = null;
-        AuditCounts auditTotal = null;
+        int nameTotal = 0;
+        int valueTotal = 0;
         int pCount = 0;
         LocalDateTime firstTime = null;
         String firstTimeDisp = null;
         String user = "";
-        int id = 0;
         String auditTime = null;
+        int id = 0;
         String method = "";
-        for (Provenance auditItem:auditList.keySet()) {
-
-            AuditCounts auditCounts = null;
-            auditTime = auditItem.getTimeStamp().format(df);
+        for (LocalDateTime auditDateTime:auditList.keySet()) {
+            AuditCounts auditCounts = auditList.get(auditDateTime);
+            auditTime = auditDateTime.format(df);
+            Provenance p = auditCounts.provenance;
             if (dateTime == null || dateTime.equals(auditTime.substring(0,dateTime.length()))) {
                 if (dateTime!=null && dateTime.length()>8) {
-                    ProvenanceForDisplay pd = new ProvenanceForDisplay(false, auditItem.getUser(), auditItem.getName(), auditItem.getMethod(), auditItem.getContext(), auditItem.getTimeStamp());
-                    auditCounts = auditList.get(auditItem);
+                    ProvenanceForDisplay pd = new ProvenanceForDisplay(false, p.getUser(), p.getName(), p.getMethod(), p.getContext(), p.getTimeStamp());
                     pd.setNameCount(auditCounts.nameCount);
                     pd.setValueCount(auditCounts.valueCount);
                     pd.setProvenanceCount(1);
@@ -537,18 +534,17 @@ public class ProvenanceService {
                     break;
                 }
 
-                String auditUser = auditItem.getUser();
+                String auditUser = p.getUser();
                 if (auditUser == null || auditUser.length() == 0) {
                     auditUser = "{blank}";
                 }
-                String auditMethod =auditItem.getMethod();
+                String auditMethod =p.getMethod();
                 if (auditMethod == null || auditMethod.length()==0){
                     auditMethod = "{blank}";
                 }
                 if (dateTime!=null && dateTime.length() == 8) {
 
-                    ProvenanceForDisplay pd = new ProvenanceForDisplay(false, auditUser,  auditItem.getMethod(),auditItem.getName(), auditItem.getContext(), auditItem.getTimeStamp());
-                    auditCounts = auditList.get(auditItem);
+                    ProvenanceForDisplay pd = new ProvenanceForDisplay(false, auditUser,  p.getMethod(),p.getName(), p.getContext(), p.getTimeStamp());
                     pd.setNameCount(auditCounts.nameCount);
                     pd.setValueCount(auditCounts.valueCount);
                     pd.setProvenanceCount(1);
@@ -563,8 +559,8 @@ public class ProvenanceService {
                     if (!(auditTime.substring(0, 8).equals(startDate))) {
                         if (dateTime == null && startDate != null) {
                             ProvenanceForDisplay pd = new ProvenanceForDisplay(false, user, method,"","", firstTime);
-                            pd.setNameCount(auditTotal.nameCount);
-                            pd.setValueCount(auditTotal.valueCount);
+                            pd.setNameCount(nameTotal);
+                            pd.setValueCount(valueTotal);
                             pd.setProvenanceCount(pCount);
                             pd.setId(++id);
                             if (pCount > 1) {
@@ -578,20 +574,17 @@ public class ProvenanceService {
                                 break;
                             }
                         }
-                        firstTime = auditItem.getTimeStamp();
+                        firstTime = auditDateTime;
                         firstTimeDisp = firstTime.format(df);
                         startDate = auditTime.substring(0, 8);
-                        auditTotal = new AuditCounts();
-                        auditCounts = auditList.get(auditItem);
-                        auditTotal.nameCount = auditCounts.nameCount;
-                        auditTotal.valueCount = auditCounts.valueCount;
+                        nameTotal = auditCounts.nameCount;
+                        valueTotal =  auditCounts.valueCount;
                         user = auditUser;
                         method = auditMethod;
                         pCount = 1;
                     } else {
-                        auditCounts = auditList.get(auditItem);
-                        auditTotal.nameCount += auditCounts.nameCount;
-                        auditTotal.valueCount += auditCounts.valueCount;
+                        nameTotal += auditCounts.nameCount;
+                        valueTotal += auditCounts.valueCount;
                         if (!user.contains(auditUser)) {
                             user += "," + auditUser;
                         }
@@ -606,8 +599,8 @@ public class ProvenanceService {
         if (dateTime==null && startDate!=null){
             ProvenanceForDisplay pd = new ProvenanceForDisplay(false, user, method,"","",firstTime);
 
-            pd.setValueCount(auditTotal.valueCount);
-            pd.setNameCount(auditTotal.nameCount);
+            pd.setValueCount(valueTotal);
+            pd.setNameCount(nameTotal);
             pd.setProvenanceCount(pCount);
             pd.setId(++id);
             if (pCount > 1){
@@ -629,10 +622,10 @@ public class ProvenanceService {
 
         Set<Value> values = new HashSet<>();
 
-        Map <Provenance,AuditCounts> auditMap = new TreeMap<>(new Comparator<Provenance>() {
+        Map <LocalDateTime,AuditCounts> auditMap = new TreeMap<>(new Comparator<LocalDateTime>() {
             @Override
-            public int compare(Provenance p1, Provenance p2) {
-                return p2.getTimeStamp().compareTo(p1.getTimeStamp());
+            public int compare(LocalDateTime t1, LocalDateTime t2) {
+                return t2.compareTo(t1);
             }
         });
 
@@ -643,32 +636,44 @@ public class ProvenanceService {
                     values.add(value);
                 }
                 Provenance p = name.getProvenance();
-                if (auditMap.get(p) == null) {
+                if (auditMap.get(p.getTimeStamp()) == null) {
                     AuditCounts auditCounts = new AuditCounts();
-                    auditMap.put(p, auditCounts);
+                    auditCounts.provenance = p;
+                    auditMap.put(p.getTimeStamp(), auditCounts);
                 }
-                auditMap.get(p).nameCount++;
+                List<Name> nList = auditMap.get(p.getTimeStamp()).nameList;
+                if (nList.size()<100){
+                    nList.add(name);
+                }
+                auditMap.get(p.getTimeStamp()).nameCount++;
+
             }
             for (Value value : values) {
                 Provenance p = value.getProvenance();
-                if (auditMap.get(p) == null) {
-                    auditMap.put(p, new AuditCounts());
+                if (auditMap.get(p.getTimeStamp()) == null) {
+                    AuditCounts auditCounts = new AuditCounts();
+                    auditCounts.provenance = p;
+                    auditMap.put(p.getTimeStamp(), auditCounts);
+
                 }
-                auditMap.get(p).valueCount++;
+                List<Value> vList = auditMap.get(p.getTimeStamp()).valueList;
+                if (vList.size()<100){
+                    vList.add(value);
+                }
+                auditMap.get(p.getTimeStamp()).valueCount++;
             }
         }catch(Exception e){
             int k=1;//DEBUG
         }
-        azquoMemoryDBConnection.setAuditMap(auditMap);
+        azquoMemoryDBConnection.getAzquoMemoryDB().setAuditMap(auditMap);
 
     }
     public static TreeNode  getIndividualProvenanceCounts(DatabaseAccessToken databaseAccessToken, int maxCount, String pChosenString) {
         AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
         TreeNode toReturn = new TreeNode();
-        Set<Value> values = new HashSet<>();
-        TreeSet<String> namesFound = new TreeSet<>();
-        Collection<Name> names = azquoMemoryDBConnection.getAzquoMemoryDBIndex().namesForAttribute(StringLiterals.DEFAULT_DISPLAY_NAME);
-
+        LocalDateTime dt = LocalDateTime.parse(pChosenString,df);
+        AuditCounts auditCounts = azquoMemoryDBConnection.getAzquoMemoryDB().getAuditMap().get(dt);
+ /*
 
         for (Name name : names) {
             for (Value value : name.getValues()) {
@@ -682,25 +687,27 @@ public class ProvenanceService {
             }
 
         }
+
+ */
         StringBuffer namesList = new StringBuffer();
-        if (namesFound.size() > 0){
+
+
+        if (auditCounts.nameList.size() > 0){
             int count = 0;
-            for(String name:namesFound){
-                if (count++ > 40){
-                    namesList.append("..." + (namesFound.size() - count) + " more...");
+            for(Name name:auditCounts.nameList){
+                if (count++ > 100){
+                    namesList.append("..." + (auditCounts.nameCount - count) + " more...");
                     break;
                 }
-                namesList.append(name + "</br>");
+                namesList.append(name.getDefaultDisplayName() + "</br>");
             }
-            toReturn.setNames("Names affected: </br>" + namesList.toString());
-            toReturn.setValue(namesFound.size()+"");
+            toReturn.setNames("<b>Names affected (max 100 shown): </b></br>" + namesList.toString());
+            toReturn.setValue(auditCounts.nameList.size()+"");
 
         }
-         if (values.size()>0){
-             toReturn.setHeading("Values affected:");
-             List<Value> valuesList = new ArrayList<>();
-             valuesList.addAll(values);
-             List<TreeNode> valuesNode = nodify(azquoMemoryDBConnection,valuesList,2000);
+         if (auditCounts.valueList.size()>0){
+             toReturn.setHeading("<b>Values affected: (Max 100 shown)</b>");
+             List<TreeNode> valuesNode = nodify(azquoMemoryDBConnection,auditCounts.valueList,100);
             toReturn.setChildren(valuesNode);
 
         }
