@@ -3,7 +3,6 @@ package com.azquo.memorydb;
 import com.azquo.memorydb.core.*;
 import com.azquo.memorydb.dao.StatisticsDAO;
 import com.azquo.memorydb.service.NameService;
-import com.azquo.spreadsheet.transport.AuditCounts;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -42,7 +41,6 @@ public class AzquoMemoryDBConnection {
     private String provenanceMethodSuggestion = "";
     private String provenanceNameSuggestion = "";
     private String provenanceContextSuggestion = "";
-    private Map<Provenance, AuditCounts> auditMap = new TreeMap();
 
 
     private AzquoMemoryDBConnection(AzquoMemoryDB azquoMemoryDB, StringBuffer userLog) {
@@ -210,12 +208,5 @@ public class AzquoMemoryDBConnection {
                 '}';
     }
 
-    public void setAuditMap(Map<Provenance, AuditCounts>auditMap){
-        this.auditMap = auditMap;
-    }
-
-    public Map<Provenance,AuditCounts> getAuditMap(){
-        return auditMap;
-    }
 
 }

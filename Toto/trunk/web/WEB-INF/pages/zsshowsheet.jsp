@@ -80,7 +80,7 @@
 
     function auditDatabase(){
         // can be passed database
-        window.open("/api/AuditDatabase", "_blank", "toolbar=no, status=no,scrollbars=yes, resizable=yes, top=100, left=100, width=1600, height=1000")
+        window.open("/api/AuditDatabase", "_blank", "toolbar=no, menubar=no, status=no,titlebar=no, scrollbars=yes, resizable=yes, top=100, left=100, width=1600, height=1000")
     }
 
 

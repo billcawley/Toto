@@ -3,7 +3,6 @@ package com.azquo.memorydb.core;
 import com.azquo.StringLiterals;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.service.DSAdminService;
-import com.azquo.spreadsheet.transport.AuditCounts;
 import net.openhft.koloboke.collect.map.hash.HashObjObjMaps;
 
 import java.io.IOException;
@@ -44,6 +43,7 @@ public final class AzquoMemoryDB {
     private static final String RMIIP = "rmiip";
     private static final String MAXTHREADS = "maxthreads";
     private static final String SFTPTEMPDIR = "sftptempdir";
+    private Map<LocalDateTime,AuditCounts> auditMap;
 
     // no point doing this on every constructor!
     static {
@@ -554,6 +554,13 @@ public final class AzquoMemoryDB {
         return valuesIncludingChildrenCacheMap;
     }
 
+    public void setAuditMap(Map<LocalDateTime, AuditCounts>auditMap){
+        this.auditMap = auditMap;
+    }
+
+    public Map<LocalDateTime,AuditCounts> getAuditMap(){
+        return auditMap;
+    }
 
 
 
