@@ -128,12 +128,12 @@
 					<li><a href="#"><span class="fa fa-bars"></span></a>
 						<ul>
 							<li><a href="#" onclick="postAjax('XLS'); return false;" title="Download as XLSX (Excel)"><span class="fa fa-file-excel-o"></span> Download as XLSX (Excel)</a></li>
-							<!-- <li><a href="#" onclick="postAjax('PDF'); return false;" title="Download as PDF"><span class="fa fa-file-pdf-o"></span> Download as PDF</a></li> -->
 			    			<li><a href="#" onclick="return inspectDatabase();" title="Inspect database"><span class="fa fa-eye"></span> Inspect database</a></li>
 							<li><a href="#" onclick="return auditDatabase();" title="Audit Database"><span class="fa fa-eye"></span> Audit Database</a></li>
 							<li><a href="#" onclick="return uploadFile();" title="Upload file"><span class="fa fa-cloud-upload"></span> Upload file</a></li>
 							<li><a href="#" onclick="return postAjax('FREEZE');" title="Upload file"><span class="fa fa-link"></span> Freeze</a></li>
 							<li><a href="#" onclick="return postAjax('UNFREEZE');" title="Upload file"><span class="fa fa-unlink"></span> Unfreeze</a></li>
+							<li><a href="#" onclick="postAjax('PDF'); return false;" title="Download as PDF"><span class="fa fa-file-pdf-o"></span> Download as PDF</a></li>
 							<c:if test="${masterUser == true}">
 								<li><a href="/api/CreateExcelForDownload?action=DOWNLOADUSERS" title="Download User List">Download User List</a></li>
 								<li><a href="/api/CreateExcelForDownload?action=DOWNLOADREPORTSCHEDULES" title="Download Report Schedules">Download Report Schedules</a></li>

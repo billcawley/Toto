@@ -166,6 +166,9 @@ public class ManageReportsController {
             model.put("reports", reportList);
             model.put("developer", loggedInUser.getUser().isDeveloper());
             AdminService.setBanner(model,loggedInUser);
+            if (request.getSession().getAttribute("newui") != null){
+                return "managereports2";
+            }
             return "managereports";
         } else {
             return "redirect:/api/Login";

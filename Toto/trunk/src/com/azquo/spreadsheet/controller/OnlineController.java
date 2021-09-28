@@ -319,6 +319,10 @@ public class OnlineController {
                         model.addAttribute("pdfMerges", pdfMerges);
                         model.addAttribute("databaseName", loggedInUser.getDatabase().getName());
                         AdminService.setBanner(model, loggedInUser);
+                        if (request.getSession().getAttribute("newui") != null){
+                            return "zsshowsheet2";
+                        }
+
                         return "zsshowsheet";// show the sheet
                     }
                     // ok now I need to set the sheet loading but on a new thread
@@ -402,6 +406,10 @@ public class OnlineController {
                     model.addAttribute("reportid", reportId); // why not? should block on refreshes then
                     // edd pasting in here to get the banner colour working
                     AdminService.setBanner(model,loggedInUser);
+                    if (request.getSession().getAttribute("newui") != null){
+                        return "zsloading2";
+                    }
+
                     return "zsloading";
                     // was provenance setting here,
                 }

@@ -55,7 +55,9 @@ public class LoginController {
             , @RequestParam(value = "userid", required = false) String userid // if a user exists in more than one business then
             , @RequestParam(value = "select", required = false) String select
      ) throws Exception {
-
+if (request.getParameter("newui") != null){
+    session.setAttribute("newui", "true");
+}
         // edd temporary hack
 /*
         Path p = Paths.get("/home/edward/Downloads/lukewfixwork");
@@ -127,6 +129,9 @@ public class LoginController {
                     usersToShow.add(l.getUser());
                 }
                 model.put("users", usersToShow);
+                if (session.getAttribute("newui") != null){
+                    return "loginuserselect2";
+                }
                 return "loginuserselect";
             }
             if (NumberUtils.isNumber(userid)) {
@@ -194,6 +199,10 @@ public class LoginController {
                             usersToShow.add(l.getUser());
                         }
                         model.put("users", usersToShow);
+                        if (session.getAttribute("newui") != null){
+                            return "loginuserselect2";
+                        }
+
                         return "loginuserselect";
                     }
                     loggedInUser = loggedInUsers.get(0);

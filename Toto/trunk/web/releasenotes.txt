@@ -1,3 +1,21 @@
+23-09-21
+
+Better pre processing date handling
+
+Audit database functionality
+
+20-09-21
+
+Improved JSON preprocessor - handles 'only ' (find these fields only when another field exists) and 'regex ' - match the regular expression
+
+Revised and extended with new instructions 'add, subtract, define, if'
+
+if only tests if an attribute exists - not comparing the value.
+
+Picks up the result of Execution to put in the range az_ExecuteResults
+
+updated bug fix to make the validations run properly
+
 13-09-21
 
 more poi hacking to enable keikai to function
