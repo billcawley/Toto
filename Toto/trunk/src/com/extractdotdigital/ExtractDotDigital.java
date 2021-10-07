@@ -64,7 +64,7 @@ public class ExtractDotDigital {
             JSONArray contacts = new JSONArray(result);
             for (Object object : contacts) {
                 JSONObject jsonObject = (JSONObject) object;
-                String preferences = resource.path(contactPreferencesUrl.replace("{0}", jsonObject.toMap().get("id").toString())).get(String.class);
+                String preferences = queryWithTries(resource.path(contactPreferencesUrl.replace("{0}", jsonObject.toMap().get("id").toString())));
                 FileUtils.writeStringToFile(new File(destinationPath + "preferences" + System.currentTimeMillis() + ".json"), preferences);
             }
         }
@@ -87,23 +87,24 @@ public class ExtractDotDigital {
             while (jsonArray.length() > 0) {
                 for (Object object : jsonArray) {
                     JSONObject jsonObject = (JSONObject) object;
+                    String campaignId = jsonObject.toMap().get("id") + "";
                     System.out.println("campaign ID " + jsonObject.toMap().get("id"));
 
                     List<String> result2 = queryPaged(resource, campaignOpensUrl.replace("{0}", jsonObject.toMap().get("id").toString()));
                     List<String> result3 = queryPaged(resource,campaignClicksUrl.replace("{0}", jsonObject.toMap().get("id").toString()));
                     List<String> result4 = queryPaged(resource,campaignPageViewsUrl.replace("{0}", jsonObject.toMap().get("id").toString()));
                     for (String r : result2){
-                        FileUtils.writeStringToFile(new File("campaignopens" + System.currentTimeMillis() + ".json"), r);
+                        FileUtils.writeStringToFile(new File(destinationPath + "campaignopens(campaignid=" + campaignId + ")" + System.currentTimeMillis() + ".json"), r);
                     }
                     for (String r : result3){
-                        FileUtils.writeStringToFile(new File(destinationPath + "campaignclicks" + System.currentTimeMillis() + ".json"), r);
+                        FileUtils.writeStringToFile(new File(destinationPath + "campaignclicks(campaignid=" + campaignId + ")" + System.currentTimeMillis() + ".json"), r);
                     }
                     for (String r : result4){
-                        FileUtils.writeStringToFile(new File(destinationPath + "campaignpageviews" + System.currentTimeMillis() + ".json"), r);
+                        FileUtils.writeStringToFile(new File(destinationPath + "campaignpageviews(campaignid=" + campaignId + ")" + System.currentTimeMillis() + ".json"), r);
                     }
 
-                    String campaignSummary = resource.path(campaignSummaryUrl.replace("{0}", jsonObject.toMap().get("id").toString())).get(String.class);
-                    FileUtils.writeStringToFile(new File(destinationPath + "campaignsummary" + System.currentTimeMillis() + ".json"), campaignSummary);
+                    String campaignSummary = queryWithTries(resource.path(campaignSummaryUrl.replace("{0}", jsonObject.toMap().get("id").toString())));
+                    FileUtils.writeStringToFile(new File(destinationPath + "campaignsummary(campaignid=" + campaignId + ")" + System.currentTimeMillis() + ".json"), campaignSummary);
 
                 }
             }
@@ -115,6 +116,19 @@ public class ExtractDotDigital {
 
     }
 
+    static String queryWithTries(WebResource resource){
+        int tries = 0;
+        while (tries < 5){
+            try {
+                return resource.get(String.class);
+            } catch (Exception ignored){
+                System.out.println("tries : " + tries);
+            }
+            tries++;
+        }
+        return null;
+    }
+
     static List<String> queryPaged(WebResource resource, String url, MultivaluedMap<String, String> multivaluedMap, boolean one) {
         List<String> toReturn = new ArrayList<>();
         int select = 1000;
@@ -124,7 +138,8 @@ public class ExtractDotDigital {
         }
         multivaluedMap.putSingle("select", select + "");
         multivaluedMap.putSingle("skip", skip + "");
-        String result = resource.path(url).queryParams(multivaluedMap).get(String.class);
+        String result = queryWithTries(resource.path(url).queryParams(multivaluedMap));
+
         JSONArray jsonArray = new JSONArray(result);
         while (jsonArray.length() > 0) {
             System.out.println("paging " + skip);
@@ -135,7 +150,7 @@ public class ExtractDotDigital {
             skip += select;
             multivaluedMap.putSingle("select", select + "");
             multivaluedMap.putSingle("skip", skip + "");
-            result = resource.path(url).queryParams(multivaluedMap).get(String.class);
+            result =  queryWithTries(resource.path(url).queryParams(multivaluedMap));
             jsonArray = new JSONArray(result);
         }
         return toReturn;

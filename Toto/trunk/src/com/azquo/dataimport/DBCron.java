@@ -132,7 +132,7 @@ public class DBCron {
                 ExtractAppointedd.extract(baseUrl,"/v1/bookings", restAPIKey, destination);
             }
         } catch (IOException e) {
-
+            e.printStackTrace();
         }
 
     }

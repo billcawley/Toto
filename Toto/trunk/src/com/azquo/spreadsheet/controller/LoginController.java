@@ -55,9 +55,12 @@ public class LoginController {
             , @RequestParam(value = "userid", required = false) String userid // if a user exists in more than one business then
             , @RequestParam(value = "select", required = false) String select
      ) throws Exception {
-if (request.getParameter("newui") != null){
-    session.setAttribute("newui", "true");
-}
+        if (request.getParameter("newui") != null){
+            session.setAttribute("newui", "true");
+        }
+        if ("".equals(request.getParameter("newui"))){
+            session.removeAttribute("newui");
+        }
         // edd temporary hack
 /*
         Path p = Paths.get("/home/edward/Downloads/lukewfixwork");
@@ -269,6 +272,9 @@ if (request.getParameter("newui") != null){
             }
         }
         String page = "login";
+        if (request.getSession().getAttribute("newui") != null){
+            return "login2";
+        }
 
         if (SpreadsheetService.getLogonPageOverride() != null && !SpreadsheetService.getLogonPageOverride().isEmpty()) {
             page = SpreadsheetService.getLogonPageOverride();
@@ -279,6 +285,8 @@ if (request.getParameter("newui") != null){
         if (SpreadsheetService.getLogonPageMessage() != null) {
             model.put("logonmessage", SpreadsheetService.getLogonPageMessage());
         }
+
+
         return page;
 
      }
