@@ -44,6 +44,7 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import java.io.*;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
@@ -171,7 +172,6 @@ public class ManageDatabasesController {
         if (loggedInUser != null && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
             StringBuilder error = new StringBuilder();
             // EFC - I can't see a way around this one currently. I want to use @SuppressWarnings very sparingly
-            @SuppressWarnings("unchecked")
             List<UploadedFile> importResult = null;
             try{
                 importResult = (List<UploadedFile>) request.getSession().getAttribute(ManageDatabasesController.IMPORTRESULT);
@@ -265,6 +265,34 @@ public class ManageDatabasesController {
             } else {
                 model.put("serverList", true);
             }
+            // another bit of utility functionality that perhaps should be moved from here in a bit : automated tests
+            Path testDir = Paths.get(SpreadsheetService.getHomeDir() + "/systemtests");
+            if (testDir.toFile().isDirectory()){ // sso find directories in there
+                try (Stream<Path> testDirList = Files.list(testDir)) {
+                    Iterator<Path> testDirListIterator = testDirList.iterator();
+                    // go through the main directory looking for directories that match a DB name
+                    while (testDirListIterator.hasNext()) {
+                        Path specificTestDir = testDirListIterator.next();
+                        if (specificTestDir.toFile().isDirectory()) {
+                            Path scriptFile = specificTestDir.resolve("script.txt");
+                            if (scriptFile.toFile().exists()){
+                                // todo - create test db
+                                List<String> testLines = Files.readAllLines(scriptFile, Charset.defaultCharset());
+                                for (String testLine : testLines){
+                                    if (testLine.toLowerCase().startsWith("load ")){ // then straight load that file into the database
+                                        // this could be import template or report or data or more likely a zip file
+
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+
+
             List<UploadRecord.UploadRecordForDisplay> uploadRecordsForDisplayForBusiness = AdminService.getUploadRecordsForDisplayForBusinessWithBasicSecurity(loggedInUser, fileSearch, "true".equalsIgnoreCase(withautos));
             if (uploadRecordsForDisplayForBusiness != null) {
                 if ("database".equals(sort)) {
@@ -303,6 +331,9 @@ public class ManageDatabasesController {
             model.put("developer", loggedInUser.getUser().isDeveloper());
             model.put("importTemplates", ImportTemplateDAO.findForBusinessId(loggedInUser.getUser().getBusinessId()));
             AdminService.setBanner(model, loggedInUser);
+            if (request.getSession().getAttribute("newui") != null){
+                return "managedatabases2";
+            }
             return "managedatabases";
         } else {
             return "redirect:/api/Login";
@@ -488,6 +519,10 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
             model.put("developer", loggedInUser.getUser().isDeveloper());
             model.put("importTemplates", ImportTemplateDAO.findForBusinessId(loggedInUser.getUser().getBusinessId()));
             AdminService.setBanner(model, loggedInUser);
+            if (request.getSession().getAttribute("newui") != null){
+                return "managedatabases2";
+            }
+
             return "managedatabases";
         } else {
             return "redirect:/api/Login";

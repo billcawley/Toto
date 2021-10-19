@@ -1,6 +1,7 @@
 package com.azquo;
 
 import com.azquo.spreadsheet.LoggedInUser;
+import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.controller.LoginController;
 
 import javax.servlet.http.HttpSession;
@@ -32,6 +33,7 @@ public class SessionListener implements HttpSessionListener {
         LoggedInUser loggedInUser = (LoggedInUser) sessionEvent.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
         if (loggedInUser != null){
             loggedInUser.userLog("Logout by time out", new HashMap<>());
+            SpreadsheetService.monitorLog(sessionEvent.getSession().getId(), loggedInUser.getBusiness().getBusinessName(), loggedInUser.getUser().getEmail(), "SESSION", "TIMEOUT", "");
         }
     }
 }

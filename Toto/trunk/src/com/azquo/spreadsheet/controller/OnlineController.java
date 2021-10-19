@@ -174,6 +174,23 @@ public class OnlineController {
                         String context = externalcall.substring(externalcall.indexOf(" with ") + 6);
                         ChoicesService.setChoices(loggedInUser,context);
                     }
+                      // todo - deal with finding a permission id instead
+                     /*
+
+                                         if (!loggedInUser.getUser().isAdministrator() && !loggedInUser.getUser().isDeveloper() && loggedInUser.getUser().getReportId() != 0) {// then we need to load in the permissions
+                        // typically loading in the permissions would be done in online report controller. I'm going to paste relevant code here, it might be factored later
+                        OnlineReport or = OnlineReportDAO.findById(loggedInUser.getUser().getReportId());
+                        String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath +
+                                loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + or.getFilenameForDisk();
+                        Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
+                        // I think I need those two
+                        book.getInternalBook().setAttribute(LOGGED_IN_USER, loggedInUser);
+                        book.getInternalBook().setAttribute(REPORT_ID, or.getId());
+                        ReportRenderer.populateBook(book, 0);
+                    }
+
+                      */
+
                     OnlineReport or = OnlineReportDAO.findForDatabaseIdAndName(loggedInUser.getDatabase().getId(), reportName.replace("_"," "));
                     reportId = "" + or.getId();
                     isExternal = true;

@@ -142,9 +142,11 @@ public class LoginController {
                     if (loggedInUser.getUser().getId() == Integer.parseInt(userid)) {
                         if (session.getAttribute(LoginController.LOGGED_IN_USER_SESSION) != null) {// then force a logout
                             ((LoggedInUser) session.getAttribute(LoginController.LOGGED_IN_USER_SESSION)).userLog("Logout due to user switch", new HashMap<>());
+                            SpreadsheetService.monitorLog(session.getId(), ((LoggedInUser) session.getAttribute(LoginController.LOGGED_IN_USER_SESSION)).getBusiness().getBusinessName(), ((LoggedInUser) session.getAttribute(LoginController.LOGGED_IN_USER_SESSION)).getUser().getEmail(), "SESSION", "LOGOUT DUE TO USER SWITCH", "");
                         }
                         session.setAttribute(LOGGED_IN_USER_SESSION, loggedInUser);
                         loggedInUser.userLog("Login", new HashMap<>());
+                        SpreadsheetService.monitorLog(session.getId(), loggedInUser.getBusiness().getBusinessName(), loggedInUser.getUser().getEmail(), "SESSION", "LOGIN", "");
                         String  externalcall = (String)request.getSession().getAttribute("externalcall");
                         if (externalcall!=null && externalcall.length()>0){
                             request.getSession().removeAttribute("externalcall");
@@ -164,6 +166,7 @@ public class LoginController {
             if (session.getAttribute(LOGGED_IN_USER_SESSION) != null) {
                 LoggedInUser loggedInUser = (LoggedInUser) session.getAttribute(LoginController.LOGGED_IN_USER_SESSION);
                 loggedInUser.userLog("Logout", new HashMap<>());
+                SpreadsheetService.monitorLog(session.getId(), loggedInUser.getBusiness().getBusinessName(), loggedInUser.getUser().getEmail(), "SESSION", "LOGOUT", "");
                 if (SpreadsheetService.inProduction() && !request.getRemoteAddr().equals("82.68.244.254") && !request.getRemoteAddr().equals("127.0.0.1") && !request.getRemoteAddr().startsWith("0")) { // if it's from us don't email us :)
                     Business business = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
                     new Thread(() -> {
@@ -212,6 +215,7 @@ public class LoginController {
                 }
                 if (loggedInUser != null) {
                     loggedInUser.userLog("Login", new HashMap<>());
+                    SpreadsheetService.monitorLog(session.getId(), loggedInUser.getBusiness().getBusinessName(), loggedInUser.getUser().getEmail(), "SESSION", "LOGIN", "");
                     // same checks as magento controller
                     if (!"nic@azquo.com".equalsIgnoreCase(userEmail) && SpreadsheetService.inProduction() && !request.getRemoteAddr().equals("82.68.244.254") && !request.getRemoteAddr().equals("127.0.0.1") && !request.getRemoteAddr().startsWith("0")) { // if it's from us don't email us :)
                         Business business = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
