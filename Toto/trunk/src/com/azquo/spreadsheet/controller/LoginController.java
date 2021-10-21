@@ -208,7 +208,6 @@ public class LoginController {
                         if (session.getAttribute("newui") != null){
                             return "loginuserselect2";
                         }
-
                         return "loginuserselect";
                     }
                     loggedInUser = loggedInUsers.get(0);

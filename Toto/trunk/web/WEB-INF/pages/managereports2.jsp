@@ -3,7 +3,7 @@
 <c:set var="title" scope="request" value="Manage Reports" />
 <%@ include file="../includes/admin_header2.jsp" %>
 <div class="box">
-    <h1 class="title">Manage Reports</h1>
+<!--    <h1 class="title">Manage Reports</h1> -->
     <table class="table is-striped is-fullwidth">
         <thead>
         <tr>
@@ -41,6 +41,26 @@
             </td>
         </tr>
         </c:forEach>
+        </tbody>
+    </table>
+    Ad Hoc Reports
+    <table class="table is-striped is-fullwidth">
+        <tbody>
+        <c:forEach items="${adhoc_reports}" var="report">
+            <tr>
+                <td>${report.database}</td>
+                <td><a href="/api/Online?reportid=${report.id}&amp;database=${report.database}" target="_blank"> <span class="fa fa-table"></span>  ${report.reportName}</a></td>
+                <td>${report.explanation}</td>
+                <td><a href="/api/ManageReports?editId=${report.id}"  title="Edit ${report.reportName}" class="button small fa fa-edit"></a>
+                    <a href="/api/ManageReports?deleteId=${report.id}" onclick="return confirm('Are you sure you want to delete ${report.reportName}?')" class="button is-small" title="Delete ${report.reportName}"><span class="fa fa-trash" title="Delete"></span> </a>
+                    <a href="/api/DownloadTemplate?reportId=${report.id}" class="button is-small" title="Download"><span class="fa fa-download" title="Download"></span> </a>
+                </td>
+            </tr>
+        </c:forEach>
+        <tr>
+            <td></td>
+            <td><a href="/api/Online?reportid=ADHOC" target="_blank"> <span class="fa fa-table"></span> NEW AD-HOC REPORT</a></td>
+        </tr>
         </tbody>
     </table>
 </div>

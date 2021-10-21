@@ -44,10 +44,6 @@ Created by IntelliJ IDEA.
 </script>
 
 <div id="tabs-with-content">
-    <div class="error">${error}</div>
-    <div id="working" class="loading" style="display:none"><h3>Working...</h3>
-        <div class="loader"><span class="fa fa-spin fa-cog"></span></div>
-    </div>
     <div class="tabs">
         <ul>
             <li><a>Uploads</a></li>
@@ -57,70 +53,96 @@ Created by IntelliJ IDEA.
             <li><a>Import Templates</a></li>
         </ul>
     </div>
+    <div class="is-danger">${error}</div>
+    <div id="working" class="loading" style="display:none"><h3>Working...</h3>
+        <div class="loader"><span class="fa fa-spin fa-cog"></span></div>
+    </div>
     <div>
         <section class="tab-content">
-            <div>
-                <form action="/api/ManageDatabases" method="post" enctype="multipart/form-data"
-                      onsubmit="showWorking();">
-                    <table>
-                        <tbody>
-                        <tr>
-                            <td>
-                                <div class="file has-name"  id="file-js-example">
-                                    <label class="file-label">
-                                        <input class="file-input" type="file" name="uploadFile" multiple>
-                                        <span class="file-cta">
-                                              <span class="file-icon">
+            <div class="box">
+                <div>
+                    <form action="/api/ManageDatabases" method="post" enctype="multipart/form-data"
+                          onsubmit="showWorking();">
+                        <table class="table">
+                            <tr>
+                                <td>
+                                    <div class="file has-name is-small" id="file-js-example">
+                                        <label class="file-label">
+                                            <input class="file-input is-small" type="file" name="uploadFile"
+                                                   id="uploadFile"
+                                                   multiple>
+                                            <span class="file-cta is-small">
+                                              <span class="file-icon is-small">
                                                 <i class="fas fa-upload"></i>
                                               </span>
-                                              <span class="file-label">
-                                                Upload Files
+                                              <span class="file-label is-small">
+                                                Select Files
                                               </span>
                                             </span>
-                                        <span class="file-name">
+                                            <span class="file-name is-small">
                                             </span>
-                                    </label>
-                                </div>
-                            </td>
-                            <td><label for="userComment">User Comment</label><input class="input is-normal" type="text" id="userComment" size="40" name="userComment"></td>
-                            <td>
-                                <label for="uploadDatabase">Database:</label>
-                                <select name="database" id="uploadDatabase">
-                                    <option value="">None</option>
-                                    <c:forEach items="${databases}" var="database">
-                                        <option value="${database.name}" <c:if
-                                                test="${database.name == lastSelected}"> selected </c:if>>${database.name}</option>
-                                    </c:forEach>
-                                </select>
-                            </td>
-                            <td><input type="submit" name="Upload" value="Upload" class="button "/></td>
-                            <c:if test="${fn:contains(error,'values ')}">
-                                <td><a href="/api/Showdata?chosen=changed" class="button small" title="Download"><span
-                                        class="fa fa-search" title="View changed data"></span> </a></td>
-                            </c:if>
-                        </tr>
-                        </tbody>
-                    </table>
-                </form>
+                                        </label>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="field is-horizontal">
+                                        <div class="field-label is-normal">
+                                            <label class="label">User&nbsp;Comment</label>
+                                        </div>
+                                        <div class="field-body">
+                                            <div class="field">
+                                                <input class="input is-small" type="text"
+                                                       id="userComment" size="40"
+                                                       name="userComment"></div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="field is-horizontal">
+                                        <div class="field-label is-normal">
+                                            <label class="label">Database</label>
+                                        </div>
+                                        <div class="field-body">
+                                            <div class="select is-small">
+                                                <select name="database" id="uploadDatabase">
+                                                    <option value="">None</option>
+                                                    <c:forEach items="${databases}" var="database">
+                                                        <option value="${database.name}" <c:if
+                                                                test="${database.name == lastSelected}"> selected </c:if>>${database.name}</option>
+                                                    </c:forEach>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td><input type="submit" name="Upload" value="Upload" class="button is-small"/></td>
+                                <c:if test="${fn:contains(error,'values ')}">
+                                    <td><a href="/api/Showdata?chosen=changed" class="button is-small"
+                                           title="Download"><span
+                                            class="fa fa-search" title="View changed data"></span> </a></td>
+                                </c:if>
+                            </tr>
+                        </table>
+                    </form>
+                </div>
             </div>
             <!-- Archive List -->
-            <table>
+            <table class="table is-striped is-fullwidth">
                 <thead>
                 <tr>
-                    <td><a href="/api/ManageDatabases?sort=${datesort}">Date</a></td>
-                    <td><a href="/api/ManageDatabases?sort=${businessnamesort}">Business Name</a></td>
-                    <td><a href="/api/ManageDatabases?sort=${dbsort}">Database Name</a></td>
-                    <td><a href="/api/ManageDatabases?sort=${usernamesort}">User Name</a></td>
-                    <td>
+                    <th><a href="/api/ManageDatabases?sort=${datesort}">Date</a></th>
+                    <th><a href="/api/ManageDatabases?sort=${businessnamesort}">Business Name</a></th>
+                    <th><a href="/api/ManageDatabases?sort=${dbsort}">Database Name</a></th>
+                    <th><a href="/api/ManageDatabases?sort=${usernamesort}">User Name</a></th>
+                    <th>
                         <form method="post"> File Name <input size="20" name="fileSearch"></form>
-                    </td>
-                    <td>Count</td>
-                    <td width="30%">Comment</td>
-                    <td colspan="4"><a href="/api/ManageDatabases?withautos=true" class="button small"
-                                       title="Show Automated Uploads">Show Automated Uploads</a></td>
+                    </th>
+                    <th>Count</th>
+                    <th width="15%">Comment</th>
+                    <th colspan="4"><a href="/api/ManageDatabases?withautos=true" class="button is-small"
+                                       title="Show Automated Uploads">Show Automated Uploads</a></th>
                 </tr>
                 </thead>
-                <tbody>
                 <c:forEach items="${uploads}" var="upload">
                     <tr>
                         <td>${upload.formattedDate}</td>
@@ -131,7 +153,7 @@ Created by IntelliJ IDEA.
                         <td><a href="/api/ManageDatabases?fileSearch=${upload.fileName}">${upload.count}</a></td>
                         <td>${upload.userComment}</td>
                         <td><a href="/api/UploadRecordComment?urid=${upload.id}" target="new"
-                               class="button inspect small" data-title="Edit" title="Comment" id="comment${upload.id}">
+                               class="button is-small" data-title="Edit" title="Comment" id="comment${upload.id}">
                             <c:if test="${upload.userComment.length() > 0}">
                                 Edit
                             </c:if>
@@ -142,64 +164,86 @@ Created by IntelliJ IDEA.
                         </a></td>
                         <td><c:if test="${upload.comments.length() > 0}">
                             <a href="/api/ImportResults?urid=${upload.id}" target="new"
-                               class="button inspect small" data-title="Import Results" title="View Import Results">Results</a>
+                               class="button  is-small" data-title="Import Results"
+                               title="View Import Results">Results</a>
                         </c:if></td>
 
                         <td><c:if test="${upload.downloadable}"><a href="/api/DownloadFile?uploadRecordId=${upload.id}"
-                                                                   class="button small" title="Download"><span
+                                                                   class="button is-small" title="Download"><span
                                 class="fa fa-download" title="Download"></span> </a></c:if></td>
-                        <td><a href="/api/ManageDatabases?deleteUploadRecordId=${upload.id}" class="button small"
+                        <td><a href="/api/ManageDatabases?deleteUploadRecordId=${upload.id}" class="button is-small"
                                title="Delete"><span class="fa fa-trash" title="Delete"></span> </a></td>
                     </tr>
                 </c:forEach>
-                </tbody>
             </table>
         </section>
         <section class="tab-content">
-            <div>
-                <form action="/api/ManageDatabases" method="post">
-                    <table>
-                        <tr>
-                            <td><label for="createDatabase">Database Name:</label> <input name="createDatabase"
-                                                                                          id="createDatabase"/></td>
-                            <td>
-                                <!-- <label for="databaseType">Database Type:</label> <input name="databaseType" id="databaseType"/>--></td>
-                            <td>
-                                <c:if test="${serverList == true}">
-                                    <label for="databaseServerId">Select Server:</label>
-                                    <select name="databaseServerId" id="databaseServerId">
-                                        <c:forEach items="${databaseServers}" var="databaseServer">
-                                            <option value="${databaseServer.id}">${databaseServer.name}</option>
-                                        </c:forEach>
-                                    </select>
-                                </c:if>
-                            </td>
-                            <td>
-                                <input type="submit" name="Create Database" value="Create Database" class="button"/>
-                            </td>
-                        </tr>
-                    </table>
-                </form>
+            <div class="box">
+                <div>
+                    <form action="/api/ManageDatabases" method="post">
+                        <table class="table">
+                            <tr>
+                                <td>
+                                    <div class="field is-horizontal">
+                                        <div class="field-label is-normal">
+                                            <label class="label">Database&nbsp;Name</label>
+                                        </div>
+                                        <div class="field-body">
+                                            <div class="field">
+                                                <input class="input is-small" type="text"
+                                                       id="createDatabase" size="40"
+                                                       name="createDatabase"></div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <!-- <label for="databaseType">Database Type:</label> <input name="databaseType" id="databaseType"/>--></td>
+                                <td>
+                                    <c:if test="${serverList == true}">
+                                        <div class="field is-horizontal">
+                                            <div class="field-label is-normal">
+                                                <label class="label">Select&nbsp;Server</label>
+                                            </div>
+                                            <div class="field-body">
+                                                <div class="select is-small">
+                                                    <select name="databaseServerId" id="databaseServerId">
+                                                        <c:forEach items="${databaseServers}" var="databaseServer">
+                                                            <option value="${databaseServer.id}">${databaseServer.name}</option>
+                                                        </c:forEach>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </c:if>
+                                </td>
+                                <td>
+                                    <input type="submit" name="Create Database" value="Create Database"
+                                           class="button is-small"/>
+                                </td>
+                            </tr>
+                        </table>
+                    </form>
+                </div>
             </div>
             <!-- Database Options Table -->
-            <table>
+            <table class="table is-striped is-fullwidth">
                 <thead>
                 <tr>
                     <!--<td>${database.id}</td> -->
                     <!--<td>${database.businessId}</td>-->
-                    <td>Name</td>
-                    <td>Persistence Name</td>
-                    <td>Name Count</td>
-                    <td>Value Count</td>
-                    <td>Created</td>
-                    <td>Last Audit</td>
-                    <td>Auto backup</td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
+                    <th>Name</th>
+                    <th>Persistence Name</th>
+                    <th>Name Count</th>
+                    <th>Value Count</th>
+                    <th>Created</th>
+                    <th>Last Audit</th>
+                    <th>Auto Backup</th>
+                    <th></th>
+                    <th></th>
+                    <th></th>
+                    <th></th>
+                    <th></th>
+                    <th></th>
                 </tr>
                 </thead>
                 <tbody>
@@ -218,24 +262,25 @@ Created by IntelliJ IDEA.
                                 test="${database.autobackup}">&nbsp;|&nbsp;<a href="/api/ManageDatabaseBackups?databaseId=${database.id}">view</a></c:if>
                         </td>
                         <td><a href="/api/Jstree?op=new&database=${database.urlEncodedName}"
-                               data-title="${database.urlEncodedName}" class="button small inspect"
+                               data-title="${database.urlEncodedName}" class="button is-small inspect"
                                title="Inspect"><span class="fa fa-eye" title="Inspect ${database.name}"></span></a></td>
                         <td><a href="/api/ManageDatabases?emptyId=${database.id}#tab2"
                                onclick="return confirm('Are you sure you want to Empty ${database.name}?')"
-                               class="button small" title="Empty ${database.name}"><span class="fa fa-bomb"
-                                                                                         title="Empty"></span></a></td>
+                               class="button is-small" title="Empty ${database.name}"><span class="fa fa-bomb"
+                                                                                            title="Empty"></span></a>
+                        </td>
                         <td><a href="/api/ManageDatabases?deleteId=${database.id}#tab2"
                                onclick="return confirm('Are you sure you want to Delete ${database.name}?')"
-                               class="button small" title="Delete ${database.name}"><span class="fa fa-trash"
-                                                                                          title="Delete"></span> </a>
+                               class="button is-small" title="Delete ${database.name}"><span class="fa fa-trash"
+                                                                                             title="Delete"></span> </a>
                         </td>
                         <td><a onclick="showWorking();" href="/api/DownloadBackup?id=${database.id}"
-                               class="button small"
+                               class="button is-small"
                                title="Download Backup for ${database.name}"><span class="fa fa-download"
                                                                                   title="Download Backup"></span> </a>
                         </td>
                         <td><c:if test="${database.loaded}"><a href="/api/ManageDatabases?unloadId=${database.id}"
-                                                               class="button small"
+                                                               class="button is-small"
                                                                title="Unload ${database.name}"><span class="fa fa-eject"
                                                                                                      title="Unload"></span></a></c:if>
                         </td>
@@ -245,96 +290,195 @@ Created by IntelliJ IDEA.
             </table>
         </section>
         <section class="tab-content">
-            WARNING : the database specified internally by the zip or "Database" here will zap a database and associated
-            reports and auto backups if they exist before it restores the file contents.
-            <form onsubmit="showWorking();" action="/api/ManageDatabases" method="post"
-                  enctype="multipart/form-data">
-                <table>
-                    <tbody>
-                    <tr>
-                        <td><label for="uploadFile">Upload Backup File:</label> <input type="file" name="uploadFile">
-                        </td>
-                        <td><input type="hidden" name="backup" value="true"/></td>
-                        <td>Database <input type="text" name="database" value=""/></td>
-                        <td><input type="submit" name="Upload" value="Upload" class="button "/></td>
-                    </tr>
-                    </tbody>
-                </table>
-            </form>
-            <h3>Download Custom Backup.</h3>
-            For advanced users - specify a subset of a database to download.
-            <form onsubmit="showWorking();" action="/api//DownloadBackup" method="get">
-                <table>
-                    <tbody>
-                    <tr>
-                        <td>Database: <select name="id">
-                            <c:forEach items="${databases}" var="database">
-                                <option value="${database.id}" <c:if
-                                        test="${database.name == lastSelected}"> selected </c:if>>${database.name}</option>
-                            </c:forEach>
-                        </select>
+            <div class="box">
+                <div>
+                    WARNING : the database specified internally by the zip or "Database" here will zap a database and
+                    associated
+                    reports and auto backups if they exist before it restores the file contents.
+                    <form onsubmit="showWorking();" action="/api/ManageDatabases" method="post"
+                          enctype="multipart/form-data">
+                        <input type="hidden" name="backup" value="true"/>
+                        <table class="table">
+                            <tbody>
+                            <tr>
+                                <td>
+                                    <div class="file has-name is-small" id="file-js-example1">
+                                        <label class="file-label is-small">
+                                            <input class="file-input is-small" type="file" name="uploadFile">
+                                            <span class="file-cta is-small">
+                                              <span class="file-icon is-small">
+                                                <i class="fas fa-upload"></i>
+                                              </span>
+                                              <span class="file-label is-small">
+                                                Select Backup File
+                                              </span>
+                                            </span>
+                                            <span class="file-name is-small">
+                                            </span>
 
-                        </td>
-                        <td>Name subset <input type="text" name="namesubset" value=""/></td>
-                        <td><input type="submit" name="Download" value="Download" class="button "/></td>
-                    </tr>
-                    </tbody>
-                </table>
-            </form>
-            <h3>Memory/CPU report for servers:</h3>
-            <div class="well">
-                <c:forEach items="${databaseServers}" var="databaseServer">
-                    <a href="/api/MemoryReport?serverIp=${databaseServer.ip}" target="new"
-                       class="button report">${databaseServer.name}</a>
-                </c:forEach>
-            </div>
-            <div class="well">
-                <a href="/api/UserLog"
-                   class="button" target="new">User Log</a>
-            </div>
+                                        </label>
+                                    </div>
+                                </td>
 
+                                <td>
+                                    <div class="field is-horizontal">
+                                        <div class="field-label is-normal">
+                                            <label class="label">Database</label>
+                                        </div>
+                                        <div class="field-body">
+                                            <div class="field">
+                                                <input class="input is-small" type="text"
+                                                       size="40"
+                                                       name="database"></div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td><input type="submit" name="Upload" value="Upload" class="button is-small"/></td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </form>
+                </div>
+            </div>
+            <div class="box">
+                <div>
+                Download Custom Backup. For advanced users - specify a subset of a database to download.
+                    <form onsubmit="showWorking();" action="/api/DownloadBackup" method="get">
+                        <table class="table">
+                            <tbody>
+                            <tr>
+                                <td>
+                                    <div class="field is-horizontal">
+                                        <div class="field-label is-normal">
+                                            <label class="label">Database</label>
+                                        </div>
+                                        <div class="field-body">
+                                            <div class="select is-small">
+                                                <select name="id">
+                                                    <c:forEach items="${databases}" var="database">
+                                                        <option value="${database.id}" <c:if
+                                                                test="${database.name == lastSelected}"> selected </c:if>>${database.name}</option>
+                                                    </c:forEach>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="field is-horizontal">
+                                        <div class="field-label is-normal">
+                                            <label class="label">Name&nbsp;Subset</label>
+                                        </div>
+                                        <div class="field-body">
+                                            <div class="field">
+                                                <input class="input is-small" type="text"
+                                                       size="40"
+                                                       name="namesubset"></div>
+                                        </div>
+                                    </div>
+                                <td><input type="submit" name="Download" value="Download" class="button is-small"/></td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </form>
+                </div>
+            </div>
+            <div class="box">
+                <div>
+
+                Memory/CPU report for servers
+                    <div class="well">
+                        <c:forEach items="${databaseServers}" var="databaseServer">
+                            <a href="/api/MemoryReport?serverIp=${databaseServer.ip}" target="new"
+                               class="button is-small">${databaseServer.name}</a>
+                        </c:forEach>
+                    </div>
+                    <div><br/>
+                        <a href="/api/UserLog"
+                           class="button is-small" target="new">User Log</a>
+                    </div>
+                </div>
+            </div>
         </section>
         <section class="tab-content">
-            <form action="/api/ManageDatabases#tab4" method="post" enctype="multipart/form-data">
-                <table>
-                    <tbody>
-                    <tr>
-                        <td><label for="uploadFile">Manually add file for validation : </label> <input type="file"
-                                                                                                       name="uploadFile">
-                        </td>
-                        <td>Team <input type="text" name="team"/></td>
-                        <td>
-                            <label for="uploadDatabase2">Database:</label>
-                            <select name="database" id="uploadDatabase2">
-                                <c:forEach items="${databases}" var="database">
-                                    <option value="${database.name}" <c:if
-                                            test="${database.name == lastSelected}"> selected </c:if>>${database.name}</option>
-                                </c:forEach>
-                            </select>
-                        </td>
-                        <td><input type="submit" name="Upload" value="Upload" class="button"/></td>
-                    </tr>
-                    </tbody>
-                </table>
-            </form>
+            <div class="box">
+                <div>
+                    <form action="/api/ManageDatabases#tab4" method="post" enctype="multipart/form-data">
+                        <table class="table">
+                            <tbody>
+                            <tr>
+                                <td>
+                                    <div class="file has-name is-small" id="file-js-example2">
+                                        <label class="file-label is-small">
+                                            <input class="file-input is-small" type="file" name="uploadFile">
+                                            <span class="file-cta is-small">
+                                              <span class="file-icon is-small">
+                                                <i class="fas fa-upload"></i>
+                                              </span>
+                                              <span class="file-label is-small">
+                                                Manually add file for validation
+                                              </span>
+                                            </span>
+                                            <span class="file-name is-small">
+                                            </span>
+                                        </label>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="field is-horizontal">
+                                        <div class="field-label is-normal">
+                                            <label class="label">Team</label>
+                                        </div>
+                                        <div class="field-body">
+                                            <div class="field">
+                                                <input class="input is-small" type="text"
+                                                       size="40"
+                                                       name="team"></div>
+                                        </div>
+                                    </div>
+                                <td>
+                                    <div class="field is-horizontal">
+                                        <div class="field-label is-normal">
+                                            <label class="label">Database</label>
+                                        </div>
+                                        <div class="field-body">
+                                            <div class="select is-small">
+                                                <select name="database" id="uploadDatabase2">
+                                                    <c:forEach items="${databases}" var="database">
+                                                        <option value="${database.name}" <c:if
+                                                                test="${database.name == lastSelected}"> selected </c:if>>${database.name}</option>
+                                                    </c:forEach>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
 
-            <table>
+                                </td>
+                                <td><input type="submit" name="Upload" value="Upload" class="button is-small"/></td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </form>
+                </div>
+            </div>
+
+            <table class="table is-striped is-fullwidth">
                 <thead>
                 <tr>
-                    <td>Created</td>
-                    <td>By user</td>
-                    <td>Processed</td>
-                    <td>By user</td>
-                    <td>
+                    <th>Created</th>
+                    <th>By user</th>
+                    <th>Processed</th>
+                    <th>By user</th>
+                    <th>
                         <form method="post" action="/api/ManageDatabases#tab4"> File Name <input size="20"
                                                                                                  name="pendingUploadSearch">
                         </form>
-                    </td>
-                    <td>Size</td>
-                    <td>Database</td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
+                    </th>
+                    <th>Size</th>
+                    <th>Database</th>
+                    <th></th>
+                    <th></th>
+                    <th></th>
                 </tr>
                 </thead>
                 <tbody>
@@ -373,79 +517,119 @@ Created by IntelliJ IDEA.
                 </tbody>
             </table>
             <div>
-                <a href="/api/ManageDatabases#tab4" class="button">Normal View</a>&nbsp;
-                <a href="/api/ManageDatabases?allteams=true#tab4" class="button">Show for all teams</a>&nbsp;
-                <a href="/api/ManageDatabases?uploadreports=true#tab4" class="button">Show completed uploads</a>
+                <a href="/api/ManageDatabases#tab4" class="button is-small">Normal View</a>&nbsp;
+                <a href="/api/ManageDatabases?allteams=true#tab4" class="button is-small">Show for all teams</a>&nbsp;
+                <a href="/api/ManageDatabases?uploadreports=true#tab4" class="button is-small">Show completed
+                    uploads</a>
             </div>
 
         </section>
         <section class="tab-content">
-            <form action="/api/ManageDatabases#tab5" method="post" enctype="multipart/form-data">
-                <table>
-                    <tbody>
+            <div class="box">
+                <div>
+                    <form action="/api/ManageDatabases#tab5" method="post" enctype="multipart/form-data">
+                        <input type="hidden" name="template" value="true"/>
+                        <table class="table">
+                            <tbody>
+                            <tr>
+                                <td>
+                                    <div class="file has-name is-small" id="file-js-example3">
+                                        <label class="file-label is-small">
+                                            <input class="file-input is-small" type="file" name="uploadFile">
+                                            <span class="file-cta is-small">
+                                              <span class="file-icon is-small">
+                                                <i class="fas fa-upload"></i>
+                                              </span>
+                                              <span class="file-label is-small">
+                                                Upload Template
+                                              </span>
+                                            </span>
+                                            <span class="file-name is-small">
+                                            </span>
+
+                                        </label>
+                                    </div>
+
+                                </td>
+                                <td>
+                                    <div class="field is-horizontal">
+                                        <div class="field-label is-normal">
+                                            <label class="label">Template&nbsp;Comment</label>
+                                        </div>
+                                        <div class="field-body">
+                                            <div class="field">
+                                                <input class="input is-small" type="text"
+                                                       size="40"
+                                                       name="userComment" pattern="(.|\s)*\S(.|\s)*"></div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="field is-horizontal">
+                                        <div class="field-label is-normal">
+                                            <label class="label">Database</label>
+                                        </div>
+                                        <div class="field-body">
+                                            <div class="select is-small">
+                                                <select name="database">
+                                                    <c:forEach items="${databases}" var="database">
+                                                        <option value="${database.name}" <c:if
+                                                                test="${database.name == lastSelected}"> selected </c:if>>${database.name}</option>
+                                                    </c:forEach>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                </td>
+                                <td><input type="submit" name="Upload" value="Upload" class="button is-small"/></td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </form>
+                </div>
+            </div>
+            <table class="table is-striped is-fullwidth">
+                <thead>
+                <tr>
+                    <th>Uploader</th>
+                    <th>Template Name</th>
+                    <th>Notes</th>
+                    <th>Date Uploaded</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                <c:forEach items="${importTemplates}" var="template">
                     <tr>
-                        <td><label for="uploadFile">Upload Template:</label> <input type="file" name="uploadFile">
-                        </td>
-                        <td><label for="templateComment">Comment:</label><input id="templateComment" size="40"
-                                                                                name="userComment" required
-                                                                                pattern="(.|\s)*\S(.|\s)*"></td>
+                        <td>${template.user}</td>
+                        <td>${template.templateName}</td>
+                        <td>${template.notes}</td>
+                        <td>${template.dateCreated}</td>
                         <td>
-                            <label for="uploadDatabase1">Database:</label>
-                            <select name="database" id="uploadDatabase1">
-                                <option value="">None</option>
-                                <c:forEach items="${databases}" var="database">
-                                    <option value="${database.name}" <c:if
-                                            test="${database.name == lastSelected}"> selected </c:if>>${database.name}</option>
-                                </c:forEach>
-                            </select>
+                            <a href="/api/ManageDatabases?deleteTemplateId=${template.id}#tab5"
+                               onclick="return confirm('Are you sure you want to delete ${template.templateName}?')"
+                               class="button is-small" title="Delete ${template.templateName}"><span
+                                    class="fa fa-trash"
+                                    title="Delete"></span>
+                            </a>
+                            <a href="/api/DownloadImportTemplate?importTemplateId=${template.id}#tab5"
+                               class="button is-small" title="Download"><span class="fa fa-download"
+                                                                              title="Download"></span> </a>
                         </td>
-                        <td><input type="hidden" name="template" value="true"/></td>
-                        <td><input type="submit" name="Upload" value="Upload" class="button "/></td>
                     </tr>
-                    </tbody>
-                </table>
-                <table>
-                    <thead>
-                    <tr>
-                        <td>Uploader</td>
-                        <td>Template Name</td>
-                        <td>Notes</td>
-                        <td>Date Uploaded</td>
-                        <td></td>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    <c:forEach items="${importTemplates}" var="template">
-                        <tr>
-                            <td>${template.user}</td>
-                            <td>${template.templateName}</td>
-                            <td>${template.notes}</td>
-                            <td>${template.dateCreated}</td>
-                            <td>
-                                <a href="/api/ManageDatabases?deleteTemplateId=${template.id}#tab5"
-                                   onclick="return confirm('Are you sure you want to delete ${template.templateName}?')"
-                                   class="button small" title="Delete ${template.templateName}"><span
-                                        class="fa fa-trash"
-                                        title="Delete"></span>
-                                </a>
-                                <a href="/api/DownloadImportTemplate?importTemplateId=${template.id}#tab5"
-                                   class="button small" title="Download"><span class="fa fa-download"
-                                                                               title="Download"></span> </a>
-                            </td>
-                        </tr>
-                    </c:forEach>
-                    </tbody>
-                </table>
-            </form>
+                </c:forEach>
+                </tbody>
+            </table>
             <br/>
             <br/>
             <h3>Assign Templates to Databases</h3>
             <form action="/api/ManageDatabases?templateassign=1#tab5" method="post">
-                <table>
+                <table class="table">
                     <thead>
                     <tr>
-                        <td>Database</td>
-                        <td>Template</td>
+                        <th>Database</th>
+                        <th>Template</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -453,32 +637,58 @@ Created by IntelliJ IDEA.
                         <tr>
                             <td>${database.name}</td>
                             <td>
-                                <select name="templateName-${database.id}">
-                                    <option value="">None</option>
-                                    <c:forEach items="${importTemplates}" var="template">
-                                        <option value="${template.templateName}" <c:if
-                                                test="${template.templateName == database.importTemplate}"> selected </c:if>>${template.templateName}</option>
-                                    </c:forEach>
-                                </select>
+
+                                <div class="field-body">
+                                    <div class="select is-small">
+                                        <select name="templateName-${database.id}">
+                                            <option value="">None</option>
+                                            <c:forEach items="${importTemplates}" var="template">
+                                                <option value="${template.templateName}" <c:if
+                                                        test="${template.templateName == database.importTemplate}"> selected </c:if>>${template.templateName}</option>
+                                            </c:forEach>
+                                        </select>
+                                    </div>
+                                </div>
+
                             </td>
                         </tr>
                     </c:forEach>
 
                     </tbody>
                 </table>
-                <input type="submit" name="Save Changes" value="Save Changes" class="button "/>
+                <input type="submit" name="Save Changes" value="Save Changes" class="button is-small"/>
             </form>
             <br/>
             <br/>
             <h3>Test pre-processor. Select a pre-processor and a zip of data to test</h3>
             <form action="/api/ManageDatabases#tab5" method="post" enctype="multipart/form-data"
                   onsubmit="showWorking();">
-                <table>
+                <table class="table">
                     <tbody>
                     <tr>
-                        <td><label for="uploadFile">Upload Files:</label> <input id="preprocessorTest" type="file"
-                                                                                 name="preprocessorTest" multiple>&nbsp;&nbsp;<input
-                                type="submit" name="Upload" value="Upload" class="button "/></td>
+                        <td>
+                            <div class="file has-name is-small" id="file-js-example4">
+                                <label class="file-label is-small">
+                                    <input class="file-input is-small" id="preprocessorTest"
+                                           type="file"
+                                           name="preprocessorTest"
+                                           multiple>
+                                    <span class="file-cta is-small">
+                                              <span class="file-icon is-small">
+                                                <i class="fas fa-upload"></i>
+                                              </span>
+                                              <span class="file-label is-small">
+                                                Upload Files
+                                              </span>
+                                            </span>
+                                    <span class="file-name is-small">
+                                            </span>
+
+                                </label>
+                            </div>
+
+                            &nbsp;&nbsp;<input
+                                type="submit" name="Upload" value="Upload" class="button is-small"/></td>
                     </tr>
                     </tbody>
                 </table>
@@ -535,10 +745,58 @@ Created by IntelliJ IDEA.
     fileInput.onchange = () => {
         if (fileInput.files.length > 0) {
             const fileName = document.querySelector('#file-js-example .file-name');
-            if (fileInput.files.length > 1){
+            if (fileInput.files.length > 1) {
                 fileName.textContent = "Multiple files selected";
             } else {
                 fileName.textContent = fileInput.files[0].name;
+            }
+        }
+    }
+
+    const fileInput1 = document.querySelector('#file-js-example1 input[type=file]');
+    fileInput1.onchange = () => {
+        if (fileInput1.files.length > 0) {
+            const fileName1 = document.querySelector('#file-js-example1 .file-name');
+            if (fileInput1.files.length > 1) {
+                fileName1.textContent = "Multiple files selected";
+            } else {
+                fileName1.textContent = fileInput1.files[0].name;
+            }
+        }
+    }
+
+    const fileinput2 = document.querySelector('#file-js-example2 input[type=file]');
+    fileinput2.onchange = () => {
+        if (fileinput2.files.length > 0) {
+            const fileName2 = document.querySelector('#file-js-example2 .file-name');
+            if (fileinput2.files.length > 1) {
+                fileName2.textContent = "Multiple files selected";
+            } else {
+                fileName2.textContent = fileinput2.files[0].name;
+            }
+        }
+    }
+
+    const fileinput3 = document.querySelector('#file-js-example3 input[type=file]');
+    fileinput3.onchange = () => {
+        if (fileinput3.files.length > 0) {
+            const fileName3 = document.querySelector('#file-js-example3 .file-name');
+            if (fileinput3.files.length > 1) {
+                fileName3.textContent = "Multiple files selected";
+            } else {
+                fileName3.textContent = fileinput3.files[0].name;
+            }
+        }
+    }
+
+    const fileinput4 = document.querySelector('#file-js-example4 input[type=file]');
+    fileinput4.onchange = () => {
+        if (fileinput4.files.length > 0) {
+            const fileName4 = document.querySelector('#file-js-example4 .file-name');
+            if (fileinput4.files.length > 1) {
+                fileName4.textContent = "Multiple files selected";
+            } else {
+                fileName4.textContent = fileinput4.files[0].name;
             }
         }
     }
