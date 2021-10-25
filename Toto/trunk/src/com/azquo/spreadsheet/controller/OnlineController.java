@@ -217,6 +217,9 @@ public class OnlineController {
                             }
                             model.put("headings", displayHeadings);
                             model.put("reportDatabase", "");
+                            if (request.getSession().getAttribute("newui") != null){
+                                return "adHocReport2";
+                            }
                             return "adHocReport";
 
                         } else {

@@ -39,11 +39,12 @@
     Ad-hoc Report
     <div class="is-danger">${error}</div>
     <form action="/api/Online?opcode=adhocreport" method="post">
+        <input type="hidden" name="reportid" value="">
         <div>
             <table class="table">
                 <tr>
                     <td>
-                        <label class="label">Database:</label>
+                        <label class="label">Database</label>
                         <div class="select is-small">
 
                             <select name="database" id="database">
@@ -55,11 +56,11 @@
                             </select>
                         </div>
                     </td>
-                    <td><label class="label">Report Name:</label> <input class="input" name="reportname" id="reportname"
+                    <td><label class="label">Report Name</label> <input class="input is-small" name="reportname" id="reportname"
                                                                          value="${reportname}"/></td>
                     <td>
-                        <input type="hidden" name="reportid" value="">
-                        <input type="submit" onClick="CreateJson()" value="Create Report" class="button"/>
+                        <label class="label">&nbsp;</label>
+                        <input type="submit" onClick="CreateJson()" value="Create Report" class="button is-small"/>
                     </td>
                 </tr>
             </table>
@@ -78,10 +79,8 @@
                     <td>
                         <input type="text" name="${heading.id}" id="${heading.id}" value="${heading.name}"/>
                         <input type="hidden" name="${heading.id}id" id="${heading.id}id" value="">
-                        <a onclick="chooseHeading('${heading.id}')" class="button" title="Choose ${heading.id}"><span
+                        <a onclick="chooseHeading('${heading.id}')" class="button is-small" title="Choose ${heading.id}"><span
                                 class="fa fa-edit" title="Unload"></span></a></td>
-
-
                     <td>
                         <div class="select is-small">
                             <select name="${heading.id}select" id="${heading.id}select">

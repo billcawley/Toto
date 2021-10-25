@@ -576,6 +576,9 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
         // edd pasting in here to get the banner colour working
         AdminService.setBanner(model,loggedInUser);
         model.addAttribute("targetController", "ManageDatabases");
+        if (session.getAttribute("newui") != null){
+            return "importrunning2";
+        }
         return "importrunning";
     }
 

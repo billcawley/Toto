@@ -83,31 +83,29 @@ public class UserUploadController {
             model.put("databases", databaseList);
 // ok adding back in the uploaded files list but constrained to this DB and with file type
             List<UploadRecord.UploadRecordForDisplay> uploadRecordsForDisplayForBusiness = AdminService.getUploadRecordsForDisplayForUserWithBasicSecurity(loggedInUser);
-            if (uploadRecordsForDisplayForBusiness != null) {
-                if ("database".equals(sort)) {
-                    uploadRecordsForDisplayForBusiness.sort(Comparator.comparing(UploadRecord.UploadRecordForDisplay::getDatabaseName));
-                }
-                if ("databasedown".equals(sort)) {
-                    uploadRecordsForDisplayForBusiness.sort((o1, o2) -> (o2.getDatabaseName().compareTo(o1.getDatabaseName())));
-                }
-                if ("date".equals(sort)) {
-                    uploadRecordsForDisplayForBusiness.sort(Comparator.comparing(UploadRecord.UploadRecordForDisplay::getDate));
-                }
-                if ("datedown".equals(sort)) {
-                    uploadRecordsForDisplayForBusiness.sort((o1, o2) -> (o2.getDate().compareTo(o1.getDate())));
-                }
-                if ("businessname".equals(sort)) {
-                    uploadRecordsForDisplayForBusiness.sort(Comparator.comparing(UploadRecord.UploadRecordForDisplay::getBusinessName));
-                }
-                if ("businessnamedown".equals(sort)) {
-                    uploadRecordsForDisplayForBusiness.sort((o1, o2) -> (o2.getBusinessName().compareTo(o1.getBusinessName())));
-                }
-                if ("username".equals(sort)) {
-                    uploadRecordsForDisplayForBusiness.sort(Comparator.comparing(UploadRecord.UploadRecordForDisplay::getUserName));
-                }
-                if ("usernamedown".equals(sort)) {
-                    uploadRecordsForDisplayForBusiness.sort((o1, o2) -> (o2.getUserName().compareTo(o1.getUserName())));
-                }
+            if ("database".equals(sort)) {
+                uploadRecordsForDisplayForBusiness.sort(Comparator.comparing(UploadRecord.UploadRecordForDisplay::getDatabaseName));
+            }
+            if ("databasedown".equals(sort)) {
+                uploadRecordsForDisplayForBusiness.sort((o1, o2) -> (o2.getDatabaseName().compareTo(o1.getDatabaseName())));
+            }
+            if ("date".equals(sort)) {
+                uploadRecordsForDisplayForBusiness.sort(Comparator.comparing(UploadRecord.UploadRecordForDisplay::getDate));
+            }
+            if ("datedown".equals(sort)) {
+                uploadRecordsForDisplayForBusiness.sort((o1, o2) -> (o2.getDate().compareTo(o1.getDate())));
+            }
+            if ("businessname".equals(sort)) {
+                uploadRecordsForDisplayForBusiness.sort(Comparator.comparing(UploadRecord.UploadRecordForDisplay::getBusinessName));
+            }
+            if ("businessnamedown".equals(sort)) {
+                uploadRecordsForDisplayForBusiness.sort((o1, o2) -> (o2.getBusinessName().compareTo(o1.getBusinessName())));
+            }
+            if ("username".equals(sort)) {
+                uploadRecordsForDisplayForBusiness.sort(Comparator.comparing(UploadRecord.UploadRecordForDisplay::getUserName));
+            }
+            if ("usernamedown".equals(sort)) {
+                uploadRecordsForDisplayForBusiness.sort((o1, o2) -> (o2.getUserName().compareTo(o1.getUserName())));
             }
 
             model.put("dbsort", "database".equals(sort) ? "databasedown" : "database");
@@ -280,6 +278,9 @@ public class UserUploadController {
         }).start();
         // edd pasting in here to get the banner colour working
         AdminService.setBanner(model,loggedInUser);
+        if (session.getAttribute("newui") != null){
+            return "importrunning2";
+        }
         return "importrunning";
     }
 }

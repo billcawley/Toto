@@ -46,9 +46,7 @@ Created by IntelliJ IDEA.
 <div id="tabs-with-content">
     <div class="tabs">
         <ul>
-            <li><a>Uploads</a></li>
-            <li><a>DB Management</a></li>
-            <li><a>Restore Backup/Maintenance</a></li>
+            <li><a>Direct Uploads</a></li>
             <li><a>Pending Uploads</a></li>
             <li><a>Import Templates</a></li>
         </ul>
@@ -181,230 +179,7 @@ Created by IntelliJ IDEA.
         <section class="tab-content">
             <div class="box">
                 <div>
-                    <form action="/api/ManageDatabases#1" method="post">
-                        <table class="table">
-                            <tr>
-                                <td>
-                                    <div class="field is-horizontal">
-                                        <div class="field-label is-normal">
-                                            <label class="label">Database&nbsp;Name</label>
-                                        </div>
-                                        <div class="field-body">
-                                            <div class="field">
-                                                <input class="input is-small" type="text"
-                                                       id="createDatabase" size="40"
-                                                       name="createDatabase"></div>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td>
-                                    <!-- <label for="databaseType">Database Type:</label> <input name="databaseType" id="databaseType"/>--></td>
-                                <td>
-                                    <c:if test="${serverList == true}">
-                                        <div class="field is-horizontal">
-                                            <div class="field-label is-normal">
-                                                <label class="label">Select&nbsp;Server</label>
-                                            </div>
-                                            <div class="field-body">
-                                                <div class="select is-small">
-                                                    <select name="databaseServerId" id="databaseServerId">
-                                                        <c:forEach items="${databaseServers}" var="databaseServer">
-                                                            <option value="${databaseServer.id}">${databaseServer.name}</option>
-                                                        </c:forEach>
-                                                    </select>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </c:if>
-                                </td>
-                                <td>
-                                    <input type="submit" name="Create Database" value="Create Database"
-                                           class="button is-small"/>
-                                </td>
-                            </tr>
-                        </table>
-                    </form>
-                </div>
-            </div>
-            <!-- Database Options Table -->
-            <table class="table is-striped is-fullwidth">
-                <thead>
-                <tr>
-                    <!--<td>${database.id}</td> -->
-                    <!--<td>${database.businessId}</td>-->
-                    <th>Name</th>
-                    <th>Persistence Name</th>
-                    <th>Name Count</th>
-                    <th>Value Count</th>
-                    <th>Created</th>
-                    <th>Last Audit</th>
-                    <th>Auto Backup</th>
-                    <th></th>
-                    <th></th>
-                    <th></th>
-                    <th></th>
-                    <th></th>
-                    <th></th>
-                </tr>
-                </thead>
-                <tbody>
-                <c:forEach items="${databases}" var="database">
-                    <tr>
-                        <!--<td>${database.id}</td>-->
-                        <!--<td>${database.businessId}</td> -->
-                        <td>${database.name}</td>
-                        <td>${database.persistenceName}</td>
-                        <td>${database.nameCount}</td>
-                        <td>${database.valueCount}</td>
-                        <td>${database.created}</td>
-                        <td>${database.lastProvenance}</td>
-                        <td>
-                            <a href="/api/ManageDatabases?toggleAutobackup=${database.id}&ab=${database.autobackup}#1">${database.autobackup}</a><c:if
-                                test="${database.autobackup}">&nbsp;|&nbsp;<a href="/api/ManageDatabaseBackups?databaseId=${database.id}">view</a></c:if>
-                        </td>
-                        <td><a href="/api/Jstree?op=new&database=${database.urlEncodedName}"
-                               data-title="${database.urlEncodedName}" class="button is-small inspect"
-                               title="Inspect"><span class="fa fa-eye" title="Inspect ${database.name}"></span></a></td>
-                        <td><a href="/api/ManageDatabases?emptyId=${database.id}#1"
-                               onclick="return confirm('Are you sure you want to Empty ${database.name}?')"
-                               class="button is-small" title="Empty ${database.name}"><span class="fa fa-bomb"
-                                                                                            title="Empty"></span></a>
-                        </td>
-                        <td><a href="/api/ManageDatabases?deleteId=${database.id}#1"
-                               onclick="return confirm('Are you sure you want to Delete ${database.name}?')"
-                               class="button is-small" title="Delete ${database.name}"><span class="fa fa-trash"
-                                                                                             title="Delete"></span> </a>
-                        </td>
-                        <td><a onclick="showWorking();" href="/api/DownloadBackup?id=${database.id}"
-                               class="button is-small"
-                               title="Download Backup for ${database.name}"><span class="fa fa-download"
-                                                                                  title="Download Backup"></span> </a>
-                        </td>
-                        <td><c:if test="${database.loaded}"><a href="/api/ManageDatabases?unloadId=${database.id}"
-                                                               class="button is-small"
-                                                               title="Unload ${database.name}"><span class="fa fa-eject"
-                                                                                                     title="Unload"></span></a></c:if>
-                        </td>
-                    </tr>
-                </c:forEach>
-                </tbody>
-            </table>
-        </section>
-        <section class="tab-content">
-            <div class="box">
-                <div>
-                    WARNING : the database specified internally by the zip or "Database" here will zap a database and
-                    associated
-                    reports and auto backups if they exist before it restores the file contents.
-                    <form onsubmit="showWorking();" action="/api/ManageDatabases" method="post"
-                          enctype="multipart/form-data">
-                        <input type="hidden" name="backup" value="true"/>
-                        <table class="table">
-                            <tbody>
-                            <tr>
-                                <td>
-                                    <div class="file has-name is-small" id="file-js-example1">
-                                        <label class="file-label is-small">
-                                            <input class="file-input is-small" type="file" name="uploadFile">
-                                            <span class="file-cta is-small">
-                                              <span class="file-icon is-small">
-                                                <i class="fas fa-upload"></i>
-                                              </span>
-                                              <span class="file-label is-small">
-                                                Select Backup File
-                                              </span>
-                                            </span>
-                                            <span class="file-name is-small">
-                                            </span>
-
-                                        </label>
-                                    </div>
-                                </td>
-
-                                <td>
-                                    <div class="field is-horizontal">
-                                        <div class="field-label is-normal">
-                                            <label class="label">Database</label>
-                                        </div>
-                                        <div class="field-body">
-                                            <div class="field">
-                                                <input class="input is-small" type="text"
-                                                       size="40"
-                                                       name="database"></div>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td><input type="submit" name="Upload" value="Upload" class="button is-small"/></td>
-                            </tr>
-                            </tbody>
-                        </table>
-                    </form>
-                </div>
-            </div>
-            <div class="box">
-                <div>
-                    Download Custom Backup. For advanced users - specify a subset of a database to download.
-                    <form onsubmit="showWorking();" action="/api/DownloadBackup" method="get">
-                        <table class="table">
-                            <tbody>
-                            <tr>
-                                <td>
-                                    <div class="field is-horizontal">
-                                        <div class="field-label is-normal">
-                                            <label class="label">Database</label>
-                                        </div>
-                                        <div class="field-body">
-                                            <div class="select is-small">
-                                                <select name="id">
-                                                    <c:forEach items="${databases}" var="database">
-                                                        <option value="${database.id}" <c:if
-                                                                test="${database.name == lastSelected}"> selected </c:if>>${database.name}</option>
-                                                    </c:forEach>
-                                                </select>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="field is-horizontal">
-                                        <div class="field-label is-normal">
-                                            <label class="label">Name&nbsp;Subset</label>
-                                        </div>
-                                        <div class="field-body">
-                                            <div class="field">
-                                                <input class="input is-small" type="text"
-                                                       size="40"
-                                                       name="namesubset"></div>
-                                        </div>
-                                    </div>
-                                <td><input type="submit" name="Download" value="Download" class="button is-small"/></td>
-                            </tr>
-                            </tbody>
-                        </table>
-                    </form>
-                </div>
-            </div>
-            <div class="box">
-                <div>
-
-                    Memory/CPU report for servers
-                    <div class="well">
-                        <c:forEach items="${databaseServers}" var="databaseServer">
-                            <a href="/api/MemoryReport?serverIp=${databaseServer.ip}" target="new"
-                               class="button is-small">${databaseServer.name}</a>
-                        </c:forEach>
-                    </div>
-                    <div><br/>
-                        <a href="/api/UserLog"
-                           class="button is-small" target="new">User Log</a>
-                    </div>
-                </div>
-            </div>
-        </section>
-        <section class="tab-content">
-            <div class="box">
-                <div>
-                    <form action="/api/ManageDatabases#3" method="post" enctype="multipart/form-data">
+                    <form action="/api/ManageDatabases#1" method="post" enctype="multipart/form-data">
                         <table class="table">
                             <tbody>
                             <tr>
@@ -471,7 +246,7 @@ Created by IntelliJ IDEA.
                     <th>Processed</th>
                     <th>By user</th>
                     <th>
-                        <form method="post" action="/api/ManageDatabases#3"> File Name <input size="20"
+                        <form method="post" action="/api/ManageDatabases#1"> File Name <input size="20"
                                                                                               name="pendingUploadSearch">
                         </form>
                     </th>
@@ -518,9 +293,9 @@ Created by IntelliJ IDEA.
                 </tbody>
             </table>
             <div class="container has-text-centered">
-                <a href="/api/ManageDatabases#3" class="button is-small">Normal View</a>&nbsp;
-                <a href="/api/ManageDatabases?allteams=true#3" class="button is-small">Show for all teams</a>&nbsp;
-                <a href="/api/ManageDatabases?uploadreports=true#3" class="button is-small">Show completed
+                <a href="/api/ManageDatabases#1" class="button is-small">Normal View</a>&nbsp;
+                <a href="/api/ManageDatabases?allteams=true#1" class="button is-small">Show for all teams</a>&nbsp;
+                <a href="/api/ManageDatabases?uploadreports=true#1" class="button is-small">Show completed
                     uploads</a>
             </div>
 
@@ -528,7 +303,7 @@ Created by IntelliJ IDEA.
         <section class="tab-content">
             <div class="box">
                 <div>
-                    <form action="/api/ManageDatabases#4" method="post" enctype="multipart/form-data">
+                    <form action="/api/ManageDatabases#2" method="post" enctype="multipart/form-data">
                         <input type="hidden" name="template" value="true"/>
                         <table class="table">
                             <tbody>
@@ -608,13 +383,13 @@ Created by IntelliJ IDEA.
                         <td>${template.notes}</td>
                         <td>${template.dateCreated}</td>
                         <td>
-                            <a href="/api/ManageDatabases?deleteTemplateId=${template.id}#4"
+                            <a href="/api/ManageDatabases?deleteTemplateId=${template.id}#2"
                                onclick="return confirm('Are you sure you want to delete ${template.templateName}?')"
                                class="button is-small" title="Delete ${template.templateName}"><span
                                     class="fa fa-trash"
                                     title="Delete"></span>
                             </a>
-                            <a href="/api/DownloadImportTemplate?importTemplateId=${template.id}#4"
+                            <a href="/api/DownloadImportTemplate?importTemplateId=${template.id}#2"
                                class="button is-small" title="Download"><span class="fa fa-download"
                                                                               title="Download"></span> </a>
                         </td>
@@ -624,7 +399,7 @@ Created by IntelliJ IDEA.
             </table>
             <div class="box">
                 <h5 class="title is-5">Assign Templates to Databases</h5>
-                <form action="/api/ManageDatabases?templateassign=1#4" method="post">
+                <form action="/api/ManageDatabases?templateassign=1#2" method="post">
                     <table class="table">
                         <thead>
                         <tr>

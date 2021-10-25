@@ -48,7 +48,7 @@ public class ShowdataController {
                 if (provenanceDetailsForDisplay.getAuditForDisplayList() != null && !provenanceDetailsForDisplay.getAuditForDisplayList().isEmpty()) {
                     modelMap.addAttribute("audit", jacksonMapper.writeValueAsString(provenanceDetailsForDisplay));
                     modelMap.addAttribute("op", "audit");
-                    return ("Excel");
+                    return "Excel";
                 }
                 return "showdata";
             }

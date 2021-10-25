@@ -90,11 +90,10 @@
                             <p class="panel-heading ">
                                 <a href="/api/Online?reportid=1"><img src="http://localhost:8080/images/logo_admin.png" alt="azquo"></a>
                             </p>
-                            <h1 class="subtitle">&nbsp;Loading... <span class="fa fa-spin fa-cog"></span></h1>
+                            <div class="container has-text-centered" style="padding:10px;"><h3 class="title is-3">Loading&nbsp;<span class="fa fa-spin fa-cog"></span></h3></div>
                             <div id="chosen" style="height:45px; width:100%;font:10px monospace;overflow:auto;"></div>
                             <div id="serverStatus" style="height:145px; width:100%;font:10px monospace;overflow:auto;"></div>
-                            <a href="javascript:void(0)" id="abort" onclick='jq.post("/api/SpreadsheetStatus?action=stop", null)' class="button alt small"><span class="fa fa-times-circle"></span>&nbsp;Abort Load</a>
-
+                            <div class="container has-text-centered" style="padding:10px;"><a href="javascript:void(0)" id="abort" onclick='jq.post("/api/SpreadsheetStatus?action=stop", null)' class="button alt small"><span class="fa fa-times-circle"></span>&nbsp;Abort Load</a></div>
                         </nav>
                     </div>
                 </div>

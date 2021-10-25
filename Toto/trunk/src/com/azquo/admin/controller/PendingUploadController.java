@@ -90,9 +90,14 @@ public class PendingUploadController {
         if (loggedInUser == null) {
             return "redirect:/api/Login";
         } else if (NumberUtils.isDigits(id)) {
-            model.put("pheader", "../includes/admin_header.jsp");
-            model.put("pfooter", "../includes/admin_footer.jsp");
-            model.put("cancelUrl", "ManageDatabases#tab4");
+            if (request.getSession().getAttribute("newui") != null){
+                model.put("cancelUrl", "ManageDatabases#3");
+
+            } else {
+                model.put("cancelUrl", "ManageDatabases#tab4");
+
+            }
+
             model.put("admin", loggedInUser.getUser().isAdministrator());
             AdminService.setBanner(model, loggedInUser);
             final PendingUpload pu = PendingUploadDAO.findById(Integer.parseInt(id));
@@ -106,7 +111,11 @@ public class PendingUploadController {
                     // now a normal user can access this spacer
                     model.put("pheader", "../includes/public_header.jsp");
                     model.put("pfooter", "../includes/public_footer.jsp");
-                    model.put("cancelUrl", "UserUpload#tab2");
+                    if (request.getSession().getAttribute("newui") != null){
+                        model.put("cancelUrl", "UserUpload#1");
+                    } else {
+                        model.put("cancelUrl", "UserUpload#tab2");
+                    }
                     nonAdminDBids = new HashSet<>();
                     databaseList = new ArrayList<>();
                     for (LoggedInUser.ReportIdDatabaseId securityPair : loggedInUser.getReportIdDatabaseIdPermissions().values()) {
@@ -137,9 +146,17 @@ public class PendingUploadController {
                     pu.setProcessedDate(LocalDateTime.now());
                     PendingUploadDAO.store(pu);
                     if (nonAdminDBids != null) {
-                        return "redirect:/api/UserUpload?uploadreports=true#tab2";
+                        if (request.getSession().getAttribute("newui") != null){
+                            return "redirect:/api/UserUpload?uploadreports=true#1";
+                        } else {
+                            return "redirect:/api/UserUpload?uploadreports=true#tab2";
+                        }
                     } else {
-                        return "redirect:/api/ManageDatabases?uploadreports=true#tab4";
+                        if (request.getSession().getAttribute("newui") != null){
+                            return "redirect:/api/ManageDatabases?uploadreports=true#3";
+                        } else {
+                            return "redirect:/api/ManageDatabases?uploadreports=true#tab4";
+                        }
                     }
                 }
                 if (commentSave != null && commentId != null) {
@@ -177,6 +194,9 @@ public class PendingUploadController {
                 ImportTemplate preProcess = null;
                 if (fileSplit.length < 3) {
                     model.put("error", "Filename in unknown format.");
+                    if (request.getSession().getAttribute("newui") != null){
+                        return "pendingupload2";
+                    }
                     return "pendingupload";
                 } else {
                     //need to think about option to find a pre processor with the first and second words, if so the second word is the version
@@ -210,6 +230,9 @@ public class PendingUploadController {
                     } else {
                         model.put("databases", AdminService.getDatabaseListForBusinessWithBasicSecurity(loggedInUser));
                     }
+                    if (request.getSession().getAttribute("newui") != null){
+                        return "pendingupload2";
+                    }
                     return "pendingupload";
                 } else {
                     model.put("database", database.getName());
@@ -226,6 +249,9 @@ public class PendingUploadController {
                 final HashMap<String, String> params = new HashMap<>();
                 if (importTemplateForUploadedFile == null) {
                     model.put("error", "Import template not found for " + database.getName() + ", please upload one for it.");
+                    if (request.getSession().getAttribute("newui") != null){
+                        return "pendingupload2";
+                    }
                     return "pendingupload";
                 } else {
                     boolean found = false;
@@ -250,6 +276,9 @@ public class PendingUploadController {
                     }
                     if (!found) {
                         model.put("error", "Import version " + importVersion + " not found.");
+                        if (request.getSession().getAttribute("newui") != null){
+                            return "pendingupload2";
+                        }
                         return "pendingupload";
                     }
                     model.put(ImportService.IMPORTVERSION, importVersion);
@@ -371,6 +400,9 @@ public class PendingUploadController {
                         model.put("setparams", true);
                         model.put("maintext", paramAdjustTable.toString());
                         //model.put("params", paramsMap);
+                        if (request.getSession().getAttribute("newui") != null){
+                            return "pendingupload2";
+                        }
                         return "pendingupload";
                     }
                 }
@@ -530,16 +562,59 @@ public class PendingUploadController {
                     maintext.append("</script>\n");
                     maintext.append("<input name=\"finalsubmit\" id=\"finalsubmit\" value=\"finalsubmit\" type=\"hidden\" />\n");
                     maintext.append("<input name=\"maxcounter\" value=\"" + (importResult.size() - 1) + "\" type=\"hidden\" />\n");
-                    maintext.append("<a href=\"/api/Download?puid=" + id + "\" class=\"button\">Download Warning Report</a>" +
-                            "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<label for=\"amendmentsFile\">Upload Amendments : </label> <input type=\"file\" name=\"amendmentsFile\">\n");
-                    maintext.append("<table>\n");
-                    maintext.append("<tr>\n");
-                    maintext.append("<td>Name</td>\n");
-                    maintext.append("<td>Status</td>\n");
-                    maintext.append("<td><div aflign=\"center\">Load</div></td>\n");
-                    maintext.append("<td></td>\n");
+
+                    boolean newUi = session.getAttribute("newui") != null;
+
+                    if (newUi){
+                        maintext.append("<table><tr><td><a href=\"/api/Download?puid=" + id + "\" class=\"button is-small\">Download Warning Report</a>&nbsp;&nbsp;" +
+                                "</td><td><div class=\"file has-name is-small\" id=\"file-js-example\">\n" +
+                                "                                        <label class=\"file-label\">\n" +
+                                "                                            <input class=\"file-input is-small\" type=\"file\" name=\"amendmentsFile\"\n" +
+                                "                                                   id=\"uploadFile\"\n" +
+                                "                                                   multiple>\n" +
+                                "                                            <span class=\"file-cta is-small\">\n" +
+                                "                                              <span class=\"file-icon is-small\">\n" +
+                                "                                                <i class=\"fas fa-upload\"></i>\n" +
+                                "                                              </span>\n" +
+                                "                                              <span class=\"file-label is-small\">\n" +
+                                "                                                Upload Amendments\n" +
+                                "                                              </span>\n" +
+                                "                                            </span>\n" +
+                                "                                            <span class=\"file-name is-small\">\n" +
+                                "                                            </span>\n" +
+                                "                                        </label>\n" +
+                                "                                    </div></td></tr></table>\n\n" +
+                                "<script>" +
+                                "    const fileInput = document.querySelector('#file-js-example input[type=file]');\n" +
+                                "    fileInput.onchange = () => {\n" +
+                                "        if (fileInput.files.length > 0) {\n" +
+                                "            const fileName = document.querySelector('#file-js-example .file-name');\n" +
+                                "            if (fileInput.files.length > 1) {\n" +
+                                "                fileName.textContent = \"Multiple files selected\";\n" +
+                                "            } else {\n" +
+                                "                fileName.textContent = fileInput.files[0].name;\n" +
+                                "            }\n" +
+                                "        }\n" +
+                                "    }\n" +
+                                "</script>");
+                    } else {
+                        maintext.append("<a href=\"/api/Download?puid=" + id + "\" class=\"button\">Download Warning Report</a>" +
+                                "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<label for=\"amendmentsFile\">Upload Amendments : </label> <input type=\"file\" name=\"amendmentsFile\">\n");
+                    }
+
+                    if (newUi){
+                        maintext.append("<table class=\"table is-striped is-fullwidth\">\n");
+                    } else {
+                        maintext.append("<table>\n");
+
+                    }
+                    maintext.append("<thead>\n");
+                    maintext.append("<th>Name</th>\n");
+                    maintext.append("<th>Status</th>\n");
+                        maintext.append("<th><div align=\"center\">Load</div></th>\n");
+                    maintext.append("<th></th>\n");
                     //maintext.append(ManageDatabasesController.formatUploadedFiles(Collections.singletonList(uploadedFile), false));
-                    maintext.append("</tr>");
+                    maintext.append("</thead>");
                     int counter = 0;
                     for (UploadedFile uploadedFile : importResult) {
                         String quickFeedback = "";
@@ -567,7 +642,6 @@ public class PendingUploadController {
                                 }
                             }
                         }
-
                         maintext.append("<tr>");
                         String fileName = uploadedFile.getFileName();
                         if (uploadedFile.getFileNames().size() > 1) {
@@ -586,17 +660,24 @@ public class PendingUploadController {
                             maintext.append("<div align=\"center\"><input type=\"checkbox\" name=\"load-" + counter + "\" checked/></div>");
                         }
                         maintext.append("</td>");
-                        maintext.append("<td><a href=\"#\" class=\"button\" title=\"Details\"  onclick=\"showHideDiv('details" + counter + "'); return false;\" >Details</a></td>");
+                        if (newUi) {
+                            maintext.append("<td><a href=\"#\" class=\"button is-small\" title=\"Details\"  onclick=\"showHideDiv('details" + counter + "'); return false;\" >Details</a></td>");
+                        } else {
+                            maintext.append("<td><a href=\"#\" class=\"button\" title=\"Details\"  onclick=\"showHideDiv('details" + counter + "'); return false;\" >Details</a></td>");
+                        }
                         // there will be a
                         maintext.append("</tr>");
                         maintext.append("<tr>");
-                        maintext.append("<td colspan=\"3\"><div id=\"details" + counter + "\" style=\"overflow-x: auto;display : none\">" + ManageDatabasesController.formatUploadedFiles(Collections.singletonList(uploadedFile), counter, false, hasComments) + "</div></td>");
+                        maintext.append("<td colspan=\"4\"><div id=\"details" + counter + "\" style=\"overflow-x: auto;display : none\">" + ManageDatabasesController.formatUploadedFiles(Collections.singletonList(uploadedFile), counter, false, hasComments) + "</div></td>");
                         maintext.append("</tr>");
                         counter++;
                     }
                     maintext.append("<table>");
                     // need to jam in the import result, need better feedback than before
                     model.put("maintext", maintext.toString());
+                    if (request.getSession().getAttribute("newui") != null){
+                        return "pendingupload2";
+                    }
                     return "pendingupload";
                 }
 
@@ -691,9 +772,17 @@ public class PendingUploadController {
                             pu.setFileName(pu.getFileName() + " - " + "results"); // to make clear to users they'll be downloading results not the source file. See no harm in adjusting this thought perhaps some kind extra field should be used
                             PendingUploadDAO.store(pu);
                             if (loggedInUser.getUser().isAdministrator()) {
-                                session.setAttribute(ManageDatabasesController.IMPORTURLSUFFIX, "?uploadreports=true#tab4"); // if actually importing will land back on the pending uploads page
+                                if (request.getSession().getAttribute("newui") != null){
+                                    session.setAttribute(ManageDatabasesController.IMPORTURLSUFFIX, "?uploadreports=true#3"); // if actually importing will land back on the pending uploads page
+                                } else {
+                                    session.setAttribute(ManageDatabasesController.IMPORTURLSUFFIX, "?uploadreports=true#tab4"); // if actually importing will land back on the pending uploads page
+                                }
                             } else {
-                                session.setAttribute(ManageDatabasesController.IMPORTURLSUFFIX, "?uploadreports=true#tab2");
+                                if (request.getSession().getAttribute("newui") != null){
+                                    session.setAttribute(ManageDatabasesController.IMPORTURLSUFFIX, "?uploadreports=true#1");
+                                } else {
+                                    session.setAttribute(ManageDatabasesController.IMPORTURLSUFFIX, "?uploadreports=true#tab2");
+                                }
                             }
                         }
                         session.setAttribute(ManageDatabasesController.IMPORTRESULT, uploadedFiles);
@@ -712,8 +801,14 @@ public class PendingUploadController {
                     } else {
                         model.addAttribute("targetController", "UserUpload");
                     }
+                    if (request.getSession().getAttribute("newui") != null){
+                        return "importrunning2";
+                    }
                     return "importrunning";
                 } else {
+                    if (request.getSession().getAttribute("newui") != null){
+                        return "validationready2";
+                    }
                     return "validationready";
                 }
             }
