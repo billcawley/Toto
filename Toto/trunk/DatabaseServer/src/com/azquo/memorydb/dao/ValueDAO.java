@@ -201,7 +201,7 @@ public class ValueDAO {
         JdbcTemplateUtils.update("CREATE TABLE IF NOT EXISTS `" + databaseName + "`.`" + VALUEHISTORY + "` (\n" +
                 "`id` int(11) NOT NULL,\n" +
                 "  `provenance_id` int(11) NOT NULL,\n" +
-                "  `text` VARCHAR(255) COLLATE utf8mb4_unicode_ci NOT NULL,\n" +
+                "  `text` VARCHAR(8192) COLLATE utf8mb4_unicode_ci NOT NULL,\n" +
                 "  `names` blob NOT NULL,\n" +
                 "  KEY (`names`(255))\n" +
                 ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci AUTO_INCREMENT=1;", JsonRecordDAO.EMPTY_PARAMETERS_MAP);

@@ -10,8 +10,16 @@
 	<!-- required for inspect - presumably zap at some point -->
 	<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
 	<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.11.4/jquery-ui.min.js"></script>
+	<link href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.11.4/themes/black-tie/jquery-ui.css" rel="stylesheet" type="text/css">
 
 	<script type="text/javascript" src="/js/global.js"></script>
+	<c:if test="${requirezss}">
+		<kkjsp:head/>
+	</c:if>
+	<style>
+		.ui-dialog .ui-tabs-panel{min-height:350px; background:#ECECEC; padding:5px 5px 0px 5px; }
+		.ui-dialog .ui-tabs-panel iframe{min-height:350px; background:#FFF;}
+	</style>
 </head>
 <body>
 
@@ -59,3 +67,4 @@
 		</div>
 	</div>
 </nav>
+<span id="lockedResult"><c:if test="${not empty lockedResult}"><textarea class="public" style="height:60px;width:400px;font:10px monospace;overflow:auto;font-family:arial;background:#f58030;color:#fff;font-size:14px;border:0">${lockedResult}</textarea></c:if></span>

@@ -134,6 +134,7 @@
         return false;
     }
     /*
+
     var skipSetting = 0;
     var skipMarker = 0;
         // how to stop this hammering? I reckon add a second every time between checks if the data hasn't changed.

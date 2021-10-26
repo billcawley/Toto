@@ -7,6 +7,21 @@
 	<title>${title} - Azquo</title>
 	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.3/css/bulma.min.css">
 	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
+	<!-- required for inspect - presumably zap at some point -->
+	<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+	<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.11.4/jquery-ui.min.js"></script>
+	<link href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.11.4/themes/black-tie/jquery-ui.css" rel="stylesheet" type="text/css">
+	<script type="text/javascript" src="/js/global.js"></script>
+	<style>
+		.ui-dialog .ui-tabs-panel{min-height:350px; background:#ECECEC; padding:5px 5px 0px 5px; }
+		.ui-dialog .ui-tabs-panel iframe{min-height:350px; background:#FFF;}
+
+		header .nav ul li a.on {background-color:${bannerColor}}
+		.ui-widget .ui-widget-header li.ui-state-active {background-color:${bannerColor}}
+		a:link {color:${bannerColor}}
+		a:visited {color:${bannerColor}}
+
+	</style>
 </head>
 <body>
 <nav class="navbar is-black" role="navigation" aria-label="main navigation">
