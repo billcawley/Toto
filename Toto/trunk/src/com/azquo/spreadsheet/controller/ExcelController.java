@@ -213,7 +213,7 @@ public class ExcelController {
             if (op.equals("download64") && fileName != null){ // if no sessionId this means an xlsx file from WEB-INF, public anyway so no security but we still need to base 64 encode it
                 // basic hack protection though I'm not sure whether anyone could get anything that worrying
                 //System.out.println("download64:" + fileName);
-                byte[] encodedBytes;
+                byte[] encodedBytes = null;
                 while (fileName.contains("\\") || fileName.contains("/")){
                     fileName = fileName.replace("\\","");
                     fileName = fileName.replace("/","");
@@ -233,20 +233,35 @@ public class ExcelController {
                         loggedInUser = excelConnections.get(sessionId);
                     }
                     //TODO should there be any security encoding??
-                       if (sessionId.equals("testing")|| loggedInUser!= null) {
-                       ImportTemplate importTemplate = ImportTemplateDAO.findForNameAndBusinessId(fileName, loggedInUser.getUser().getBusinessId());
-                       String directory="risk";
-                       if (!sessionId.equals("testing")) {
-                           directory = loggedInUser.getBusinessDirectory();
-                       }
-                       String filePath = SpreadsheetService.getHomeDir() + ImportService.dbPath + directory + ImportService.importTemplatesDir + importTemplate.getFilenameForDisk();
-                       //System.out.println("template download:" + filePath);
-                       File file = new File(filePath);
-                       encodedBytes = Base64.getEncoder().encode(IOUtils.toByteArray(Files.newInputStream(file.toPath())));
+                    if (sessionId.equals("testing")|| loggedInUser!= null) {
+                        if (!fileName.toLowerCase(Locale.ROOT).endsWith(".xlsx")) {
+                            fileName = fileName.replace("_", " ");
+                            reportName = fileName;
+                            if (fileName.contains(" with ")) {
+                                reportName = fileName.substring(0, fileName.indexOf(" with ")).replace("`", "");
+                                String withContext = fileName.substring(fileName.indexOf(" with ") + 6);
+                                ChoicesService.setChoices(loggedInUser, withContext);
+                            }
+                            OnlineReport onlineReport = OnlineReportDAO.findForNameAndBusinessId(reportName, loggedInUser.getUser().getBusinessId());
+                            if (onlineReport!=null){
+                                File file = ExcelService.createReport(loggedInUser, onlineReport, false);
+                                encodedBytes = Base64.getEncoder().encode(IOUtils.toByteArray(Files.newInputStream(file.toPath())));
+                            }
+                        }else {
+                            ImportTemplate importTemplate = ImportTemplateDAO.findForNameAndBusinessId(fileName, loggedInUser.getUser().getBusinessId());
+                            String directory = "risk";
+                            if (!sessionId.equals("testing")) {
+                                directory = loggedInUser.getBusinessDirectory();
+                            }
+                            String filePath = SpreadsheetService.getHomeDir() + ImportService.dbPath + directory + ImportService.importTemplatesDir + importTemplate.getFilenameForDisk();
+                            //System.out.println("template download:" + filePath);
+                            File file = new File(filePath);
+                            encodedBytes = Base64.getEncoder().encode(IOUtils.toByteArray(Files.newInputStream(file.toPath())));
+                        }
                     }else{
                         return null;
                     }
-                 }else{
+                }else{
                     String filePath = "/WEB-INF/" + fileName;
                     encodedBytes = Base64.getEncoder().encode(IOUtils.toByteArray(servletContext.getResourceAsStream(filePath)));
 
@@ -270,7 +285,7 @@ public class ExcelController {
 
             LoggedInUser loggedInUser = null;
             // todo - try to tidy up the login ogic if possible. Hacked to support users that cross businesses
-            if (op.equals("logon")) {
+            if (op.equals("logon") || logon!=null) {
                  if (NumberUtils.isNumber(userId) && sessionId != null){ // then try to select from a multi usr session
                     if (excelMultiUserConnections.get(sessionId) != null){
                         for (LoggedInUser check : excelMultiUserConnections.get(sessionId)) {
