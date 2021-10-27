@@ -5,6 +5,7 @@ import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.CommonReportUtils;
 import com.azquo.spreadsheet.LoggedInUser;
+import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.SpreadsheetService;
 import io.keikai.api.CellOperationUtil;
 import io.keikai.api.Range;
@@ -522,7 +523,7 @@ public class ChoicesService {
         return map;
     }
 
-    public static void setChoices(LoggedInUser loggedInUser, String context) {
+    public static void setChoices(LoggedInUser loggedInUser, String context) throws Exception{
         Map<String, String> stringStringMap = parseChoicesFromDrillDownContextString(context);
         for (Map.Entry<String, String> choiceChosen : stringStringMap.entrySet()) {
             // EFC note 07/04/2021 we need to support attributes here e.g. in spreadsheet Customer Record with customer = `[rowheading]`.`all customers`
@@ -540,7 +541,11 @@ public class ChoicesService {
                 }
             }
 
-            SpreadsheetService.setUserChoice(loggedInUser, choice, chosen);
+            if (choice.toLowerCase(Locale.ROOT).equals("database")){
+                LoginService.switchDatabase(loggedInUser,chosen);
+            }else{
+                SpreadsheetService.setUserChoice(loggedInUser, choice, chosen);
+            }
         }
     }
 }
