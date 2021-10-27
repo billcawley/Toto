@@ -78,7 +78,7 @@ class ZKComposerUtils {
         }
     }
 
-    static void openDrillDown(LoggedInUser loggedInUser, String reportName, String context, int valueId) {
+    static void openDrillDown(LoggedInUser loggedInUser, String reportName, String context, int valueId) throws Exception{
         ChoicesService.setChoices(loggedInUser, context);
         OnlineReport or = null;
         String permissionId = null;
