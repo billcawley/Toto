@@ -64,7 +64,7 @@
                 <div class="columns is-centered">
                     <div class="column is-5-tablet is-4-desktop is-3-widescreen">
                         <nav class="panel is-black">
-                            <p class="panel-heading ">
+                            <p class="panel-heading" style="background-color:${bannerColor}">
                                 <a href="/api/Online?reportid=1"><img src="${logo}" alt="azquo"></a>
                             </p>
                             <div class="container has-text-centered" style="padding:10px;"><h3 class="title is-3">Importing Data&nbsp;<span class="fa fa-spin fa-cog"></span></h3></div>

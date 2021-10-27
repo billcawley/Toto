@@ -87,8 +87,8 @@
                 <div class="columns is-centered">
                     <div class="column is-5-tablet is-4-desktop is-3-widescreen">
                         <nav class="panel is-black">
-                            <p class="panel-heading ">
-                                <a href="/api/Online?reportid=1"><img src="http://localhost:8080/images/logo_admin.png" alt="azquo"></a>
+                            <p class="panel-heading" style="background-color:${bannerColor}">
+                                <a href="/api/Online?reportid=1"><img src="${logo}" alt="azquo"></a>
                             </p>
                             <div class="container has-text-centered" style="padding:10px;"><h3 class="title is-3">Loading&nbsp;<span class="fa fa-spin fa-cog"></span></h3></div>
                             <div id="chosen" style="height:45px; width:100%;font:10px monospace;overflow:auto;"></div>

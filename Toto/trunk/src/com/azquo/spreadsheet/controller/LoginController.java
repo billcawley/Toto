@@ -274,10 +274,10 @@ public class LoginController {
                 }
             }
         }
-        String page = "login";
-        if (request.getSession().getAttribute("newui") != null){
+        String page = "login2";
+/*        if (request.getSession().getAttribute("newui") != null){
             return "login2";
-        }
+        }*/
 
         if (SpreadsheetService.getLogonPageOverride() != null && !SpreadsheetService.getLogonPageOverride().isEmpty()) {
             page = SpreadsheetService.getLogonPageOverride();
