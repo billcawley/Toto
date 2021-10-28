@@ -245,6 +245,16 @@ java.lang.IllegalStateException: is ERROR, not the one of [STRING, BLANK]
         return names;
     }
 
+    public static void localiseNames(Book book) {
+        for (SName name : book.getInternalBook().getNames()) {
+            if (name.getRefersToSheetName() != null) {
+                name.setApplyToSheetName(name.getRefersToSheetName());
+            }
+        }
+    }
+
+
+
     public static List<org.apache.poi.ss.usermodel.Name> getNamesForSheet(org.apache.poi.ss.usermodel.Sheet sheet) {
         List<org.apache.poi.ss.usermodel.Name> names = new ArrayList<>();
         for (org.apache.poi.ss.usermodel.Name name : sheet.getWorkbook().getAllNames()) {

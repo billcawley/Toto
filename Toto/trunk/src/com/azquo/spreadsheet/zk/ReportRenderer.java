@@ -50,6 +50,7 @@ public class ReportRenderer {
     // when resolving e.g. choices etc before even populating data  so probably a moot point but worth noting
     private static boolean populateBook(Book book, int valueId, boolean useSavedValuesOnFormulae, boolean executeMode, StringBuilder errors, boolean useRepeats) throws Exception { // todo - make more elegant? error hack . . .
         BookUtils.removeNamesWithNoRegion(book); // should protect against some errors.
+        BookUtils.localiseNames(book);
         book.getInternalBook().setAttribute(OnlineController.LOCKED, false); // by default
         long track = System.currentTimeMillis();
         String imageStoreName = "";
