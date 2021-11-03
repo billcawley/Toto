@@ -50,7 +50,7 @@ public class ReportRenderer {
     // when resolving e.g. choices etc before even populating data  so probably a moot point but worth noting
     private static boolean populateBook(Book book, int valueId, boolean useSavedValuesOnFormulae, boolean executeMode, StringBuilder errors, boolean useRepeats) throws Exception { // todo - make more elegant? error hack . . .
         BookUtils.removeNamesWithNoRegion(book); // should protect against some errors.
-        BookUtils.localiseNames(book);
+        //BookUtils.localiseNames(book);  //bug in ZK - will not extend ranges when rows inserted
         book.getInternalBook().setAttribute(OnlineController.LOCKED, false); // by default
         long track = System.currentTimeMillis();
         String imageStoreName = "";
@@ -770,7 +770,7 @@ public class ReportRenderer {
             // only look for the pattern if we're not using hide rows
             if (userRegionOptions.getHideRows() == 0) {
                 rowsFormattingPatternHeight = ReportUtils.guessColumnsFormattingPatternWidth(loggedInUser, MultidimensionalListUtils.transpose2DList(cellsAndHeadingsForDisplay.getRowHeadingsSource()));
-                if (rowsToAdd < rowsFormattingPatternHeight) {
+                if (rowsFormattingPatternHeight % rowsToAdd != 0) {//if the pattern cannot be repeated exactly, assume normal operation
                     rowsFormattingPatternHeight = 1;
                 }
             }
