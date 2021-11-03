@@ -38,6 +38,9 @@
 			<c:if test="${xmlzip == true}"><a class="navbar-item" href="#" onclick="postAjax('XMLZIP');return false;">Download XML</a></c:if>
 			<c:if test="${showTemplate == true}"><a class="navbar-item" href="#" onclick="window.location.assign(window.location.href+='&opcode=template')">View Template</a></c:if>
 			<c:if test="${execute == true}"><a class="navbar-item" href="#" onclick="postAjax('ExecuteSave');window.location.assign(window.location.href+='&opcode=execute')">Execute</a></c:if>
+			<a id="unlockButton" <c:if test="${showUnlockButton == false}"></c:if> class="navbar-item" href="#" onclick="postAjax('Unlock')">Unlock</a>
+			<a id="saveDataButton" <c:if test="${showSave == false}"> style="display:none;"</c:if> class="navbar-item" href="#" onclick="postAjax('Save')">Save Data</a>
+			<a id="restoreDataButton" <c:if test="${showSave == false}"> style="display:none;"</c:if> class="navbar-item" href="#" onclick="postAjax('RestoreSavedValues')">Restore Saved Values</a>
 		</div>
 		<div class="navbar-end">
 			<c:if test="${sessionScope.LOGGED_IN_USERS_SESSION != null}">

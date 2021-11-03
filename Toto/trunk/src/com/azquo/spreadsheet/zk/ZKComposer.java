@@ -418,7 +418,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                         sentCells.getData().size() > regionRowCol.row && sentCells.getData().get(regionRowCol.row).size() > regionRowCol.col) {
                     CellForDisplay cellForDisplay = sentCells.getData().get(regionRowCol.row).get(regionRowCol.col);
                     // todo address locking here - maybe revert the cell
-                    Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"block\";document.getElementById(\"restoreDataButton\").style.display=\"block\";");
+                    Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"flex\";document.getElementById(\"restoreDataButton\").style.display=\"flex\";");
                     if (isDouble) {
                         cellForDisplay.setNewDoubleValue(doubleValue);
                         // copying a few lines of server side code to try and ensure that successive saves don't cause a mismatch in the string values compared to what they would be on a fresh report load

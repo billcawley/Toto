@@ -29,12 +29,12 @@
         </c:if>
         <tr>
             <td>${report.database}</td>
-            <td>${report.author}</td>
+            <td style="white-space: nowrap;">${report.author}</td>
             <td></td>
             <td><c:if test="${report.database != 'None'}"><a href="/api/Online?reportid=${report.id}&amp;database=${report.database}" target="_blank"></c:if>
                 <span class="fa fa-table"></span>  ${report.untaggedReportName}<c:if test="${report.database != 'None'}"></a></c:if></td>
             <td>${report.explanation}</td>
-            <td>
+            <td style="white-space: nowrap;">
                 <a href="/api/ManageReports?editId=${report.id}"  title="Edit ${report.reportName}" class="button is-small"><span class="fa fa-edit" title="Edit"></span></a>
                 <a href="/api/ManageReports?deleteId=${report.id}" onclick="return confirm('Are you sure you want to delete ${report.reportName}?')" title="Delete ${report.reportName}" class="button is-small"><span class="fa fa-trash" title="Delete"></span> </a>
                 <a href="/api/DownloadTemplate?reportId=${report.id}" title="Download" class="button is-small"><span class="fa fa-download" title="Download"></span> </a>
