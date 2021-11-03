@@ -448,8 +448,14 @@ public class ManageUsersController {
                             if (notAllowed.contains(email)) rejected.add(email);
                             if (!loggedInUser.getUser().getEmail().equals(email) && !notAllowed.contains(email)) { // leave the logged in user alone!
                                 String salt = "";
-                                String password = userSheet.getRow(row).getCell(2).getStringCellValue();
-                                String selections = userSheet.getRow(row).getCell(7).getStringCellValue();
+                                String password = "";
+                                String selections = null;
+                                if (userSheet.getRow(row).getCell(2) != null){
+                                    password = userSheet.getRow(row).getCell(2).getStringCellValue();
+                                }
+                                if (userSheet.getRow(row).getCell(7) != null){
+                                    selections = userSheet.getRow(row).getCell(7).getStringCellValue();
+                                }
                                 if (password == null) {
                                     password = "";
                                 }
