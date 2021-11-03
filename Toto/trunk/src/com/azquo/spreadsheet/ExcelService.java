@@ -113,6 +113,7 @@ public class ExcelService {
         // todo, address allowing multiple books open for one user. I think this could be possible. Might mean passing a DB connection not a logged in one
         book.getInternalBook().setAttribute(REPORT_ID, onlineReport.getId());
         ReportRenderer.populateBook(book, 0);
+        BookUtils.localiseNames(book);//for the preprocessor
         Exporter exporter = Exporters.getExporter();
         File file = File.createTempFile(Long.toString(System.currentTimeMillis()), "temp");
         try (FileOutputStream fos = new FileOutputStream(file)) {
