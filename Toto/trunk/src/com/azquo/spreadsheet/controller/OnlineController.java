@@ -175,10 +175,9 @@ public class OnlineController {
                         ChoicesService.setChoices(loggedInUser,context);
                     }
                       // todo - deal with finding a permission id instead
-                     /*
 
-                                         if (!loggedInUser.getUser().isAdministrator() && !loggedInUser.getUser().isDeveloper() && loggedInUser.getUser().getReportId() != 0) {// then we need to load in the permissions
-                        // typically loading in the permissions would be done in online report controller. I'm going to paste relevant code here, it might be factored later
+                    if (!loggedInUser.getUser().isAdministrator() && !loggedInUser.getUser().isDeveloper() && loggedInUser.getUser().getReportId() != 0) {// then we need to load in the permissions
+                        // duplicated code, todo refactor at some point . . .
                         OnlineReport or = OnlineReportDAO.findById(loggedInUser.getUser().getReportId());
                         String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath +
                                 loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + or.getFilenameForDisk();
@@ -187,9 +186,10 @@ public class OnlineController {
                         book.getInternalBook().setAttribute(LOGGED_IN_USER, loggedInUser);
                         book.getInternalBook().setAttribute(REPORT_ID, or.getId());
                         ReportRenderer.populateBook(book, 0);
+                        // end duplicate so now we have to find the permission id
+                        permissionId = reportName.replace("_"," ").toLowerCase(); // I think that's it!
                     }
 
-                      */
 
                     OnlineReport or = OnlineReportDAO.findForDatabaseIdAndName(loggedInUser.getDatabase().getId(), reportName.replace("_"," "));
                     reportId = "" + or.getId();

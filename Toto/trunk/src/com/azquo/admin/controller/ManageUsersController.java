@@ -441,7 +441,7 @@ public class ManageUsersController {
                                 }
                             }
                         }
-                        while (userSheet.getRow(row).getCell(0).getStringCellValue() != null && userSheet.getRow(row).getCell(0).getStringCellValue().length() > 0) {
+                        while (userSheet.getRow(row).getCell(0) != null && userSheet.getRow(row).getCell(0).getStringCellValue() != null && userSheet.getRow(row).getCell(0).getStringCellValue().length() > 0) {
                             //Email	Name  Password	End Date	Status	Database	Report
                             String user = userSheet.getRow(row).getCell(1).getStringCellValue().trim();
                             String email = userSheet.getRow(row).getCell(0).getStringCellValue().trim();
@@ -484,7 +484,11 @@ public class ManageUsersController {
                                 if (!status.equalsIgnoreCase(User.STATUS_ADMINISTRATOR) && !status.equalsIgnoreCase(User.STATUS_DEVELOPER) && or == null) {
                                     throw new Exception("Unable to find report " + userSheet.getRow(row).getCell(6).getStringCellValue());
                                 }
-                                String team = userSheet.getRow(row).getCell(7).getStringCellValue();
+                                String team = null;
+                                if (userSheet.getRow(row).getCell(8) != null){
+                                    team =userSheet.getRow(row).getCell(8).getStringCellValue();
+                                }
+
 
                                 // todo - master and user types need to check for a report and error if it's not there
                                 if (!loggedInUser.getUser().isAdministrator()) { // then I need to check against the session for allowable reports and databases

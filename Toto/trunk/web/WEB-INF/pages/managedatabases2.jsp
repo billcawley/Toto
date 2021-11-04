@@ -39,6 +39,22 @@ Created by IntelliJ IDEA.
     function showWorking() {
         var x = document.getElementById("working");
         x.style.display = "block";
+        setTimeout('checkStatus()', 1000);
+    }
+
+    function checkStatus() {
+        $.ajax({
+            url: "/api/SpreadsheetStatus?action=working",
+            type: "GET",
+            dataType: 'json',
+            success: function (data) {
+                //$('#statusmessage').html(data.message);
+                if (data.status == "working")
+                    setTimeout('checkStatus()', 1000);
+                else
+                    $('#working').hide();
+            }
+        });
     }
 
 </script>
