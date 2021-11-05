@@ -9,7 +9,7 @@
                 <div class="columns is-centered">
                     <div class="column is-5-tablet is-4-desktop is-3-widescreen">
                         <h1 class="title">Login to Azquo</h1>
-                        <form action="/api/Login" class="box">
+                        <form action="/api/Login" class="box" method="post">
                             <input name="newui" value="true" type="hidden">
                             <div class="field">
                                 <label class="label">Email/Username</label>
