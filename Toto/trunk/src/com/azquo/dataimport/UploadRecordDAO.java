@@ -7,6 +7,7 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -87,6 +88,14 @@ public final class UploadRecordDAO {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(USERID, userId);
         return StandardDAO.findOneWithWhereSQLAndParameters("WHERE " + USERID + " = :" + USERID + " order by `id` desc", TABLENAME, uploadRowMapper, namedParams);
+    }
+
+    public static UploadRecord findMostRecentAfterDateForDatabaseAndName(final int databaseId, LocalDateTime ldt, String fileName) {
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(DATABASEID, databaseId);
+        namedParams.addValue(DATE, DateUtils.getDateFromLocalDateTime(ldt));
+        namedParams.addValue(FILENAME, fileName);
+        return StandardDAO.findOneWithWhereSQLAndParameters("WHERE " + DATABASEID + " = :" + DATABASEID + " and `" + DATE + "` > :" + DATE + " and " + FILENAME + " = :" + FILENAME + " order by `date` asc", TABLENAME, uploadRowMapper, namedParams);
     }
 
     public static List<UploadRecord> findForDatabaseIdWithFileType(final int databaseId) {
