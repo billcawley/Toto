@@ -7,6 +7,8 @@ import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.user.UserRegionOptions;
 import com.azquo.admin.user.UserRegionOptionsDAO;
 import com.azquo.StringLiterals;
+import com.azquo.dataimport.UploadRecord;
+import com.azquo.dataimport.UploadRecordDAO;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.SpreadsheetService;
@@ -300,7 +302,25 @@ class ZKContextMenu {
         int count = 0;
         for (ProvenanceForDisplay provenanceForDisplay : provenanceDetailsForDisplay.getAuditForDisplayList()) {
             boolean breakLoop = false;
-            provenancePopup.appendChild(geLabelForProvenanceMenu("0000ff", provenanceForDisplay.toString() + "\n"));
+            // ok can we make it so that if this is an import then we can download it?
+            String provenanceForDisplayString = provenanceForDisplay.toString();
+            provenancePopup.appendChild(geLabelForProvenanceMenu("0000ff", provenanceForDisplayString + "\n"));
+            if (provenanceForDisplayString.contains("imported ") && provenanceForDisplay.toString().indexOf(",") > provenanceForDisplayString.indexOf("imported ")){
+                String possibleFileName = provenanceForDisplayString.substring(provenanceForDisplayString.indexOf("imported ") + "imported ".length(), provenanceForDisplay.toString().indexOf(",")).trim();
+                //System.out.println("possible file name " + possibleFileName);
+                //System.out.println("possible date : " + provenanceForDisplay.getDate());
+                final UploadRecord mostRecentAfterDateForDatabaseAndName = UploadRecordDAO.findMostRecentAfterDateForDatabaseAndName(loggedInUser.getDatabase().getId(), provenanceForDisplay.getDate(), possibleFileName);
+                if (mostRecentAfterDateForDatabaseAndName != null){
+                    final Toolbarbutton provButton = new Toolbarbutton("Download " + possibleFileName);
+                    provButton.setStyle("color:#000000; font-size:12pt");
+                    provenancePopup.appendChild(provButton);
+                    provButton.addEventListener("onClick",
+                            event ->
+                                    Clients.evalJavaScript("window.open(\"/api/DownloadFile?uploadRecordId=" + mostRecentAfterDateForDatabaseAndName.getId() + "\")")
+                    );
+                    provenancePopup.appendChild(geLabelForProvenanceMenu("000000", "\n"));
+                }
+            }
             if (provenanceForDisplay.getNames() != null && !provenanceForDisplay.getNames().isEmpty()) {
                 StringBuilder names = new StringBuilder();
                 for (String name : provenanceForDisplay.getNames()) {
