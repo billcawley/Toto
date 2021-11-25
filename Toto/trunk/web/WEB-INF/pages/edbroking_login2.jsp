@@ -13,7 +13,7 @@
                             <img src="/images/edbroking_logo.jpg" alt="azquo">
                         </div>
                         <div class="box">
-                            <form action="/api/Login">
+                            <form action="/api/Login" method="post">
                                 <input name="newui" value="true" type="hidden">
                                 <div class="field">
                                     <label class="label">Email/Username</label>

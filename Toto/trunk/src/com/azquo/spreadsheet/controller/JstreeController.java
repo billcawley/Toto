@@ -73,6 +73,10 @@ public class JstreeController {
             model.addAttribute("content", "error:not logged in");
             return "utf8page";
         }
+        if (!loggedInUser.getUser().isDeveloper() && !loggedInUser.getUser().isAdministrator()) {
+            model.addAttribute("content", "error:access denied");
+            return "utf8page";
+        }
         try {
             // todo - is this duplicated below? SLight security concern re developers and database switching . . .
             if ((database == null || database.length() == 0) && loggedInUser.getDatabase() != null) {

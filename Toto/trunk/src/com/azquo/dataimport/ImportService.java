@@ -1419,6 +1419,15 @@ public final class ImportService {
             uploadedFile.addToErrorHeadings(notice);
         }
         // used to be processed file, I see no advantage to that
+        if (!loggedInUser.getUser().isAdministrator() && !loggedInUser.getUser().isDeveloper()){
+            // then check privileges on uploading files
+            if (uploadedFile.getParameter("importversion") == null ||
+                    loggedInUser.getPendingUploadPermissions() == null ||
+                    !loggedInUser.getPendingUploadPermissions().contains(uploadedFile.getParameter("importversion").toLowerCase())){
+                throw new Exception("Insufficient priviledges to upload that type of file");
+            }
+        }
+
         uploadedFile = RMIClient.getServerInterface(databaseServer.getIp()).readPreparedFile(databaseAccessToken
                 , uploadedFile
                 , loggedInUser.getUser().getName());

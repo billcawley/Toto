@@ -34,6 +34,7 @@ import java.util.*;
 public class ReportService {
     // should functions like this be in another class? It's not really stateless or that low level
     static final String ALLOWABLE_REPORTS = "az_AllowableReports";
+    static final String ALLOWABLE_PENDING_UPLOADS = "az_AllowablePendingUploads";
     static final String ALLOWABLE_FORMS = "az_AllowableForms";
     private static final String REDUNDANT = "redundant";
 
@@ -42,21 +43,38 @@ public class ReportService {
         // a repeat call to this function - could be moved outside but I'm not too bothered about it at the moment
         List<SName> namesForSheet = BookUtils.getNamesForSheet(sheet);
         //current report is always allowable...
-        SName sReportName  = BookUtils.getNameByName(StringLiterals.AZREPORTNAME, sheet);
-        if (sReportName==null){
+        SName sReportName = BookUtils.getNameByName(StringLiterals.AZREPORTNAME, sheet);
+        if (sReportName == null) {
             return;
         }
         String thisReportName = BookUtils.getSnameCell(sReportName).getStringValue();
         // todo - null pointer when no database for user? Force db to be set? Or allow it not to?
         OnlineReport or = OnlineReportDAO.findById(reportId);
         //System.out.println("adding a report to permissions : " + or);
-        loggedInUser.setReportDatabasePermission(null, or, loggedInUser.getDatabase());
+        loggedInUser.setReportDatabasePermission(null, or, loggedInUser.getDatabase(), true); // I think we'll consider the menu read only
         for (SName sName : namesForSheet) {
             // run through every cell in any names region unlocking to I can later lock. Setting locking on a large selection seems to zap formatting, do it cell by cell
             if (sName.getName().equalsIgnoreCase(ALLOWABLE_REPORTS)) {
                 CellRegion allowable = sName.getRefersToCellRegion();
                 // need to detect 2nd AND 3rd column here - 2nd = db, if 3rd then last is db 2nd report and 1st name (key)
-                if (allowable.getLastColumn() - allowable.getColumn() >= 2) { // name, report, database
+                if (allowable.getLastColumn() - allowable.getColumn() >= 3) { // name, report, database, read only
+                    for (int row = allowable.getRow(); row <= allowable.getLastRow(); row++) {
+                        if (!sheet.getInternalSheet().getCell(row, allowable.getColumn()).isNull()) {
+                            String name = sheet.getInternalSheet().getCell(row, allowable.getColumn()).getStringValue();
+                            final String reportName = sheet.getInternalSheet().getCell(row, allowable.getColumn() + 1).getStringValue();
+                            final OnlineReport report = OnlineReportDAO.findForNameAndBusinessId(reportName, loggedInUser.getUser().getBusinessId());
+                            final String databaseName = sheet.getInternalSheet().getCell(row, allowable.getColumn() + 2).getStringValue();
+                            final String readonly = sheet.getInternalSheet().getCell(row, allowable.getColumn() + 3).getStringValue();
+                            Database database = DatabaseDAO.findForNameAndBusinessId(databaseName, loggedInUser.getUser().getBusinessId());
+                            if (database == null) {
+                                database = DatabaseDAO.findById(loggedInUser.getUser().getDatabaseId());
+                            }
+                            if (report != null && !reportName.equals(thisReportName)) {
+                                loggedInUser.setReportDatabasePermission(name.toLowerCase(), report, database, "x".equalsIgnoreCase(readonly));
+                            }
+                        }
+                    }
+                } else if (allowable.getLastColumn() - allowable.getColumn() == 2) { // name, report, database
                     for (int row = allowable.getRow(); row <= allowable.getLastRow(); row++) {
                         if (!sheet.getInternalSheet().getCell(row, allowable.getColumn()).isNull()) {
                             String name = sheet.getInternalSheet().getCell(row, allowable.getColumn()).getStringValue();
@@ -68,7 +86,7 @@ public class ReportService {
                                 database = DatabaseDAO.findById(loggedInUser.getUser().getDatabaseId());
                             }
                             if (report != null && !reportName.equals(thisReportName)) {
-                                loggedInUser.setReportDatabasePermission(name.toLowerCase(), report, database);
+                                loggedInUser.setReportDatabasePermission(name.toLowerCase(), report, database, false);
                             }
                         }
                     }
@@ -82,8 +100,8 @@ public class ReportService {
                             if (database == null) {
                                 database = DatabaseDAO.findById(loggedInUser.getUser().getDatabaseId());
                             }
-                            if (report != null && database!=null) {
-                                loggedInUser.setReportDatabasePermission(null, report, database);
+                            if (report != null && database != null) {
+                                loggedInUser.setReportDatabasePermission(null, report, database, false);
                             }
                         }
                     }
@@ -93,7 +111,7 @@ public class ReportService {
                             final String reportName = sheet.getInternalSheet().getCell(row, allowable.getColumn()).getStringValue();
                             final OnlineReport report = OnlineReportDAO.findForNameAndBusinessId(reportName, loggedInUser.getUser().getBusinessId());
                             if (report != null) {
-                                loggedInUser.setReportDatabasePermission(null, report, DatabaseDAO.findById(loggedInUser.getUser().getDatabaseId()));
+                                loggedInUser.setReportDatabasePermission(null, report, DatabaseDAO.findById(loggedInUser.getUser().getDatabaseId()), false);
                             }
                         }
                     }
@@ -106,16 +124,30 @@ public class ReportService {
                 for (int row = allowable.getRow(); row <= allowable.getLastRow(); row++) {
                     if (!sheet.getInternalSheet().getCell(row, allowable.getColumn()).isNull()) {
                         final String formName = sheet.getInternalSheet().getCell(row, allowable.getColumn()).getStringValue();
-                        if (formName != null && !formName.isEmpty()){
+                        if (formName != null && !formName.isEmpty()) {
                             formNames.add(formName.toLowerCase());
                         }
                     }
                 }
                 loggedInUser.setFormPermissions(formNames);
             }
+            // a simple list for the mo
+            if (sName.getName().equalsIgnoreCase(ALLOWABLE_PENDING_UPLOADS)) {
+                CellRegion allowable = sName.getRefersToCellRegion();
+                Set<String> allowedImportVersions = new HashSet<>();
+                for (int row = allowable.getRow(); row <= allowable.getLastRow(); row++) {
+                    if (!sheet.getInternalSheet().getCell(row, allowable.getColumn()).isNull()) {
+                        final String importVersion = sheet.getInternalSheet().getCell(row, allowable.getColumn()).getStringValue();
+                        if (importVersion != null && !importVersion.isEmpty()) {
+                            allowedImportVersions.add(importVersion.toLowerCase().trim());
+                        }
+                    }
+                }
+                loggedInUser.setPendingUploadPermissions(allowedImportVersions);
+            }
         }
-        //System.out.println("permissions : " + loggedInUser.getReportIdDatabaseIdPermissions());
     }
+    //System.out.println("permissions : " + loggedInUser.getReportIdDatabaseIdPermissions());
 
     static void resolveQueries(Book book, LoggedInUser loggedInUser) {
         List<SName> names = new ArrayList<>(book.getInternalBook().getNames());
@@ -196,7 +228,7 @@ public class ReportService {
                                                         if (sCell.getCellStyle().getDataFormat().toLowerCase().contains("m")) {
                                                             if (sCell.getNumberValue() > 0) {
                                                                 String dateValue = df.format(DateUtils.getLocalDateTimeFromDate(sCell.getDateValue()));
-                                                                if (!cellForDisplay.getStringValue().equals(dateValue)){
+                                                                if (!cellForDisplay.getStringValue().equals(dateValue)) {
                                                                     cellForDisplay.setNewStringValue(dateValue);//set a string value as our date for saving purposes
                                                                     showSave = true;
                                                                 }
@@ -217,7 +249,7 @@ public class ReportService {
                                                     }
                                                 }
                                             }
-                                        } catch (Exception e){
+                                        } catch (Exception e) {
                                             System.out.println("Error on cell " + sCell.getReferenceString());
                                             e.printStackTrace();
                                         }
@@ -246,18 +278,18 @@ public class ReportService {
                 }
             }
         }
-            for (SChart chart : sheet.getInternalSheet().getCharts()) {
-                ViewAnchor oldAnchor = chart.getAnchor();
-                int row = oldAnchor.getRowIndex();
-                int col = oldAnchor.getColumnIndex();
-                int width = oldAnchor.getWidth();
-                int height = oldAnchor.getHeight();
-                if (!skipChartSnap) {
-                    chart.setAnchor(new ViewAnchor(row, col, 0, 0, width, height));
-                } else {
-                    chart.setAnchor(new ViewAnchor(row, col, oldAnchor.getXOffset(), oldAnchor.getYOffset(), width, height));
-                }
+        for (SChart chart : sheet.getInternalSheet().getCharts()) {
+            ViewAnchor oldAnchor = chart.getAnchor();
+            int row = oldAnchor.getRowIndex();
+            int col = oldAnchor.getColumnIndex();
+            int width = oldAnchor.getWidth();
+            int height = oldAnchor.getHeight();
+            if (!skipChartSnap) {
+                chart.setAnchor(new ViewAnchor(row, col, 0, 0, width, height));
+            } else {
+                chart.setAnchor(new ViewAnchor(row, col, oldAnchor.getXOffset(), oldAnchor.getYOffset(), width, height));
             }
+        }
         return showSave;
     }
 
@@ -353,7 +385,7 @@ public class ReportService {
             }
             Map<String, String> params = new HashMap<>();
             params.put("Report", (onlineReport != null ? onlineReport.getReportName() : ""));
-            loggedInUser.userLog("Save",  params);
+            loggedInUser.userLog("Save", params);
             ReportExecutor.runExecuteCommandForBook(book, StringLiterals.FOLLOWON); // that SHOULD do it. It will fail gracefully in the vast majority of times there is no followon
             // unlock here makes sense think, if duff save probably leave locked
             SpreadsheetService.unlockData(loggedInUser);

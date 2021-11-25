@@ -7,6 +7,7 @@ import com.azquo.dataimport.*;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
 import org.apache.commons.lang.math.NumberUtils;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -81,7 +82,7 @@ public class DownloadController {
             // todo - pending upload security for non admin users?
             if (pu.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
                 if (session.getAttribute(PendingUploadController.WARNINGSWORKBOOK) != null) {
-                    Workbook wb = (Workbook) session.getAttribute(PendingUploadController.WARNINGSWORKBOOK);
+                    XSSFWorkbook wb = (XSSFWorkbook) session.getAttribute(PendingUploadController.WARNINGSWORKBOOK);
                     response.setContentType("application/vnd.ms-excel");
                     response.setHeader("Content-Disposition", "inline; filename=\"" + pu.getFileName() + "warnings.xlsx\"");
                     try {

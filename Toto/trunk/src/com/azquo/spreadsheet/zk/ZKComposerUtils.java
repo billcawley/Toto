@@ -51,7 +51,7 @@ class ZKComposerUtils {
             }
             newBook.getInternalBook().setAttribute(OnlineController.LOCKED_RESULT, null); // zap the locked result, it will be checked below and we only want it there if  populate book put it there
             if (ReportRenderer.populateBook(newBook, 0)) { // check if formulae made saveable data
-                Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"block\";document.getElementById(\"restoreDataButton\").style.display=\"block\";");
+                Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"flex\";document.getElementById(\"restoreDataButton\").style.display=\"flex\";");
             }
             if (newBook.getInternalBook().getAttribute(OnlineController.LOCKED_RESULT) != null) {
                 String message = (String) newBook.getInternalBook().getAttribute(OnlineController.LOCKED_RESULT);

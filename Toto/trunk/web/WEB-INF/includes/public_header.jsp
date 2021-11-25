@@ -112,7 +112,7 @@
 						<li ><a href="#" onclick="postAjax('SaveTemplate'); return false;">Save Template</a></li>
 					</c:if>
 					<c:if test="${templateMode == false}">
-						<li><a href="#" onclick="return inspectDatabase();" title="Inspect database"><span class="fa fa-eye"></span> Inspect database</a> <!--<span class="fa fa-question-circle" onclick="showInspectHelp(); return false;"></span>--></li>
+						<c:if test="${showInspect == true}"><li><a href="#" onclick="return inspectDatabase();" title="Inspect database"><span class="fa fa-eye"></span> Inspect database</a> <!--<span class="fa fa-question-circle" onclick="showInspectHelp(); return false;"></span>--></li></c:if>
 						<c:if test="${xml == true}"><li><a href="#" onclick="postAjax('XML');return false;">Send XML</a></li></c:if>
 						<c:if test="${xmlzip == true}"><li><a href="#" onclick="postAjax('XMLZIP');return false;">Download XML</a></li></c:if>
 						<c:if test="${showTemplate == true}"><li><a href="#" onclick="window.location.assign(window.location.href+='&opcode=template')">View Template</a></li></c:if>
@@ -128,9 +128,8 @@
 					<li><a href="#"><span class="fa fa-bars"></span></a>
 						<ul>
 							<li><a href="#" onclick="postAjax('XLS'); return false;" title="Download as XLSX (Excel)"><span class="fa fa-file-excel-o"></span> Download as XLSX (Excel)</a></li>
-			    			<li><a href="#" onclick="return inspectDatabase();" title="Inspect database"><span class="fa fa-eye"></span> Inspect database</a></li>
-							<li><a href="#" onclick="return auditDatabase();" title="Audit Database"><span class="fa fa-eye"></span> Audit Database</a></li>
-							<li><a href="#" onclick="return uploadFile();" title="Upload file"><span class="fa fa-cloud-upload"></span> Upload file</a></li>
+							<c:if test="${showInspect == true}">			    			<li><a href="#" onclick="return inspectDatabase();" title="Inspect database"><span class="fa fa-eye"></span> Inspect database</a></li>
+								<li><a href="#" onclick="return auditDatabase();" title="Audit Database"><span class="fa fa-eye"></span> Audit Database</a></li></c:if>
 							<li><a href="#" onclick="return postAjax('FREEZE');" title="Upload file"><span class="fa fa-link"></span> Freeze</a></li>
 							<li><a href="#" onclick="return postAjax('UNFREEZE');" title="Upload file"><span class="fa fa-unlink"></span> Unfreeze</a></li>
 							<li><a href="#" onclick="postAjax('PDF'); return false;" title="Download as PDF"><span class="fa fa-file-pdf-o"></span> Download as PDF</a></li>
@@ -138,7 +137,6 @@
 								<li><a href="/api/CreateExcelForDownload?action=DOWNLOADUSERS" title="Download User List">Download User List</a></li>
 								<li><a href="/api/CreateExcelForDownload?action=DOWNLOADREPORTSCHEDULES" title="Download Report Schedules">Download Report Schedules</a></li>
 							</c:if>
-							<li><a href="/api/UserUpload#tab2" title="Upload Data">Data Validation</a></li>
 						</ul>
 					</li>
 				</ul>

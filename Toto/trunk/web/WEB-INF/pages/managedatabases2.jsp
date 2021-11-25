@@ -79,7 +79,7 @@ Created by IntelliJ IDEA.
             <div class="box">
                 <div>
                     <form action="/api/ManageDatabases" method="post" enctype="multipart/form-data"
-                          onsubmit="showWorking();">
+                          onsubmit="document.getElementById('working').style.display = 'block';">
                         <table class="table">
                             <tr>
                                 <td>
@@ -312,7 +312,7 @@ Created by IntelliJ IDEA.
                     WARNING : the database specified internally by the zip or "Database" here will zap a database and
                     associated
                     reports and auto backups if they exist before it restores the file contents.
-                    <form onsubmit="showWorking();" action="/api/ManageDatabases" method="post"
+                    <form onsubmit="document.getElementById('working').style.display = 'block';" action="/api/ManageDatabases" method="post"
                           enctype="multipart/form-data">
                         <input type="hidden" name="backup" value="true"/>
                         <table class="table">
@@ -522,7 +522,7 @@ Created by IntelliJ IDEA.
                             </a></c:if>
                         </td>
                         <td>
-                            <c:if test="${!pendingupload.loaded}"><a onclick="showWorking();"
+                            <c:if test="${!pendingupload.loaded}"><a onclick="document.getElementById('working').style.display = 'block';"
                                                                      href="/api/PendingUpload?id=${pendingupload.id}"
                                                                      class="button is-small"
                                                                      title="Validate and Load">
@@ -678,7 +678,7 @@ Created by IntelliJ IDEA.
             <div class="box">
                 <h5 class="title is-5">Test pre-processor. Select a pre-processor and a zip of data to test</h5>
                 <form action="/api/ManageDatabases#4" method="post" enctype="multipart/form-data"
-                      onsubmit="showWorking();">
+                      onsubmit="document.getElementById('working').style.display = 'block';">
                     <table class="table">
                         <tbody>
                         <tr>

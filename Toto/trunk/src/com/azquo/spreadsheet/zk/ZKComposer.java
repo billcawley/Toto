@@ -186,7 +186,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                                         ChoicesService.setChoices(loggedInUser,choices);
                                     }
                                 }
-                                Clients.evalJavaScript("window.open(\"/api/Online?permissionid=" + URLEncoder.encode(cellValue, "UTF-8") + "\")");
+                                Clients.evalJavaScript("window.open(\"/api/Online?permissionid=" + URLEncoder.encode(cellValue.trim(), "UTF-8") + "\")");
                             }
                         }
                     } catch (Exception e) {
@@ -210,23 +210,25 @@ public class ZKComposer extends SelectorComposer<Component> {
 
             // and now check for the cell being a save button
             SName saveName = event.getSheet().getBook().getInternalBook().getNameByName(StringLiterals.AZSAVE);
-            if (saveName != null && saveName.getRefersToSheetName().equals(myzss.getSelectedSheetName())
-                    && event.getRow() >= saveName.getRefersToCellRegion().getRow()
-                    && event.getRow() <= saveName.getRefersToCellRegion().getLastRow()
-                    && event.getColumn() >= saveName.getRefersToCellRegion().getColumn()
-                    && event.getColumn() <= saveName.getRefersToCellRegion().getLastColumn()
-            ) {
-                try {
-                    String saveResult = ReportService.save(myzss, loggedInUser);
-                    if (saveResult.startsWith("Success")) {
-                        // todo - processing warning here? The button isn't used much . . .
-                        ZKComposerUtils.reloadBook(myzss, book);
-                        // think this wil;l do it
-                        Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"none\";document.getElementById(\"restoreDataButton\").style.display=\"none\";");
-                        Clients.evalJavaScript("alert(\"" + saveResult + "\")");
+            if (book.getInternalBook().getAttribute(OnlineController.READ_ONLY) == null){
+                if (saveName != null && saveName.getRefersToSheetName().equals(myzss.getSelectedSheetName())
+                        && event.getRow() >= saveName.getRefersToCellRegion().getRow()
+                        && event.getRow() <= saveName.getRefersToCellRegion().getLastRow()
+                        && event.getColumn() >= saveName.getRefersToCellRegion().getColumn()
+                        && event.getColumn() <= saveName.getRefersToCellRegion().getLastColumn()
+                ) {
+                    try {
+                        String saveResult = ReportService.save(myzss, loggedInUser);
+                        if (saveResult.startsWith("Success")) {
+                            // todo - processing warning here? The button isn't used much . . .
+                            ZKComposerUtils.reloadBook(myzss, book);
+                            // think this wil;l do it
+                            Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"none\";document.getElementById(\"restoreDataButton\").style.display=\"none\";");
+                            Clients.evalJavaScript("alert(\"" + saveResult + "\")");
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
                     }
-                } catch (Exception e) {
-                    e.printStackTrace();
                 }
             }
         }
@@ -393,61 +395,64 @@ public class ZKComposer extends SelectorComposer<Component> {
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
         checkRegionSizes(event.getSheet(), loggedInUser, reportId);
         // regions may overlap - update all EXCEPT where there are repeat regions, in which case just do that as repeat regions will have overlap by their nature
-        List<RegionRowCol> regionRowColsToSave = new ArrayList<>(); // a list to save - list due to the possibility of overlapping data regions
-        List<RegionRowCol> headingRowColsToSave = new ArrayList<>();
-        for (SName name : repeatRegionNames) {
-            final RegionRowCol regionRowColForRepeatRegion = ReportUIUtils.getRegionRowColForRepeatRegion(book, row, col, name);
-            if (regionRowColForRepeatRegion != null) {
-                regionRowColsToSave.add(regionRowColForRepeatRegion);
+        if (book.getInternalBook().getAttribute(OnlineController.READ_ONLY) == null) {
+
+            List<RegionRowCol> regionRowColsToSave = new ArrayList<>(); // a list to save - list due to the possibility of overlapping data regions
+            List<RegionRowCol> headingRowColsToSave = new ArrayList<>();
+            for (SName name : repeatRegionNames) {
+                final RegionRowCol regionRowColForRepeatRegion = ReportUIUtils.getRegionRowColForRepeatRegion(book, row, col, name);
+                if (regionRowColForRepeatRegion != null) {
+                    regionRowColsToSave.add(regionRowColForRepeatRegion);
+                }
             }
-        }
-        if (regionRowColsToSave.isEmpty() && !names.isEmpty()) { // no repeat regions but there are normal ones
-            for (SName name : names) {
-                String regionName = name.getName().substring(StringLiterals.AZDATAREGION.length());
-                regionRowColsToSave.add(new RegionRowCol(name.getRefersToSheetName(), regionName, row - name.getRefersToCellRegion().getRow(), col - name.getRefersToCellRegion().getColumn()));
+            if (regionRowColsToSave.isEmpty() && !names.isEmpty()) { // no repeat regions but there are normal ones
+                for (SName name : names) {
+                    String regionName = name.getName().substring(StringLiterals.AZDATAREGION.length());
+                    regionRowColsToSave.add(new RegionRowCol(name.getRefersToSheetName(), regionName, row - name.getRefersToCellRegion().getRow(), col - name.getRefersToCellRegion().getColumn()));
+                }
             }
-        }
-        List<SName> headingNames = BookUtils.getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn(), event.getSheet(), StringLiterals.AZDISPLAYROWHEADINGS);
-        for (SName name : headingNames) {
-            headingRowColsToSave.add(new RegionRowCol(name.getRefersToSheetName(), name.getName().substring(StringLiterals.AZDISPLAYROWHEADINGS.length()), row - name.getRefersToCellRegion().getRow(), col - name.getRefersToCellRegion().getColumn()));
-        }
-        for (RegionRowCol regionRowCol : regionRowColsToSave) {
-            final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(reportId, regionRowCol.sheetName, regionRowCol.region);
-            if (sentCells != null) { // a good start!
-                if (regionRowCol.row >= 0 && regionRowCol.col >= 0 &&
-                        sentCells.getData().size() > regionRowCol.row && sentCells.getData().get(regionRowCol.row).size() > regionRowCol.col) {
-                    CellForDisplay cellForDisplay = sentCells.getData().get(regionRowCol.row).get(regionRowCol.col);
-                    // todo address locking here - maybe revert the cell
-                    Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"flex\";document.getElementById(\"restoreDataButton\").style.display=\"flex\";");
-                    if (isDouble) {
-                        cellForDisplay.setNewDoubleValue(doubleValue);
-                        // copying a few lines of server side code to try and ensure that successive saves don't cause a mismatch in the string values compared to what they would be on a fresh report load
-                        String numericValue = doubleValue + "";
-                        if (numericValue.endsWith(".0")) {
-                            numericValue = numericValue.substring(0, numericValue.length() - 2);
+            List<SName> headingNames = BookUtils.getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn(), event.getSheet(), StringLiterals.AZDISPLAYROWHEADINGS);
+            for (SName name : headingNames) {
+                headingRowColsToSave.add(new RegionRowCol(name.getRefersToSheetName(), name.getName().substring(StringLiterals.AZDISPLAYROWHEADINGS.length()), row - name.getRefersToCellRegion().getRow(), col - name.getRefersToCellRegion().getColumn()));
+            }
+            for (RegionRowCol regionRowCol : regionRowColsToSave) {
+                final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(reportId, regionRowCol.sheetName, regionRowCol.region);
+                if (sentCells != null) { // a good start!
+                    if (regionRowCol.row >= 0 && regionRowCol.col >= 0 &&
+                            sentCells.getData().size() > regionRowCol.row && sentCells.getData().get(regionRowCol.row).size() > regionRowCol.col) {
+                        CellForDisplay cellForDisplay = sentCells.getData().get(regionRowCol.row).get(regionRowCol.col);
+                        // todo address locking here - maybe revert the cell
+                        Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"flex\";document.getElementById(\"restoreDataButton\").style.display=\"flex\";");
+                        if (isDouble) {
+                            cellForDisplay.setNewDoubleValue(doubleValue);
+                            // copying a few lines of server side code to try and ensure that successive saves don't cause a mismatch in the string values compared to what they would be on a fresh report load
+                            String numericValue = doubleValue + "";
+                            if (numericValue.endsWith(".0")) {
+                                numericValue = numericValue.substring(0, numericValue.length() - 2);
+                            }
+                            cellForDisplay.setNewStringValue(numericValue);
+                        } else {
+                            cellForDisplay.setNewDoubleValue(0);
+                            cellForDisplay.setNewStringValue(chosen);
                         }
-                        cellForDisplay.setNewStringValue(numericValue);
-                    } else {
-                        cellForDisplay.setNewDoubleValue(0);
-                        cellForDisplay.setNewStringValue(chosen);
-                    }
-                    int highlightDays = 0;
-                    if (book.getInternalBook().getAttribute("highlightDays") != null) { // maybe factor the string literals??
-                        highlightDays = (Integer) book.getInternalBook().getAttribute("highlightDays");
-                    }
-                    if (highlightDays > 0) {
-                        cellForDisplay.setHighlighted(true);
-                        CellOperationUtil.applyFontColor(Ranges.range(event.getSheet(), row, col), "#FF0000");
+                        int highlightDays = 0;
+                        if (book.getInternalBook().getAttribute("highlightDays") != null) { // maybe factor the string literals??
+                            highlightDays = (Integer) book.getInternalBook().getAttribute("highlightDays");
+                        }
+                        if (highlightDays > 0) {
+                            cellForDisplay.setHighlighted(true);
+                            CellOperationUtil.applyFontColor(Ranges.range(event.getSheet(), row, col), "#FF0000");
+                        }
                     }
                 }
             }
-        }
-        for (RegionRowCol headingRowCol : headingRowColsToSave) { //recording any edited row heading
-            final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(reportId, headingRowCol.sheetName, headingRowCol.region);
-            if (sentCells != null) { // a good start!
-                if (headingRowCol.row >= 0 && headingRowCol.col >= 0 &&
-                        sentCells.getRowHeadings().size() > headingRowCol.row && sentCells.getRowHeadings().get(headingRowCol.row).size() > headingRowCol.col) {
-                    sentCells.setRowHeading(headingRowCol.row, headingRowCol.col, chosen);
+            for (RegionRowCol headingRowCol : headingRowColsToSave) { //recording any edited row heading
+                final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(reportId, headingRowCol.sheetName, headingRowCol.region);
+                if (sentCells != null) { // a good start!
+                    if (headingRowCol.row >= 0 && headingRowCol.col >= 0 &&
+                            sentCells.getRowHeadings().size() > headingRowCol.row && sentCells.getRowHeadings().get(headingRowCol.row).size() > headingRowCol.col) {
+                        sentCells.setRowHeading(headingRowCol.row, headingRowCol.col, chosen);
+                    }
                 }
             }
         }

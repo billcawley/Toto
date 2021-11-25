@@ -33,11 +33,12 @@
 		<div class="navbar-start">
 			<a class="navbar-item" href="/api/ManageReports">Reports</a>
 
-			<a class="navbar-item" href="#" onclick="return inspectDatabase();" title="Inspect database"><span class="fa fa-eye"></span>&nbsp;Inspect database</a> <!--<span class="fa fa-question-circle" onclick="showInspectHelp(); return false;"></span>-->
+			<c:if test="${showInspect == true}"><a class="navbar-item" href="#" onclick="return inspectDatabase();" title="Inspect database"><span class="fa fa-eye"></span>&nbsp;Inspect database</a> <!--<span class="fa fa-question-circle" onclick="showInspectHelp(); return false;"></span>--></c:if>
 			<c:if test="${xml == true}"><a class="navbar-item" href="#" onclick="postAjax('XML');return false;">Send XML</a></c:if>
 			<c:if test="${xmlzip == true}"><a class="navbar-item" href="#" onclick="postAjax('XMLZIP');return false;">Download XML</a></c:if>
 			<c:if test="${showTemplate == true}"><a class="navbar-item" href="#" onclick="window.location.assign(window.location.href+='&opcode=template')">View Template</a></c:if>
 			<c:if test="${execute == true}"><a class="navbar-item" href="#" onclick="postAjax('ExecuteSave');window.location.assign(window.location.href+='&opcode=execute')">Execute</a></c:if>
+			<c:if test="${userUploads == true}"><a class="navbar-item" href="/api/UserUpload">Validate File</a></c:if>
 			<a id="unlockButton" <c:if test="${showUnlockButton == false}"></c:if> class="navbar-item" href="#" onclick="postAjax('Unlock')">Unlock</a>
 			<a id="saveDataButton" <c:if test="${showSave == false}"> style="display:none;"</c:if> class="navbar-item" href="#" onclick="postAjax('Save')">Save Data</a>
 			<a id="restoreDataButton" <c:if test="${showSave == false}"> style="display:none;"</c:if> class="navbar-item" href="#" onclick="postAjax('RestoreSavedValues')">Restore Saved Values</a>
@@ -54,17 +55,14 @@
 				<div class="navbar-dropdown is-boxed is-right">
 					<a class="navbar-item"  href="#" onclick="postAjax('XLS'); return false;" title="Download as XLSX (Excel)"><span class="fa fa-file-excel-o"></span>&nbsp;&nbsp;Download as XLSX (Excel)</a>
 					<c:if test="${showTemplate == true}"><a class="navbar-item"   href="#" onclick="window.location.assign(window.location.href+='&opcode=template')">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;View Template</a></c:if>
-					<a class="navbar-item"  href="#" onclick="return inspectDatabase();" title="Inspect database"><span class="fa fa-eye"></span>&nbsp;&nbsp;Inspect database</a>
-					<a class="navbar-item"  href="#" onclick="return auditDatabase();" title="Audit Database"><span class="fa fa-eye"></span>&nbsp;&nbsp;Audit Database</a>
-					<a class="navbar-item"  href="#" onclick="return uploadFile();" title="Upload file"><span class="fa fa-cloud-upload"></span>&nbsp;&nbsp;Upload file</a>
+					<c:if test="${showInspect == true}"><a class="navbar-item"  href="#" onclick="return inspectDatabase();" title="Inspect database"><span class="fa fa-eye"></span>&nbsp;&nbsp;Inspect database</a>
+					<a class="navbar-item"  href="#" onclick="return auditDatabase();" title="Audit Database"><span class="fa fa-eye"></span>&nbsp;&nbsp;Audit Database</a></c:if>
 					<a class="navbar-item"  href="#" onclick="return postAjax('FREEZE');" title="Upload file"><span class="fa fa-link"></span>&nbsp;&nbsp;Freeze</a>
 					<a class="navbar-item"  href="#" onclick="return postAjax('UNFREEZE');" title="Upload file"><span class="fa fa-unlink"></span>&nbsp;&nbsp;Unfreeze</a>
 					<c:if test="${masterUser == true}">
 						<a class="navbar-item"  href="/api/CreateExcelForDownload?action=DOWNLOADUSERS" title="Download User List">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Download User List</a>
 						<a class="navbar-item"  href="/api/CreateExcelForDownload?action=DOWNLOADREPORTSCHEDULES" title="Download Report Schedules">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Download Report Schedules</a>
 					</c:if>
-					<a class="navbar-item"  href="/api/UserUpload#tab2" title="Upload Data">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Data Validation</a>
-
 				</div>
 			</div>
 		</div>

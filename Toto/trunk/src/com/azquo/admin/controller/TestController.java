@@ -3,6 +3,7 @@ package com.azquo.admin.controller;
 import com.azquo.dataimport.*;
 import com.csvreader.CsvWriter;
 import com.ecwid.maleorang.MailchimpException;
+import com.extractagilecrm.ExtractContacts;
 import com.extractappointedd.ExtractAppointedd;
 import com.extractdotdigital.ExtractDotDigital;
 import com.extractmailchimp.ExtractMailchimp;
@@ -367,6 +368,10 @@ public class TestController {
     public String handleRequest(
             @RequestParam(value = "something", required = false) String something
     ) {
+        if ("bonza".equals(something)){
+            ExtractContacts.extractContacts("https://bonzabfs.agilecrm.com/dev", "shaun.dodimead@azquo.com", "evjgnce8ou9hn77e4ma7uvjgcg", "/home/edward/Downloads/contacts(preprocessor = bonza contact preprocessor)", 183);
+        }
+
         if ("mailchimp".equals(something)) {
             try {
 // azquo                ExtractMailchimp.extractData("516f98d1f28e8cc97a2b8da9025d3b78-us1");

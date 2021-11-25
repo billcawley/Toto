@@ -36,14 +36,24 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class LoggedInUser implements Serializable {
 
+    public Set<String> getPendingUploadPermissions() {
+        return pendingUploadPermissions;
+    }
+
+    public void setPendingUploadPermissions(Set<String> pendingUploadPermissions) {
+        this.pendingUploadPermissions = pendingUploadPermissions;
+    }
+
     // I don't care about equals and hashcode on these two currently
     public static class ReportIdDatabaseId {
         final int reportId;
         final int databaseId;
+        final boolean readOnly;// Ed Broking require this, not a bad idea to have anyway
 
-        public ReportIdDatabaseId(int reportId, int databaseId) {
+        public ReportIdDatabaseId(int reportId, int databaseId, boolean readOnly) {
             this.reportId = reportId;
             this.databaseId = databaseId;
+            this.readOnly = readOnly;
         }
 
         public int getReportId() {
@@ -53,15 +63,21 @@ public class LoggedInUser implements Serializable {
         public int getDatabaseId() {
             return databaseId;
         }
+
+        public boolean isReadOnly() {
+            return readOnly;
+        }
     }
 
     public static class ReportDatabase {
         final OnlineReport report;
         final Database database;
+        final boolean readOnly;// Ed Broking require this, not a bad idea to have anyway
 
-        public ReportDatabase(OnlineReport report, Database database) {
+        public ReportDatabase(OnlineReport report, Database database, boolean readOnly) {
             this.report = report;
             this.database = database;
+            this.readOnly = readOnly;
         }
 
         public OnlineReport getReport() {
@@ -70,6 +86,10 @@ public class LoggedInUser implements Serializable {
 
         public Database getDatabase() {
             return database;
+        }
+
+        public boolean isReadOnly() {
+            return readOnly;
         }
     }
 
@@ -102,6 +122,8 @@ public class LoggedInUser implements Serializable {
     private final Map<String, ReportIdDatabaseId> reportIdDatabaseIdPermissions; // hold them here after they're set by a "home page" report for linking
 
     private Set<String> formPermissions; // form permissions, more simple than above
+
+    private Set<String> pendingUploadPermissions; // for users with status User to access the pending uploads but to be restricted to certain import template versions
 
     private static final String defaultRegion = "default-region";
     private static final String defaultSheet = "default-sheet";
@@ -144,6 +166,7 @@ public class LoggedInUser implements Serializable {
         }
         reportIdDatabaseIdPermissions = new ConcurrentHashMap<>();
         formPermissions = new HashSet<>();
+        pendingUploadPermissions = new HashSet<>();
     }
 
     public JsonChildren.Node getFromJsTreeLookupMap(int jsTreeNodeId) {
@@ -277,7 +300,7 @@ public class LoggedInUser implements Serializable {
             Database byId = DatabaseDAO.findById(idPair.getDatabaseId());
             OnlineReport onlineReport = OnlineReportDAO.findById(idPair.getReportId());
             if (byId != null && onlineReport != null){
-                return new ReportDatabase(onlineReport,byId);
+                return new ReportDatabase(onlineReport,byId, idPair.readOnly);
             } else { // zap reference to records which don't exist!
                 reportIdDatabaseIdPermissions.remove(reportName.toLowerCase());
             }
@@ -285,9 +308,9 @@ public class LoggedInUser implements Serializable {
         return null;
     }
 
-    public void setReportDatabasePermission(String key, OnlineReport onlineReport, Database database){
+    public void setReportDatabasePermission(String key, OnlineReport onlineReport, Database database, boolean readOnly){
         if (!this.getUser().isDeveloper() && !this.getUser().isAdministrator()) {
-            reportIdDatabaseIdPermissions.put(key != null ? key.toLowerCase() : onlineReport.getReportName().toLowerCase(), new ReportIdDatabaseId(onlineReport.getId(), database.getId()));
+            reportIdDatabaseIdPermissions.put(key != null ? key.toLowerCase() : onlineReport.getReportName().toLowerCase(), new ReportIdDatabaseId(onlineReport.getId(), database.getId(), readOnly));
         }
     }
 

@@ -112,9 +112,9 @@ public class PendingUploadController {
                     model.put("pheader", "../includes/public_header.jsp");
                     model.put("pfooter", "../includes/public_footer.jsp");
                     if (request.getSession().getAttribute("newui") != null){
-                        model.put("cancelUrl", "UserUpload#1");
+                        model.put("cancelUrl", "UserUpload");
                     } else {
-                        model.put("cancelUrl", "UserUpload#tab2");
+                        model.put("cancelUrl", "UserUpload");
                     }
                     nonAdminDBids = new HashSet<>();
                     databaseList = new ArrayList<>();
@@ -146,11 +146,7 @@ public class PendingUploadController {
                     pu.setProcessedDate(LocalDateTime.now());
                     PendingUploadDAO.store(pu);
                     if (nonAdminDBids != null) {
-                        if (request.getSession().getAttribute("newui") != null){
-                            return "redirect:/api/UserUpload?uploadreports=true#1";
-                        } else {
-                            return "redirect:/api/UserUpload?uploadreports=true#tab2";
-                        }
+                            return "redirect:/api/UserUpload?uploadreports=true";
                     } else {
                         if (request.getSession().getAttribute("newui") != null){
                             return "redirect:/api/ManageDatabases?uploadreports=true#3";

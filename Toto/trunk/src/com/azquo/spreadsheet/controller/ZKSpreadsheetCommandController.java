@@ -230,21 +230,22 @@ public class ZKSpreadsheetCommandController {
                 String saveMessage = "";
 
                 // now just pops up the processing, bounces back to actually save below
-                if ("Save".equals(action)) {
-                    Clients.showBusy(ss,"Processing ...");
-                    Clients.evalJavaScript("postAjax('ActuallySave');");
-                }
+                if (ss.getBook().getInternalBook().getAttribute(OnlineController.READ_ONLY) == null){
+                    if ("Save".equals(action)) {
+                        Clients.showBusy(ss,"Processing ...");
+                        Clients.evalJavaScript("postAjax('ActuallySave');");
+                    }
 
-                if ("ActuallySave".equals(action)) {
-                    saveMessage = ReportService.save(ss,loggedInUser);
-                    Clients.clearBusy(ss);
-                }
+                    if ("ActuallySave".equals(action)) {
+                        saveMessage = ReportService.save(ss,loggedInUser);
+                        Clients.clearBusy(ss);
+                    }
 
-                if ("ExecuteSave".equals(action)) {
-                    ReportService.save(ss,loggedInUser);
-                    Clients.clearBusy(ss);
+                    if ("ExecuteSave".equals(action)) {
+                        ReportService.save(ss,loggedInUser);
+                        Clients.clearBusy(ss);
+                    }
                 }
-
                 if ("RestoreSavedValues".equals(action) || saveMessage.startsWith("Success")) {
                     final Book book = ss.getBook();
                     final Book newBook = Importers.getImporter().imports(new File((String) book.getInternalBook().getAttribute(OnlineController.BOOK_PATH)), "Report name");

@@ -110,6 +110,7 @@ public class OnlineController {
     private static final String EXECUTE_FLAG = "EXECUTE_FLAG";
     public static final String LOGGED_IN_USER = "LOGGED_IN_USER";
     public static final String REPORT_ID = "REPORT_ID";
+    public static final String READ_ONLY = "READ_ONLY";
     public static final String CELL_SELECT = "CELL_SELECT";
     public static final String LOCKED = "LOCKED";
     public static final String LOCKED_RESULT = "LOCK_RESULT";
@@ -166,6 +167,9 @@ public class OnlineController {
                     }
                 }
                 boolean isExternal = false;
+
+                boolean readOnlyReport = false;
+
                  if (externalcall!=null && externalcall.length()>0){
                     externalcall = externalcall.replace("_"," ");
                     String reportName = externalcall;
@@ -245,6 +249,7 @@ public class OnlineController {
                         LoggedInUser.ReportDatabase permission = loggedInUser.getPermission(permissionId.toLowerCase());
 //                        System.out.println("found permission : " + permission);
                         onlineReport = permission.getReport();
+                        readOnlyReport = permission.isReadOnly();
                         if (onlineReport != null) {
                             reportId = onlineReport.getId() + ""; // hack for permissions
                             LoginService.switchDatabase(loggedInUser, permission.getDatabase());
@@ -254,7 +259,7 @@ public class OnlineController {
 
                     }
                 }
-                if (opcode.equalsIgnoreCase(UPLOAD)) {
+                if (opcode.equalsIgnoreCase(UPLOAD) && !readOnlyReport) {
                     // revised logic - this is ONLY for uploading data entered in a downloaded report
                     reportId = "";
                     if (submit.length() > 0) {
@@ -312,14 +317,20 @@ public class OnlineController {
                         request.setAttribute(OnlineController.BOOK, book); // push the rendered book into the request to be sent to the user
                         session.removeAttribute(reportId);// get rid of it from the session
                         // hmm, is putting attributes agains the book the way to go? I've used session in other places but it would be a pain for these two. Todo : standardise on something that makes sense.
-                        model.put("showUnlockButton", book.getInternalBook().getAttribute(LOCKED));
+                        if (onlineReport.getId() == loggedInUser.getUser().getReportId()){
+                            model.put("showUnlockButton", false);
+                        } else {
+                            model.put("showUnlockButton", book.getInternalBook().getAttribute(LOCKED));
+                        }
                         model.put("lockedResult", book.getInternalBook().getAttribute(LOCKED_RESULT));
                         model.put("xml", book.getInternalBook().getAttribute(XML) != null);
                         model.put("xmlzip", book.getInternalBook().getAttribute(XMLZIP) != null);
                         model.put("showSave", session.getAttribute(reportId + SAVE_FLAG));
                         model.put("masterUser", loggedInUser.getUser().isMaster());
                         model.put("templateMode", "template".equalsIgnoreCase(opcode) && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster() || loggedInUser.getUser().isDeveloper()));
+                        model.put("userUploads", (loggedInUser.getPendingUploadPermissions() != null && !loggedInUser.getPendingUploadPermissions().isEmpty()));
                         model.put("showTemplate", loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster() || loggedInUser.getUser().isDeveloper());
+                        model.put("showInspect", loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper());
                         model.put("execute", session.getAttribute(reportId + EXECUTE_FLAG));
                         session.removeAttribute(reportId + SAVE_FLAG);// get rid of it from the session
                         session.removeAttribute(reportId + EXECUTE_FLAG);
@@ -354,6 +365,7 @@ public class OnlineController {
                         final OnlineReport finalOnlineReport = onlineReport;
                         final boolean templateMode = TEMPLATE.equalsIgnoreCase(opcode) && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster() || loggedInUser.getUser().isDeveloper());
                         final boolean executeMode = opcode.toUpperCase().startsWith(EXECUTE);//opcode seems to become execute.execute
+                        final boolean finalReadOnlyReport = readOnlyReport;
                         new Thread(() -> {
                             // so in here the new thread we set up the loading as it was originally before
                             try {
@@ -378,6 +390,9 @@ public class OnlineController {
                                 // todo, address allowing multiple books open for one user. I think this could be possible. Might mean passing a DB connection not a logged in one
                                 System.out.println("Loading report : " + finalOnlineReport.getReportName());
                                 book.getInternalBook().setAttribute(REPORT_ID, finalOnlineReport.getId());
+                                if (finalReadOnlyReport){
+                                    book.getInternalBook().setAttribute(READ_ONLY, "true");
+                                }
                                 if (!templateMode) {
                                     boolean executeName = false;
                                     // annoying, factor?
@@ -398,7 +413,8 @@ public class OnlineController {
                                     Map<String, String> params = new HashMap<>();
                                     params.put("Report", finalOnlineReport.getReportName());
                                     loggedInUser.userLog(" Load report", params);
-                                    session.setAttribute(finalReportId + SAVE_FLAG, ReportRenderer.populateBook(book, valueId));
+                                    boolean saveResult = ReportRenderer.populateBook(book, valueId);
+                                    session.setAttribute(finalReportId + SAVE_FLAG, finalReadOnlyReport ? false :  saveResult);
                                 } else {
                                     loggedInUser.setImageStoreName(""); // legacy thing to stop null pointer, should be zapped after getting rid of aspose
                                 }
