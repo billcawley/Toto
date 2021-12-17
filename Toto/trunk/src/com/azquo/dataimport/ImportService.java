@@ -3184,8 +3184,8 @@ fr.close();
                     ImportService.addFileNameParametersToMap(f.getName(), fileNameParams);
                     UploadedFile zipEntryUploadFile = new UploadedFile(f.getPath(), Collections.singletonList(f.getName()), fileNameParams, false, false);
                     // ok I need to convert the excel input files here hhhhhhhngh
-                    org.apache.poi.xssf.usermodel.XSSFWorkbook book;
-                    if (!f.getName().endsWith(".xlsx")) {
+                    org.apache.poi.ss.usermodel.Workbook book;
+                    if (!f.getName().endsWith(".xlsx") || f.getName().endsWith(".xls")) {
                         UploadedFile uf = new UploadedFile(f.getPath(), zipEntryUploadFile.getFileNames(), fileNameParams, true, false);
                         ImportService.preProcessUsingPoi(loggedInUser, uf, preprocessorTempLocation.getPath());
                         String name = uf.getPath();
@@ -3205,6 +3205,12 @@ fr.close();
                         Files.copy(Paths.get(uf.getPath()), zipforuploadresult.resolve(name));
                     } else {
                         try {
+                            if (f.getName().endsWith(".xlsx")){
+                                book = new org.apache.poi.xssf.usermodel.XSSFWorkbook(org.apache.poi.openxml4j.opc.OPCPackage.open(new FileInputStream(new File(zipEntryUploadFile.getPath()))));
+                            }else{
+                                book = new org.apache.poi.hssf.usermodel.HSSFWorkbook(new FileInputStream(new File(zipEntryUploadFile.getPath())));
+
+                            }
                             book = new org.apache.poi.xssf.usermodel.XSSFWorkbook(org.apache.poi.openxml4j.opc.OPCPackage.open(new FileInputStream(new File(zipEntryUploadFile.getPath()))));
                         } catch (org.apache.poi.openxml4j.exceptions.InvalidFormatException ife) {
                             // Hanover may send 'em encrypted
