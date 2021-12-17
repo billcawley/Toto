@@ -15,6 +15,8 @@ import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.spreadsheet.transport.json.JsonChildren;
 import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
 import io.keikai.api.model.Book;
+import org.apache.poi.openxml4j.opc.OPCPackage;
+import org.apache.poi.ss.usermodel.Workbook;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -123,7 +125,11 @@ public class LoggedInUser implements Serializable {
 
     private Set<String> formPermissions; // form permissions, more simple than above
 
+    private OPCPackage opcPackage;
+    private Workbook preprocessorLoaded;
+
     private Set<String> pendingUploadPermissions; // for users with status User to access the pending uploads but to be restricted to certain import template versions
+
 
     private static final String defaultRegion = "default-region";
     private static final String defaultSheet = "default-sheet";
@@ -166,7 +172,10 @@ public class LoggedInUser implements Serializable {
         }
         reportIdDatabaseIdPermissions = new ConcurrentHashMap<>();
         formPermissions = new HashSet<>();
+        opcPackage = null;
+        preprocessorLoaded = null;
         pendingUploadPermissions = new HashSet<>();
+
     }
 
     public JsonChildren.Node getFromJsTreeLookupMap(int jsTreeNodeId) {
@@ -325,6 +334,14 @@ public class LoggedInUser implements Serializable {
     public void setFormPermissions(Set<String> formPermissions) {
         this.formPermissions = formPermissions;
     }
+
+    public OPCPackage getOpcPackage() {return opcPackage; }
+
+    public void setOpcPackage(OPCPackage opcPackage) {this.opcPackage = opcPackage; }
+
+    public Workbook getPreprocessorLoaded() { return preprocessorLoaded; }
+
+    public void setPreprocessorLoaded(Workbook preprocessorLoaded) {this.preprocessorLoaded = preprocessorLoaded; }
 
     // just pop it open and closed, should be a little cleaner
 /*    public void userLog(String message) {
