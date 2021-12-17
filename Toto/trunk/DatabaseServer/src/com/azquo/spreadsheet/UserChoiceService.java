@@ -208,10 +208,10 @@ public class UserChoiceService {
                 }
             }
             names = newNames;
-        } else if (names.size() > 1000) { // don't even try, you're not getting the dropdown or multi select = SHOW THE FIRST 500!!!!!!!
+        } else if (names.size() > 2000) { // EFC, making this 2k for bonza but it's not the best idea. Needs to be back to 500 sooner rather than later
             List<Name> newNames = new ArrayList<>();
             Iterator it = names.iterator();
-            for (int i = 0; i < 1000; i++) newNames.add((Name) it.next());
+            for (int i = 0; i < 2000; i++) newNames.add((Name) it.next());
             names = newNames;
         }
         // I'm not going to check if provenanceId is positive - if they use "updated" in the wrong context nothing should be returned

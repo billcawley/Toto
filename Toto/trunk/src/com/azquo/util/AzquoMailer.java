@@ -25,6 +25,29 @@ import java.util.Properties;
 public class AzquoMailer {
     private static final Properties azquoProperties = new Properties();
 
+    /*
+
+    org.apache.commons.mail.EmailException: Sending the email to the following server failed : smtp.office365.com:587
+        at org.apache.commons.mail.Email.sendMimeMessage(Email.java:1410)
+        at org.apache.commons.mail.Email.send(Email.java:1437)
+        at com.azquo.util.AzquoMailer.sendEMail(AzquoMailer.java:119)
+        at com.azquo.util.AzquoMailer.sendEMail(AzquoMailer.java:50)
+        at com.azquo.spreadsheet.controller.LoginController.lambda$handleRequest$6(LoginController.java:226)
+        at java.base/java.lang.Thread.run(Thread.java:830)
+Caused by: javax.mail.AuthenticationFailedException: 421 4.7.66 TLS 1.0 and 1.1 are not supported. Please upgrade/update your client to support TLS 1.2. Visit https://aka.ms/smtp_auth_tls. [LO3P123CA0001.GBRP123.PROD.OUTLOOK.COM]
+
+        at com.sun.mail.smtp.SMTPTransport$Authenticator.authenticate(SMTPTransport.java:823)
+        at com.sun.mail.smtp.SMTPTransport.authenticate(SMTPTransport.java:756)
+        at com.sun.mail.smtp.SMTPTransport.protocolConnect(SMTPTransport.java:673)
+        at javax.mail.Service.connect(Service.java:317)
+        at javax.mail.Service.connect(Service.java:176)
+        at javax.mail.Service.connect(Service.java:125)
+        at javax.mail.Transport.send0(Transport.java:194)
+        at javax.mail.Transport.send(Transport.java:124)
+        at org.apache.commons.mail.Email.sendMimeMessage(Email.java:1400)
+
+     */
+
     static {
         System.out.println("attempting properties load from classpath");
         try {

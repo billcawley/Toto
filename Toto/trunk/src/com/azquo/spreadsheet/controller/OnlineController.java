@@ -376,6 +376,9 @@ public class OnlineController {
                                 String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + finalOnlineReport.getFilenameForDisk();
                                 Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
                                 if (external) {
+                                    // EFC : this is hacky - trying to head off bonza problems
+                                    ReportService.resolveQueries(book, loggedInUser);
+
                                     String deflectReport = SpreadsheetService.findDeflects(loggedInUser, book);
                                     if (deflectReport != null) {
                                         OnlineReport or2 = OnlineReportDAO.findForNameAndBusinessId(deflectReport, loggedInUser.getUser().getBusinessId());

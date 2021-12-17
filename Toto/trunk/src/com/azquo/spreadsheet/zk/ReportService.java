@@ -149,7 +149,7 @@ public class ReportService {
     }
     //System.out.println("permissions : " + loggedInUser.getReportIdDatabaseIdPermissions());
 
-    static void resolveQueries(Book book, LoggedInUser loggedInUser) {
+    public static void resolveQueries(Book book, LoggedInUser loggedInUser) {
         List<SName> names = new ArrayList<>(book.getInternalBook().getNames());
         names.sort(Comparator.comparing(SName::getName)); // they may be anyway but be sure
         for (SName name : book.getInternalBook().getNames()) {

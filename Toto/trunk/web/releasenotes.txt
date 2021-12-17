@@ -1,3 +1,15 @@
+26-11-21
+
+Roles work - additional functionality for the user home menu
+
+security fix on new login form
+
+download file on audit
+
+ability to download reports into preprocessor
+
+new UI bug fixes
+
 28-10-21
 
 work on ignoring blank lines and correction of 'copyrange' bug in workbook preprocessor where one extra line was copied
