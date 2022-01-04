@@ -2706,7 +2706,11 @@ fr.close();
                 }
                 lastline = line;
                 if (lineNo % 200 == 0) {
-                    RMIClient.getServerInterface(loggedInUser.getDatabaseServer().getIp()).addToLog(loggedInUser.getDataAccessToken(), "Preprocessing line: " + lineNo );
+                    try{
+                        RMIClient.getServerInterface(loggedInUser.getDatabaseServer().getIp()).addToLog(loggedInUser.getDataAccessToken(), "Preprocessing line: " + lineNo );
+                    }catch(Exception e){
+                        //ignore - there is no log set up for a template test
+                    }
                 }
                 lineNo++;
              }
@@ -3185,7 +3189,7 @@ fr.close();
                     UploadedFile zipEntryUploadFile = new UploadedFile(f.getPath(), Collections.singletonList(f.getName()), fileNameParams, false, false);
                     // ok I need to convert the excel input files here hhhhhhhngh
                     org.apache.poi.ss.usermodel.Workbook book;
-                    if (!f.getName().endsWith(".xlsx") || f.getName().endsWith(".xls")) {
+                    if (!f.getName().endsWith(".xlsx") && !f.getName().endsWith(".xls")) {
                         UploadedFile uf = new UploadedFile(f.getPath(), zipEntryUploadFile.getFileNames(), fileNameParams, true, false);
                         ImportService.preProcessUsingPoi(loggedInUser, uf, preprocessorTempLocation.getPath());
                         String name = uf.getPath();
@@ -3211,7 +3215,6 @@ fr.close();
                                 book = new org.apache.poi.hssf.usermodel.HSSFWorkbook(new FileInputStream(new File(zipEntryUploadFile.getPath())));
 
                             }
-                            book = new org.apache.poi.xssf.usermodel.XSSFWorkbook(org.apache.poi.openxml4j.opc.OPCPackage.open(new FileInputStream(new File(zipEntryUploadFile.getPath()))));
                         } catch (org.apache.poi.openxml4j.exceptions.InvalidFormatException ife) {
                             // Hanover may send 'em encrypted
                             POIFSFileSystem fileSystem = new POIFSFileSystem(new FileInputStream(zipEntryUploadFile.getPath()));
