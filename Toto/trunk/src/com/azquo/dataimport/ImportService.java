@@ -2605,7 +2605,7 @@ fr.close();
                         //handle the data
                         for (colNo = 0; colNo < line.length; colNo++) {
                             if (inputColumnMap.get(colNo) != null) {
-                                setCellValue(inputSheet, inputRowNo, inputColumnMap.get(colNo), line[colNo]);
+                               setCellValue(inputSheet, inputRowNo, inputColumnMap.get(colNo), line[colNo]);
                             }
                         }
                         for (String param : uploadedFile.getParameters().keySet()) {
@@ -2987,6 +2987,14 @@ fr.close();
             String source = standardise(getCellValue(hSheet,rowNo,firstCol));
             String target = standardise(getCellValue(hSheet,rowNo,firstCol + 1));
             if (headingsLookups.get(source) != null) {
+                if (headingsLookups.get(target) != null && !headingsLookups.get(target).equals(headingsLookups.get(source))){
+                    //need to consolidate existing as target
+                    for (String existingLookup:headingsLookups.keySet()){
+                        if (headingsLookups.get(existingLookup).equals(headingsLookups.get(source))){
+                            headingsLookups.put(existingLookup,headingsLookups.get(target));
+                        }
+                    }
+                }
                 headingsLookups.put(target, headingsLookups.get(source));
             } else {
                 if (headingsLookups.get(target) != null) {
