@@ -27,6 +27,7 @@ public final class BusinessDAO {
     private static final String BUSINESSDETAILS = "business_details";
     private static final String BANNERCOLOR = "banner_color";
     private static final String LOGO = "logo";
+    private static final String SERVERNAME = "server_name";
 
     public static Map<String, Object> getColumnNameValueMap(final Business business) {
         final Map<String, Object> toReturn = new HashMap<>();
@@ -51,7 +52,9 @@ public final class BusinessDAO {
                         , jacksonMapper.readValue(rs.getString(BUSINESSDETAILS)
                         , Business.BusinessDetails.class)
                         , rs.getString(BANNERCOLOR)
-                        , rs.getString(LOGO));
+                        , rs.getString(LOGO)
+                        , rs.getString(SERVERNAME)
+                );
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;
@@ -65,6 +68,12 @@ public final class BusinessDAO {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(BUSINESSNAME, businessName);
         return StandardDAO.findOneWithWhereSQLAndParameters(" WHERE `" + BUSINESSNAME + "` = :" + BUSINESSNAME, TABLENAME, businessRowMapper, namedParams);
+    }
+
+    public static Business findByServerName(final String serverName) {
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(SERVERNAME, serverName);
+        return StandardDAO.findOneWithWhereSQLAndParameters(" WHERE `" + SERVERNAME + "` = :" + SERVERNAME, TABLENAME, businessRowMapper, namedParams);
     }
 
     public static Business findById(int id){

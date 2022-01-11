@@ -19,17 +19,20 @@ public final class Business extends StandardEntity {
     private BusinessDetails businessDetails;
     private String bannerColor;
     private String logo;
+    // as in charterhouse.gingerblack.com or whatever. Change branding on the login page
+    private String serverName;
 
     public Business(int id
             , String businessName
             , BusinessDetails businessDetails
             , String bannerColor
-            , String logo) {
+            , String logo, String serverName) {
         this.id = id;
         this.businessName = businessName;
         this.businessDetails = businessDetails;
         this.bannerColor = bannerColor;
         this.logo = logo;
+        this.serverName = serverName;
     }
 
     public String getBusinessName() {
@@ -68,12 +71,23 @@ public final class Business extends StandardEntity {
         this.logo = logo;
     }
 
+    public String getServerName() {
+        return serverName;
+    }
+
+    public void setServerName(String serverName) {
+        this.serverName = serverName;
+    }
+
     @Override
     public String toString() {
         return "Business{" +
-                "id=" + id +
-                ", businessName='" + businessName + '\'' +
+                "businessName='" + businessName + '\'' +
                 ", businessDetails=" + businessDetails +
+                ", bannerColor='" + bannerColor + '\'' +
+                ", logo='" + logo + '\'' +
+                ", serverName='" + serverName + '\'' +
+                ", id=" + id +
                 '}';
     }
 
