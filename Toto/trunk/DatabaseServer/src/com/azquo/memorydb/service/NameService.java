@@ -363,7 +363,8 @@ public final class NameService {
             // remove 'Europe' from the direct parent list.
             //NEW CONDITION ADDED - we are parent = child, but not bothering to put into the set.  This may need discussion - are the parent and child really the same?
             // I think I was just avoiding a circular reference
-            if (parent != null && existing != parent && !existing.findAllParents().contains(parent)) {
+            //WFC REMOVED THIS CONDITION.  There are reasonable cases where parents and children may co-exist in a set (e.g. duplicate email lists for customers)
+            if (parent != null && existing != parent){ //&& !existing.findAllParents().contains(parent)) {
                 //only check if the new parent is not already in the parent hierarchy.
                 includeInSet(existing, parent, azquoMemoryDBConnection);
             }

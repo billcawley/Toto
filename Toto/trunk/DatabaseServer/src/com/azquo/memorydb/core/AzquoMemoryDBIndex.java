@@ -71,9 +71,11 @@ public class AzquoMemoryDBIndex {
                 return found; // and return straight away
             }
         }
+        return Collections.emptySet();
+        //WFC removed this - caused problems in listing duplicate emails in customer list where succeeding customers were children of originals.
         // get rid of any that are not in the parent - removeIf has the same logic as the iterator that was there before.
-        possibles.removeIf(possible -> !possible.findAllParents().contains(parent));
-        return possibles; // so this could be more than one if there were multiple in a big parent set (presumably at different levels)
+        //possibles.removeIf(possible -> !possible.findAllParents().contains(parent));
+        //return possibles; // so this could be more than one if there were multiple in a big parent set (presumably at different levels)
     }
 
     // only used by the namesFromAttributeFunction. Todo - confirm the usage of this. I'd like to zap it, WFC says it's not currently being used but wants to keep it
