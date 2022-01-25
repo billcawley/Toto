@@ -74,7 +74,7 @@ Created by IntelliJ IDEA.
                         <tbody>
                         <tr>
                             <td><label for="uploadFile">Upload Files:</label> <input id="uploadFile" type="file" name="uploadFile" multiple></td>
-                            <td><label for="userComment">Comment:</label><input id="userComment" size="40" name="userComment" required pattern="(.|\s)*\S(.|\s)*"></td>
+                            <td><label for="userComment">Comment:</label><input id="userComment" size="40" name="userComment"></td>
                             <td>
                                 <label for="uploadDatabase">Database:</label>
                                 <select name="database" id="uploadDatabase">

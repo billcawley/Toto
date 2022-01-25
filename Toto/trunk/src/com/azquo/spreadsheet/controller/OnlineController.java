@@ -254,6 +254,10 @@ public class OnlineController {
                             reportId = onlineReport.getId() + ""; // hack for permissions
                             LoginService.switchDatabase(loggedInUser, permission.getDatabase());
                         }
+                    } else if(loggedInUser.getIFrameUrl(permissionId) != null){
+                        model.put("iframesrc", loggedInUser.getIFrameUrl(permissionId));
+                        AdminService.setBanner(model, loggedInUser);
+                        return "showiframe";
                     }else{
                        result = "error: user has no permission for this report";
 

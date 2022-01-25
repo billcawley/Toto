@@ -123,6 +123,9 @@ public class LoggedInUser implements Serializable {
     // report, database, generally set from a home user menu
     private final Map<String, ReportIdDatabaseId> reportIdDatabaseIdPermissions; // hold them here after they're set by a "home page" report for linking
 
+    // option to open iframes from the report menu
+    private final Map<String, String> iframeLookups; // hold them here after they're set by a "home page" report for linking
+
     private Set<String> formPermissions; // form permissions, more simple than above
 
     private OPCPackage opcPackage;
@@ -176,6 +179,7 @@ public class LoggedInUser implements Serializable {
         preprocessorLoaded = null;
         pendingUploadPermissions = new HashSet<>();
 
+        iframeLookups = new HashMap<>();
     }
 
     public JsonChildren.Node getFromJsTreeLookupMap(int jsTreeNodeId) {
@@ -325,6 +329,14 @@ public class LoggedInUser implements Serializable {
 
     public Map<String, ReportIdDatabaseId> getReportIdDatabaseIdPermissions() {
         return reportIdDatabaseIdPermissions;
+    }
+
+    public void setIFrameLookup(String name, String url){
+        iframeLookups.put(name, url);
+    }
+
+    public String getIFrameUrl(String name) {
+        return iframeLookups.get(name);
     }
 
     public Set<String> getFormPermissions() {

@@ -62,15 +62,19 @@ public class ReportService {
                         if (!sheet.getInternalSheet().getCell(row, allowable.getColumn()).isNull()) {
                             String name = sheet.getInternalSheet().getCell(row, allowable.getColumn()).getStringValue();
                             final String reportName = sheet.getInternalSheet().getCell(row, allowable.getColumn() + 1).getStringValue();
-                            final OnlineReport report = OnlineReportDAO.findForNameAndBusinessId(reportName, loggedInUser.getUser().getBusinessId());
-                            final String databaseName = sheet.getInternalSheet().getCell(row, allowable.getColumn() + 2).getStringValue();
-                            final String readonly = sheet.getInternalSheet().getCell(row, allowable.getColumn() + 3).getStringValue();
-                            Database database = DatabaseDAO.findForNameAndBusinessId(databaseName, loggedInUser.getUser().getBusinessId());
-                            if (database == null) {
-                                database = DatabaseDAO.findById(loggedInUser.getUser().getDatabaseId());
-                            }
-                            if (report != null && !reportName.equals(thisReportName)) {
-                                loggedInUser.setReportDatabasePermission(name.toLowerCase(), report, database, "x".equalsIgnoreCase(readonly));
+                            if (reportName.startsWith("iframe:")){
+                                loggedInUser.setIFrameLookup(name, reportName.substring(7).trim());
+                            } else {
+                                final OnlineReport report = OnlineReportDAO.findForNameAndBusinessId(reportName, loggedInUser.getUser().getBusinessId());
+                                final String databaseName = sheet.getInternalSheet().getCell(row, allowable.getColumn() + 2).getStringValue();
+                                final String readonly = sheet.getInternalSheet().getCell(row, allowable.getColumn() + 3).getStringValue();
+                                Database database = DatabaseDAO.findForNameAndBusinessId(databaseName, loggedInUser.getUser().getBusinessId());
+                                if (database == null) {
+                                    database = DatabaseDAO.findById(loggedInUser.getUser().getDatabaseId());
+                                }
+                                if (report != null && !reportName.equals(thisReportName)) {
+                                    loggedInUser.setReportDatabasePermission(name.toLowerCase(), report, database, "x".equalsIgnoreCase(readonly));
+                                }
                             }
                         }
                     }
@@ -79,14 +83,18 @@ public class ReportService {
                         if (!sheet.getInternalSheet().getCell(row, allowable.getColumn()).isNull()) {
                             String name = sheet.getInternalSheet().getCell(row, allowable.getColumn()).getStringValue();
                             final String reportName = sheet.getInternalSheet().getCell(row, allowable.getColumn() + 1).getStringValue();
-                            final OnlineReport report = OnlineReportDAO.findForNameAndBusinessId(reportName, loggedInUser.getUser().getBusinessId());
-                            final String databaseName = sheet.getInternalSheet().getCell(row, allowable.getColumn() + 2).getStringValue();
-                            Database database = DatabaseDAO.findForNameAndBusinessId(databaseName, loggedInUser.getUser().getBusinessId());
-                            if (database == null) {
-                                database = DatabaseDAO.findById(loggedInUser.getUser().getDatabaseId());
-                            }
-                            if (report != null && !reportName.equals(thisReportName)) {
-                                loggedInUser.setReportDatabasePermission(name.toLowerCase(), report, database, false);
+                            if (reportName.startsWith("iframe:")){
+                                loggedInUser.setIFrameLookup(name, reportName.substring(7).trim());
+                            } else {
+                                final OnlineReport report = OnlineReportDAO.findForNameAndBusinessId(reportName, loggedInUser.getUser().getBusinessId());
+                                final String databaseName = sheet.getInternalSheet().getCell(row, allowable.getColumn() + 2).getStringValue();
+                                Database database = DatabaseDAO.findForNameAndBusinessId(databaseName, loggedInUser.getUser().getBusinessId());
+                                if (database == null) {
+                                    database = DatabaseDAO.findById(loggedInUser.getUser().getDatabaseId());
+                                }
+                                if (report != null && !reportName.equals(thisReportName)) {
+                                    loggedInUser.setReportDatabasePermission(name.toLowerCase(), report, database, false);
+                                }
                             }
                         }
                     }
