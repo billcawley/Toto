@@ -62,12 +62,17 @@ class NameEditFunctions {
                     long allCount = 0;
                     //System.out.println("starting orphaning - child has " + children.size() + " elements");
                     for (Name parentName : parents) {
+                        Collection<Name> tobeRemoved = new HashSet<>();
                         for (Name childName : parentName.getChildren()) {
-                            if (children.contains(childName)) {
+                              if (children.contains(childName)) {
                                 System.out.println(".." + allCount + " names - now removing " + childName.getDefaultDisplayName() + " from " + parentName.getDefaultDisplayName());
                                 //note only removing one child at a time - for loop may be corrupted
+                                tobeRemoved.add(childName);
+                            }
+                        }
+                        if (tobeRemoved.size()>0) {
+                            for (Name childName : tobeRemoved) {
                                 parentName.removeFromChildrenWillBePersisted(childName, azquoMemoryDBConnection);
-                                break;
                             }
                         }
                     }
@@ -379,20 +384,45 @@ class NameEditFunctions {
         if (toPos < 0) return toReturn;
         String baseSet = formula.substring(0, toPos);
         String binSet = formula.substring(toPos + 4);
-        Name rubbishBin = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, binSet, null, false);
+        String attName = null;
+        int usingPos = binSet.indexOf(" using ");
+        if (usingPos > 0){
+            attName = binSet.substring(usingPos + 7);
+            binSet = binSet.substring(0,usingPos).trim();
+
+        }
+
+         Name rubbishBin = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, binSet, null, false);
         Collection<Name> names = NameQueryParser.parseQuery(azquoMemoryDBConnection, baseSet);
         if (names.size() == 0) return toReturn;
         if (names.size() > 1) {
             Map<String, Set<Name>> nameMap = new HashMap<>();
             for (Name name : names) {
-                String nameString = name.getDefaultDisplayName();
-                // todo - pretty sure we should not be using putifabsent
-                nameMap.putIfAbsent(nameString, new HashSet<>());
-                nameMap.get(nameString).add(name);
+                String nameString = null;
+                if (attName != null){
+                    nameString = name.getAttribute(attName);
+                }
+                if (nameString == null){
+                    nameString = name.getDefaultDisplayName();
+                }
+                if (nameString!=null && nameString.length() > 0) {
+                    // todo - pretty sure we should not be using putifabsent
+                    nameMap.putIfAbsent(nameString, new HashSet<>());
+                    nameMap.get(nameString).add(name);
+                }
             }
             for (Set<Name> dupeNames : nameMap.values()) {
                 if (dupeNames.size() > 1) {
-                    dedupeOne(dupeNames.iterator().next(), dupeNames, rubbishBin, azquoMemoryDBConnection);
+                    Name baseName = null;
+                    for (Name name:dupeNames){
+                        if (name.getAttribute(attName)==null){
+                            baseName = name;
+                            break;
+                        }
+                    }
+                    if (baseName!=null){
+                        dedupeOne(baseName, dupeNames, rubbishBin, azquoMemoryDBConnection);
+                    }
                 }
             }
             toReturn.add(rubbishBin);
