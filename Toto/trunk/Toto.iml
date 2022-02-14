@@ -62,5 +62,6 @@
     <orderEntry type="module" module-name="serilogj" />
     <orderEntry type="library" name="agilecrm" level="project" />
     <orderEntry type="library" name="com.ecwid:maleorang:3.0-0.9.6" level="project" />
+    <orderEntry type="library" name="snowflake-jdbc-3.9.2" level="project" />
   </component>
 </module>

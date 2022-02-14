@@ -31,7 +31,7 @@
 	</div>
 	<div id="navbarBasicExample" class="navbar-menu">
 		<div class="navbar-start">
-			<a class="navbar-item" href="/api/ManageReports">Reports</a>
+			<a class="navbar-item" href="/api/Online?reportid=1">Reports</a>
 
 			<c:if test="${showInspect == true}"><a class="navbar-item" href="#" onclick="return inspectDatabase();" title="Inspect database"><span class="fa fa-eye"></span>&nbsp;Inspect database</a> <!--<span class="fa fa-question-circle" onclick="showInspectHelp(); return false;"></span>--></c:if>
 			<c:if test="${xml == true}"><a class="navbar-item" href="#" onclick="postAjax('XML');return false;">Send XML</a></c:if>

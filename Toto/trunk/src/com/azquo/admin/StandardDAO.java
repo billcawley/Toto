@@ -7,6 +7,7 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 
+import javax.sql.DataSource;
 import java.net.InetAddress;
 import java.util.*;
 
@@ -28,9 +29,15 @@ public class StandardDAO {
 
 
     private static NamedParameterJdbcTemplate jdbcTemplate;
+    public static DataSource sfDataSource;
 
     // Copypasta from JdbcTemplateUtils (unlike there we won't be retrying on queries).
     public StandardDAO(NamedParameterJdbcTemplate jdbcTemplate) throws Exception {
+        this(jdbcTemplate, null);
+    }
+
+    // Copypasta from JdbcTemplateUtils (unlike there we won't be retrying on queries).
+    public StandardDAO(NamedParameterJdbcTemplate jdbcTemplate, DataSource sfTest) throws Exception {
         // moved from spreadsheet service as it won't be instantiated any more, just logging
         String thost = ""; // Currently just to put in the log
         try {
@@ -154,6 +161,7 @@ public class StandardDAO {
 
 
         StandardDAO.jdbcTemplate = jdbcTemplate; // I realise that this is "naughty", see comments at the top.
+        StandardDAO.sfDataSource = sfTest;
     }
 
     private static <T extends StandardEntity> void updateById(final T entity, final String tableName, final Map<String, Object> columnNameValueMap) throws DataAccessException {

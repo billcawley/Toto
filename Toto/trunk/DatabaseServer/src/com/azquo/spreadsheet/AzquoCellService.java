@@ -721,7 +721,7 @@ public class AzquoCellService {
             connection.addToUserLog("Size = " + totalRows + " * " + totalCols);
             connection.addToUserLog("1%--------25%---------50%---------75%--------100%");
         }
-        int maxRegionSize = 10_000_000;//EFC 17/12/21, Phil wanted more than 5 million, with csv download probably ok
+        int maxRegionSize = 100_000_000;//EFC 17/12/21, Phil wanted more than 5 million, with csv download probably ok
         if (totalRows * totalCols > maxRegionSize && !noLimit) {
             throw new Exception("Data region too large - " + totalRows + " * " + totalCols + ", max cells " + maxRegionSize);
         }

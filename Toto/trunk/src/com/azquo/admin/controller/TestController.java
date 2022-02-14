@@ -1,5 +1,6 @@
 package com.azquo.admin.controller;
 
+import com.azquo.admin.StandardDAO;
 import com.azquo.dataimport.*;
 import com.csvreader.CsvWriter;
 import com.ecwid.maleorang.MailchimpException;
@@ -33,6 +34,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
+import java.sql.*;
 import java.text.NumberFormat;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
@@ -368,6 +370,21 @@ public class TestController {
     public String handleRequest(
             @RequestParam(value = "something", required = false) String something
     ) {
+        if ("snowflake".equals(something)){
+            try {
+                Connection con = StandardDAO.sfDataSource.getConnection();
+                Statement stat = con.createStatement();
+                ResultSet res = stat.executeQuery("select 1");
+                res.next();
+                System.out.println(res.getString(1));
+                res = stat.executeQuery("select * from Orders limit 1");
+                res.next();
+                System.out.println(res);
+                con.close();
+            } catch (SQLException throwables) {
+                throwables.printStackTrace();
+            }
+        }
         if ("bonza".equals(something)){
             ExtractContacts.extractContacts("https://bonzabfs.agilecrm.com/dev", "shaun.dodimead@azquo.com", "evjgnce8ou9hn77e4ma7uvjgcg", "/home/edward/Downloads/contacts(preprocessor = bonza contact preprocessor)", 183);
         }
