@@ -8,7 +8,17 @@
             <div class="container">
                 <div class="columns is-centered">
                     <div class="column is-5-tablet is-4-desktop is-3-widescreen">
-                        <h1 class="title">Login to Azquo</h1>
+
+                        <c:choose>
+                            <c:when test="${!empty logo}">
+                                <div class="box">
+                                    <img src="${logo}" alt="azquo">
+                                </div>
+                            </c:when>
+                            <c:otherwise>
+                                <h1 class="title">Login to Azquo</h1>
+                            </c:otherwise>
+                        </c:choose>
                         <form action="/api/Login" class="box" method="post">
                             <input name="newui" value="true" type="hidden">
                             <div class="field">

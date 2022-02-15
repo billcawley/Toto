@@ -1,5 +1,6 @@
 package com.azquo.admin.controller;
 
+import com.azquo.ExternalConnector;
 import com.azquo.admin.StandardDAO;
 import com.azquo.dataimport.*;
 import com.csvreader.CsvWriter;
@@ -371,19 +372,7 @@ public class TestController {
             @RequestParam(value = "something", required = false) String something
     ) {
         if ("snowflake".equals(something)){
-            try {
-                Connection con = StandardDAO.sfDataSource.getConnection();
-                Statement stat = con.createStatement();
-                ResultSet res = stat.executeQuery("select 1");
-                res.next();
-                System.out.println(res.getString(1));
-                res = stat.executeQuery("select * from Orders limit 1");
-                res.next();
-                System.out.println(res);
-                con.close();
-            } catch (SQLException throwables) {
-                throwables.printStackTrace();
-            }
+                System.out.println(ExternalConnector.getData("", "select *  from TPCH_SF1.ORDERS INNER JOIN TPCH_SF1.CUSTOMER ON O_CUSTKEY = C_CUSTKEY AND O_ORDERPRIORITY = '5-LOW' limit 1000;"));
         }
         if ("bonza".equals(something)){
             ExtractContacts.extractContacts("https://bonzabfs.agilecrm.com/dev", "shaun.dodimead@azquo.com", "evjgnce8ou9hn77e4ma7uvjgcg", "/home/edward/Downloads/contacts(preprocessor = bonza contact preprocessor)", 183);

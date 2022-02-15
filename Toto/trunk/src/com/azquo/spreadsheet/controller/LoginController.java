@@ -61,51 +61,6 @@ public class LoginController {
         if ("false".equals(request.getParameter("newui"))){
             session.removeAttribute("newui");
         }
-        // edd temporary hack
-/*
-        Path p = Paths.get("/home/edward/Downloads/lukewfixwork");
-        Map<String, String> timestampToTransactionMap = new HashMap<>();
-        try (Stream<Path> list = Files.list(p)) {
-            list.forEach(path -> {
-                String filename = path.getFileName().toString();
-                if (filename.endsWith(".xml")){
-                    String excelNameTimestamp = filename.substring(13);
-                    excelNameTimestamp = excelNameTimestamp.substring(0, excelNameTimestamp.indexOf("-"));
-                    // now last 10
-                    excelNameTimestamp = excelNameTimestamp.substring(excelNameTimestamp.length() - 10);
-                    String transactionNo = filename.substring(filename.lastIndexOf("-") + 1);
-                    transactionNo = transactionNo.substring(0, transactionNo.indexOf("."));
-                    //System.out.println("excel name timestamp : " + excelNameTimestamp);
-                    //System.out.println("transaction no : " + transactionNo);
-                    timestampToTransactionMap.put(excelNameTimestamp, transactionNo);
-                }
-            });
-        }
-        try (Stream<Path> list = Files.list(p)) {
-            list.forEach(path -> {
-                String filename = path.getFileName().toString();
-                // this time xlsx
-                if (filename.endsWith(".xlsx")){
-                    String excelNameTimestamp = filename.substring(0, filename.indexOf("."));
-                    excelNameTimestamp = excelNameTimestamp.substring(excelNameTimestamp.length() - 10);
-                    System.out.println("current excel name  : " + filename);
-                    System.out.println("proposed excel name  : " + filename.substring(0, filename.indexOf(".")) + "-" + timestampToTransactionMap.get(excelNameTimestamp) + ".xlsx");
-                    try {
-                        Files.move(path, path.resolveSibling(filename.substring(0, filename.indexOf(".")) + "-" + timestampToTransactionMap.get(excelNameTimestamp) + ".xlsx"));
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-            });
-        }
-*/
-
-/*        Workbook ppBook = new XSSFWorkbook("/home/edward/Downloads/poitest2.xlsx");
-        Cell cell = ppBook.getSheetAt(0).getRow(3).getCell(6);
-        FormulaEvaluator evaluator = ppBook.getCreationHelper().createFormulaEvaluator();
-        evaluator.setDebugEvaluationOutputForNextEval(true);
-        CellValue evaluate = evaluator.evaluate(cell);
-        ppBook.close();*/
 
         // stack overflow code, will be modified
         long percentUsable = 100; // if it cna't be worked out default to ok. Maybe change this . . .
@@ -278,6 +233,13 @@ public class LoginController {
 /*        if (request.getSession().getAttribute("newui") != null){
             return "login2";
         }*/
+
+        Business check = BusinessDAO.findByServerName(request.getServerName());
+        if (check != null){
+            if (check.getLogo() != null){
+                model.put("logo", SpreadsheetService.getLogonPageColour());
+            }
+        }
 
         if (SpreadsheetService.getLogonPageOverride() != null && !SpreadsheetService.getLogonPageOverride().isEmpty()) {
             page = SpreadsheetService.getLogonPageOverride();
