@@ -239,7 +239,7 @@ public class OnlineController {
                             }
                         }
                     }
-                    if (database != null && database.length()>0) {
+                    if (database != null && database.length()>0  && !database.equals("No database")) {
                         LoginService.switchDatabase(loggedInUser, database);
                     }
                 } else if (permissionId != null && permissionId.length() > 0) {

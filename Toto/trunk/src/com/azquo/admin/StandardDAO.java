@@ -133,6 +133,41 @@ public class StandardDAO {
             jdbcTemplate.update("ALTER table `master_db`.`user` DROP INDEX email;\n", new HashMap<>());
         }
 
+
+
+        jdbcTemplate.update("CREATE TABLE IF NOT EXISTS `master_db`.`user_activity` (" +
+                "`id` int(11) NOT NULL AUTO_INCREMENT" +
+                ",`business_id` int(11) NOT NULL" +
+                ",`user` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL" +
+                ",`activity` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL" +
+                ",`parameters` text COLLATE utf8_unicode_ci DEFAULT NULL,PRIMARY KEY (`id`)) ENGINE=InnoDB AUTO_INCREMENT=120 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;", new HashMap<>());
+
+
+
+
+        jdbcTemplate.update("CREATE TABLE IF NOT EXISTS `master_db`.`menuitem` (" +
+                                              "`id` int(11) NOT NULL AUTO_INCREMENT" +
+                                              ",`date_created` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP" +
+                                              ",`business_id` int(11) NOT NULL" +
+                                              ",`report_id` int(11) NOT NULL" +
+                                              ",`submenu_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL" +
+                                              ",`menuitem_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL" +
+                                              ",`explanation` text COLLATE utf8_unicode_ci NOT NULL" +
+                                              ",`position_id` int(11) NOT NULL" +
+                                              ",`database_id` int(11) NOT NULL" +
+                                              ", PRIMARY KEY(`id`))" +
+          "ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;", new HashMap<>());
+
+
+        jdbcTemplate.update("CREATE TABLE IF NOT EXISTS `master_db`.`importdata_usage` (" +
+                                           "`id` int(11) NOT NULL AUTO_INCREMENT" +
+                                           ",`business_id` int(11) NOT NULL" +
+                                           ",`importdata_id` int(11) NOT NULL" +
+                                           ",`report_id` int(11) NOT NULL" +
+                                           ", PRIMARY KEY(`id`))" +
+         "ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci", new HashMap<>());
+
+
         // previously we had some kind of user tracking, add it back in with optional paramters
         jdbcTemplate.update("CREATE TABLE IF NOT EXISTS `master_db`.`user_activity` (" +
                 "`id` int(11) NOT NULL AUTO_INCREMENT" +

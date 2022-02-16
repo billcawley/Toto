@@ -381,17 +381,19 @@ public final class ImportService {
             }
         } else { // nothing to decompress
             // simple checks in case the wrong type of file is being uploaded here - will probably be removed later
-            String suffix = uploadedFile.getFileName().toLowerCase(Locale.ROOT).substring(uploadedFile.getFileName().length()-4);
-            if (uploadedFile.getFileName().startsWith(CreateExcelForDownloadController.USERSFILENAME) && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster())) { // then it's not a normal import, users/permissions upload. There may be more conditions here if so might need to factor off somewhere
+            String lcName = uploadedFile.getFileName().toLowerCase(Locale.ROOT);
+            String suffix = lcName.substring(lcName.length()-4);
+            if (lcName.startsWith(CreateExcelForDownloadController.USERSFILENAME) && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster())) { // then it's not a normal import, users/permissions upload. There may be more conditions here if so might need to factor off somewhere
                 uploadedFile.setError("Please upload the users file in the users tab.");
                 processedUploadedFiles.add(uploadedFile);
-            } else if (uploadedFile.getFileName().equals(CreateExcelForDownloadController.REPORTSCHEDULESFILENAME) && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster())) {
+            } else if (lcName.equals(CreateExcelForDownloadController.REPORTSCHEDULESFILENAME) && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster())) {
                 uploadedFile.setError("Please upload the report schedules file in the schedules tab.");
                 processedUploadedFiles.add(uploadedFile);
             } else if (suffix.equals(".xls") || suffix.equals("xlsx")) {
                 processedUploadedFiles.addAll(readBook(loggedInUser, uploadedFile, pendingUploadConfig, templateCache, userComment));
-            } else if (suffix.equals(".jpg") || suffix.equals(".png")) {
+            } else if (suffix.equals(".jpg") || suffix.equals(".png")|| lcName.contains(StringLiterals.IMPORTDATA+"=")) {
                 return Collections.singletonList(uploadImportTemplate(uploadedFile, loggedInUser, userComment));
+
             }else{
                 processedUploadedFiles.add(readPreparedFile(loggedInUser, uploadedFile, false, pendingUploadConfig, templateCache));
             }
@@ -407,6 +409,10 @@ public final class ImportService {
         long time = System.currentTimeMillis();
         org.apache.poi.ss.usermodel.Workbook book;
         org.apache.poi.openxml4j.opc.OPCPackage opcPackage = null;
+        boolean isImportData = false;
+        if (uploadedFile.getFileName().toLowerCase(Locale.ROOT).contains(StringLiterals.IMPORTDATA+".")){
+            isImportData = true;
+        }
         // we now use apache POI which is faster than ZK but it has different implementations for .xls and .xlsx files
         try {
             // so, the try catches are there in case the file extension is incorrect. This has happened!
@@ -489,7 +495,7 @@ public final class ImportService {
             }
             // also just do a simple check on the file name.  Allow templates to be included in a setup bundle then directed correctly
             String lcName = uploadedFile.getFileName().toLowerCase();
-            if ((lcName.contains("import templates") || lcName.contains(PREPROCESSOR) || lcName.contains("headings")) && !lcName.contains("=")) {
+            if ((lcName.contains("import templates")  || lcName.contains(PREPROCESSOR) || lcName.contains("headings")) && !lcName.contains("=")) {
                 if ((loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
                     if (opcPackage != null) opcPackage.revert();
                     //preprocessors are not assigned to the file, import templates are assigned
@@ -542,7 +548,15 @@ public final class ImportService {
                     }
                     */
                     if (or != null) {
-                        // zap the old one first
+                         // zap the old one first
+                        List<MenuItem> menuItems = MenuItemDAO.findForReportId(or.getId());
+                        for (MenuItem menuItem:menuItems){
+                            MenuItemDAO.removeById(menuItem);
+                        }
+                        List<ImportdataUsage>importdataUsages = ImportdataUsageDAO.findForBusinessAndReportID(loggedInUser.getBusiness().getId(),or.getId());
+                        for (ImportdataUsage importdataUsage:importdataUsages){
+                            ImportdataUsageDAO.removeById(importdataUsage);
+                        }
                         try {
                             Files.deleteIfExists(Paths.get(SpreadsheetService.getHomeDir() + dbPath + pathName + onlineReportsDir + or.getFilenameForDisk()));
                         } catch (Exception e) {
@@ -555,6 +569,44 @@ public final class ImportService {
                         or = new OnlineReport(0, LocalDateTime.now(), businessId, loggedInUser.getUser().getId(), loggedInUser.getDatabase().getName(), reportName, uploadedFile.getFileName(), "", "");
                     }
                     OnlineReportDAO.store(or); // store before or.getFilenameForDisk() or the id will be wrong!
+                    List<org.apache.poi.ss.usermodel.Name> names = (List<Name>)book.getAllNames();
+                    for (org.apache.poi.ss.usermodel.Name name:names){
+                        if (name.getNameName().toLowerCase(Locale.ROOT).startsWith(StringLiterals.AZSHOWIN)){
+                            for (int col=1;col<10;col++) {
+
+                                Map<String, String> showinVals = rangeToMap(book, name, col);
+                                if (getMapValue(showinVals,"submenu name").length()==0){
+                                    break;
+                                }
+                                int azquoDatabaseId = 0;
+                                int position = 0;
+                                if (showinVals.get("position").length()> 0) {
+                                    position = Integer.parseInt(showinVals.get("position"));
+                                }
+                                String aDatabase = showinVals.get("azquo database");
+                                if (aDatabase.length() > 0) {
+                                    Database adb = DatabaseDAO.findForNameAndBusinessId(aDatabase, businessId);
+                                    if (adb!=null){
+                                        azquoDatabaseId = adb.getId();
+                                    }
+                                }
+                                MenuItem menuitem = new MenuItem(0, LocalDateTime.now(), businessId, or.getId(), showinVals.get("submenu name").toLowerCase(Locale.ROOT), getMapValue(showinVals,"shown report name"), getMapValue(showinVals,"explanation"), position, azquoDatabaseId);
+                                MenuItemDAO.store(menuitem);
+                            }
+                        }
+                        if (name.getNameName().toLowerCase(Locale.ROOT).startsWith(StringLiterals.AZIMPORTDATA)){
+                            for (int col=1;col<10;col++) {
+
+                                Map<String, String> importdataVals = rangeToMap(book, name, col);
+                                String importdataName = getMapValue(importdataVals,"sheet/range name");
+                                if (importdataName.length()>0) {
+                                    ImportdataUsage importdataUsage = new ImportdataUsage(0, loggedInUser.getBusiness().getId(), importdataName,or.getId());
+                                    ImportdataUsageDAO.store(importdataUsage);
+                                }
+                            }
+                        }
+                    }
+
                     Path fullPath = Paths.get(SpreadsheetService.getHomeDir() + dbPath + pathName + onlineReportsDir + or.getFilenameForDisk());
                     Files.createDirectories(fullPath.getParent()); // in case it doesn't exist
                     Files.copy(Paths.get(uploadedFile.getPath()), fullPath); // and copy
@@ -624,7 +676,7 @@ public final class ImportService {
                 for (int sheetNo = 0; sheetNo < ppBook.getNumberOfSheets(); sheetNo++) {
                     org.apache.poi.ss.usermodel.Sheet sheet = ppBook.getSheetAt(sheetNo);
                     if (sheet.getSheetName().toLowerCase().contains("output")) {
-                        UploadedFile uploadedFile1 = readSheet(loggedInUser, uploadedFile, sheet, pendingUploadConfig, templateCache);
+                        UploadedFile uploadedFile1 = readSheet(loggedInUser, uploadedFile, sheet, sheet.getSheetName(), pendingUploadConfig, templateCache, userComment);
                         uploadedFile1.addToProcessingDuration(sheetExcelLoadTimeShare);
                         toReturn.add(uploadedFile1);
                     }
@@ -646,7 +698,11 @@ public final class ImportService {
             for (int sheetNo = 0; sheetNo < book.getNumberOfSheets(); sheetNo++) {
                 org.apache.poi.ss.usermodel.Sheet sheet = book.getSheetAt(sheetNo);
                 if (!book.isSheetHidden(sheetNo)) {
-                    UploadedFile uploadedFile1 = readSheet(loggedInUser, uploadedFile, sheet, pendingUploadConfig, templateCache);
+                    String sheetName = sheet.getSheetName();
+                    if (isImportData){//converting each sheet into a csv import
+                        sheetName = "("+StringLiterals.IMPORTDATA + "=" + sheetName + ")";
+                    }
+                    UploadedFile uploadedFile1 = readSheet(loggedInUser, uploadedFile, sheet, sheetName,pendingUploadConfig, templateCache, userComment);
                     uploadedFile1.addToProcessingDuration(sheetExcelLoadTimeShare);
                     toReturn.add(uploadedFile1);
                 }
@@ -657,6 +713,18 @@ public final class ImportService {
         return toReturn;
     }
 
+
+    private static String getMapValue(Map<String,String>mapping, String value){
+        try {
+            String found = mapping.get(value);
+            if (found!=null){
+                return found;
+            }
+            return "";
+        }catch(Exception e){
+            return "";
+        }
+    }
 
     private static void zapValuesInSheet(Sheet outputSheet){
         for (int rowNo = 0;rowNo <= outputSheet.getLastRowNum();rowNo++){
@@ -897,8 +965,28 @@ public final class ImportService {
     }
 
 
-    private static UploadedFile readSheet(LoggedInUser loggedInUser, UploadedFile uploadedFile, org.apache.poi.ss.usermodel.Sheet sheet, PendingUploadConfig pendingUploadConfig, HashMap<String, ImportTemplateData> templateCache) {
-        String sheetName = sheet.getSheetName();
+    public static Map<String,String> rangeToMap(Workbook book, Name name, int column) throws Exception {
+        Map<String,String> toReturn = new HashMap<>();
+        Sheet sheet = book.getSheet(name.getSheetName());
+        AreaReference areaReference = new AreaReference(name.getRefersToFormula(), null);
+        int startRow = areaReference.getFirstCell().getRow();
+        int endRow = areaReference.getLastCell().getRow();
+        int startCol = areaReference.getFirstCell().getCol();
+        int endCol = areaReference.getLastCell().getCol();
+        if (endCol == startCol) return toReturn;
+        for (int rNo = startRow; rNo <= endRow; rNo++) {
+            String parameterName = getCellValue(sheet,rNo, startCol);
+            String parameterValue = getCellValue(sheet,rNo, startCol + column);
+            if (parameterName.length()>0){
+                 toReturn.put(parameterName.toLowerCase(Locale.ROOT), parameterValue);
+            }
+        }
+        return toReturn;
+    }
+
+
+
+    private static UploadedFile readSheet(LoggedInUser loggedInUser, UploadedFile uploadedFile, org.apache.poi.ss.usermodel.Sheet sheet, String sheetName, PendingUploadConfig pendingUploadConfig, HashMap<String, ImportTemplateData> templateCache, String userComment) {
         boolean usDates = false;
         if (uploadedFile.getParameter("usdates")!=null){
             usDates = true;
@@ -957,6 +1045,11 @@ public final class ImportService {
                 uploadedFile.setError("Empty sheet : " + sheetName);
                 return uploadedFile;
             } else {
+                if (sheetName.contains(StringLiterals.IMPORTDATA +"=")){
+                    UploadedFile toReturn = uploadImportTemplate(uploadedFile,loggedInUser,userComment);
+                    toReturn.addToProcessingDuration(convertTime);
+                    return toReturn;
+                }
                 UploadedFile toReturn = readPreparedFile(loggedInUser, uploadedFile, false, pendingUploadConfig, templateCache);
                 // the UploadedFile will have the database server processing time, add the Excel stuff to it for better feedback to the user
                 toReturn.addToProcessingDuration(convertTime);
@@ -1996,16 +2089,30 @@ public final class ImportService {
 
     // similar to uploading a report
 
+
     public static UploadedFile uploadImportTemplate(UploadedFile uploadedFile, LoggedInUser loggedInUser, String userComment) throws
             IOException {
         //rule put in by WFC Jan-21
-        String suffix = uploadedFile.getFileName().toLowerCase(Locale.ROOT).substring(uploadedFile.getFileName().length()-4);
-        boolean assignToLoggedInUserDB = uploadedFile.getFileName().toLowerCase().contains("import templates");
+        String templateName = uploadedFile.getFileName();
+        String fileName = templateName;
+        String suffix = templateName.substring(templateName.length()-4);
+        int fileNames = uploadedFile.getFileNames().size();
+        if (!templateName.contains(".")&& fileNames>1) {
+            fileName = uploadedFile.getFileNames().get(fileNames-2);
+        }
+        boolean assignToLoggedInUserDB = fileName.toLowerCase().contains("import templates");
         long time = System.currentTimeMillis();
         uploadedFile.setDataModified(true); // ok so it's not technically data modified but the file has been processed correctly.
         int businessId = loggedInUser.getUser().getBusinessId();
         String pathName = loggedInUser.getBusinessDirectory();
-        ImportTemplate importTemplate = ImportTemplateDAO.findForNameAndBusinessId(uploadedFile.getFileName(), loggedInUser.getUser().getBusinessId());
+         int importPos =templateName.toLowerCase(Locale.ROOT).indexOf(StringLiterals.IMPORTDATA + "=");
+        if (importPos > 0){
+            int closeBracketsPos = templateName.indexOf(")",importPos);
+            if (closeBracketsPos > 0){
+                templateName = templateName.substring(importPos+11,closeBracketsPos).toLowerCase(Locale.ROOT).trim();
+            }
+        }
+        ImportTemplate importTemplate = ImportTemplateDAO.findForNameAndBusinessId(templateName, loggedInUser.getUser().getBusinessId());
         if (userComment==null){
             userComment = "";
         }
@@ -2017,11 +2124,11 @@ public final class ImportService {
                 System.out.println("problem deleting old template");
                 e.printStackTrace();
             }
-             importTemplate.setFilename(uploadedFile.getFileName()); // it might have changed, I don't think much else under these circumstances
+             importTemplate.setFilename(fileName); // it might have changed, I don't think much else under these circumstances
             importTemplate.setDateCreated(LocalDateTime.now());
             importTemplate.setNotes(userComment);
         } else {
-            importTemplate = new ImportTemplate(0, LocalDateTime.now(), businessId, loggedInUser.getUser().getId(), uploadedFile.getFileName(), uploadedFile.getFileName(),  userComment); // default to ZK now
+            importTemplate = new ImportTemplate(0, LocalDateTime.now(), businessId, loggedInUser.getUser().getId(), templateName, fileName,  userComment); // default to ZK now
         }
         ImportTemplateDAO.store(importTemplate);
         // right here is a problem - what about other users currently logged in with that database? todo
@@ -2046,25 +2153,28 @@ public final class ImportService {
         uploadedFile.setImportTemplate(true);
         OPCPackage opcPackage = null;
         Workbook ppBook = null;
-        try (FileInputStream fi = new FileInputStream(uploadedFile.getPath())) { // this will hopefully guarantee that the file handler is released under windows
-            opcPackage = OPCPackage.open(fi);
-        } catch (Exception e) {
-            e.printStackTrace();
-            throw new IOException("Cannot load preprocessor template");
-        }
-        ppBook = new XSSFWorkbook(opcPackage);
-        for (int sheetNo = 0; sheetNo < ppBook.getNumberOfSheets(); sheetNo++) {
-            org.apache.poi.ss.usermodel.Sheet sheet = ppBook.getSheetAt(sheetNo);
-            if (sheet.getSheetName().toLowerCase().endsWith(" upload")) {
-                //need to clear all templates before loading internal sheet...
-                Map<String,String>holdParameters = uploadedFile.getParameters();
-                 uploadedFile.getParameters().remove("preprocessor");
-                uploadedFile.getParameters().remove("importversion");
-                readSheet(loggedInUser, uploadedFile, sheet, null, null);
-                uploadedFile.setParameters(holdParameters);
+        if (suffix.equals("xlsx")) {
+            //templates may also contain some sheets for direct upload, identified by ' upload' at the end of the sheet name
+            try (FileInputStream fi = new FileInputStream(uploadedFile.getPath())) { // this will hopefully guarantee that the file handler is released under windows
+                opcPackage = OPCPackage.open(fi);
+            } catch (Exception e) {
+                e.printStackTrace();
+                throw new IOException("Cannot load preprocessor template");
             }
+            ppBook = new XSSFWorkbook(opcPackage);
+            for (int sheetNo = 0; sheetNo < ppBook.getNumberOfSheets(); sheetNo++) {
+                org.apache.poi.ss.usermodel.Sheet sheet = ppBook.getSheetAt(sheetNo);
+                if (sheet.getSheetName().toLowerCase().endsWith(" upload")) {
+                    //need to clear all templates before loading internal sheet...
+                    Map<String, String> holdParameters = uploadedFile.getParameters();
+                    uploadedFile.getParameters().remove("preprocessor");
+                    uploadedFile.getParameters().remove("importversion");
+                    readSheet(loggedInUser, uploadedFile, sheet, sheet.getSheetName(),null, null, userComment);
+                    uploadedFile.setParameters(holdParameters);
+                }
+            }
+            opcPackage.revert();
         }
-        opcPackage.revert();
 
         uploadedFile.setProcessingDuration(System.currentTimeMillis() - time);
         return uploadedFile;

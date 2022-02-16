@@ -512,6 +512,15 @@ this may now not work at all, perhaps delete?
                     e.printStackTrace();
                 }
             }
+            List<MenuItem> menuItems = MenuItemDAO.findForReportId(onlineReport.getId());
+            for (MenuItem menuItem:menuItems){
+                MenuItemDAO.removeById(menuItem);
+            }
+            List<ImportdataUsage>importdataUsages = ImportdataUsageDAO.findForBusinessAndReportID(loggedInUser.getBusiness().getId(),onlineReport.getId());
+            for (ImportdataUsage importdataUsage:importdataUsages){
+                ImportdataUsageDAO.removeById(importdataUsage);
+            }
+
             OnlineReportDAO.removeById(onlineReport);
             // and the schedules
             List<ReportSchedule> reportSchedules = ReportScheduleDAO.findForReportId(reportId);

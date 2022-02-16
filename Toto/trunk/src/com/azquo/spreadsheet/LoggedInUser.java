@@ -312,7 +312,7 @@ public class LoggedInUser implements Serializable {
         if (idPair != null){
             Database byId = DatabaseDAO.findById(idPair.getDatabaseId());
             OnlineReport onlineReport = OnlineReportDAO.findById(idPair.getReportId());
-            if (byId != null && onlineReport != null){
+            if (onlineReport != null){
                 return new ReportDatabase(onlineReport,byId, idPair.readOnly);
             } else { // zap reference to records which don't exist!
                 reportIdDatabaseIdPermissions.remove(reportName.toLowerCase());
@@ -322,9 +322,15 @@ public class LoggedInUser implements Serializable {
     }
 
     public void setReportDatabasePermission(String key, OnlineReport onlineReport, Database database, boolean readOnly){
-        if (!this.getUser().isDeveloper() && !this.getUser().isAdministrator()) {
+        //In order to test menus, developers must have the same permissions as users....
+       // if (!this.getUser().isDeveloper() && !this.getUser().isAdministrator()) {
+        if (database!=null){
             reportIdDatabaseIdPermissions.put(key != null ? key.toLowerCase() : onlineReport.getReportName().toLowerCase(), new ReportIdDatabaseId(onlineReport.getId(), database.getId(), readOnly));
+        }else{
+            reportIdDatabaseIdPermissions.put(key != null ? key.toLowerCase() : onlineReport.getReportName().toLowerCase(), new ReportIdDatabaseId(onlineReport.getId(), 0, readOnly));
+
         }
+       // }
     }
 
     public Map<String, ReportIdDatabaseId> getReportIdDatabaseIdPermissions() {

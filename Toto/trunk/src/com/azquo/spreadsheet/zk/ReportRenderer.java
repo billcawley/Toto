@@ -1,16 +1,27 @@
 package com.azquo.spreadsheet.zk;
 
+import com.azquo.ExternalConnector;
 import com.azquo.MultidimensionalListUtils;
+import com.azquo.RowColumn;
 import com.azquo.StringLiterals;
 import com.azquo.admin.database.Database;
+import com.azquo.admin.database.DatabaseDAO;
 import com.azquo.admin.database.DatabaseServer;
-import com.azquo.admin.onlinereport.OnlineReportDAO;
+import com.azquo.admin.onlinereport.*;
 import com.azquo.admin.user.*;
+import com.azquo.dataimport.ImportService;
+import com.azquo.dataimport.ImportTemplate;
+import com.azquo.dataimport.ImportTemplateDAO;
+import com.azquo.dataimport.ImportTemplateData;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.controller.OnlineController;
 import com.azquo.spreadsheet.*;
 import com.azquo.spreadsheet.transport.CellForDisplay;
 import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
+import com.fasterxml.jackson.databind.MappingIterator;
+import com.fasterxml.jackson.dataformat.csv.CsvMapper;
+import com.fasterxml.jackson.dataformat.csv.CsvParser;
+import com.fasterxml.jackson.dataformat.csv.CsvSchema;
 import com.github.rcaller.rstuff.RCaller;
 import com.github.rcaller.rstuff.RCode;
 import org.apache.commons.lang.math.NumberUtils;
@@ -18,12 +29,20 @@ import io.keikai.api.*;
 import io.keikai.api.model.*;
 import io.keikai.api.model.Sheet;
 import io.keikai.model.*;
+import org.apache.poi.ss.usermodel.Cell;
 
-import java.io.ByteArrayOutputStream;
+import java.io.*;
+import java.nio.charset.MalformedInputException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.rmi.RemoteException;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import static com.azquo.dataimport.ImportService.dbPath;
+import static com.azquo.dataimport.ImportService.importTemplatesDir;
 
 /**
  * Copyright (C) 2016 Azquo Ltd.
@@ -65,6 +84,7 @@ public class ReportRenderer {
         } catch (Exception e) {
             e.printStackTrace();
         }
+        loadExternalData(book,loggedInUser);
         int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
         loggedInUser.setOnlineReport(OnlineReportDAO.findById(reportId));
         Map<Sheet, String> sheetsToRename = new HashMap<>(); // the repeat sheet can require renaming the first "template" sheet but this seems to trip up ZK so do it at the end after all the expanding etc
@@ -288,6 +308,62 @@ public class ReportRenderer {
                         }
                     }
                 }
+                if (name.getName().toLowerCase().equals(StringLiterals.AZMENUSPEC)) { // then we have a MENU to deal with here
+                    List<List<String>> menuSpec = BookUtils.replaceUserChoicesInRegionDefinition(loggedInUser, name);
+                    int menuLines = 0;
+                    for (List<String> submenu: menuSpec){
+                        String submenuText = submenu.get(0);
+                        String submenuName = submenu.get(1);
+                        List<MenuItem> menuItems= MenuItemDAO.findForNameAndBusinessId(submenuName.toLowerCase(Locale.ROOT),loggedInUser.getBusiness().getId());
+                        if (menuItems.size()>0){
+                            menuLines += 2 & menuItems.size() + 3;
+                        }
+                    }
+                    SName menuRange =  BookUtils.getNameByName(StringLiterals.AZMENU, sheet);
+                    if (menuRange!=null) {
+                        int firstRow = menuRange.getRefersToCellRegion().getRow();
+                        int rowCount = menuRange.getRefersToCellRegion().getRowCount();
+                        int firstCol = menuRange.getRefersToCellRegion().getColumn();
+                        Range titleModel = Ranges.range(sheet, firstRow, 0, firstRow + 1, book.getMaxColumns());
+                        Range itemModel = Ranges.range(sheet, firstRow + 2, 0, firstRow + 3, book.getMaxColumns());
+                        if (rowCount < menuLines) {
+                            Range insertRange = Ranges.range(sheet, firstRow + rowCount - 1, 0, firstRow + menuLines - 1, 1); // insert at the 3rd row - should be rows to add - 1 as it starts at one without adding anything
+                            CellOperationUtil.insertRow(insertRange);
+                        }
+                        int rowNo = firstRow;
+                        for (List<String> submenu : menuSpec) {
+                            String submenuText = submenu.get(0);
+                            String submenuName = submenu.get(1);
+                            String submenuExplanation = submenu.get(2);
+                            List<MenuItem> menuItems = MenuItemDAO.findForNameAndBusinessId(submenuName, loggedInUser.getBusiness().getId());
+                            if (menuItems.size() > 0) {
+                                if (firstRow< rowNo){
+                                    CellOperationUtil.paste(titleModel, Ranges.range(sheet,rowNo, 0, rowNo + 1, book.getMaxColumns()));
+                                }
+                                sheet.getInternalSheet().getCell(rowNo++, firstCol).setStringValue(submenuText);
+                                sheet.getInternalSheet().getCell(rowNo++, firstCol + 2).setStringValue(submenuExplanation);
+                                for (MenuItem menuItem:menuItems){
+                                    if (rowNo > firstRow + 2){
+                                        CellOperationUtil.paste(itemModel, Ranges.range(sheet,rowNo, 0, rowNo + 1, book.getMaxColumns()));
+                                    }
+                                    OnlineReport or = OnlineReportDAO.findById(menuItem.getReportId());
+                                    String menuItemName= menuItem.getMenuItemName();
+                                    if (menuItemName.length()==0){
+                                        menuItemName = or.getReportName();
+                                    }
+                                    sheet.getInternalSheet().getCell(rowNo++, firstCol + 1).setStringValue(menuItemName);
+                                    sheet.getInternalSheet().getCell(rowNo++, firstCol + 2).setStringValue(menuItem.getExplanation());
+                                    Database db = DatabaseDAO.findById(menuItem.getId());
+                                    loggedInUser.setReportDatabasePermission(menuItemName,or,db,true);
+
+                                }
+                                rowNo++;//blank row between menus
+                            }
+                        }
+                    }
+
+
+                }
             }
             // after loading deal with lock stuff
             final List<CellsAndHeadingsForDisplay> sentForReport = loggedInUser.getSentForReport(reportId);
@@ -427,8 +503,7 @@ public class ReportRenderer {
                     true  //boolean scenarios
             );*/
             // all data for that sheet should be populated
-            // returns true if data changed by formulae
-            Ranges.range(sheet).notifyChange();
+            // returns true if data changed by formulaeRanges.range(sheet).notifyChange();
             if (ReportService.checkDataChangeAndSnapCharts(loggedInUser, reportId, book, sheet, fastLoad, skipChartSnap, useSavedValuesOnFormulae)) {
                 showSave = true;
             }
@@ -873,7 +948,129 @@ public class ReportRenderer {
         }
     }
 
-     /*  THIS MAY BE USEFUL FOR CREATING 'EXCEL STYLE' RANGES  (e.g. $AB$99)
+    private static void loadExternalData(Book book, LoggedInUser loggedInUser)throws Exception{
+        for (SName name:book.getInternalBook().getNames()){
+            int nameRow = -1;
+            int connectorRow =  -1;
+            int sqlRow = -1;
+            if (name.getName().toLowerCase(Locale.ROOT).startsWith(StringLiterals.AZIMPORTDATA)){
+                List<List<String>> importdataspec = BookUtils.replaceUserChoicesInRegionDefinition(loggedInUser, name);
+                int cols = importdataspec.get(0).size();
+                int rows = importdataspec.size();
+                for (int rowNo = 0;rowNo < rows;rowNo++){
+                    String heading = importdataspec.get(rowNo).get(0).toLowerCase(Locale.ROOT);
+                    if (heading.equals("sheet/range name")) nameRow = rowNo;
+                    if (heading.equals("connector")) connectorRow = rowNo;
+                    if (heading.equals("sql")) sqlRow = rowNo;
+                }
+                if (nameRow < 0 || connectorRow < 0 || sqlRow < 0){
+                    return;
+                }
+                for (int col=1;col<cols;col++) {
+                    String rangeName = importdataspec.get(nameRow).get(col).toLowerCase(Locale.ROOT);
+                    if (rangeName.length() == 0){
+                        break;
+                    }
+                    String connectorName = importdataspec.get(connectorRow).get(col).toLowerCase(Locale.ROOT);
+                    String sqlName = importdataspec.get(sqlRow).get(col).toLowerCase(Locale.ROOT);
+                    boolean found = false;
+                    Sheet sheet = null;
+                    int startRow = 0;
+                    int startCol = 0;
+                    int rowCount = 0;
+                    int colCount = 0;
+                    for (int i=0;i<book.getNumberOfSheets();i++){
+                        sheet = book.getSheetAt(i);
+                        if (sheet.getSheetName().toLowerCase(Locale.ROOT).equals(rangeName)){
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found){
+                        sheet = null;
+                        SName sourceName = book.getInternalBook().getNameByName(rangeName);
+                        if (sourceName !=null){
+                              sheet = book.getSheet(sourceName.getRefersToSheetName());
+                              startRow = sourceName.getRefersToCellRegion().getRow();
+                              startCol = sourceName.getRefersToCellRegion().getColumn();
+                              rowCount = sourceName.getRefersToCellRegion().getRowCount();
+                              colCount = sourceName.getRefersToCellRegion().getCellCount();
+                              return;
+                        }
+                    }
+
+                    List<List<String>> data =getExternalData(loggedInUser,rangeName,connectorName,sqlName);
+                    if (data==null || data.size()==0){
+                        return;
+                    }
+                    if(rowCount==0 || rowCount > data.size()){
+                        rowCount = data.size();
+                    }
+                    if (colCount == 0 || colCount > data.get(0).size()){
+                        colCount =data.get(0).size();
+                    }
+                    for (int rowNo = 0; rowNo < rowCount; rowNo++){
+                        List<String> dataline = data.get(rowNo);
+                        for (int colNo = 0;colNo < colCount; colNo++){;
+                              sheet.getInternalSheet().getCell(rowNo + startRow, colNo + startCol).setStringValue(dataline.get(colNo));
+
+                        }
+                    }
+                 }
+            }
+
+
+        }
+
+    }
+
+   private static List<List<String>> getExternalData(LoggedInUser loggedInUser, String rangeName, String connectorName, String sql)throws Exception {
+       List<List<String>> toReturn = new ArrayList<>();
+       if (connectorName.length() == 0) {
+           char delimiter = ',';
+           ImportTemplate it = ImportTemplateDAO.findForNameAndBusinessId(rangeName, loggedInUser.getBusiness().getId());
+           if (it == null) {
+               return null;
+           }
+           String path = SpreadsheetService.getHomeDir() + dbPath + loggedInUser.getBusinessDirectory() + importTemplatesDir + it.getFilenameForDisk();
+           try (BufferedReader br = Files.newBufferedReader(Paths.get(path), StandardCharsets.ISO_8859_1)) { // iso shouldn't error while UTF8 can . . .
+               // grab the first line to check on delimiters
+               String firstLine = br.readLine();
+               if (firstLine == null || firstLine.length() == 0) {
+                   br.close();
+                   throw new Exception(it.getFilename() + ": Unable to read any data (perhaps due to an empty file)");
+               }
+               if (firstLine.contains("|")) {
+                   delimiter = '|';
+               }
+               if (firstLine.contains("\t")) {
+                   delimiter = '\t';
+               }
+               br.close();
+               CsvMapper csvMapper = new CsvMapper();
+               csvMapper.enable(CsvParser.Feature.WRAP_AS_ARRAY);
+               CsvSchema schema = csvMapper.schemaFor(String[].class)
+                       .withColumnSeparator(delimiter)
+                       .withLineSeparator("\n");
+               if (delimiter == '\t') {
+                   schema = schema.withoutQuoteChar();
+               }
+               MappingIterator<String[]> lineIterator = (csvMapper.readerFor(String[].class).with(schema).readValues(new File(path)));
+               while (lineIterator.hasNext()){
+                   toReturn.add(new ArrayList<>(Arrays.asList(lineIterator.next())));
+
+               }
+           } catch (Exception e) {
+               throw new Exception(it.getFilename() + ": Unable to read " + it.getFilename());
+           }
+       }else{
+           return ExternalConnector.getData(connectorName, sql);
+       }
+       return toReturn;
+   }
+
+
+        /*  THIS MAY BE USEFUL FOR CREATING 'EXCEL STYLE' RANGES  (e.g. $AB$99)
 
     private static String numberColToStringCol(int col) {
         if (col < 26) return Character.toString((char)(65 + col));

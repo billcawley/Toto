@@ -163,38 +163,43 @@ public class ZKComposer extends SelectorComposer<Component> {
         if (selectionList != null) {
             showMultiSelectionList(loggedInUser, selectionName, selectionList, event.getPageX(), event.getPageY());
         } else { // if not a multi check for a clickable report name
-            SName allowableReports = myzss.getBook().getInternalBook().getNameByName(ReportService.ALLOWABLE_REPORTS, myzss.getSelectedSheetName());//try local
-            if (allowableReports == null) {
-                allowableReports = myzss.getBook().getInternalBook().getNameByName(ReportService.ALLOWABLE_REPORTS);//try global
+            String cellValue = "";
+            final SCell cell = myzss.getSelectedSheet().getInternalSheet().getCell(event.getRow(), event.getColumn());// we care about the contents of the left most cell
+            if (!cell.isNull() && cell.getType().equals(SCell.CellType.STRING)) {
+                try {
+                    cellValue = cell.getStringValue().toLowerCase(Locale.ROOT).trim();
+                    if (cellValue.length() > 0) {
+                        if (loggedInUser.getPermission(cellValue)!=null){
+                            Clients.evalJavaScript("window.open(\"/api/Online?permissionid=" + URLEncoder.encode(cellValue, "UTF-8") + "\")");
 
-            }
-            if (allowableReports != null) {
-                String cellValue = "";
-                final SCell cell = myzss.getSelectedSheet().getInternalSheet().getCell(event.getRow(), event.getColumn());// we care about the contents of the left most cell
-                if (!cell.isNull() && cell.getType().equals(SCell.CellType.STRING)) {
-                    cellValue = cell.getStringValue();
-                }
-                if (cellValue.length() > 0) {
-                    CellRegion allowedRegion = allowableReports.getRefersToCellRegion();
-                    Sheet allowedSheet = myzss.getBook().getSheet(allowableReports.getRefersToSheetName());
-                    try {
-                        for (int row1 = allowedRegion.getRow(); row1 < allowedRegion.getRow() + allowedRegion.getRowCount(); row1++) {
-                            if (allowedSheet.getInternalSheet().getCell(row1, allowedRegion.getColumn()).getStringValue().equals(cellValue)) {// deal with security in the online controller
-                                if (allowedRegion.getLastColumn() - allowedRegion.getColumn()>=3){
-                                    String choices = allowedSheet.getInternalSheet().getCell(row1,allowedRegion.getColumn()+3).getStringValue();
-                                    if (choices != null){
-                                        ChoicesService.setChoices(loggedInUser,choices);
+                        }else {
+                            SName allowableReports = myzss.getBook().getInternalBook().getNameByName(ReportService.ALLOWABLE_REPORTS, myzss.getSelectedSheetName());//try local
+                            if (allowableReports == null) {
+                                allowableReports = myzss.getBook().getInternalBook().getNameByName(ReportService.ALLOWABLE_REPORTS);//try global
+
+                            }
+                            if (allowableReports != null) {
+                                CellRegion allowedRegion = allowableReports.getRefersToCellRegion();
+                                Sheet allowedSheet = myzss.getBook().getSheet(allowableReports.getRefersToSheetName());
+                                for (int row1 = allowedRegion.getRow(); row1 < allowedRegion.getRow() + allowedRegion.getRowCount(); row1++) {
+                                    if (allowedSheet.getInternalSheet().getCell(row1, allowedRegion.getColumn()).getStringValue().equals(cellValue)) {// deal with security in the online controller
+                                        if (allowedRegion.getLastColumn() - allowedRegion.getColumn() >= 3) {
+                                            String choices = allowedSheet.getInternalSheet().getCell(row1, allowedRegion.getColumn() + 3).getStringValue();
+                                            if (choices != null) {
+                                                ChoicesService.setChoices(loggedInUser, choices);
+                                            }
+                                        }
+                                        Clients.evalJavaScript("window.open(\"/api/Online?permissionid=" + URLEncoder.encode(cellValue.trim(), "UTF-8") + "\")");
                                     }
                                 }
-                                Clients.evalJavaScript("window.open(\"/api/Online?permissionid=" + URLEncoder.encode(cellValue.trim(), "UTF-8") + "\")");
                             }
                         }
-                    } catch (Exception e) {
-                        //in case some cells are numeric (I think as in getStringValue throwing an exception - should I be checking the cell type instead?)
                     }
+                }catch(Exception e){
+                    //ignore at present
                 }
             }
-            final SCell cell = myzss.getSelectedSheet().getInternalSheet().getCell(event.getRow(), event.getColumn());
+
             if (!cell.isNull() && cell.getType().equals(SCell.CellType.FORMULA)) {
                 String formula = cell.getFormulaValue();
                 if (formula.contains("HYPERLINK")){

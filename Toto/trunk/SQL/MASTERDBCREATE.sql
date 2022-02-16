@@ -79,6 +79,47 @@ CREATE TABLE IF NOT EXISTS `online_report` (
 ) ENGINE=InnoDB AUTO_INCREMENT=223 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 
+--
+-- Table structure for table `menuitem`
+
+
+
+CREATE TABLE IF NOT EXISTS `menuitem` (
+                                               `id` int(11) NOT NULL,
+                                               `date_created` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                                               `business_id` int(11) NOT NULL,
+                                               `report_id` int(11) NOT NULL,
+                                               `submenu_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+                                               `menuitem_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+                                                `explanation` text COLLATE utf8_unicode_ci NOT NULL,
+                                                `position_id` int(11) NOT NULL,
+                                                `database_id` int(11) NOT NULL
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+ALTER TABLE `menuitem`
+    ADD PRIMARY KEY (`id`);
+
+ALTER TABLE `menuitem`
+    MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+CREATE TABLE IF NOT EXISTS `importdata_usage` (
+                                          `id` int(11) NOT NULL,
+                                          `business_id` int(11) NOT NULL,
+                                          `importdata_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+                                          `report_id` int(11) NOT NULL
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+ALTER TABLE `importdata_usage`
+    ADD PRIMARY KEY (`id`);
+
+ALTER TABLE `importdata_usage`
+    MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+
+
+
 CREATE TABLE IF NOT EXISTS `import_template` (
                                              `id` int(11) NOT NULL,
                                              `date_created` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
