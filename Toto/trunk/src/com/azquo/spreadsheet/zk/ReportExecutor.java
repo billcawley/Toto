@@ -130,6 +130,10 @@ public class ReportExecutor {
             }
         }
 
+        // it wasn't persisting - do it here when all is done
+        RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).clearSessionLog(loggedInUser.getDataAccessToken());
+        SpreadsheetService.databasePersist(loggedInUser);
+
         return toReturn;
         /*
         //LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
