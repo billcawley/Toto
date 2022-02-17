@@ -69,6 +69,15 @@ def fileProcess(Object[] args) {
                             // new version all risks premiums Jan 2020 data
                             uploadedFile.setParameters(newparams);
                         }
+                        if (col.equals("insured")) {
+                            switched = true;
+                            Map<String, String> newparams = new HashMap<>(uploadedFile.getParameters());
+                            // this is a template switch, todo . . . .
+                            println("insured, AllRisksPremium4");
+                            newparams.put("importversion", "AllRisksPremium4");
+                            // new version all risks premiums Feb 2022
+                            uploadedFile.setParameters(newparams);
+                        }
                         colNum++;
                     }
                     if (expDateCol > 0) {
