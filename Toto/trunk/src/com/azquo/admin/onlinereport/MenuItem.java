@@ -20,6 +20,7 @@ public class MenuItem extends StandardEntity implements Serializable {
     private String submenuName;
     private String menuItemName;
     private String explanation;
+    private String iFrame;
     private int position;
     private int databaseID;
 
@@ -30,7 +31,8 @@ public class MenuItem extends StandardEntity implements Serializable {
             , String submenuName
             , String menuItemName
             , String explanation
-             ,int position
+             ,String iFrame
+            ,int position
             , int databaseID
     ) {
         this.id = id;
@@ -40,6 +42,7 @@ public class MenuItem extends StandardEntity implements Serializable {
         this.submenuName = submenuName;
         this.menuItemName = menuItemName;
         this.explanation = explanation;
+        this.iFrame = iFrame;
         this.position = position;
         this.databaseID = databaseID;
     }
@@ -56,7 +59,7 @@ public class MenuItem extends StandardEntity implements Serializable {
         return reportId;
     }
 
-    public void setReportId(int userId) {
+    public void setReportId(int reportId) {
         this.reportId = reportId;
     }
 
@@ -86,6 +89,14 @@ public class MenuItem extends StandardEntity implements Serializable {
 
     public void setExplanation(String explanation) {
         this.explanation = explanation;
+    }
+
+    public String getIframe() {
+        return iFrame;
+    }
+
+    public void setiFrame(String iFrame) {
+        this.iFrame = iFrame;
     }
 
     public int getPosition() {

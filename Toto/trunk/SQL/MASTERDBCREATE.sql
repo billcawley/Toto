@@ -91,8 +91,9 @@ CREATE TABLE IF NOT EXISTS `menuitem` (
                                                `report_id` int(11) NOT NULL,
                                                `submenu_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
                                                `menuitem_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-                                                `explanation` text COLLATE utf8_unicode_ci NOT NULL,
-                                                `position_id` int(11) NOT NULL,
+                                               `explanation` text COLLATE utf8_unicode_ci NOT NULL,
+                                               `iframe` text COLLATE utf8_unicode_ci NOT NULL,
+                                               `position_id` int(11) NOT NULL,
                                                 `database_id` int(11) NOT NULL
 
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;

@@ -132,11 +132,12 @@ public class CommonReportUtils {
                     }
                     userChoice = paras[0];
                 }
-                String userChoiceBasic = userChoice;
+                String userChoiceBasic = userChoice.toLowerCase(Locale.ROOT);
                 if (userChoice.toLowerCase().startsWith("az_")) {
                     userChoiceBasic = userChoice.substring(3);
                 }
-                String replacement = userChoices.get(userChoiceBasic.toLowerCase().replace(" ",""));//remove any blanks.
+                //REMOVED 'toLowerCase...
+                String replacement = userChoices.get(userChoiceBasic.replace(" ",""));//remove any blanks.
                 if (replacement != null) {
                     if (function.length() > 0){
                         if (function.equals("left")&& replacement.length()> para2){

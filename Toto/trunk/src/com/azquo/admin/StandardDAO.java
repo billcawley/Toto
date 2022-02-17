@@ -153,6 +153,7 @@ public class StandardDAO {
                                               ",`submenu_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL" +
                                               ",`menuitem_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL" +
                                               ",`explanation` text COLLATE utf8_unicode_ci NOT NULL" +
+                                              ",`iframe` text COLLATE utf8_unicode_ci NOT NULL" +
                                               ",`position_id` int(11) NOT NULL" +
                                               ",`database_id` int(11) NOT NULL" +
                                               ", PRIMARY KEY(`id`))" +
@@ -162,7 +163,7 @@ public class StandardDAO {
         jdbcTemplate.update("CREATE TABLE IF NOT EXISTS `master_db`.`importdata_usage` (" +
                                            "`id` int(11) NOT NULL AUTO_INCREMENT" +
                                            ",`business_id` int(11) NOT NULL" +
-                                           ",`importdata_id` int(11) NOT NULL" +
+                                           ",`importdata_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL" +
                                            ",`report_id` int(11) NOT NULL" +
                                            ", PRIMARY KEY(`id`))" +
          "ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci", new HashMap<>());

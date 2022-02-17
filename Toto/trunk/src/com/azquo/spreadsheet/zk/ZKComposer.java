@@ -169,7 +169,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                 try {
                     cellValue = cell.getStringValue().toLowerCase(Locale.ROOT).trim();
                     if (cellValue.length() > 0) {
-                        if (loggedInUser.getPermission(cellValue)!=null){
+                         if (myzss.getSelectedSheet().getBook().hasNameRange(StringLiterals.AZMENUSPEC) && loggedInUser.getPermission(cellValue)!=null){
                             Clients.evalJavaScript("window.open(\"/api/Online?permissionid=" + URLEncoder.encode(cellValue, "UTF-8") + "\")");
 
                         }else {

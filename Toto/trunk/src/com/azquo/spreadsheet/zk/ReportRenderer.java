@@ -351,6 +351,11 @@ public class ReportRenderer {
                                     if (menuItemName.length()==0){
                                         menuItemName = or.getReportName();
                                     }
+                                    String iframe = menuItem.getIframe();
+                                    if (iframe!=null && iframe.length()>0){
+                                        loggedInUser.setIFrameLookup(menuItemName.toLowerCase(Locale.ROOT), iframe.trim());
+
+                                    }
                                     sheet.getInternalSheet().getCell(rowNo++, firstCol + 1).setStringValue(menuItemName);
                                     sheet.getInternalSheet().getCell(rowNo++, firstCol + 2).setStringValue(menuItem.getExplanation());
                                     Database db = DatabaseDAO.findById(menuItem.getId());
@@ -972,7 +977,7 @@ public class ReportRenderer {
                         break;
                     }
                     String connectorName = importdataspec.get(connectorRow).get(col).toLowerCase(Locale.ROOT);
-                    String sqlName = importdataspec.get(sqlRow).get(col).toLowerCase(Locale.ROOT);
+                    String sqlName = importdataspec.get(sqlRow).get(col);
                     boolean found = false;
                     Sheet sheet = null;
                     int startRow = 0;

@@ -26,6 +26,7 @@ public class MenuItemDAO {
     private static final String SUBMENUNAME = "submenu_name";
     private static final String MENUITEMNAME = "menuitem_name";
     private static final String EXPLANATION = "explanation";
+    private static final String IFRAME = "iframe";
     private static final String POSITION= "position_id";
     private static final String DATABASE_ID= "database_id";
 
@@ -38,6 +39,7 @@ public class MenuItemDAO {
         toReturn.put(SUBMENUNAME, menuItem.getSubmenuName());
         toReturn.put(MENUITEMNAME, menuItem.getMenuItemName());
         toReturn.put(EXPLANATION, menuItem.getExplanation());
+        toReturn.put(IFRAME, menuItem.getIframe());
         toReturn.put(POSITION, menuItem.getPosition());
         toReturn.put(DATABASE_ID, menuItem.getDatabaseID());
         return toReturn;
@@ -54,6 +56,7 @@ public class MenuItemDAO {
                         , rs.getString(SUBMENUNAME)
                         , rs.getString(MENUITEMNAME)
                         , rs.getString(EXPLANATION)
+                        , rs.getString(IFRAME)
                         , rs.getInt(POSITION)
                         , rs.getInt(DATABASE_ID)
                 );

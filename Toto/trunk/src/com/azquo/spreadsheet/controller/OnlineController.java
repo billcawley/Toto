@@ -247,7 +247,11 @@ public class OnlineController {
 //                    System.out.println("Checking permission : " + permissionId);
                     if (loggedInUser.getPermission(permissionId.toLowerCase()) != null) { // then we have a permission as set by a report
                         LoggedInUser.ReportDatabase permission = loggedInUser.getPermission(permissionId.toLowerCase());
-//                        System.out.println("found permission : " + permission);
+                        if(loggedInUser.getIFrameUrl(permissionId) != null) {
+                            model.put("iframesrc", loggedInUser.getIFrameUrl(permissionId));
+                            AdminService.setBanner(model, loggedInUser);
+                            return "showiframe";
+                        }
                         onlineReport = permission.getReport();
                         readOnlyReport = permission.isReadOnly();
                         if (onlineReport != null) {

@@ -551,7 +551,9 @@ public final class ImportService {
                          // zap the old one first
                         List<MenuItem> menuItems = MenuItemDAO.findForReportId(or.getId());
                         for (MenuItem menuItem:menuItems){
-                            MenuItemDAO.removeById(menuItem);
+                            if (menuItem != null) {
+                                MenuItemDAO.removeById(menuItem);
+                            }
                         }
                         List<ImportdataUsage>importdataUsages = ImportdataUsageDAO.findForBusinessAndReportID(loggedInUser.getBusiness().getId(),or.getId());
                         for (ImportdataUsage importdataUsage:importdataUsages){
@@ -590,7 +592,7 @@ public final class ImportService {
                                         azquoDatabaseId = adb.getId();
                                     }
                                 }
-                                MenuItem menuitem = new MenuItem(0, LocalDateTime.now(), businessId, or.getId(), showinVals.get("submenu name").toLowerCase(Locale.ROOT), getMapValue(showinVals,"shown report name"), getMapValue(showinVals,"explanation"), position, azquoDatabaseId);
+                                MenuItem menuitem = new MenuItem(0, LocalDateTime.now(), businessId, or.getId(), showinVals.get("submenu name").toLowerCase(Locale.ROOT), getMapValue(showinVals,"shown report name"), getMapValue(showinVals,"explanation"),getMapValue(showinVals,"iframe"), position, azquoDatabaseId);
                                 MenuItemDAO.store(menuitem);
                             }
                         }
