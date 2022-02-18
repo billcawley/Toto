@@ -1,6 +1,12 @@
+17-02-22
+
+Improved orphan and deduplication instructions
+
+Persisting after a manual execute fix
+
 18-01-22
 
-pre processor upgrades, maily to support bringing in All Risks
+pre processor upgrades, mainly to support bringing in All Risks
 
 26-11-21
 
