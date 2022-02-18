@@ -215,9 +215,9 @@ java.lang.IllegalStateException: is ERROR, not the one of [STRING, BLANK]
                 return;
             }
         }
-        if (NumberUtils.isNumber(sValue)) {
+        if (NumberUtils.isNumber(sValue.trim())) {
             try {
-                sCell.setValue(Double.parseDouble(sValue));
+                sCell.setValue(Double.parseDouble(sValue.trim()));
             } catch (Exception e) {
                 //isNumber seems to allow 100000L   so ignore the exception - it's not a number
             }
