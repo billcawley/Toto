@@ -20,7 +20,7 @@ public class ExternalConnector {
     public static List<List<String>> getData(String connectionName, String query) {
         List<List<String>> toReturn = new ArrayList<>();
         // intial test code hard coded to snowflake
-        Connection con;
+        Connection con = null;
         try {
             con = StandardDAO.sfDataSource.getConnection();
             Statement stat = con.createStatement();
@@ -42,6 +42,13 @@ public class ExternalConnector {
             }
             con.close();
         } catch (SQLException throwables) {
+            if (con != null){
+                try {
+                    con.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
             throwables.printStackTrace();
         }
         return toReturn;
