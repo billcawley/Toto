@@ -1017,7 +1017,7 @@ public class ReportRenderer {
                     for (int rowNo = 0; rowNo < rowCount; rowNo++){
                         List<String> dataline = data.get(rowNo);
                         for (int colNo = 0;colNo < colCount; colNo++){;
-                              sheet.getInternalSheet().getCell(rowNo + startRow, colNo + startCol).setStringValue(dataline.get(colNo));
+                              BookUtils.setValue(sheet.getInternalSheet().getCell(rowNo + startRow, colNo + startCol),dataline.get(colNo));
 
                         }
                     }
