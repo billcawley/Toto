@@ -182,7 +182,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                                 CellRegion allowedRegion = allowableReports.getRefersToCellRegion();
                                 Sheet allowedSheet = myzss.getBook().getSheet(allowableReports.getRefersToSheetName());
                                 for (int row1 = allowedRegion.getRow(); row1 < allowedRegion.getRow() + allowedRegion.getRowCount(); row1++) {
-                                    if (allowedSheet.getInternalSheet().getCell(row1, allowedRegion.getColumn()).getStringValue().equals(cellValue)) {// deal with security in the online controller
+                                    if (allowedSheet.getInternalSheet().getCell(row1, allowedRegion.getColumn()).getStringValue().equalsIgnoreCase(cellValue)) {// deal with security in the online controller
                                         if (allowedRegion.getLastColumn() - allowedRegion.getColumn() >= 3) {
                                             String choices = allowedSheet.getInternalSheet().getCell(row1, allowedRegion.getColumn() + 3).getStringValue();
                                             if (choices != null) {

@@ -245,27 +245,26 @@ public class OnlineController {
                 } else if (permissionId != null && permissionId.length() > 0) {
                     //new logic for permissions ad hoc on a report
 //                    System.out.println("Checking permission : " + permissionId);
-                    if (loggedInUser.getPermission(permissionId.toLowerCase()) != null) { // then we have a permission as set by a report
-                        LoggedInUser.ReportDatabase permission = loggedInUser.getPermission(permissionId.toLowerCase());
-                        if(loggedInUser.getIFrameUrl(permissionId) != null) {
-                            model.put("iframesrc", loggedInUser.getIFrameUrl(permissionId));
-                            AdminService.setBanner(model, loggedInUser);
-                            return "showiframe";
+                     if (!loggedInUser.getUser().isAdministrator() && !loggedInUser.getUser().isDeveloper()){
+                       LoggedInUser.ReportDatabase permission = loggedInUser.getPermission(permissionId.toLowerCase());
+                       if (permission!=null){
+                           readOnlyReport = permission.isReadOnly();
+                           onlineReport = permission.getReport();
+                           LoginService.switchDatabase(loggedInUser, permission.getDatabase());
                         }
-                        onlineReport = permission.getReport();
-                        readOnlyReport = permission.isReadOnly();
-                        if (onlineReport != null) {
-                            reportId = onlineReport.getId() + ""; // hack for permissions
-                            LoginService.switchDatabase(loggedInUser, permission.getDatabase());
-                        }
-                    } else if(loggedInUser.getIFrameUrl(permissionId) != null){
-                        model.put("iframesrc", loggedInUser.getIFrameUrl(permissionId));
-                        AdminService.setBanner(model, loggedInUser);
-                        return "showiframe";
-                    }else{
-                       result = "error: user has no permission for this report";
+                     }else{
+                         onlineReport = OnlineReportDAO.findForDatabaseIdAndName(loggedInUser.getDatabase().getId(), permissionId);
+                     }
+                     if (onlineReport==null) {
+                         if (loggedInUser.getIFrameUrl(permissionId) != null) {
+                             model.put("iframesrc", loggedInUser.getIFrameUrl(permissionId));
+                             AdminService.setBanner(model, loggedInUser);
+                             return "showiframe";
+                         } else {
+                             result = "error: user has no permission for this report";
 
-                    }
+                         }
+                     }
                 }
                 if (opcode.equalsIgnoreCase(UPLOAD) && !readOnlyReport) {
                     // revised logic - this is ONLY for uploading data entered in a downloaded report
