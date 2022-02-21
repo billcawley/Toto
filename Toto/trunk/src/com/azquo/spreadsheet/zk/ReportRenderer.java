@@ -74,6 +74,7 @@ public class ReportRenderer {
         long track = System.currentTimeMillis();
         String imageStoreName = "";
         boolean showSave = false;
+        BookUtils.sumifConverter(book);
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
         // unlock data on every report load. Maybe make this clear to the user?
         // is the exception a concern here?

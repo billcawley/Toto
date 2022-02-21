@@ -4,9 +4,11 @@ import com.azquo.DateUtils;
 import com.azquo.StringLiterals;
 import com.azquo.spreadsheet.CommonReportUtils;
 import com.azquo.spreadsheet.LoggedInUser;
+import io.keikai.model.*;
 import org.apache.commons.lang.math.NumberUtils;
 import org.zkoss.poi.ss.usermodel.DateUtil;
 import org.zkoss.poi.ss.usermodel.Name;
+import org.zkoss.poi.ss.usermodel.Row;
 import org.zkoss.poi.ss.usermodel.Workbook;
 import org.zkoss.poi.ss.util.AreaReference;
 import org.zkoss.poi.ss.util.CellReference;
@@ -15,10 +17,6 @@ import io.keikai.api.Ranges;
 import io.keikai.api.model.Book;
 import io.keikai.api.model.CellData;
 import io.keikai.api.model.Sheet;
-import io.keikai.model.CellRegion;
-import io.keikai.model.SCell;
-import io.keikai.model.SName;
-import io.keikai.model.SSheet;
 
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
@@ -428,5 +426,94 @@ java.lang.IllegalStateException: is ERROR, not the one of [STRING, BLANK]
         }
 
     }
+
+    public static void sumifConverter(Book book){
+        for (int i=0;i<book.getNumberOfSheets();i++){
+            Sheet sheet = book.getSheetAt(i);
+            for (int rowNo = 0;rowNo <= sheet.getLastRow(); rowNo++){
+                SRow row = sheet.getInternalSheet().getRow(rowNo);
+                if (row!=null){
+                    Iterator colIt = row.getCellIterator();
+                    while (colIt.hasNext()){
+                        SCell cell = (SCell)colIt.next();
+                        if (cell.getType()== SCell.CellType.FORMULA){
+                            String cellFormula = cell.getFormulaValue();
+                            int cursor = cellFormula.indexOf("SUM(IF");
+                            StringBuffer newCellFormula  = new StringBuffer();
+                            int lastCursor = 0;
+
+                            while (cursor >= 0){
+                                newCellFormula.append(cellFormula.substring(lastCursor,cursor));
+                                cursor +=7;
+
+                                Map<String,String>conditions=new HashMap<>();
+                                if(cellFormula.charAt(cursor)=='('){
+                                    cursor++;
+                                    int nextSumIf =  cellFormula.indexOf("SUM(IF", cursor);
+                                    if (nextSumIf< 0){
+                                        nextSumIf = cellFormula.length();
+                                    }
+                                    int equalPos = cellFormula.indexOf("=",cursor);
+                                    while (equalPos > 0 && equalPos < nextSumIf){
+                                        String condition = cellFormula.substring(cursor, equalPos);
+                                        int closebrackets = cellFormula.indexOf(")",equalPos);
+                                        if (closebrackets > 0){
+                                            conditions.put(condition,cellFormula.substring(equalPos+1,closebrackets));
+                                            cursor = closebrackets + 1;
+                                            if (cellFormula.substring(cursor,cursor+2).equals("*(")){
+                                                cursor+=2;
+                                            }
+                                            equalPos = cellFormula.indexOf("=",cursor);
+                                        }
+                                    }
+                                    cursor++;//to cover teh comma;
+                                    int closeBrackets = cellFormula.indexOf(")",cursor);
+                                    if (closeBrackets < 0) {
+                                        return; //formula not understood;
+                                    }
+                                    String target = cellFormula.substring(cursor,closeBrackets);
+                                    newCellFormula.append("SUMIFS(" + target);
+                                    for (String condition:conditions.keySet()){
+                                        newCellFormula.append(","+ condition+","+ conditions.get(condition));
+                                    }
+                                    newCellFormula.append(")");
+                                    lastCursor = closeBrackets + 2;
+
+                                }else{
+                                    int equalPos = cellFormula.indexOf("=",cursor);
+                                    if(equalPos < 0 ) {
+                                        return;
+                                    }
+                                    String condition = cellFormula.substring(cursor, equalPos);
+                                    int commaPos = cellFormula.indexOf(",",equalPos);
+                                    if (commaPos > 0){
+                                        conditions.put(condition,cellFormula.substring(equalPos+1,commaPos));
+                                        cursor = commaPos + 1;
+                                    }
+                                    int closeBrackets = cellFormula.indexOf(")", commaPos);
+                                    String target = cellFormula.substring(cursor,closeBrackets);
+                                    newCellFormula.append("SUMIF(" + target);
+                                    for (String cond:conditions.keySet()){
+                                        newCellFormula.append(","+ cond+","+ conditions.get(cond));
+                                    }
+                                    newCellFormula.append(")");
+                                    lastCursor = closeBrackets + 2;
+
+                                }
+
+                                cursor = cellFormula.indexOf("SUM(IF", lastCursor);
+                            }
+                            if (lastCursor>0){
+                                newCellFormula.append(cellFormula.substring(lastCursor));
+                                cell.setFormulaValue(newCellFormula.toString());
+                            }
+                        }
+
+                    }
+                }
+            }
+        }
+    }
+
 
 }
