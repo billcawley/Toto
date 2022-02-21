@@ -237,7 +237,7 @@ public class LoginController {
         Business check = BusinessDAO.findByServerName(request.getServerName());
         if (check != null){
             if (check.getLogo() != null){
-                model.put("logo", SpreadsheetService.getLogonPageColour());
+                model.put("logo", "/images/" + check.getLogo());
             }
         }
 
