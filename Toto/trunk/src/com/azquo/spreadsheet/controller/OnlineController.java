@@ -268,7 +268,7 @@ public class OnlineController {
                 }
                 if (opcode.equalsIgnoreCase(UPLOAD) && !readOnlyReport) {
                     // revised logic - this is ONLY for uploading data entered in a downloaded report
-                    reportId = "";
+                    reportId = "" + onlineReport.getId();
                     if (submit.length() > 0) {
                         // getting rid of database switch
                         String fileName = uploadfile.getOriginalFilename();
@@ -311,7 +311,8 @@ public class OnlineController {
                 }
                 // db and report should be sorted by now
                 if (onlineReport != null) {
-                    // ok the new sheet and the loading screen have added chunks of code here, should it be in a service or can it "live" here?
+                    reportId = onlineReport.getId() + "";
+                     // ok the new sheet and the loading screen have added chunks of code here, should it be in a service or can it "live" here?
                     final int valueId = ServletRequestUtils.getIntParameter(request, "valueid", 0); // the value to be selected if it's in any of the regions . . . how to select?
                     HttpSession session = request.getSession();
                     if (session.getAttribute(reportId + "error") != null) { // push exception to the user
@@ -368,7 +369,7 @@ public class OnlineController {
                         // yes there's a chance a user could cause a double load if they were really quick but I'm not that bothered about this
                         session.setAttribute(reportId + "loading", Boolean.TRUE);
                         // this is a bit hacky, the new thread doesn't want them reassigned, fair enough
-                        final String finalReportId = reportId;
+                        String finalReportId = reportId;
                         final OnlineReport finalOnlineReport = onlineReport;
                         final boolean templateMode = TEMPLATE.equalsIgnoreCase(opcode) && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster() || loggedInUser.getUser().isDeveloper());
                         final boolean executeMode = opcode.toUpperCase().startsWith(EXECUTE);//opcode seems to become execute.execute
