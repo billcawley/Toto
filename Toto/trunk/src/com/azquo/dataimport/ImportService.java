@@ -2953,13 +2953,7 @@ fr.close();
             try {
                 XSSFFormulaEvaluator.evaluateAllFormulaCells(ppBook);
             } catch (Exception e) {
-                String outFile = "c:\\users\\test\\Downloads\\Corrupt.xlsx";
-                File writeFile = new File(outFile);
-                writeFile.delete(); // to avoid confusion
-
-                OutputStream outputStream = new FileOutputStream(writeFile);
-                ppBook.write(outputStream);
-
+                // EFC note - there was a hardcoded path here that crashed on some servers, I have removed it
                 opcPackage.revert();
                 //e.printStackTrace(); // efc note - would we want to know this? Does stopping on a cell mean the rest arne't sorted?
                 //seems to get hung up on some #refs which make little sense
