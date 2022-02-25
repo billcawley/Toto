@@ -1,6 +1,7 @@
 package com.azquo.spreadsheet.zk;
 
 import com.azquo.StringLiterals;
+import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.user.*;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.controller.OnlineController;
@@ -31,6 +32,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.net.URLEncoder;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
@@ -257,6 +259,12 @@ public class ZKComposer extends SelectorComposer<Component> {
         final Book book = event.getSheet().getBook();
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
         int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
+        LoggedInUser.ReportDatabase permission = loggedInUser.getPermission(OnlineReportDAO.findById(reportId).getReportName());
+        if (permission != null && permission.isRecording()){
+            String userEvent = "$" + makeColumn(event.getColumn()+1) + "$" + (event.getRow() + 1) + "=" + chosen;
+            UserEventDAO.store(new UserEvent(0, LocalDateTime.now(),loggedInUser.getBusiness().getId(), loggedInUser.getUser().getId(), reportId,userEvent));
+        }
+
         List<SName> names = ReportUIUtils.getNamedRegionForRowAndColumnSelectedSheet(event.getSheet(), event.getRow(), event.getColumn());
         boolean reload = false;
         // so run through all the names associated with that cell
@@ -342,6 +350,31 @@ public class ZKComposer extends SelectorComposer<Component> {
         }
 
     }
+    private String makeColumn(int n){
+         {
+              String toReturn = "";
+             int i = 0; // To store current index in str which is result
+
+            while (n > 0) {
+                // Find remainder
+                int rem = n % 26;
+
+                // If remainder is 0, then a 'Z' must be there in output
+                if (rem == 0) {
+                    toReturn = "Z" + toReturn;
+                    n = (n / 26) - 1;
+                }
+                else // If remainder is non-zero
+                {
+                    toReturn = (char)((rem - 1) + 'A') + toReturn;
+                    n = n / 26;
+                }
+            }
+
+
+            return toReturn;
+        }
+     }
 
     // used directly below, I need a list of the following
     static class RegionRowCol {

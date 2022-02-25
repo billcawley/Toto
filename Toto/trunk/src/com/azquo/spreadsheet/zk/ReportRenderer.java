@@ -76,6 +76,7 @@ public class ReportRenderer {
         boolean showSave = false;
         BookUtils.sumifConverter(book);
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
+
         // unlock data on every report load. Maybe make this clear to the user?
         // is the exception a concern here?
         // also clear temporary names? Apparently not - discuss with WFC
@@ -360,7 +361,7 @@ public class ReportRenderer {
                                     sheet.getInternalSheet().getCell(rowNo++, firstCol + 1).setStringValue(menuItemName);
                                     sheet.getInternalSheet().getCell(rowNo++, firstCol + 2).setStringValue(menuItem.getExplanation());
                                     Database db = DatabaseDAO.findById(menuItem.getId());
-                                    loggedInUser.setReportDatabasePermission(menuItemName,or,db,true);
+                                    loggedInUser.setReportDatabasePermission(menuItemName,or,db,true, false);
 
                                 }
                                 rowNo++;//blank row between menus

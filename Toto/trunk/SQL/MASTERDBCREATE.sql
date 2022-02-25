@@ -407,3 +407,19 @@ CREATE TABLE IF NOT EXISTS `comment` (
                                               PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=120 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
+
+--
+-- Table structure for table `upload_record`
+--
+
+CREATE TABLE IF NOT EXISTS `user_event` (
+                                               `id` int(11) NOT NULL,
+                                               `date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                                               `business_id` int(11) NOT NULL,
+                                               `user_id` int(11) NOT NULL,
+                                               `report_id` int(11) NOT NULL,
+                                               `event` varchar(255) COLLATE utf8_unicode_ci NOT NULL
+) ENGINE=InnoDB AUTO_INCREMENT=207 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+-- --------------------------------------------------------
+

@@ -51,11 +51,13 @@ public class LoggedInUser implements Serializable {
         final int reportId;
         final int databaseId;
         final boolean readOnly;// Ed Broking require this, not a bad idea to have anyway
+        final boolean recording;//will update user_event
 
-        public ReportIdDatabaseId(int reportId, int databaseId, boolean readOnly) {
+        public ReportIdDatabaseId(int reportId, int databaseId, boolean readOnly, boolean recording) {
             this.reportId = reportId;
             this.databaseId = databaseId;
             this.readOnly = readOnly;
+            this.recording = recording;
         }
 
         public int getReportId() {
@@ -69,17 +71,21 @@ public class LoggedInUser implements Serializable {
         public boolean isReadOnly() {
             return readOnly;
         }
+
+        public boolean isRecording() {return recording; }
     }
 
     public static class ReportDatabase {
         final OnlineReport report;
         final Database database;
         final boolean readOnly;// Ed Broking require this, not a bad idea to have anyway
+        boolean recording;
 
-        public ReportDatabase(OnlineReport report, Database database, boolean readOnly) {
+        public ReportDatabase(OnlineReport report, Database database, boolean readOnly, boolean recording) {
             this.report = report;
             this.database = database;
             this.readOnly = readOnly;
+            this.recording = recording;
         }
 
         public OnlineReport getReport() {
@@ -93,6 +99,13 @@ public class LoggedInUser implements Serializable {
         public boolean isReadOnly() {
             return readOnly;
         }
+
+        public boolean isRecording() {
+            return recording;
+        }
+
+        public void setRecording(boolean recording) {this.recording = recording; }
+
     }
 
     private static final String userLogsPath = "User Logs/"; // with a space
@@ -313,7 +326,7 @@ public class LoggedInUser implements Serializable {
             Database byId = DatabaseDAO.findById(idPair.getDatabaseId());
             OnlineReport onlineReport = OnlineReportDAO.findById(idPair.getReportId());
             if (onlineReport != null){
-                return new ReportDatabase(onlineReport,byId, idPair.readOnly);
+                return new ReportDatabase(onlineReport,byId, idPair.readOnly, idPair.recording);
             } else { // zap reference to records which don't exist!
                 reportIdDatabaseIdPermissions.remove(reportName.toLowerCase());
             }
@@ -321,13 +334,18 @@ public class LoggedInUser implements Serializable {
         return null;
     }
 
-    public void setReportDatabasePermission(String key, OnlineReport onlineReport, Database database, boolean readOnly){
+    public void setReportDatabasePermission(String key, OnlineReport onlineReport, Database database, boolean readOnly) {
+        setReportDatabasePermission(key, onlineReport, database, readOnly, false);
+    }
+
+
+     public void setReportDatabasePermission(String key, OnlineReport onlineReport, Database database, boolean readOnly, boolean recording){
         //In order to test menus, developers must have the same permissions as users....
        // if (!this.getUser().isDeveloper() && !this.getUser().isAdministrator()) {
         if (database!=null){
-            reportIdDatabaseIdPermissions.put(key != null ? key.toLowerCase() : onlineReport.getReportName().toLowerCase(), new ReportIdDatabaseId(onlineReport.getId(), database.getId(), readOnly));
+            reportIdDatabaseIdPermissions.put(key != null ? key.toLowerCase() : onlineReport.getReportName().toLowerCase(), new ReportIdDatabaseId(onlineReport.getId(), database.getId(), readOnly, recording));
         }else{
-            reportIdDatabaseIdPermissions.put(key != null ? key.toLowerCase() : onlineReport.getReportName().toLowerCase(), new ReportIdDatabaseId(onlineReport.getId(), 0, readOnly));
+            reportIdDatabaseIdPermissions.put(key != null ? key.toLowerCase() : onlineReport.getReportName().toLowerCase(), new ReportIdDatabaseId(onlineReport.getId(), 0, readOnly, recording));
 
         }
        // }

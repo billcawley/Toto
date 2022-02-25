@@ -255,16 +255,15 @@ public class OnlineController {
                      }else{
                          onlineReport = OnlineReportDAO.findForDatabaseIdAndName(loggedInUser.getDatabase().getId(), permissionId);
                      }
-                     if (onlineReport==null) {
-                         if (loggedInUser.getIFrameUrl(permissionId) != null) {
-                             model.put("iframesrc", loggedInUser.getIFrameUrl(permissionId));
-                             AdminService.setBanner(model, loggedInUser);
-                             return "showiframe";
-                         } else {
-                             result = "error: user has no permission for this report";
+                    if (loggedInUser.getIFrameUrl(permissionId) != null) {
+                        model.put("iframesrc", loggedInUser.getIFrameUrl(permissionId));
+                        AdminService.setBanner(model, loggedInUser);
+                        return "showiframe";
+                    }
+                    if (onlineReport==null) {
+                          result = "error: user has no permission for this report";
 
-                         }
-                     }
+                    }
                 }
                 if (opcode.equalsIgnoreCase(UPLOAD) && !readOnlyReport) {
                     // revised logic - this is ONLY for uploading data entered in a downloaded report

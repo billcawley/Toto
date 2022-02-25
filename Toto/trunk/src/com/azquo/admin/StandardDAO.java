@@ -178,6 +178,18 @@ public class StandardDAO {
                 ",`parameters` text COLLATE utf8_unicode_ci DEFAULT NULL,PRIMARY KEY (`id`)) ENGINE=InnoDB AUTO_INCREMENT=120 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;", new HashMap<>());
 
 
+        jdbcTemplate.update("CREATE TABLE IF NOT EXISTS `master_db`.`user_event` (" +
+                "`id` int(11) NOT NULL AUTO_INCREMENT" +
+                ",`date_created` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP" +
+                ",`business_id` int(11) NOT NULL" +
+                ",`user_id` int(11) NOT NULL" +
+                ",`report_id` int(11) NOT NULL" +
+                ",`event` varchar(255) COLLATE utf8_unicode_ci NOT NULL" +
+                ", PRIMARY KEY(`id`))" +
+                "ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;", new HashMap<>());
+
+
+
         if (jdbcTemplate.queryForObject("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS\n" +
                 "    WHERE\n" +
                 "      (table_name = \"user_activity\")\n" +

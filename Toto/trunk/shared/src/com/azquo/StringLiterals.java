@@ -88,6 +88,7 @@ public class StringLiterals {
     public static final String AZDISPLAY = "az_display";
     public static final String AZDRILLDOWN = "az_drilldown";
     public static final String AZOPTIONS = "az_options";
+    public static final String AZTRACK = "az_track";
     public static final String AZREPEATREGION = "az_repeatregion";
     public static final String AZREPEATSCOPE = "az_repeatscope";
     public static final String AZREPEATITEM = "az_repeatitem";

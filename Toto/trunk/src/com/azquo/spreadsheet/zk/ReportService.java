@@ -7,6 +7,8 @@ import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseDAO;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
+import com.azquo.admin.user.UserEvent;
+import com.azquo.admin.user.UserEventDAO;
 import com.azquo.admin.user.UserRegionOptions;
 import com.azquo.spreadsheet.CommonReportUtils;
 import com.azquo.spreadsheet.LoggedInUser;
@@ -22,6 +24,7 @@ import io.keikai.api.model.Sheet;
 import io.keikai.model.*;
 import io.keikai.ui.Spreadsheet;
 
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
@@ -44,10 +47,16 @@ public class ReportService {
         List<SName> namesForSheet = BookUtils.getNamesForSheet(sheet);
         //current report is always allowable...
         SName sReportName = BookUtils.getNameByName(StringLiterals.AZREPORTNAME, sheet);
-        if (sReportName == null) {
+        if (sReportName == null || !sReportName.getRefersToSheetName().equals(sheet.getSheetName())) {
             return;
         }
+
+
+
         String thisReportName = BookUtils.getSnameCell(sReportName).getStringValue();
+
+
+
         // todo - null pointer when no database for user? Force db to be set? Or allow it not to?
         OnlineReport or = OnlineReportDAO.findById(reportId);
         //System.out.println("adding a report to permissions : " + or);
@@ -154,6 +163,19 @@ public class ReportService {
                 loggedInUser.setPendingUploadPermissions(allowedImportVersions);
             }
         }
+        SName trackRegion = sheet.getBook().getInternalBook().getNameByName(StringLiterals.AZTRACK);
+        if (trackRegion != null) {
+            SCell trackCell = BookUtils.getSnameCell(trackRegion);
+            if (trackCell.getStringValue().toLowerCase(Locale.ROOT).equals("yes")){
+                loggedInUser.setReportDatabasePermission(null,or,loggedInUser.getDatabase(),true,true);
+                UserEventDAO.store(new UserEvent(0, LocalDateTime.now(),loggedInUser.getBusiness().getId(), loggedInUser.getUser().getId(), reportId,"OPEN"));
+
+
+            }
+        }
+
+
+
     }
     //System.out.println("permissions : " + loggedInUser.getReportIdDatabaseIdPermissions());
 
