@@ -7,7 +7,6 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 
-import javax.sql.DataSource;
 import java.net.InetAddress;
 import java.util.*;
 
@@ -29,15 +28,9 @@ public class StandardDAO {
 
 
     private static NamedParameterJdbcTemplate jdbcTemplate;
-    public static DataSource sfDataSource;
 
     // Copypasta from JdbcTemplateUtils (unlike there we won't be retrying on queries).
     public StandardDAO(NamedParameterJdbcTemplate jdbcTemplate) throws Exception {
-        this(jdbcTemplate, null);
-    }
-
-    // Copypasta from JdbcTemplateUtils (unlike there we won't be retrying on queries).
-    public StandardDAO(NamedParameterJdbcTemplate jdbcTemplate, DataSource sfTest) throws Exception {
         // moved from spreadsheet service as it won't be instantiated any more, just logging
         String thost = ""; // Currently just to put in the log
         try {
@@ -206,10 +199,19 @@ public class StandardDAO {
             jdbcTemplate.update("ALTER TABLE `master_db`.`business` ADD `server_name` VARCHAR(255) NULL DEFAULT NULL ;", new HashMap<>());
         }
 
+        // define extrenal connecitons. Notably password encryption as used in the user table is not applicable here as I need to get to the passwords
+        jdbcTemplate.update("CREATE TABLE IF NOT EXISTS `master_db`.`external_database_connection` (" +
+                "`id` int(11) NOT NULL AUTO_INCREMENT" +
+                ",`business_id` int(11) NOT NULL" +
+                ",`name` varchar(255) COLLATE utf8_unicode_ci not null" +
+                ",`connection_string` varchar(1024) COLLATE utf8_unicode_ci not null" +
+                ",`user` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL" +
+                ",`password` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL" +
+                ",`database` text COLLATE utf8_unicode_ci DEFAULT NULL,PRIMARY KEY (`id`)) ENGINE=InnoDB AUTO_INCREMENT=120 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;", new HashMap<>());
+
 
 
         StandardDAO.jdbcTemplate = jdbcTemplate; // I realise that this is "naughty", see comments at the top.
-        StandardDAO.sfDataSource = sfTest;
     }
 
     private static <T extends StandardEntity> void updateById(final T entity, final String tableName, final Map<String, Object> columnNameValueMap) throws DataAccessException {

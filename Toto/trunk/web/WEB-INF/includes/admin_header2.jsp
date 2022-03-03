@@ -40,6 +40,12 @@
 				Databases
 			</a>
 			<c:if test="${!developer}">
+				<a class="navbar-item is-tab${fn:startsWith(requestScope['javax.servlet.forward.path_info'], '/ManageDatabaseConnections') ? ' is-active' : ''}"
+				   href="/api/ManageDatabaseConnections">
+					Connections
+				</a>
+			</c:if>
+			<c:if test="${!developer}">
 				<a class="navbar-item is-tab${fn:startsWith(requestScope['javax.servlet.forward.path_info'], '/ManageUsers') ? ' is-active' : ''}"
 				   href="/api/ManageUsers">
 					Users

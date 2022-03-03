@@ -1071,7 +1071,7 @@ public class ReportRenderer {
                throw new Exception(it.getFilename() + ": Unable to read " + it.getFilename());
            }
        }else{
-           return ExternalConnector.getData(connectorName, sql);
+           return ExternalConnector.getData(loggedInUser, connectorName, sql);
        }
        return toReturn;
    }

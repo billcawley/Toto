@@ -229,6 +229,14 @@ this may now not work at all, perhaps delete?
         return toReturn;
     }
 
+    public static List<ExternalDatabaseConnection> getExternalDatabaseConnectionListForBusinessWithBasicSecurity(final LoggedInUser loggedInUser) {
+        List<ExternalDatabaseConnection> toReturn = null;
+        if (loggedInUser.getUser().isAdministrator()) {
+            toReturn = ExternalDatabaseConnectionDAO.findForBusinessId(loggedInUser.getUser().getBusinessId());
+        }
+        return toReturn;
+    }
+
     public static List<OnlineReport> getReportList(final LoggedInUser loggedInUser, boolean webFormat) {
         List<OnlineReport> reportList = new ArrayList<>();
         if (!loggedInUser.getUser().isAdministrator() && !loggedInUser.getUser().isDeveloper()) {
@@ -480,6 +488,25 @@ this may now not work at all, perhaps delete?
             return user;
         }
         return null;
+    }
+
+    public static ExternalDatabaseConnection getExternalDatabaseConnectionById(int id, LoggedInUser loggedInUser) {
+        ExternalDatabaseConnection externalDatabaseConnection = ExternalDatabaseConnectionDAO.findById(id);
+        if (externalDatabaseConnection != null && loggedInUser.getUser().getBusinessId() == externalDatabaseConnection.getBusinessId()) {
+            return externalDatabaseConnection;
+        }
+        return null;
+    }
+
+    public static ExternalDatabaseConnection getExternalDatabaseConnectionByName(String name, LoggedInUser loggedInUser) {
+        return ExternalDatabaseConnectionDAO.findForNameAndBusinessId(name, loggedInUser.getBusiness().getId());
+    }
+
+    public static void deleteExternalDatabaseConnectionById(int id, LoggedInUser loggedInUser) {
+        ExternalDatabaseConnection externalDatabaseConnection = ExternalDatabaseConnectionDAO.findById(id);
+        if (externalDatabaseConnection != null && loggedInUser.getUser().getBusinessId() == externalDatabaseConnection.getBusinessId()) {
+            ExternalDatabaseConnectionDAO.removeById(externalDatabaseConnection);
+        }
     }
 
     public static Database getDatabaseByIdWithBasicSecurityCheck(int databaseId, LoggedInUser loggedInUser) {

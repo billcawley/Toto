@@ -1,3 +1,11 @@
+22-02-22
+
+remove debug code with a hard coded directory
+
+CSS tweak in new UI so images show on reports
+
+Groovy switch for latest premium version for all risks
+
 17-02-22
 
 Improved orphan and deduplication instructions

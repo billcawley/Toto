@@ -3,6 +3,9 @@ package com.azquo.admin.controller;
 import com.azquo.ExternalConnector;
 import com.azquo.admin.StandardDAO;
 import com.azquo.dataimport.*;
+import com.azquo.spreadsheet.LoggedInUser;
+import com.azquo.spreadsheet.controller.LoginController;
+import com.azquo.util.AzquoMailer;
 import com.csvreader.CsvWriter;
 import com.ecwid.maleorang.MailchimpException;
 import com.extractagilecrm.ExtractContacts;
@@ -21,11 +24,13 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.util.PDFTextStripper;
 import org.apache.pdfbox.util.TextPosition;
+import org.springframework.http.HttpRequest;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.*;
@@ -369,10 +374,17 @@ public class TestController {
     @RequestMapping
     @ResponseBody
     public String handleRequest(
-            @RequestParam(value = "something", required = false) String something
+            @RequestParam(value = "something", required = false) String something, HttpServletRequest request
     ) {
-        if ("snowflake".equals(something)){
-                System.out.println(ExternalConnector.getData("", "select *  from TPCH_SF1.ORDERS INNER JOIN TPCH_SF1.CUSTOMER ON O_CUSTKEY = C_CUSTKEY AND O_ORDERPRIORITY = '5-LOW' limit 1000;"));
+        if ("email".equals(something)){
+            AzquoMailer.sendEMail("edd@azquo.com", "Edd", "here is a test", "test body");
+        }
+        if ("snowflake".equals(something) ){
+            LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
+            if (loggedInUser != null){
+                // SNOWWFLAKE_SAMPLE_DATA
+                System.out.println(ExternalConnector.getData(loggedInUser, "snowflake11","select *  from TPCH_SF1.ORDERS INNER JOIN TPCH_SF1.CUSTOMER ON O_CUSTKEY = C_CUSTKEY AND O_ORDERPRIORITY = '5-LOW' limit 1000;"));
+            }
         }
         if ("bonza".equals(something)){
             ExtractContacts.extractContacts("https://bonzabfs.agilecrm.com/dev", "shaun.dodimead@azquo.com", "evjgnce8ou9hn77e4ma7uvjgcg", "/home/edward/Downloads/contacts(preprocessor = bonza contact preprocessor)", 183);

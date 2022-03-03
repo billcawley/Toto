@@ -36,24 +36,11 @@
         <!-- damn, need to work on this <property name="connectionTimeout" value="30000" />8 hours, should solve the "weekend" problem? -->
     </bean>
 
-    <bean id="SFdataSource" class="org.apache.tomcat.jdbc.pool.DataSource" destroy-method="close">
-        <property name="driverClassName" value="com.snowflake.client.jdbc.SnowflakeDriver" />
-        <property name="url" value="jdbc:snowflake://uh24145.eu-west-2.aws.snowflakecomputing.com/?warehouse=COMPUTE_WH&amp;db=SNOWFLAKE_SAMPLE_DATA&amp;schema=TPCH_SF1000&amp;CLIENT_RESULT_COLUMN_CASE_INSENSITIVE=true&amp;CLIENT_TIMESTAMP_TYPE_MAPPING=TIMESTAMP_NTZ&amp;user=EDD&amp;password=Azquo99" />
-        <property name="initialSize" value="1" />
-        <property name="maxActive" value="1" />
-        <property name="maxIdle" value="1" />
-        <property name="minIdle" value="1" />
-        <property name="testOnBorrow" value="true" />
-        <property name="validationQuery" value="Select 1" />
-        <!-- damn, need to work on this <property name="connectionTimeout" value="30000" />8 hours, should solve the "weekend" problem? -->
-    </bean>
-
     <bean id="jdbcTemplate" class="org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate">
         <constructor-arg type="javax.sql.DataSource" ref="dataSource"/>
     </bean>
     <bean name="standardDao" class="com.azquo.admin.StandardDAO">
         <constructor-arg type="org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate" ref="jdbcTemplate"/>
-        <constructor-arg type="javax.sql.DataSource" ref="SFdataSource"/>
     </bean>
 
     <bean id="multipartResolver" class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
