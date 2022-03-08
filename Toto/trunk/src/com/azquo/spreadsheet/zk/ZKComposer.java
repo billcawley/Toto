@@ -610,13 +610,19 @@ public class ZKComposer extends SelectorComposer<Component> {
                                     final SSeries series = generalChartData.getSeries(0);
                                     try {
                                         final Range range = Ranges.range(myzss.getSelectedSheet(), series.getValuesFormula());
-                                        int pointIndex = chartsEvent.getPointIndex();
+                                        int rowIndex = range.getRow();
+                                        int colIndex = range.getColumn();
+                                        if (usefulChart.getType()==SChart.ChartType.COLUMN){
+                                            rowIndex += chartsEvent.getSeriesIndex();
+                                        }else{
+                                            colIndex += chartsEvent.getPointIndex();
+                                        }
                                         if (range.getRowCount() == 1) {
                                             //myzss.focusTo(range.getRow(), range.getColumn() + pointIndex);
-                                            showAzquoContextMenu(range.getRow(), range.getColumn() + pointIndex, chartsEvent.getTarget());
+                                            showAzquoContextMenu(rowIndex, colIndex, chartsEvent.getTarget());
                                         } else {
                                             //myzss.focusTo(range.getRow() + pointIndex, range.getColumn());
-                                            showAzquoContextMenu(range.getRow() + pointIndex, range.getColumn(), chartsEvent.getTarget());
+                                            showAzquoContextMenu(rowIndex, colIndex, chartsEvent.getTarget());
                                         }
                                     } catch (Exception e) {
                                         e.printStackTrace();
