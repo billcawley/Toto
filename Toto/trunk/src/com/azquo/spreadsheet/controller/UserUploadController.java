@@ -80,10 +80,7 @@ public class UserUploadController {
             model.put("showUnlockButton", false);
             model.put("importTemplates", ImportTemplateDAO.findForBusinessId(loggedInUser.getUser().getBusinessId()));
             AdminService.setBanner(model, loggedInUser);
-            if (request.getSession().getAttribute("newui") != null) {
                 return "useruploads2";
-            }
-            return "useruploads";
         } else {
             return "redirect:/api/Login";
         }
@@ -164,10 +161,7 @@ public class UserUploadController {
             model.put("showSave", false);
             model.put("showUnlockButton", false);
             AdminService.setBanner(model, loggedInUser);
-            if (request.getSession().getAttribute("newui") != null) {
                 return "useruploads2";
-            }
-            return "useruploads";
         } else {
             return "redirect:/api/Login";
         }
@@ -190,9 +184,6 @@ public class UserUploadController {
         }).start();
         // edd pasting in here to get the banner colour working
         AdminService.setBanner(model, loggedInUser);
-        if (session.getAttribute("newui") != null) {
             return "importrunning2";
-        }
-        return "importrunning";
     }
 }

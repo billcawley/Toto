@@ -20,7 +20,6 @@
                             </c:otherwise>
                         </c:choose>
                         <form action="/api/Login" class="box" method="post">
-                            <input name="newui" value="true" type="hidden">
                             <div class="field">
                                 <label class="label">Email/Username</label>
                                 <div class="control has-icons-left">

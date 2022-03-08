@@ -331,10 +331,7 @@ public class ManageDatabasesController {
             model.put("developer", loggedInUser.getUser().isDeveloper());
             model.put("importTemplates", ImportTemplateDAO.findForBusinessId(loggedInUser.getUser().getBusinessId()));
             AdminService.setBanner(model, loggedInUser);
-            if (request.getSession().getAttribute("newui") != null){
                 return "managedatabases2";
-            }
-            return "managedatabases";
         } else {
             return "redirect:/api/Login";
         }
@@ -519,11 +516,7 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
             model.put("developer", loggedInUser.getUser().isDeveloper());
             model.put("importTemplates", ImportTemplateDAO.findForBusinessId(loggedInUser.getUser().getBusinessId()));
             AdminService.setBanner(model, loggedInUser);
-            if (request.getSession().getAttribute("newui") != null){
                 return "managedatabases2";
-            }
-
-            return "managedatabases";
         } else {
             return "redirect:/api/Login";
         }
@@ -576,10 +569,7 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
         // edd pasting in here to get the banner colour working
         AdminService.setBanner(model,loggedInUser);
         model.addAttribute("targetController", "ManageDatabases");
-        if (session.getAttribute("newui") != null){
             return "importrunning2";
-        }
-        return "importrunning";
     }
 
     // as it says make something for users to read from a list of uploaded files.

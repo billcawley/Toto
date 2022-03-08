@@ -25,12 +25,7 @@ public class UserLogController {
             return "redirect:/api/Login";
         }
         AdminService.setBanner(model,loggedInUser);
-        if (request.getSession().getAttribute("newui") != null){
             return "userlog2";
-        } else {
-            return "userlog";
-        }
-
     }
 
 }

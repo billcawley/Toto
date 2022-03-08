@@ -1,7 +1,7 @@
 <%-- Copyright (C) 2016 Azquo Ltd. --%><%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
 <c:set var="title" scope="request" value="Azquo Users Activity" />
-<%@ include file="../includes/admin_header.jsp" %>
+<%@ include file="../includes/admin_header2.jsp" %>
 
 <main>
 	<h1>Azquo Users Activity - <a href="/api/AzquoUsersReport?download=true">Download</a></h1>

@@ -55,13 +55,6 @@ public class LoginController {
             , @RequestParam(value = "userid", required = false) String userid // if a user exists in more than one business then
             , @RequestParam(value = "select", required = false) String select
      ) throws Exception {
-        if ("true".equals(request.getParameter("newui"))){
-            session.setAttribute("newui", "true");
-        }
-        if ("false".equals(request.getParameter("newui"))){
-            session.removeAttribute("newui");
-        }
-
         // stack overflow code, will be modified
         long percentUsable = 100; // if it cna't be worked out default to ok. Maybe change this . . .
         try {
@@ -87,10 +80,7 @@ public class LoginController {
                     usersToShow.add(l.getUser());
                 }
                 model.put("users", usersToShow);
-                if (session.getAttribute("newui") != null){
                     return "loginuserselect2";
-                }
-                return "loginuserselect";
             }
             if (NumberUtils.isNumber(userid)) {
                 for (LoggedInUser loggedInUser : loggedInUsers) {
@@ -160,10 +150,7 @@ public class LoginController {
                             usersToShow.add(l.getUser());
                         }
                         model.put("users", usersToShow);
-                        if (session.getAttribute("newui") != null){
                             return "loginuserselect2";
-                        }
-                        return "loginuserselect";
                     }
                     loggedInUser = loggedInUsers.get(0);
                 }
@@ -230,10 +217,6 @@ public class LoginController {
             }
         }
         String page = "login2";
-/*        if (request.getSession().getAttribute("newui") != null){
-            return "login2";
-        }*/
-
         Business check = BusinessDAO.findByServerName(request.getServerName());
         if (check != null){
             if (check.getLogo() != null){

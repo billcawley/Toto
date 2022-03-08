@@ -175,10 +175,7 @@ public class ManageUsersController {
                 model.put("useractivities", userActivities);
                 model.put("id", recentId);
                 AdminService.setBanner(model, loggedInUser);
-                if (request.getSession().getAttribute("newui") != null){
                     return "recentuseractivity2";
-                }
-                return "recentuseractivity";
             }
 
             if (NumberUtils.isDigits(downloadRecentId)) {
@@ -335,10 +332,7 @@ public class ManageUsersController {
                         }
                         model.put("users", AdminService.getUserListForBusinessWithBasicSecurity(loggedInUser));
                         AdminService.setBanner(model, loggedInUser);
-                        if (request.getSession().getAttribute("newui") != null){
                             return "manageusers2";
-                        }
-                        return "manageusers";
                     } else {
                         model.put("error", error.toString());
                     }
@@ -365,10 +359,7 @@ public class ManageUsersController {
                 model.put("databases", AdminService.getDatabaseListForBusinessWithBasicSecurity(loggedInUser));
                 model.put("reports", AdminService.getReportList(loggedInUser, true));
                 AdminService.setBanner(model, loggedInUser);
-                if (request.getSession().getAttribute("newui") != null){
                     return "edituser2";
-                }
-                return "edituser";
             }
             final List<User> userListForBusiness = AdminService.getUserListForBusinessWithBasicSecurity(loggedInUser);
             if (userListForBusiness != null) {
@@ -379,10 +370,7 @@ public class ManageUsersController {
                 model.put("showDownload", true);
             }
             AdminService.setBanner(model, loggedInUser);
-            if (request.getSession().getAttribute("newui") != null){
                 return "manageusers2";
-            }
-            return "manageusers";
         }
     }
 
@@ -534,10 +522,7 @@ public class ManageUsersController {
             }
             model.put("users", AdminService.getUserListForBusinessWithBasicSecurity(loggedInUser));
             AdminService.setBanner(model, loggedInUser);
-            if (request.getSession().getAttribute("newui") != null){
                 return "manageusers2";
-            }
-            return "manageusers";
         } else {
             return "redirect:/api/Login";
         }

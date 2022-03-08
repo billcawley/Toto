@@ -100,10 +100,7 @@ public class ManageReportsController {
                         OnlineReportDAO.store(theReport);
                         model.put("reports", AdminService.getReportList(loggedInUser, true));
                         AdminService.setBanner(model,loggedInUser);
-                        if (request.getSession().getAttribute("newui") != null){
                             return "managereports2";
-                        }
-                        return "managereports";
                     }
                     final List<Integer> databaseIdsForReportId = DatabaseReportLinkDAO.getDatabaseIdsForReportId(theReport.getId());
                     model.put("id", editId);
@@ -120,10 +117,7 @@ public class ManageReportsController {
                     model.put("category", theReport.getCategory() != null ?theReport.getCategory() : "");
                     model.put("explanation", theReport.getExplanation() != null ? theReport.getExplanation() : "");
                     AdminService.setBanner(model,loggedInUser);
-                    if (request.getSession().getAttribute("newui") != null){
                         return "editreport2";
-                    }
-                    return "editreport";
                 }
             }
             // if not editing then very simple
@@ -172,10 +166,7 @@ public class ManageReportsController {
             model.put("reports", reportList);
             model.put("developer", loggedInUser.getUser().isDeveloper());
             AdminService.setBanner(model,loggedInUser);
-            if (request.getSession().getAttribute("newui") != null){
                 return "managereports2";
-            }
-            return "managereports";
         } else {
             return "redirect:/api/Login";
         }

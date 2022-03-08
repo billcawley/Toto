@@ -52,10 +52,7 @@ public class AuditDatabaseController {
                 model.put("node", treeNode);
             }
 
-            if (request.getSession().getAttribute("newui") != null){
                 return "auditdatabase2";
-            }
-            return "auditdatabase";
         }
         return "redirect:/api/Login";
     }

@@ -150,10 +150,7 @@ public class ManageReportSchedulesController {
             model.put("reports", AdminService.getReportList(loggedInUser, true));
             model.put("databases", databaseListForBusiness);
             AdminService.setBanner(model,loggedInUser);
-            if (request.getSession().getAttribute("newui") != null){
                 return "managereportschedules2";
-            }
-            return "managereportschedules";
         }
     }
 
@@ -225,10 +222,7 @@ public class ManageReportSchedulesController {
             }
             model.put("users", AdminService.getUserListForBusinessWithBasicSecurity(loggedInUser));
             AdminService.setBanner(model, loggedInUser);
-            if (request.getSession().getAttribute("newui") != null){
                 return "managereportschedules2";
-            }
-            return "managereportschedules";
         } else {
             return "redirect:/api/Login";
         }
