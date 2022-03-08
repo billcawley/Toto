@@ -260,7 +260,7 @@ public class SpreadsheetService {
                 }
             }
              if (userChoice == null) {
-                userChoice = new UserChoice(0, userId, choiceName, choiceValue, LocalDateTime.now());
+                userChoice = new UserChoice(0, userId, choiceName, choiceValue.replace(StringLiterals.QUOTE+"",""), LocalDateTime.now());
                 UserChoiceDAO.store(userChoice);
             } else {
                 if (userChoice.getChoiceValue().equalsIgnoreCase(choiceValue)){
