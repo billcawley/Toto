@@ -1144,8 +1144,14 @@ public class ReportExecutor {
 
     static DecimalFormat df = new DecimalFormat("00000000");
 
+    // EFC note - the obove wasn't trimming it! I think I misunderstood the API. Fixing now.
     private static String eightCharInt(int input) {
-        return df.format(input);
+        String s = df.format(input);
+        // so if 1234567890 then do 34567890
+        if (s.length() > 8){
+            s = s.substring(s.length() - 8);
+        }
+        return s;
     }
 
 }
