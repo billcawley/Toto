@@ -11,7 +11,9 @@
             <th>Author</th>
             <th>&nbsp;&nbsp;&nbsp;&nbsp;</th>
             <th>Report Name</th>
+<c:if test="${showexplanation}">
             <th>Explanation</th>
+</c:if>
             <th></th>
         </tr>
         </thead>
@@ -33,7 +35,9 @@
             <td></td>
             <td><c:if test="${report.database != 'None'}"><a href="/api/Online?reportid=${report.id}&amp;database=${report.database}" target="_blank"></c:if>
                 <span class="fa fa-table"></span>  ${report.untaggedReportName}<c:if test="${report.database != 'None'}"></a></c:if></td>
+            <c:if test="${showexplanation}">
             <td>${report.explanation}</td>
+            </c:if>
             <td style="white-space: nowrap;">
                 <a href="/api/ManageReports?editId=${report.id}"  title="Edit ${report.reportName}" class="button is-small"><span class="fa fa-edit" title="Edit"></span></a>
                 <a href="/api/ManageReports?deleteId=${report.id}" onclick="return confirm('Are you sure you want to delete ${report.reportName}?')" title="Delete ${report.reportName}" class="button is-small"><span class="fa fa-trash" title="Delete"></span> </a>

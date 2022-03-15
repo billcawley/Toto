@@ -10,11 +10,24 @@
 <!DOCTYPE html>
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml">
 <head>
-    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
-    <script src="//cdnjs.cloudflare.com/ajax/libs/jstree/3.0.4/jstree.min.js"></script>
-    <link rel="stylesheet" href="/css/themes/proton/style.min.css" />
-    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/jstree/3.0.4/themes/default/style.min.css" />
-    <link href="/css/style.css" rel="stylesheet" type="text/css">
+    <link rel="stylesheet" href="/sass/mystyles.css">
+    <!-- <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css"> -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- required for inspect - presumably zap at some point -->
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.11.4/jquery-ui.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.11.4/themes/black-tie/jquery-ui.css" rel="stylesheet" type="text/css">
+    <script type="text/javascript" src="/js/global.js"></script>
+    <style>
+        .ui-dialog .ui-tabs-panel{min-height:350px; background:#ECECEC; padding:5px 5px 0px 5px; }
+        .ui-dialog .ui-tabs-panel iframe{min-height:350px; background:#FFF;}
+
+        header .nav ul li a.on {background-color:${bannerColor}}
+        .ui-widget .ui-widget-header li.ui-state-active {background-color:${bannerColor}}
+        a:link {color:${bannerColor}}
+        a:visited {color:${bannerColor}}
+
+    </style>
     <script>
         function checkFile(){
             var fileName = document.getElementById("uploadfile").value;

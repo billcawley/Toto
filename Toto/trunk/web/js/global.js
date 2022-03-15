@@ -83,7 +83,7 @@
 			
 			// now add the new tab 
 			_.el.ul.append('<li><a data-url="' + url + '" href="#o-' + _.numTabs + '">' + title + '</a> <span class="ui-icon ui-icon-close">Remove</span></li>');
-			_.el.append('<div id="o-' + _.numTabs + '" class="dialog-inner"><div class="loading"><h3>Loading Data...</h3> <div class="loader"><span class="fa fa-spin fa-cog"></span></div> </div><iframe src="' + url + '" width="100%" height="100%" frameborder="0" scrolling="auto" style="display:none"></iframe></div>');
+			_.el.append('<div id="o-' + _.numTabs + '" class="dialog-inner"><div class="loading"><h3>Loading Data...</h3></div><iframe src="' + url + '" width="100%" height="100%" frameborder="0" scrolling="auto" style="display:none"></iframe></div>');
 			
 			_.el.find('iframe').load(function(){
 				_.el.find('.loading').hide();

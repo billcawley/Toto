@@ -122,6 +122,13 @@ public class ManageReportsController {
             }
             // if not editing then very simple
             List<OnlineReport> reportList = AdminService.getReportList(loggedInUser, true);
+            boolean showExplanation = false;
+            for (OnlineReport or : reportList){
+                if (or.getExplanation() != null && !or.getExplanation().isEmpty()){
+                    showExplanation = true;
+                    break;
+                }
+            }
             if ("test".equals(test)){
                 Workbook wb = new XSSFWorkbook();
                 Sheet analysis = wb.createSheet("Analysis");
@@ -165,6 +172,7 @@ public class ManageReportsController {
 
             model.put("reports", reportList);
             model.put("developer", loggedInUser.getUser().isDeveloper());
+            model.put("showexplanation", showExplanation);
             AdminService.setBanner(model,loggedInUser);
                 return "managereports2";
         } else {

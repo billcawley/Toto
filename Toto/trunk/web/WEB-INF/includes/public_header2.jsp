@@ -48,7 +48,7 @@
 			<c:if test="${sessionScope.LOGGED_IN_USERS_SESSION != null}">
 				<a class="navbar-item" href="/api/Login?select=true">Switch Business</a>
 			</c:if>
-			<a class="navbar-item" href="/api/Login?logoff=true">Log Off</a>
+			<a class="navbar-item" href="/api/Login?logoff=true">Sign Out</a>
 			<div class="navbar-item has-dropdown is-hoverable">
 				<a class="navbar-link is-arrowless" >
 					<span class="fa fa-bars"></span>
