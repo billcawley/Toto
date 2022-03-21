@@ -269,7 +269,7 @@ public class BackupService {
 
     public static void loadDBBackup(LoggedInUser loggedInUser, File file, String database, StringBuilder log, boolean justEmpty) {
         int line = 1;
-        if (database.toLowerCase(Locale.ROOT).endsWith(" refresh")){
+        if (database != null && database.toLowerCase(Locale.ROOT).endsWith(" refresh")){
             //this is a temporary fix to allow a restore without removing the upload history
             database = database.substring(0,database.length() - 8);
             justEmpty = true;
