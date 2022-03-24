@@ -117,6 +117,16 @@ public class OnlineReportDAO {
                 + " order by " + REPORTNAME, TABLENAME, onlineReportRowMapper, namedParams);
     }
 
+    public static List<OnlineReport> findForDatabaseIdAndCategory(final int databaseId, String category) {
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(DatabaseReportLinkDAO.DATABASE_ID, databaseId);
+        namedParams.addValue(OnlineReportDAO.CATEGORY, category);
+        return StandardDAO.findListWithWhereSQLAndParameters(", `" + StandardDAO.MASTER_DB + "`.`" + DatabaseReportLinkDAO.DATABASE_REPORT_LINK + "` WHERE " + StandardDAO.ID + " = `" + DatabaseReportLinkDAO.DATABASE_REPORT_LINK + "`.`" + DatabaseReportLinkDAO.REPORT_ID
+                + "` AND `" + DatabaseReportLinkDAO.DATABASE_REPORT_LINK + "`.`" + DatabaseReportLinkDAO.DATABASE_ID + "` = :" + DatabaseReportLinkDAO.DATABASE_ID
+                + " AND `" + OnlineReportDAO.CATEGORY + "` = :" + OnlineReportDAO.CATEGORY
+                + " order by " + REPORTNAME, TABLENAME, onlineReportRowMapper, namedParams);
+    }
+
     public static OnlineReport findById(int id) {
         return StandardDAO.findById(id, TABLENAME, onlineReportRowMapper);
     }

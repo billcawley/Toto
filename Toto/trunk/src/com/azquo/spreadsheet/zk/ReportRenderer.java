@@ -8,11 +8,9 @@ import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseDAO;
 import com.azquo.admin.database.DatabaseServer;
 import com.azquo.admin.onlinereport.*;
+import com.azquo.admin.onlinereport.MenuItem;
 import com.azquo.admin.user.*;
-import com.azquo.dataimport.ImportService;
-import com.azquo.dataimport.ImportTemplate;
-import com.azquo.dataimport.ImportTemplateDAO;
-import com.azquo.dataimport.ImportTemplateData;
+import com.azquo.dataimport.*;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.controller.OnlineController;
 import com.azquo.spreadsheet.*;
@@ -31,6 +29,7 @@ import io.keikai.api.model.Sheet;
 import io.keikai.model.*;
 import org.apache.poi.ss.usermodel.Cell;
 
+import java.awt.*;
 import java.io.*;
 import java.nio.charset.MalformedInputException;
 import java.nio.charset.StandardCharsets;
@@ -38,6 +37,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.rmi.RemoteException;
 import java.util.*;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -311,14 +311,15 @@ public class ReportRenderer {
                     }
                 }
                 if (name.getName().toLowerCase().equals(StringLiterals.AZMENUSPEC)) { // then we have a MENU to deal with here
+                    String searchReports = (String)book.getInternalBook().getAttribute("searchReports");
                     List<List<String>> menuSpec = BookUtils.replaceUserChoicesInRegionDefinition(loggedInUser, name);
                     int menuLines = 0;
                     for (List<String> submenu: menuSpec){
-                        String submenuText = submenu.get(0);
                         String submenuName = submenu.get(1);
-                        List<MenuItem> menuItems= MenuItemDAO.findForNameAndBusinessId(submenuName.toLowerCase(Locale.ROOT),loggedInUser.getBusiness().getId());
+                        List<MenuItem> menuItems;
+                         menuItems = filterMenuItems(submenuName, loggedInUser, searchReports);
                         if (menuItems.size()>0){
-                            menuLines += 2 & menuItems.size() + 3;
+                            menuLines += 2 * menuItems.size() + 3;
                         }
                     }
                     SName menuRange =  BookUtils.getNameByName(StringLiterals.AZMENU, sheet);
@@ -326,8 +327,9 @@ public class ReportRenderer {
                         int firstRow = menuRange.getRefersToCellRegion().getRow();
                         int rowCount = menuRange.getRefersToCellRegion().getRowCount();
                         int firstCol = menuRange.getRefersToCellRegion().getColumn();
-                        Range titleModel = Ranges.range(sheet, firstRow, 0, firstRow + 1, book.getMaxColumns());
-                        Range itemModel = Ranges.range(sheet, firstRow + 2, 0, firstRow + 3, book.getMaxColumns());
+                        Range titleModel = Ranges.range(sheet, firstRow, firstCol, firstRow + 1, firstCol + 3);
+                        Range itemModel = Ranges.range(sheet, firstRow + 2, firstCol, firstRow + 3, firstCol + 3);
+
                         if (rowCount < menuLines) {
                             Range insertRange = Ranges.range(sheet, firstRow + rowCount - 1, 0, firstRow + menuLines - 1, 1); // insert at the 3rd row - should be rows to add - 1 as it starts at one without adding anything
                             CellOperationUtil.insertRow(insertRange);
@@ -338,17 +340,18 @@ public class ReportRenderer {
                             String submenuName = submenu.get(1);
                             String submenuExplanation = submenu.get(2);
                             List<MenuItem> menuItems = MenuItemDAO.findForNameAndBusinessId(submenuName, loggedInUser.getBusiness().getId());
+                            menuItems = filterMenuItems(submenuName, loggedInUser,searchReports);
                             if (menuItems.size() > 0) {
                                 if (firstRow< rowNo){
-                                    CellOperationUtil.paste(titleModel, Ranges.range(sheet,rowNo, 0, rowNo + 1, book.getMaxColumns()));
+                                    CellOperationUtil.paste(titleModel, Ranges.range(sheet,rowNo, firstCol, rowNo + 1, firstCol + 3));
                                 }
                                 sheet.getInternalSheet().getCell(rowNo++, firstCol).setStringValue(submenuText);
                                 sheet.getInternalSheet().getCell(rowNo++, firstCol + 2).setStringValue(submenuExplanation);
                                 for (MenuItem menuItem:menuItems){
                                     if (rowNo > firstRow + 2){
-                                        CellOperationUtil.paste(itemModel, Ranges.range(sheet,rowNo, 0, rowNo + 1, book.getMaxColumns()));
+                                        CellOperationUtil.paste(itemModel, Ranges.range(sheet,rowNo, firstCol, rowNo + 1, firstCol + 3));
                                     }
-                                    OnlineReport or = OnlineReportDAO.findById(menuItem.getReportId());
+                                     OnlineReport or = OnlineReportDAO.findById(menuItem.getReportId());
                                     String menuItemName= menuItem.getMenuItemName();
                                     if (menuItemName.length()==0){
                                         menuItemName = or.getReportName();
@@ -368,8 +371,6 @@ public class ReportRenderer {
                             }
                         }
                     }
-
-
                 }
             }
             // after loading deal with lock stuff
@@ -574,6 +575,53 @@ public class ReportRenderer {
         return showSave;
     }
 
+
+    private static List<MenuItem> filterMenuItems(String submenuName, LoggedInUser loggedInUser, String searchReports){
+       List<MenuItem> menuItems= MenuItemDAO.findForNameAndBusinessId(submenuName.toLowerCase(Locale.ROOT),loggedInUser.getBusiness().getId());
+       Set<Integer> reportsFound = new HashSet<>();
+       for (MenuItem menuItem:menuItems){
+           reportsFound.add(menuItem.getReportId());
+       }
+       int databaseId = 0;
+       if (loggedInUser.getDatabase()!=null){
+           databaseId = loggedInUser.getDatabase().getId();
+       }
+       List<OnlineReport> onlineReports = OnlineReportDAO.findForDatabaseIdAndCategory(databaseId, submenuName);
+       for (OnlineReport onlineReport:onlineReports){
+           if (!reportsFound.contains(onlineReport.getId()) && onlineReport.getCategory().length() > 0){
+               menuItems.add(new MenuItem(0,onlineReport.getDateCreated(), loggedInUser.getBusiness().getId(),onlineReport.getId(), onlineReport.getCategory(),onlineReport.getReportName(),onlineReport.getExplanation(), null,99,databaseId));
+           }
+       }
+        Collections.sort(menuItems, new Comparator<MenuItem>() {
+
+            public int compare(MenuItem m1, MenuItem m2) {
+                // compare two instance of `Score` and return `int` as result.
+                int comp1 = m2.getSubmenuName().compareTo(m2.getSubmenuName());
+                if (comp1!=0) return comp1;
+                if (m2.getPosition()==0) return 1;
+                return m2.getPosition() - m2.getPosition();
+            }
+        });
+
+
+       if (searchReports==null || searchReports.length()==0){
+            return menuItems;
+        }
+        List<MenuItem> toReturn = new ArrayList<>();
+        for (MenuItem menuItem:menuItems){
+             OnlineReport or = OnlineReportDAO.findById(menuItem.getReportId());
+            String menuItemName= menuItem.getMenuItemName();
+            if (menuItemName.length()==0){
+                menuItemName = or.getReportName();
+            }
+            if (menuItemName.toLowerCase(Locale.ROOT).contains(searchReports.toLowerCase(Locale.ROOT))){
+                toReturn.add(menuItem);
+            }
+        }
+        return toReturn;
+
+    }
+
     // edd modifying a version of ZK code to allow a suggested new sheet name
     private static String suggestSheetName(Book book, String suggestedName) {
         if (book.getSheet(suggestedName) == null) {
@@ -735,6 +783,7 @@ public class ReportRenderer {
                 CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = SpreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser, region, valueId, rowHeadingList,
                         BookUtils.replaceUserChoicesInRegionDefinition(loggedInUser, columnHeadingsDescription),
                         contextList, userRegionOptions, quiet);
+                //valueId is a value to select if found.
                 loggedInUser.setSentCells(reportId, sheetName, region, cellsAndHeadingsForDisplay);
                 // now, put the headings into the sheet!
                 // might be factored into fill range in a bit

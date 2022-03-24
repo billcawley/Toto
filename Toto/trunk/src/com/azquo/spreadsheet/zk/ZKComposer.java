@@ -283,7 +283,13 @@ public class ZKComposer extends SelectorComposer<Component> {
                     break;
                 }
             }
-            // We may add row heading later but it's not a requirement currently
+            if (name.getName().equalsIgnoreCase("az_SearchReports")  && name.getRefersToCellRegion().getRow() == event.getRow() && name.getRefersToCellRegion().getColumn() ==event.getColumn()
+                    && name.getRefersToSheetName().equals(event.getSheet().getSheetName())) {
+                 myzss.getBook().getInternalBook().setAttribute("searchReports", chosen);
+                reload=true;
+                break;
+            }
+                // We may add row heading later but it's not a requirement currently
             if (name.getName().toLowerCase().startsWith(StringLiterals.AZDISPLAYCOLUMNHEADINGS)) { // ok going to try for a sorting on column heading detect
                 String region = name.getName().substring(StringLiterals.AZDISPLAYCOLUMNHEADINGS.length());
                 UserRegionOptions userRegionOptions = UserRegionOptionsDAO.findForUserIdReportIdAndRegion(loggedInUser.getUser().getId(), reportId, region);
