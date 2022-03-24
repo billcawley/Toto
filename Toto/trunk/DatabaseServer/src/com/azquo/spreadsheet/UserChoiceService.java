@@ -208,10 +208,10 @@ public class UserChoiceService {
                 }
             }
             names = newNames;
-        } else if (names.size() > 2000) { // EFC, making this 2k for bonza but it's not the best idea. Needs to be back to 500 sooner rather than later
+        } else if (names.size() > 4000) { // EFC, making this 4k for bonza but it's not the best idea. Needs to be back to 500 sooner rather than later
             List<Name> newNames = new ArrayList<>();
             Iterator it = names.iterator();
-            for (int i = 0; i < 2000; i++) newNames.add((Name) it.next());
+            for (int i = 0; i < 4000; i++) newNames.add((Name) it.next());
             names = newNames;
         }
         // I'm not going to check if provenanceId is positive - if they use "updated" in the wrong context nothing should be returned
