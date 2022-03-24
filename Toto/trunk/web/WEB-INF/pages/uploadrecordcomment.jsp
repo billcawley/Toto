@@ -16,7 +16,7 @@
 
         header .nav ul li a.on {background-color:${bannerColor}}
         .ui-widget .ui-widget-header li.ui-state-active {background-color:${bannerColor}}
-        a:link {color:${bannerColor}}
+        # a:link {color:${bannerColor}}
         a:visited {color:${bannerColor}}
 
     </style>
