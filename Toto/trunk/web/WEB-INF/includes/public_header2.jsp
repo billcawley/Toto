@@ -5,7 +5,7 @@
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title>${title} - Azquo</title>
-	<link rel="stylesheet" href="/sass/mystyles.css">
+	<link rel="stylesheet" href="/css/bulma.css">
 	<!-- <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css"> -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 	<!-- required for inspect - presumably zap at some point -->
@@ -46,7 +46,7 @@
 		</div>
 		<div class="navbar-end">
 			<c:if test="${sessionScope.LOGGED_IN_USERS_SESSION != null}">
-				<a class="navbar-item" href="/api/Login?select=true">Switch Business</a>
+				<a class="navbar-item" href="/api/Login?select=true"><i class="fa-solid fa-sitemap"></i></a>
 			</c:if>
 			<a class="navbar-item" href="/api/Login?logoff=true">Sign Out</a>
 			<div class="navbar-item has-dropdown is-hoverable">

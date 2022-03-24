@@ -19,7 +19,7 @@
 
 		header .nav ul li a.on {background-color:${bannerColor}}
 		.ui-widget .ui-widget-header li.ui-state-active {background-color:${bannerColor}}
-		# a:link {color:${bannerColor}}
+		a:link {color:${bannerColor}}
 		a:visited {color:${bannerColor}}
 
 	</style>
@@ -61,7 +61,7 @@
 
 		<div class="navbar-end">
 			<c:if test="${sessionScope.LOGGED_IN_USERS_SESSION != null}">
-				<a  class="navbar-item" href="/api/Login?select=true">Logged in under ${sessionScope.LOGGED_IN_USER_SESSION.user.businessName}. Switch business.</a>
+				<a  class="navbar-item" href="/api/Login?select=true"><!--Logged in under ${sessionScope.LOGGED_IN_USER_SESSION.user.businessName}. --><i class="fa-solid fa-sitemap"></i></a>
 			</c:if>
 			<a class="navbar-item" href="/api/Login?logoff=true">Sign Out</a>
 		</div>

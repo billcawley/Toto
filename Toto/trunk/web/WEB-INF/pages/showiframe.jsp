@@ -41,7 +41,7 @@
         </div>
         <div class="navbar-end">
             <c:if test="${sessionScope.LOGGED_IN_USERS_SESSION != null}">
-                <a class="navbar-item" href="/api/Login?select=true">Switch Business</a>
+                <a class="navbar-item" href="/api/Login?select=true"><i class="fa-solid fa-sitemap"></i></a>
             </c:if>
             <a class="navbar-item" href="/api/Login?logoff=true">Sign Out</a>
         </div>
