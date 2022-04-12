@@ -1,6 +1,8 @@
 package com.azquo.spreadsheet;
 
+import com.azquo.ExternalConnector;
 import com.azquo.StringLiterals;
+import com.azquo.StringUtils;
 import com.azquo.admin.business.Business;
 import com.azquo.admin.business.BusinessDAO;
 import com.azquo.admin.database.*;
@@ -21,6 +23,7 @@ import com.azquo.spreadsheet.zk.BookUtils;
 import com.azquo.spreadsheet.zk.ReportExecutor;
 import com.azquo.spreadsheet.zk.ReportRenderer;
 import com.azquo.util.AzquoMailer;
+import io.keikai.api.model.Sheet;
 import io.keikai.model.CellRegion;
 import io.keikai.model.SCell;
 import io.keikai.model.SName;
@@ -29,6 +32,7 @@ import io.keikai.api.Exporter;
 import io.keikai.api.Exporters;
 import io.keikai.api.Importers;
 import io.keikai.api.model.Book;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import serilogj.Log;
 import serilogj.LoggerConfiguration;
 import serilogj.events.LogEventLevel;
@@ -671,5 +675,167 @@ public class SpreadsheetService {
         return null;
     }
 
+    public static void saveExternalData(Book book, LoggedInUser loggedInUser)throws Exception{
+        for (SName name:book.getInternalBook().getNames()){
+            int nameRow = -1;
+            int connectorRow =  -1;
+            int sqlRow = -1;
+            int saveRow = -1;
+            int keyCol = -1;
+            if (name.getName().toLowerCase(Locale.ROOT).startsWith(StringLiterals.AZIMPORTDATA)){
+                List<List<String>> importdataspec = BookUtils.replaceUserChoicesInRegionDefinition(loggedInUser, name);
+                int cols = importdataspec.get(0).size();
+                int rows = importdataspec.size();
+                for (int rowNo = 0;rowNo < rows;rowNo++){
+                    String heading = importdataspec.get(rowNo).get(0).toLowerCase(Locale.ROOT);
+                    if (heading.equals("sheet/range name")) nameRow = rowNo;
+                    if (heading.equals("connector")) connectorRow = rowNo;
+                    if (heading.equals("sql")) sqlRow = rowNo;
+                    if (heading.equals("save")) saveRow = rowNo;
+                }
+                if (nameRow < 0 || connectorRow < 0 || sqlRow < 0 || saveRow < 0){
+                    return;
+                }
+                for (int col=1;col<cols;col++) {
+                    String rangeName = importdataspec.get(nameRow).get(col).toLowerCase(Locale.ROOT);
+                    if (rangeName.length() == 0){
+                        break;
+                    }
+                    String saveInstructions = importdataspec.get(saveRow).get(col);
+                     if   (saveInstructions!=null && saveInstructions.length()>0) {
+                        String keyName = StringUtils.findQuery("key",saveInstructions);
+                         String updateQuery = StringUtils.findQuery("update", saveInstructions);
+                         String insertKey = StringUtils.findQuery("insertkey", saveInstructions);
+                         String deleteQuery = StringUtils.findQuery("delete", saveInstructions);
+                         if (keyName==null){
+                            throw new Exception("cannot find 'key=...;' in the save instructions");
+                        }
+
+                        String connectorName = importdataspec.get(connectorRow).get(col).toLowerCase(Locale.ROOT);
+                        boolean found = false;
+                        Sheet sheet = null;
+                        int startRow = 0;
+                        int startCol = 0;
+                        int rowCount = 0;
+                        int colCount = 0;
+                        List<List<String>>data = null;
+                        for (int i = 0; i < book.getNumberOfSheets(); i++) {
+                            sheet = book.getSheetAt(i);
+                            if (sheet.getSheetName().toLowerCase(Locale.ROOT).equals(rangeName)) {
+                                found = true;
+                                data = ImportService.rangeToList(sheet,null);
+                                break;
+                            }
+                        }
+                        if (!found) {
+                            sheet = null;
+                            SName sourceName = book.getInternalBook().getNameByName(rangeName);
+                            if (sourceName != null) {
+                                sheet = book.getSheet(sourceName.getRefersToSheetName());
+                                data = ImportService.rangeToList(sheet,sourceName.getRefersToCellRegion());
+                            }
+                        }
+
+                        if (data != null || data.size() > 0) {
+                            if (rowCount == 0 || rowCount > data.size()) {
+                                rowCount = data.size();
+                            }
+                            if (colCount == 0 || colCount > data.get(0).size()) {
+                                colCount = data.get(0).size();
+                            }
+
+                            List<String> headingRow = new ArrayList<>();
+                            for (int i=0; i< data.get(0).size();i++){
+                                headingRow.add(data.get(0).get(i).substring(1,data.get(0).get(i).length()-1));
+                            }
+                            for (int col2=0;col2<headingRow.size();col2++){
+                                if (headingRow.get(col2).equals(keyName)){
+                                    keyCol = col2;
+                                    break;
+                                }
+
+                            }
+                            if (keyCol<0){
+                                throw new Exception("cannot find " + keyName + " as a column heading");
+                            }
+                            List<List<String>>savedData = loggedInUser.getExternalData(rangeName);
+                             Map<String,List<String>>originaldata = new HashMap<>();
+                            for (int rowNo = 1;rowNo < savedData.size();rowNo++) {
+                                List<String> originalLine = savedData.get(rowNo);
+                                originaldata.put(originalLine.get(keyCol), originalLine);
+                            }
+
+                            Set<String> keysFound = new HashSet<>();
+                            for (int rowNo = 1; rowNo < rowCount; rowNo++) {
+                                List<String> dataline = data.get(rowNo);
+                                String keyVal = dataline.get(keyCol);
+                                if (keyVal==null || keyVal.length() == 0 || keyVal.equals("''")){
+                                    //insertline
+                                    boolean hasData = false;
+                                    for (int i=0;i< dataline.size();i++){
+                                        String val = dataline.get(i);
+                                        if (val!=null && val.length()> 0 && !val.equals("''")){
+                                            hasData = true;
+                                            break;
+                                        }
+                                    }
+                                    if (hasData) {
+                                        dataline.set(keyCol, insertKey);
+                                        ExternalConnector.getData(loggedInUser, connectorName, updateQuery, createMap(headingRow, dataline), null);
+                                    }
+                                }else {
+                                    keysFound.add(keyVal);
+
+                                    List<String> originalLine = originaldata.get(keyVal);
+                                    if (originalLine==null){
+                                        throw new Exception("cannot find the key value "+ keyVal);
+                                    }
+                                    if (originalLine.size() != dataline.size()) {
+                                        throw new Exception("column count does not match on save");
+                                    }
+                                    boolean diff = false;
+                                    for (int colNo = 0; colNo < dataline.size(); colNo++) {
+                                        if (!dataline.get(colNo).equals(originalLine.get(colNo).trim())) {
+                                            diff = true;
+                                            break;
+                                        }
+                                    }
+                                    if (diff) {
+                                        //update line
+                                        ExternalConnector.getData(loggedInUser, connectorName, updateQuery, createMap(headingRow, dataline), keyName);
+                                    }
+                                }
+                            }
+                            if (deleteQuery!=null && deleteQuery.equals("true")){
+                                if(originaldata.keySet().removeAll(keysFound)){
+                                    for (String toBeRemoved:originaldata.keySet()){
+                                        //delete line - send only the delete value in the 'valueMap'
+                                        Map<String,String> deleteMap = new HashMap<>();
+                                        deleteMap.put(keyName, toBeRemoved);
+                                        ExternalConnector.getData(loggedInUser,connectorName,updateQuery,deleteMap, keyName);
+
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+
+
+    private static Map<String,String> createMap(List<String> headings, List<String> values){
+        Map<String,String> toReturn = new HashMap<>();
+        for (int fieldNo = 0;fieldNo <headings.size();fieldNo++){
+            if (fieldNo < values.size()){
+                toReturn.put(headings.get(fieldNo), values.get(fieldNo));
+            }else{
+                toReturn.put(headings.get(fieldNo), null);
+            }
+        }
+        return toReturn;
+    }
 
 }
