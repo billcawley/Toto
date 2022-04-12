@@ -220,7 +220,7 @@ I should be ok for StringTokenizer at this point
                     if (lastToken.equals("as")){
                         //new behaviour - any name preceded by 'as' can be created as a temporary name.  This signals.
                         nameNames.add(StringLiterals.ASSYMBOL + term);
-                    }else{
+                    } else {
                         nameNames.add(term);
                     }
                 }
@@ -384,5 +384,14 @@ I should be ok for StringTokenizer at this point
             }
         }
         return -1;
+    }
+
+    public static String findQuery(String toFind, String findIn) {
+        int start = findIn.toLowerCase().indexOf(toFind + "=");
+        if (start < 0) return null;
+        int end = findIn.indexOf(";", start);
+        if (end < 0) end = findIn.length();
+        return findIn.substring(start + toFind.length() + 1, end).trim();
+
     }
 }
