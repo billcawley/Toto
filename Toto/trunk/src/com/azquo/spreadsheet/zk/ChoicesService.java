@@ -1,6 +1,8 @@
 package com.azquo.spreadsheet.zk;
 
+import com.azquo.ExternalConnector;
 import com.azquo.StringLiterals;
+import com.azquo.StringUtils;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.CommonReportUtils;
@@ -184,7 +186,7 @@ public class ChoicesService {
         List<SName> namesForSheet = BookUtils.getNamesForSheet(sheet);
         boolean resolveChoices = true;
         Map<String, List<String>> choiceOptionsMap = resolveChoiceOptions(namesForSheet, loggedInUser);
-        Map<String, String> userChoices = CommonReportUtils.getUserChoicesMap(loggedInUser);
+         Map<String, String> userChoices = CommonReportUtils.getUserChoicesMap(loggedInUser);
         // will explain this below where it's used near the end of the function
         Map<String, String> choicesSet = new HashMap<>();
 
@@ -326,7 +328,7 @@ public class ChoicesService {
      This adds one caveat : the options match the choice name at the time the function ran - if the query in the choice cell updates this needs to be run again - resolveAndSetChoiceOptions checks for this
        */
 
-    private static Map<String, List<String>> resolveChoiceOptions(List<SName> names, LoggedInUser loggedInUser) {
+    private static Map<String, List<String>> resolveChoiceOptions(List<SName> names, LoggedInUser loggedInUser) throws RemoteException{
         Map<String, List<String>> toReturn = new HashMap<>();
         for (SName name : names) {
             //check to create pivot filter choices.... TODO - is this a redundant comment, aren't the filters being sorted anyway?
@@ -344,7 +346,9 @@ public class ChoicesService {
                 if (choiceCell.getType() != SCell.CellType.ERROR && (choiceCell.getType() != SCell.CellType.FORMULA || choiceCell.getFormulaResultType() != SCell.CellType.ERROR)) {
                     String query;
                     query = choiceCell.getStringValue();
-                    if (!query.toLowerCase().contains(CONTENTS)) {//FIRST PASS - MISS OUT ANY QUERY CONTAINING 'contents('
+                    if (query.toLowerCase(Locale.ROOT).startsWith("external:")){
+                        toReturn.put(name.getName().toLowerCase(Locale.ROOT),loadExternalSelections(loggedInUser,query.substring(9)));
+                    }else if (!query.toLowerCase().contains(CONTENTS)) {//FIRST PASS - MISS OUT ANY QUERY CONTAINING 'contents('
                         if (query.toLowerCase().contains(" default")) {
                             query = query.substring(0, query.toLowerCase().indexOf(" default"));
                         }
@@ -548,4 +552,23 @@ public class ChoicesService {
             }
         }
     }
+
+    private static List<String> loadExternalSelections(LoggedInUser loggedInUser,String selectionString)throws RemoteException{
+        String connectorName = StringUtils.findQuery("connector", selectionString);
+        String sql = StringUtils.findQuery("sql", selectionString);
+        if (connectorName!=null && sql!=null){
+            List<List<String>>data = ExternalConnector.getData(loggedInUser, connectorName, sql, null, null);
+            List<String>options = new ArrayList<>();
+            for (int i=1;i<data.size();i++){
+                options.add(data.get(i).get(0));
+            }
+            return options;
+        }
+
+        return new ArrayList<>();
+
+    }
+
+
+
 }
