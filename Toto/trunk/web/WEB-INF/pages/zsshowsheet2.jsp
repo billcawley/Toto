@@ -187,6 +187,4 @@
     }
 </style>
 
-
-</body>
-</html>
+<%@ include file="../includes/public_footer.jsp" %>

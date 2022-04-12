@@ -6,6 +6,7 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title>${title} - Azquo</title>
 	<link rel="stylesheet" href="/sass/mystyles.css">
+	<link rel="stylesheet" href="/quickview/bulma-quickview.min.css">
 	<!-- <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css"> -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 	<!-- required for inspect - presumably zap at some point -->
@@ -26,6 +27,9 @@
 </head>
 <body>
 <nav class="navbar is-black" role="navigation" aria-label="main navigation">
+	<!--<c:if test="${reports != null}">
+		<button class="button" data-show="quickview" data-target="quickviewDefault"><i class="fa-solid fa-chevron-right"></i></button>
+	</c:if>-->
 	<div class="navbar-brand">
 		<a class="navbar-item" href="https://azquo.com">
 			<img src="${logo}" alt="azquo">
@@ -33,9 +37,10 @@
 	</div>
 	<div id="navbarBasicExample" class="navbar-menu">
 		<div class="navbar-start">
-			<a class="navbar-item is-tab${fn:startsWith(requestScope['javax.servlet.forward.path_info'], '/ManageReports') ? ' is-active' : ''}"
-			   href="/api/ManageReports">
-				Reports</a>
+
+					<a class="navbar-item is-tab${fn:startsWith(requestScope['javax.servlet.forward.path_info'], '/ManageReports') ? ' is-active' : ''}"
+					   href="/api/ManageReports">
+						Reports</a>
 			<a class="navbar-item is-tab${fn:startsWith(requestScope['javax.servlet.forward.path_info'], '/ManageDatabases') ? ' is-active' : ''}"
 			   href="/api/ManageDatabases">
 				Databases
@@ -67,3 +72,30 @@
 		</div>
 	</div>
 </nav>
+<!--<c:if test="${reports != null}">
+
+<div id="quickviewDefault" class="quickview is-left">
+	<header class="quickview-header">
+		<p class="title">Reports</p>
+		<span class="delete" data-dismiss="quickview"></span>
+	</header>
+
+	<div class="quickview-body">
+		<div class="quickview-block">
+			<c:forEach items="${reports}" var="report">
+				<c:if test="${report.database != 'None'}">
+					<c:if test="${report.category != ''}">
+						<hr>
+						&nbsp;&nbsp;${report.category}
+						<hr>
+					</c:if>
+					<a href="/api/Online?reportid=${report.id}&amp;database=${report.database}">
+						&nbsp;&nbsp;&nbsp;&nbsp;${report.untaggedReportName}<br/>
+					</a>
+				</c:if>
+			</c:forEach>
+
+		</div>
+	</div>
+</div>
+</c:if>-->

@@ -6,6 +6,7 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title>${title} - Azquo</title>
 	<link rel="stylesheet" href="/css/bulma.css">
+	<link rel="stylesheet" href="/quickview/bulma-quickview.min.css">
 	<!-- <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css"> -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 	<!-- required for inspect - presumably zap at some point -->
@@ -20,11 +21,20 @@
 	<style>
 		.ui-dialog .ui-tabs-panel{min-height:350px; background:#ECECEC; padding:5px 5px 0px 5px; }
 		.ui-dialog .ui-tabs-panel iframe{min-height:350px; background:#FFF;}
+
+		header .nav ul li a.on {background-color:${bannerColor}}
+		.ui-widget .ui-widget-header li.ui-state-active {background-color:${bannerColor}}
+		a:link {color:${bannerColor}}
+		a:visited {color:${bannerColor}}
+		
 	</style>
 </head>
 <body>
 
 <nav class="navbar is-black" role="navigation" aria-label="main navigation">
+	<!--<c:if test="${reports != null}">
+		<button class="button" data-show="quickview" data-target="quickviewDefault"><i class="fa-solid fa-chevron-right"></i></button>
+	</c:if>-->
 	<div class="navbar-brand">
 		<a class="navbar-item" href="https://azquo.com">
 			<img src="${logo}" alt="azquo">
@@ -32,7 +42,9 @@
 	</div>
 	<div id="navbarBasicExample" class="navbar-menu">
 		<div class="navbar-start">
-			<a class="navbar-item" href="/api/Online?reportid=1">Reports</a>
+					<a class="navbar-item is-tab${fn:startsWith(requestScope['javax.servlet.forward.path_info'], '/ManageReports') ? ' is-active' : ''}"
+					   href="/api/Online?reportid=1">
+						Reports</a>
 
 			<c:if test="${showInspect == true}"><a class="navbar-item" href="#" onclick="return inspectDatabase();" title="Inspect database"><span class="fa fa-eye"></span>&nbsp;Inspect database</a> <!--<span class="fa fa-question-circle" onclick="showInspectHelp(); return false;"></span>--></c:if>
 			<c:if test="${xml == true}"><a class="navbar-item" href="#" onclick="postAjax('XML');return false;">Send XML</a></c:if>
@@ -69,4 +81,33 @@
 		</div>
 	</div>
 </nav>
+<!--<c:if test="${reports != null}">
+
+<div id="quickviewDefault" class="quickview is-left">
+	<header class="quickview-header">
+		<p class="title">Reports</p>
+		<span class="delete" data-dismiss="quickview"></span>
+	</header>
+
+	<div class="quickview-body">
+		<div class="quickview-block">
+			<c:forEach items="${reports}" var="report">
+				<c:if test="${report.database != 'None'}">
+					<c:if test="${report.category != ''}">
+						<hr>
+						&nbsp;&nbsp;${report.category}
+						<hr>
+					</c:if>
+					<a href="/api/Online?reportid=${report.id}&amp;database=${report.database}">
+						&nbsp;&nbsp;&nbsp;&nbsp;${report.untaggedReportName}<br/>
+					</a>
+				</c:if>
+			</c:forEach>
+
+		</div>
+	</div>
+
+</div>
+</c:if>-->
+
 <span id="lockedResult"><c:if test="${not empty lockedResult}"><textarea class="public" style="height:60px;width:400px;font:10px monospace;overflow:auto;font-family:arial;background:#f58030;color:#fff;font-size:14px;border:0">${lockedResult}</textarea></c:if></span>

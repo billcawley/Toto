@@ -383,7 +383,7 @@ public class TestController {
             LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
             if (loggedInUser != null){
                 // SNOWWFLAKE_SAMPLE_DATA
-                System.out.println(ExternalConnector.getData(loggedInUser, "snowflake11","select *  from TPCH_SF1.ORDERS INNER JOIN TPCH_SF1.CUSTOMER ON O_CUSTKEY = C_CUSTKEY AND O_ORDERPRIORITY = '5-LOW' limit 1000;"));
+                //System.out.println(ExternalConnector.getData(loggedInUser, "snowflake11","select *  from TPCH_SF1.ORDERS INNER JOIN TPCH_SF1.CUSTOMER ON O_CUSTKEY = C_CUSTKEY AND O_ORDERPRIORITY = '5-LOW' limit 1000;"));
             }
         }
         if ("bonza".equals(something)){

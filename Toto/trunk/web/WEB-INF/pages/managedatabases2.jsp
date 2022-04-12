@@ -826,5 +826,4 @@ Created by IntelliJ IDEA.
     }
 
 </script>
-</body>
-</html>
+<%@ include file="../includes/admin_footer.jsp" %>

@@ -68,8 +68,4 @@
         </tbody>
     </table>
 </div>
-
-
-
-</body>
-</html>
+<%@ include file="../includes/admin_footer.jsp" %>

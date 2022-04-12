@@ -169,5 +169,4 @@ Created by IntelliJ IDEA.
         }
     }
 </script>
-</body>
-</html>
+<%@ include file="../includes/public_footer.jsp" %>

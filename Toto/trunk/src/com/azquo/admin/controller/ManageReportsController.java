@@ -9,13 +9,11 @@ import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.controller.LoginController;
 import com.azquo.spreadsheet.zk.ReportAnalysis;
-import org.springframework.security.access.method.P;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.zkoss.poi.hssf.usermodel.HSSFFont;
-import org.zkoss.poi.hssf.util.HSSFColor;
 import org.zkoss.poi.ss.usermodel.*;
 import org.zkoss.poi.xssf.usermodel.XSSFWorkbook;
 
@@ -25,7 +23,6 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
 /**
  * Copyright (C) 2016 Azquo Ltd.
@@ -174,6 +171,12 @@ public class ManageReportsController {
             model.put("developer", loggedInUser.getUser().isDeveloper());
             model.put("showexplanation", showExplanation);
             AdminService.setBanner(model,loggedInUser);
+            if (request.getParameter("newformat") != null){
+                // EFC : I know this is hacky, just trying to make it work
+                model.put("categorybefore", "</div><h1>");
+                model.put("categoryafter", "</h1><div class=\"columns is-multiline\">");
+                return "managereportscards";
+            }
                 return "managereports2";
         } else {
             return "redirect:/api/Login";

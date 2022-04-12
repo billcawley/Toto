@@ -112,5 +112,5 @@
         </div>
     </form>
 </div>
-</body>
-</html>
+<!-- could ever be a problem if just user?? -->
+<%@ include file="../includes/admin_footer.jsp" %>

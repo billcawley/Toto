@@ -57,5 +57,4 @@ Copyright (C) 2016 Azquo Ltd.
     </tbody>
 </table>
 </div>
-</body>
-</html>
+<%@ include file="../includes/admin_footer.jsp" %>
