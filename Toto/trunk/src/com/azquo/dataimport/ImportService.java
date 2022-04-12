@@ -12,6 +12,7 @@ import com.fasterxml.jackson.dataformat.csv.CsvParser;
 import com.fasterxml.jackson.dataformat.csv.CsvSchema;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.core.util.MultivaluedMapImpl;
+import io.keikai.model.CellRegion;
 import io.keikai.model.SSheet;
 import net.lingala.zip4j.core.ZipFile;
 import org.apache.log4j.Logger;
@@ -927,6 +928,38 @@ public final class ImportService {
         }
         return false;
     }
+
+    public static List<List<String>> rangeToList(io.keikai.api.model.Sheet sheet, CellRegion regionName){
+        List<List<String>> toReturn = new ArrayList<>();
+        int startRow = 0;
+        int startCol = 0;
+        int endRow = sheet.getLastRow();
+        int endCol = sheet.getLastColumn(0);
+        if (regionName != null) {
+            startRow = regionName.getRow();
+            endRow = regionName.getLastRow();
+            startCol = regionName.getColumn();
+            endCol = regionName.getLastColumn();
+        }
+        for (int rNo = startRow; rNo <= endRow; rNo++) {
+            List<String>dataline = new ArrayList<>();
+            for (int cNo = startCol; cNo <= endCol; cNo++) {
+                String val = "";
+                Double d = getCellValue(sheet,rNo, cNo).getDouble();
+                if (d!=null){
+                    val = d + "";
+                } else {
+                    val = "'" + getCellValue(sheet, rNo, cNo).getString() + "'";
+                }
+                dataline.add(zapCRs(val));
+            }
+            toReturn.add(dataline);
+        }
+        return toReturn;
+    }
+
+
+
 
     public static void rangeToCSV(io.keikai.api.model.Sheet sheet, AreaReference areaReference, CsvWriter csvW) throws Exception {
         int startRow = areaReference.getFirstCell().getRow();
