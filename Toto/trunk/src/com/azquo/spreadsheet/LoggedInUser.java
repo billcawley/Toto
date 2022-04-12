@@ -114,6 +114,7 @@ public class LoggedInUser implements Serializable {
 
     // in theory the concantation of strings for keys could trip up, maybe make more robust? TODO
     private final Map<String, CellsAndHeadingsForDisplay> sentCellsMaps; // returned display data for each region
+    private Map <String,List<List<String>>> externalDataMaps;
 
     private Database database;
     private OnlineReport onlineReport;
@@ -165,6 +166,7 @@ public class LoggedInUser implements Serializable {
         this.user = user;
         this.business = business;
         sentCellsMaps = new HashMap<>();
+        externalDataMaps = new HashMap<>();
         this.database = database;
         this.onlineReport = null;
         this.book = null;
@@ -226,6 +228,22 @@ public class LoggedInUser implements Serializable {
         }
         this.sentCellsMaps.put(reportId + "-"  + sheetName + "-" + region.toLowerCase(), sentCells);
     }
+
+    public void clearExternalData(){
+        this.externalDataMaps = new HashMap<>();
+    }
+
+    public List<List<String>> getExternalData(final String regionName) {
+        return externalDataMaps.get(regionName.toLowerCase(Locale.ROOT));
+    }
+
+
+    public void setExternalData(final String regionName, List<List<String>> data) {
+        this.externalDataMaps.put(regionName,data);
+    }
+
+
+
 
     public List<CellsAndHeadingsForDisplay> getSentForReport(final int reportId) {
         List<CellsAndHeadingsForDisplay> toReturn = new ArrayList<>();
