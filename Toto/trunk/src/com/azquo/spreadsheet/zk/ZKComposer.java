@@ -406,7 +406,8 @@ public class ZKComposer extends SelectorComposer<Component> {
         if (row != event.getLastRow() || col != event.getLastColumn()) { // I believe we're only interested in single cells changing
             return;
         }
-        CellData cellData = Ranges.range(event.getSheet(), row, col).getCellData();
+        Range cellEdited = Ranges.range(event.getSheet(), row, col);
+        CellData cellData = cellEdited.getCellData();
         if (cellData == null) {
             return;
         }
@@ -459,6 +460,9 @@ public class ZKComposer extends SelectorComposer<Component> {
             for (SName name : headingNames) {
                 headingRowColsToSave.add(new RegionRowCol(name.getRefersToSheetName(), name.getName().substring(StringLiterals.AZDISPLAYROWHEADINGS.length()), row - name.getRefersToCellRegion().getRow(), col - name.getRefersToCellRegion().getColumn()));
             }
+            if (BookUtils.inExternalData(loggedInUser,cellEdited)){
+                showSaveButton();
+            }
             for (RegionRowCol regionRowCol : regionRowColsToSave) {
                 final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(reportId, regionRowCol.sheetName, regionRowCol.region);
                 if (sentCells != null) { // a good start!
@@ -466,7 +470,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                             sentCells.getData().size() > regionRowCol.row && sentCells.getData().get(regionRowCol.row).size() > regionRowCol.col) {
                         CellForDisplay cellForDisplay = sentCells.getData().get(regionRowCol.row).get(regionRowCol.col);
                         // todo address locking here - maybe revert the cell
-                        Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"flex\";document.getElementById(\"restoreDataButton\").style.display=\"flex\";");
+                        showSaveButton();
                         if (isDouble) {
                             cellForDisplay.setNewDoubleValue(doubleValue);
                             // copying a few lines of server side code to try and ensure that successive saves don't cause a mismatch in the string values compared to what they would be on a fresh report load
@@ -500,6 +504,11 @@ public class ZKComposer extends SelectorComposer<Component> {
                 }
             }
         }
+    }
+
+    private void showSaveButton(){
+        Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"flex\";document.getElementById(\"restoreDataButton\").style.display=\"flex\";");
+
     }
 
     private void checkRegionSizes(Sheet sheet, LoggedInUser loggedInUser, int reportId) {
@@ -759,6 +768,9 @@ public class ZKComposer extends SelectorComposer<Component> {
         filterPopup.setVisible(true);
         //filterPopup.open(pageX, pageY);
     }
+
+
+
 /* not used might as well comment for the mo
     @Listen("onCellSelection = #myzss")
     public void onCellSelection(CellSelectionEvent event){
