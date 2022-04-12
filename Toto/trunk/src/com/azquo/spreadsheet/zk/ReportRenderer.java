@@ -1005,10 +1005,13 @@ public class ReportRenderer {
     }
 
     private static void loadExternalData(Book book, LoggedInUser loggedInUser)throws Exception{
+        loggedInUser.clearExternalData();
         for (SName name:book.getInternalBook().getNames()){
             int nameRow = -1;
             int connectorRow =  -1;
             int sqlRow = -1;
+            int saveRow = -1;
+            String keyName = null;
             if (name.getName().toLowerCase(Locale.ROOT).startsWith(StringLiterals.AZIMPORTDATA)){
                 List<List<String>> importdataspec = BookUtils.replaceUserChoicesInRegionDefinition(loggedInUser, name);
                 int cols = importdataspec.get(0).size();
@@ -1018,11 +1021,14 @@ public class ReportRenderer {
                     if (heading.equals("sheet/range name")) nameRow = rowNo;
                     if (heading.equals("connector")) connectorRow = rowNo;
                     if (heading.equals("sql")) sqlRow = rowNo;
+                    if (heading.equals("save")) saveRow = rowNo;
                 }
+
                 if (nameRow < 0 || connectorRow < 0 || sqlRow < 0){
                     return;
                 }
                 for (int col=1;col<cols;col++) {
+                    boolean saving = false;
                     String rangeName = importdataspec.get(nameRow).get(col).toLowerCase(Locale.ROOT);
                     if (rangeName.length() == 0){
                         break;
@@ -1030,11 +1036,14 @@ public class ReportRenderer {
                     String connectorName = importdataspec.get(connectorRow).get(col).toLowerCase(Locale.ROOT);
                     String sqlName = importdataspec.get(sqlRow).get(col);
                     boolean found = false;
+                    if (saveRow>=0) {
+                        String saveInstructions = importdataspec.get(saveRow).get(col);
+                        if (saveInstructions!=null && saveInstructions.length()>0) {
+                            saving = true;
+                        }
+                    }
                     Sheet sheet = null;
-                    int startRow = 0;
-                    int startCol = 0;
-                    int rowCount = 0;
-                    int colCount = 0;
+                    CellRegion cellRegion = null;
                     for (int i=0;i<book.getNumberOfSheets();i++){
                         sheet = book.getSheetAt(i);
                         if (sheet.getSheetName().toLowerCase(Locale.ROOT).equals(rangeName)){
@@ -1047,32 +1056,18 @@ public class ReportRenderer {
                         SName sourceName = book.getInternalBook().getNameByName(rangeName);
                         if (sourceName !=null){
                               sheet = book.getSheet(sourceName.getRefersToSheetName());
-                              startRow = sourceName.getRefersToCellRegion().getRow();
-                              startCol = sourceName.getRefersToCellRegion().getColumn();
-                              rowCount = sourceName.getRefersToCellRegion().getRowCount();
-                              colCount = sourceName.getRefersToCellRegion().getCellCount();
-                              return;
+                              cellRegion = sourceName.getRefersToCellRegion();
+                        }
+                    }
+                    if (sheet!=null) {
+                        getExternalData(loggedInUser, rangeName, connectorName, sqlName, sheet, cellRegion);
+                        if (saving){
+                            //keep a record of the values as seen in Excel (maybe reformatted...)
+                            loggedInUser.setExternalData(rangeName,ImportService.rangeToList(sheet,cellRegion));
                         }
                     }
 
-                    List<List<String>> data =getExternalData(loggedInUser,rangeName,connectorName,sqlName);
-                    if (data==null || data.size()==0){
-                        return;
-                    }
-                    if(rowCount==0 || rowCount > data.size()){
-                        rowCount = data.size();
-                    }
-                    if (colCount == 0 || colCount > data.get(0).size()){
-                        colCount =data.get(0).size();
-                    }
-                    for (int rowNo = 0; rowNo < rowCount; rowNo++){
-                        List<String> dataline = data.get(rowNo);
-                        for (int colNo = 0;colNo < colCount; colNo++){;
-                              BookUtils.setValue(sheet.getInternalSheet().getCell(rowNo + startRow, colNo + startCol),dataline.get(colNo));
-
-                        }
-                    }
-                 }
+                }
             }
 
 
@@ -1080,13 +1075,99 @@ public class ReportRenderer {
 
     }
 
-   private static List<List<String>> getExternalData(LoggedInUser loggedInUser, String rangeName, String connectorName, String sql)throws Exception {
-       List<List<String>> toReturn = new ArrayList<>();
+
+    private static Map<String,List<String>> loadExternalSelections(Book book, LoggedInUser loggedInUser)throws Exception{
+        Map<String,List<String>> toReturn = new HashMap<>();
+        loggedInUser.clearExternalData();
+        for (SName name:book.getInternalBook().getNames()){
+            int selectionRow = -1;
+            int connectorRow = -1;
+
+            if (name.getName().toLowerCase(Locale.ROOT).startsWith(StringLiterals.AZIMPORTDATA)){
+                List<List<String>> importdataspec = BookUtils.replaceUserChoicesInRegionDefinition(loggedInUser, name);
+                int cols = importdataspec.get(0).size();
+                int rows = importdataspec.size();
+                for (int rowNo = 0;rowNo < rows;rowNo++){
+                    String heading = importdataspec.get(rowNo).get(0).toLowerCase(Locale.ROOT);
+                      if (heading.equals("selection")) selectionRow = rowNo;
+                      if (heading.equals("connector")) connectorRow = rowNo;
+                }
+                if (selectionRow < 0 || connectorRow < 0){
+                    return toReturn;
+                }
+                Sheet validationSheet = book.getSheet(ChoicesService.VALIDATION_SHEET);
+                for (int col=1;col<cols;col++) {
+                    boolean saving = false;
+                    String rangeName = importdataspec.get(0).get(col);
+                    if (rangeName.length() == 0){
+                        break;
+                    }
+                    String connectorName = importdataspec.get(connectorRow).get(col);
+                    String selectionList = importdataspec.get(selectionRow).get(col);
+                    String[] selections = selectionList.split(";");
+                    for (String selection:selections) {
+                        int equalPos = selection.indexOf("=");
+                        if (equalPos > 0) {
+                            String selectionName = selection.substring(0, equalPos).trim();
+                            String sql = selection.substring(equalPos + 1);
+                            List<List<String>>data = ExternalConnector.getData(loggedInUser, connectorName, sql, null, null);
+                            List<String>options = new ArrayList<>();
+                            for (List<String>dataline:data){
+                                options.add(dataline.get(0));
+                            }
+                            toReturn.put(selectionName,options);
+
+                        }
+                    }
+
+                }
+            }
+        }
+        return toReturn;
+
+    }
+
+
+
+
+    private static void setData(List<List<String>>data, Sheet sheet, CellRegion cellRegion){
+         if (data==null || data.size()==0){
+            return;
+        }
+        int startRow = 0;
+        int startCol = 0;
+        int rowCount = 0;
+        int colCount = 0;
+        if (cellRegion !=null){
+            startRow = cellRegion.getRow();
+            startCol = cellRegion.getColumn();
+            rowCount = cellRegion.getRowCount();
+            colCount = cellRegion.getCellCount();
+        }
+        if(rowCount==0 || rowCount > data.size()){
+            rowCount = data.size();
+        }
+        if (colCount == 0 || colCount > data.get(0).size()){
+            colCount =data.get(0).size();
+        }
+        for (int rowNo = 0; rowNo < rowCount; rowNo++){
+            List<String> dataline = data.get(rowNo);
+            for (int colNo = 0;colNo < colCount; colNo++){;
+                BookUtils.setValue(sheet.getInternalSheet().getCell(rowNo + startRow, colNo + startCol),dataline.get(colNo));
+
+            }
+        }
+    }
+
+
+
+   private static void getExternalData(LoggedInUser loggedInUser, String rangeName, String connectorName, String sql, Sheet sheet,CellRegion cellRegion)throws Exception {
+       List<List<String>> data = new ArrayList<>();
        if (connectorName.length() == 0) {
            char delimiter = ',';
            ImportTemplate it = ImportTemplateDAO.findForNameAndBusinessId(rangeName, loggedInUser.getBusiness().getId());
            if (it == null) {
-               return null;
+               return;
            }
            String path = SpreadsheetService.getHomeDir() + dbPath + loggedInUser.getBusinessDirectory() + importTemplatesDir + it.getFilenameForDisk();
            try (BufferedReader br = Files.newBufferedReader(Paths.get(path), StandardCharsets.ISO_8859_1)) { // iso shouldn't error while UTF8 can . . .
@@ -1113,16 +1194,19 @@ public class ReportRenderer {
                }
                MappingIterator<String[]> lineIterator = (csvMapper.readerFor(String[].class).with(schema).readValues(new File(path)));
                while (lineIterator.hasNext()){
-                   toReturn.add(new ArrayList<>(Arrays.asList(lineIterator.next())));
+                   data.add(new ArrayList<>(Arrays.asList(lineIterator.next())));
 
                }
+               setData(data,sheet,cellRegion);
            } catch (Exception e) {
                throw new Exception(it.getFilename() + ": Unable to read " + it.getFilename());
            }
        }else{
-           return ExternalConnector.getData(loggedInUser, connectorName, sql);
+           data = ExternalConnector.getData(loggedInUser, connectorName, sql, null, null);
+           if (data!=null&& data.size()>0 ){
+               setData(data,sheet,cellRegion);
+           }
        }
-       return toReturn;
    }
 
 
