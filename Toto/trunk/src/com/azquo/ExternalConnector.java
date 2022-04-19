@@ -13,6 +13,7 @@ import com.azquo.admin.AdminService;
 import com.azquo.admin.onlinereport.ExternalDatabaseConnection;
 import com.azquo.spreadsheet.LoggedInUser;
 
+import java.rmi.RemoteException;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -23,7 +24,7 @@ import java.util.Map;
 public class ExternalConnector {
 
 
-    public static List<List<String>> getData(LoggedInUser loggedInUser, String connectionName, String query, Map<String, String> valueMap, String keyField) {
+    public static List<List<String>> getData(LoggedInUser loggedInUser, String connectionName, String query, Map<String, String> valueMap, String keyField) throws RemoteException {
         List<List<String>> toReturn = new ArrayList<>();
         // intial test code hard coded to snowflake
         Connection con = null;
@@ -77,6 +78,7 @@ public class ExternalConnector {
                 }
             }
             throwables.printStackTrace();
+            throw new RemoteException(throwables.getMessage());
         }
         return toReturn;
     }

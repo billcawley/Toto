@@ -675,7 +675,9 @@ public class SpreadsheetService {
         return null;
     }
 
-    public static void saveExternalData(Book book, LoggedInUser loggedInUser)throws Exception{
+    public static String saveExternalData(Book book, LoggedInUser loggedInUser)throws Exception{
+        String errors = "";
+        int savedRows = 0;
         for (SName name:book.getInternalBook().getNames()){
             int nameRow = -1;
             int connectorRow =  -1;
@@ -694,7 +696,7 @@ public class SpreadsheetService {
                     if (heading.equals("save")) saveRow = rowNo;
                 }
                 if (nameRow < 0 || connectorRow < 0 || sqlRow < 0 || saveRow < 0){
-                    return;
+                    return "";
                 }
                 for (int col=1;col<cols;col++) {
                     String rangeName = importdataspec.get(nameRow).get(col).toLowerCase(Locale.ROOT);
@@ -762,7 +764,10 @@ public class SpreadsheetService {
                              Map<String,List<String>>originaldata = new HashMap<>();
                             for (int rowNo = 1;rowNo < savedData.size();rowNo++) {
                                 List<String> originalLine = savedData.get(rowNo);
-                                originaldata.put(originalLine.get(keyCol), originalLine);
+                                String key = originalLine.get(keyCol);
+                                if (!key.equals("''")){
+                                    originaldata.put(key, originalLine);
+                                }
                             }
 
                             Set<String> keysFound = new HashSet<>();
@@ -782,6 +787,7 @@ public class SpreadsheetService {
                                     if (hasData) {
                                         dataline.set(keyCol, insertKey);
                                         ExternalConnector.getData(loggedInUser, connectorName, updateQuery, createMap(headingRow, dataline), null);
+                                        savedRows++;
                                     }
                                 }else {
                                     keysFound.add(keyVal);
@@ -802,7 +808,12 @@ public class SpreadsheetService {
                                     }
                                     if (diff) {
                                         //update line
-                                        ExternalConnector.getData(loggedInUser, connectorName, updateQuery, createMap(headingRow, dataline), keyName);
+                                        try{
+                                            ExternalConnector.getData(loggedInUser, connectorName, updateQuery, createMap(headingRow, dataline), keyName);
+                                            savedRows++;
+                                        }catch(Exception e){
+                                            errors += "Key: " + keyVal + ":" + e.getMessage() + ";";
+                                        }
                                     }
                                 }
                             }
@@ -813,6 +824,7 @@ public class SpreadsheetService {
                                         Map<String,String> deleteMap = new HashMap<>();
                                         deleteMap.put(keyName, toBeRemoved);
                                         ExternalConnector.getData(loggedInUser,connectorName,updateQuery,deleteMap, keyName);
+                                        savedRows++;
 
                                     }
                                 }
@@ -822,6 +834,7 @@ public class SpreadsheetService {
                 }
             }
         }
+        return (savedRows + " rows saved;" + errors);
     }
 
 

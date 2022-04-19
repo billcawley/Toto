@@ -330,7 +330,7 @@ public class ReportService {
 
     // factored off from the command controller
     public static String save(Book book, LoggedInUser loggedInUser) throws Exception {
-        SpreadsheetService.saveExternalData(book,loggedInUser);
+        String savedRows = SpreadsheetService.saveExternalData(book,loggedInUser);
         // todo - provenance?
         long time = System.currentTimeMillis();
         int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
@@ -410,7 +410,15 @@ public class ReportService {
         AdminService.updateNameAndValueCounts(loggedInUser, loggedInUser.getDatabase());
         System.out.println("Save time ms : " + (System.currentTimeMillis() - time));
         if (error == null) {
-            error = "Success: " + savedItems + " values saved";
+
+            error = "Success: ";
+            if (savedItems > 0){
+                error += savedItems + " values saved ";
+            }
+            if (savedRows!=null){
+                error += savedRows;
+            }
+
             if (redundant.length() > 0) {
                 error += " - " + redundant;
             }
