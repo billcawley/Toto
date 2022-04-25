@@ -3089,14 +3089,12 @@ fr.close();
         if (line.length < 5) return false;
         //found five within the first ten
         int found = 0;
-        int maxpos = 10;
-        if (line.length < 10) {
-            maxpos = line.length;
-        }
+        int maxpos = line.length;
+
         for (int col = 0; col < maxpos; col++) {
             if (line[col].length() > 0 && findFirst(headingsMap, headingFrom(line[col], headingsLookups)) >= 0) {
                 found++;
-                if (found > 4) {
+                if (found > 10) {//arbitrary at this stage.  Checking later
                     return true;
                 }
             }
