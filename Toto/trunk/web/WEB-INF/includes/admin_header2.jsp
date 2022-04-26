@@ -27,9 +27,6 @@
 </head>
 <body>
 <nav class="navbar is-black" role="navigation" aria-label="main navigation">
-	<!--<c:if test="${reports != null}">
-		<button class="button" data-show="quickview" data-target="quickviewDefault"><i class="fa-solid fa-chevron-right"></i></button>
-	</c:if>-->
 	<div class="navbar-brand">
 		<a class="navbar-item" href="https://azquo.com">
 			<img src="${logo}" alt="azquo">
@@ -72,7 +69,11 @@
 		</div>
 	</div>
 </nav>
-<!--<c:if test="${reports != null}">
+<c:if test="${reports != null && param.testmenu==true}">
+<button class="button" data-show="quickview" data-target="quickviewDefault" style="
+	position: fixed;
+    top: 5%;
+"><i class="fa-solid fa-chevron-right"></i></button>
 
 <div id="quickviewDefault" class="quickview is-left">
 	<header class="quickview-header">
@@ -98,4 +99,4 @@
 		</div>
 	</div>
 </div>
-</c:if>-->
+</c:if>

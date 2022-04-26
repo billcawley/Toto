@@ -147,6 +147,7 @@ public class DBCron {
             String backupname = toBackUp.getLastProvenance();
             // make backup name "safer" for file names?
             // could a name in theory clash?
+            // todo - make them zipped but with support for the old files also
             if (backupname != null && backupname.length() > 0) {
                 backupname = backupname.replaceAll("[^A-Za-z0-9_]", "");
                 /* ok where do the backups go?
