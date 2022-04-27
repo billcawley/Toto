@@ -400,7 +400,7 @@ public class LoggedInUser implements Serializable {
     }
 
     public String getIFrameUrl(String name) {
-        return iframeLookups.get(name);
+        return iframeLookups.get(name.toLowerCase(Locale.ROOT));
     }
 
     public Set<String> getFormPermissions() {
