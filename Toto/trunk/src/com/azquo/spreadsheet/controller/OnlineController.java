@@ -253,6 +253,7 @@ public class OnlineController {
                      }
                     if (loggedInUser.getIFrameUrl(permissionId) != null) {
                         model.put("iframesrc", loggedInUser.getIFrameUrl(permissionId));
+                        model.put("reports", AdminService.getReportList(loggedInUser, true));
                         AdminService.setBanner(model, loggedInUser);
                         return "showiframe";
                     }
