@@ -237,43 +237,70 @@ this may now not work at all, perhaps delete?
         return toReturn;
     }
 
+
+
+
+
     public static List<OnlineReport> getReportList(final LoggedInUser loggedInUser, boolean webFormat) {
         List<OnlineReport> reportList = new ArrayList<>();
         if (!loggedInUser.getUser().isAdministrator() && !loggedInUser.getUser().isDeveloper()) {
-            int reportId = loggedInUser.getUser().getReportId();
-            int dbId = loggedInUser.getUser().getDatabaseId();
-            if (reportId > 0 && dbId > 0) {
-                OnlineReport or = OnlineReportDAO.findById(reportId);
-                if (or != null) {
-                    or.setDatabase(DatabaseDAO.findById(dbId).getName());
-                    reportList.add(or);
-                    return reportList;
-                }
-            }
-        }
+            if (webFormat) {
+                List<OnlineReport> reports = new ArrayList<>();
+                for (String report : loggedInUser.getReportIdDatabaseIdPermissions().keySet()) {
+                    LoggedInUser.ReportIdDatabaseId reportIdDatabaseId = loggedInUser.getReportIdDatabaseIdPermissions().get(report);
+                    if (reportIdDatabaseId.getSubmenuName()!=null) {
+                        OnlineReport or = OnlineReportDAO.findById(reportIdDatabaseId.getReportId());
+                        or.setReportName(report);
+                        int dbId = reportIdDatabaseId.getDatabaseId();
+                        if (dbId == 0) {
+                            or.setDatabase(loggedInUser.getDatabase().getName());
+                        } else {
+                            or.setDatabase(DatabaseDAO.findById(dbId).getName());
+                        }
+                        or.setCategory(reportIdDatabaseId.getSubmenuName());
+                        or.setExplanation(reportIdDatabaseId + "");
 
-        List<Database> databases = DatabaseDAO.findForBusinessId(loggedInUser.getUser().getBusinessId());
-        for (Database database : databases) {
-            if (loggedInUser.getUser().isAdministrator()) {// admin gets all
-                List<OnlineReport> reports = OnlineReportDAO.findForDatabaseId(database.getId());
-                for (OnlineReport report : reports) {
-                    report.setDatabase(database.getName());
+                        reportList.add(or);
+                    }
                 }
-                reportList.addAll(reports);
-            } else if (loggedInUser.getUser().isDeveloper() && database.getUserId() == loggedInUser.getUser().getId()) { // developer constrained to their own database reports
-                List<OnlineReport> reports = OnlineReportDAO.findForDatabaseId(database.getId());
+            }else {
+
+                int reportId = loggedInUser.getUser().getReportId();
+                int dbId = loggedInUser.getUser().getDatabaseId();
+                if (reportId > 0 && dbId > 0) {
+                    OnlineReport or = OnlineReportDAO.findById(reportId);
+                    if (or != null) {
+                        or.setDatabase(DatabaseDAO.findById(dbId).getName());
+                        reportList.add(or);
+                        return reportList;
+                    }
+                }
+            }
+        }else {
+
+            List<Database> databases = DatabaseDAO.findForBusinessId(loggedInUser.getUser().getBusinessId());
+            for (Database database : databases) {
+                if (loggedInUser.getUser().isAdministrator()) {// admin gets all
+                    List<OnlineReport> reports = OnlineReportDAO.findForDatabaseId(database.getId());
+                    for (OnlineReport report : reports) {
+                        report.setDatabase(database.getName());
+                    }
+                    reportList.addAll(reports);
+                } else if (loggedInUser.getUser().isDeveloper() && database.getUserId() == loggedInUser.getUser().getId()) { // developer constrained to their own database reports
+                    List<OnlineReport> reports = OnlineReportDAO.findForDatabaseId(database.getId());
+                    for (OnlineReport report : reports) {
+                        report.setDatabase(database.getName());
+                    }
+                    reportList.addAll(reports);
+                }
+            }
+            if (loggedInUser.getUser().isAdministrator()) {
+                List<OnlineReport> reports = OnlineReportDAO.findForBusinessIdWithNoDatabase(loggedInUser.getUser().getBusinessId());
                 for (OnlineReport report : reports) {
-                    report.setDatabase(database.getName());
+                    report.setDatabase("No database");
                 }
                 reportList.addAll(reports);
             }
-        }
-        if (loggedInUser.getUser().isAdministrator()) {
-            List<OnlineReport> reports = OnlineReportDAO.findForBusinessIdWithNoDatabase(loggedInUser.getUser().getBusinessId());
-            for (OnlineReport report : reports) {
-                report.setDatabase("No database");
-            }
-            reportList.addAll(reports);
         }
         // was setting the database name for each report, this will be irrelevant
         if (reportList.size() == 0) {

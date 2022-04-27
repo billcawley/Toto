@@ -191,7 +191,7 @@ public class OnlineController {
                         book.getInternalBook().setAttribute(REPORT_ID, or.getId());
                         ReportRenderer.populateBook(book, 0);
                         // end duplicate so now we have to find the permission id
-                        permissionId = reportName.replace("_"," ").toLowerCase(); // I think that's it!
+                        permissionId = reportName.replace("_"," "); // I think that's it!
                     }
 
 
@@ -242,7 +242,7 @@ public class OnlineController {
                     //new logic for permissions ad hoc on a report
 //                    System.out.println("Checking permission : " + permissionId);
                      if (!loggedInUser.getUser().isAdministrator() && !loggedInUser.getUser().isDeveloper()){
-                       LoggedInUser.ReportDatabase permission = loggedInUser.getPermission(permissionId.toLowerCase());
+                       LoggedInUser.ReportDatabase permission = loggedInUser.getPermission(permissionId);
                        if (permission!=null){
                            readOnlyReport = permission.isReadOnly();
                            onlineReport = permission.getReport();
@@ -354,10 +354,8 @@ public class OnlineController {
                         model.addAttribute("databaseName", loggedInUser.getDatabase().getName());
                         AdminService.setBanner(model, loggedInUser);
                         // todo - report list based off home menu? Doable?
-                        if (loggedInUser.getUser().isAdministrator()){
-                            model.put("reports", AdminService.getReportList(loggedInUser, true));
-                        }
-                            return "zsshowsheet2";
+                        model.put("reports", AdminService.getReportList(loggedInUser, true));
+                        return "zsshowsheet2";
                     }
                     // ok now I need to set the sheet loading but on a new thread
                     if (session.getAttribute(reportId + "loading") == null) { // don't wanna load it twice! This could be hit if the user refreshes while generating the report.

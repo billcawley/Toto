@@ -335,7 +335,9 @@ public class ReportRenderer {
                             CellOperationUtil.insertRow(insertRange);
                         }
                         int rowNo = firstRow;
+                        int menuCount = 0;
                         for (List<String> submenu : menuSpec) {
+                            menuCount++;
                             String submenuText = submenu.get(0);
                             String submenuName = submenu.get(1);
                             String submenuExplanation = submenu.get(2);
@@ -365,6 +367,13 @@ public class ReportRenderer {
                                     sheet.getInternalSheet().getCell(rowNo++, firstCol + 2).setStringValue(menuItem.getExplanation());
                                     Database db = DatabaseDAO.findById(menuItem.getId());
                                     loggedInUser.setReportDatabasePermission(menuItemName,or,db,true, false);
+                                    String menuPrefix = "";
+                                    try{
+                                        int existingMenuPrefix = Integer.parseInt(submenuText.substring(0,submenuText.indexOf(" ")));
+                                    }catch(Exception e){
+                                        menuPrefix = menuCount + " ";
+                                    }
+                                    loggedInUser.setPermissionData(menuItemName,menuPrefix + submenuText,menuItem.getPosition());//saving for use in the side menu
 
                                 }
                                 rowNo++;//blank row between menus

@@ -100,7 +100,7 @@
 						&nbsp;&nbsp;${report.category}
 						<hr>
 					</c:if>
-					<a href="/api/Online?reportid=${report.id}&amp;database=${report.database}">
+					<a href="/api/Online?reportid=${report.id}&amp;database=${report.database}&amp;permissionid=${report.untaggedReportName}">
 						&nbsp;&nbsp;&nbsp;&nbsp;${report.untaggedReportName}<br/>
 					</a>
 				</c:if>

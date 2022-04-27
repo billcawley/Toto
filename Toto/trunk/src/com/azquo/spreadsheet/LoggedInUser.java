@@ -52,12 +52,16 @@ public class LoggedInUser implements Serializable {
         final int databaseId;
         final boolean readOnly;// Ed Broking require this, not a bad idea to have anyway
         final boolean recording;//will update user_event
+        String submenuName;
+        int position;
 
         public ReportIdDatabaseId(int reportId, int databaseId, boolean readOnly, boolean recording) {
             this.reportId = reportId;
             this.databaseId = databaseId;
             this.readOnly = readOnly;
             this.recording = recording;
+            this.submenuName = null;
+            this.position = 0;
         }
 
         public int getReportId() {
@@ -73,6 +77,15 @@ public class LoggedInUser implements Serializable {
         }
 
         public boolean isRecording() {return recording; }
+
+        public String getSubmenuName(){ return submenuName; }
+
+        public void setSubmenuName(String submenuName) {this.submenuName = submenuName; }
+
+        public int getPosition() {return position; }
+
+        public void setPosition(int position) {this.position = position; }
+
     }
 
     public static class ReportDatabase {
@@ -105,6 +118,7 @@ public class LoggedInUser implements Serializable {
         }
 
         public void setRecording(boolean recording) {this.recording = recording; }
+
 
     }
 
@@ -339,7 +353,7 @@ public class LoggedInUser implements Serializable {
 
     // deliberately look up the permissions each time - we want to be up to date with master_db
     public ReportDatabase getPermission(String reportName){
-        ReportIdDatabaseId idPair = reportIdDatabaseIdPermissions.get(reportName.toLowerCase());
+        ReportIdDatabaseId idPair = reportIdDatabaseIdPermissions.get(reportName);
         if (idPair != null){
             Database byId = DatabaseDAO.findById(idPair.getDatabaseId());
             OnlineReport onlineReport = OnlineReportDAO.findById(idPair.getReportId());
@@ -361,14 +375,22 @@ public class LoggedInUser implements Serializable {
         //In order to test menus, developers must have the same permissions as users....
        // if (!this.getUser().isDeveloper() && !this.getUser().isAdministrator()) {
         if (database!=null){
-            reportIdDatabaseIdPermissions.put(key != null ? key.toLowerCase() : onlineReport.getReportName().toLowerCase(), new ReportIdDatabaseId(onlineReport.getId(), database.getId(), readOnly, recording));
+            reportIdDatabaseIdPermissions.put(key != null ? key : onlineReport.getReportName(), new ReportIdDatabaseId(onlineReport.getId(), database.getId(), readOnly, recording));
         }else{
-            reportIdDatabaseIdPermissions.put(key != null ? key.toLowerCase() : onlineReport.getReportName().toLowerCase(), new ReportIdDatabaseId(onlineReport.getId(), 0, readOnly, recording));
+            reportIdDatabaseIdPermissions.put(key != null ? key : onlineReport.getReportName(), new ReportIdDatabaseId(onlineReport.getId(), 0, readOnly, recording));
 
         }
        // }
     }
 
+    public void setPermissionData(String key, String submenuName, int position){
+        ReportIdDatabaseId rd = reportIdDatabaseIdPermissions.get(key);
+        if (rd==null) return;
+        rd.setSubmenuName(submenuName);
+        rd.setPosition(position);
+
+
+    }
     public Map<String, ReportIdDatabaseId> getReportIdDatabaseIdPermissions() {
         return reportIdDatabaseIdPermissions;
     }
