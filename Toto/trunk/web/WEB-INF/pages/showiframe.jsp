@@ -48,6 +48,39 @@
     </div>
 </nav>
 
+<c:if test="${reports != null && param.testmenu==true}">
+    <button class="button" data-show="quickview" data-target="quickviewDefault" style="
+	position: fixed;
+    top: 5%;
+        z-index: 34;
+"><i class="fa-solid fa-chevron-right"></i></button>
+
+    <div id="quickviewDefault" class="quickview is-left">
+        <header class="quickview-header">
+            <p class="title">Reports</p>
+            <span class="delete" data-dismiss="quickview"></span>
+        </header>
+
+        <div class="quickview-body">
+            <div class="quickview-block">
+                <c:forEach items="${reports}" var="report">
+                    <c:if test="${report.database != 'None'}">
+                        <c:if test="${report.category != ''}">
+                            <hr>
+                            &nbsp;&nbsp;${report.category}
+                            <hr>
+                        </c:if>
+                        <a href="/api/Online?reportid=${report.id}&amp;database=${report.database}&amp;permissionid=${report.untaggedReportName}">
+                            &nbsp;&nbsp;&nbsp;&nbsp;${report.untaggedReportName}<br/>
+                        </a>
+                    </c:if>
+                </c:forEach>
+
+            </div>
+        </div>
+
+    </div>
+</c:if>
 
 
 <script type="text/javascript">
@@ -75,5 +108,13 @@
             style="height: calc(100vh - 70px);
 display:block;">
     </iframe>
+
+<c:if test="${reports != null && param.testmenu==true}">
+    <script type="text/javascript" src="/quickview/bulma-quickview.min.js"></script>
+    <script>
+        var quickviews = bulmaQuickview.attach(); // quickviews now contains an array of all Quickview instances
+    </script>
+</c:if>
+
 </body>
 </html>
