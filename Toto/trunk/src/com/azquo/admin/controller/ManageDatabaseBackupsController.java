@@ -12,6 +12,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.zeroturnaround.zip.ZipUtil;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.File;
@@ -90,7 +91,21 @@ public class ManageDatabaseBackupsController {
                     // todo - factor, this could cause problems!
                     if (restoreBackupOk) {
                         loggedInUser.setDatabaseWithServer(DatabaseServerDAO.findById(databaseById.getDatabaseServerId()), databaseById);
-                        BackupService.loadDBBackup(loggedInUser, new File(dbBackupsDirectory + "/" + restoreBackup), null, new StringBuilder(), true);
+                        // todo : need to unzip if the file is zipped
+                        if (restoreBackup.endsWith(".zip")){
+                            File file = new File(dbBackupsDirectory + "/" + restoreBackup);
+                            System.out.println("attempting zipped auto backup restore on " + file.getPath());
+                            ZipUtil.explode(file);
+                            // after exploding the original file is replaced with a directory
+                            File zipDir = new File(file.getPath());
+                            File[] files = zipDir.listFiles();
+                            for (File f : files) { // should be just one!
+                                BackupService.loadDBBackup(loggedInUser, f, null, new StringBuilder(), true);
+                            }
+                            ZipUtil.unexplode(file);// first time using - hopefully it will put it back where it was!
+                        } else {
+                            BackupService.loadDBBackup(loggedInUser, new File(dbBackupsDirectory + "/" + restoreBackup), null, new StringBuilder(), true);
+                        }
                     }
                     // todo - reverse date sort!
                     model.put("developer", loggedInUser.getUser().isDeveloper());

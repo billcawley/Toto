@@ -18,6 +18,7 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
+import org.zeroturnaround.zip.ZipUtil;
 import org.zeroturnaround.zip.commons.FileUtils;
 
 import javax.xml.parsers.DocumentBuilder;
@@ -150,15 +151,21 @@ public class DBCron {
             // todo - make them zipped but with support for the old files also
             if (backupname != null && backupname.length() > 0) {
                 backupname = backupname.replaceAll("[^A-Za-z0-9_]", "");
+                String backupZipName = backupname + ".zip";
                 /* ok where do the backups go?
                  this is how reports are found String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + finalOnlineReport.getFilenameForDisk();
                  this is a directory per business though . . . we want a directory per database really. So make a directory in there! Need to zap on delete . . .
                  */
                 String dbBackupsDir = getDBBackupsDirectory(toBackUp);
-                if (!Files.exists(Paths.get(dbBackupsDir + "/" + backupname))) { // then we need to make a backup . . .
+                if (!Files.exists(Paths.get(dbBackupsDir + "/" + backupname)) && !Files.exists(Paths.get(dbBackupsDir + "/" + backupZipName))) { // then we need to make a backup . . .
                     DatabaseServer server = DatabaseServerDAO.findById(toBackUp.getDatabaseServerId());
                     File dbBackupFile = BackupService.createDBBackupFile(toBackUp.getName(), null, new DatabaseAccessToken("", "", server.getIp(), toBackUp.getPersistenceName()), server);
-                    FileUtils.copyFile(dbBackupFile, new File(dbBackupsDir + "/" + backupname));
+                    File destinationFile = new File(dbBackupsDir + "/" + backupname);
+                    FileUtils.copyFile(dbBackupFile, destinationFile);
+                    // new thing - zip the file to save space
+                    File zippedFile = new File(destinationFile.getAbsolutePath() + ".zip");
+                    ZipUtil.packEntry(destinationFile, zippedFile);
+                    destinationFile.delete(); // as there's a zip file now instead
                     dbBackupFile.delete();
                 }
             }
