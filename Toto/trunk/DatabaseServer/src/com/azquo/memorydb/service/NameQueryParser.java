@@ -350,7 +350,8 @@ public class NameQueryParser {
                         if (defChangedRecursive == null){
                             throw new Exception("Parent of " + defName + " does not have a default display name, this will crash calc definitions.");
                         }
-                        calcDefinitons(azquoMemoryDBConnection,defChangedRecursive,attributeNames,global, level);
+                        //used to work on defChangedRecursive - WHY????
+                        calcDefinitons(azquoMemoryDBConnection, defName.getDefaultDisplayName(),attributeNames,global, level);
                     }
                 }
             }
