@@ -65,6 +65,8 @@ public class JstreeController {
             if (itemsChosen == null){
                 itemsChosen = query;
             }
+
+
             jsTreeMode = "chosentree";
         }
         String jsonFunction = "azquojsonfeed";
@@ -73,7 +75,7 @@ public class JstreeController {
             model.addAttribute("content", "error:not logged in");
             return "utf8page";
         }
-        if (!loggedInUser.getUser().isDeveloper() && !loggedInUser.getUser().isAdministrator()) {
+        if (!op.equals("children") && !loggedInUser.getUser().isDeveloper() && !loggedInUser.getUser().isAdministrator()&& (query==null || query.length()==0)) {
             model.addAttribute("content", "error:access denied");
             return "utf8page";
         }
