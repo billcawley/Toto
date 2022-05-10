@@ -16,4 +16,12 @@
         <name>io.keikai.import.cache</name>
         <value>true</value> <!-- turn the import cache on; default is false if not specified -->
     </library-property>
+<!-- zk security patch until next keikai update -->
+    <listener>
+        <listener-class>org.zkoss.support.patch.AuUploadWebAppInit</listener-class>
+    </listener>
+
+    <system-config>
+        <file-item-factory-class>org.zkoss.support.patch.UploadFixItemFactory</file-item-factory-class>
+    </system-config>
 </zk>
