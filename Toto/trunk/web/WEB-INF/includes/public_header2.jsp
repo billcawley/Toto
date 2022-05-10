@@ -33,8 +33,8 @@
 
 <nav class="navbar is-black" role="navigation" aria-label="main navigation">
 	<div class="navbar-brand">
-		<a class="navbar-item" href="https://azquo.com">
-			<img src="${logo}" alt="azquo">
+		<a class="navbar-item" href="/api/Online?reportid=1">
+			<img src="${logo}">
 		</a>
 	</div>
 	<div id="navbarBasicExample" class="navbar-menu">
