@@ -353,7 +353,7 @@ public class LoggedInUser implements Serializable {
 
     // deliberately look up the permissions each time - we want to be up to date with master_db
     public ReportDatabase getPermission(String reportName){
-        ReportIdDatabaseId idPair = reportIdDatabaseIdPermissions.get(reportName);
+        ReportIdDatabaseId idPair = reportIdDatabaseIdPermissions.get(reportName.toLowerCase());
         if (idPair != null){
             Database byId = DatabaseDAO.findById(idPair.getDatabaseId());
             OnlineReport onlineReport = OnlineReportDAO.findById(idPair.getReportId());
@@ -371,16 +371,16 @@ public class LoggedInUser implements Serializable {
     }
 
 
-     public void setReportDatabasePermission(String key, OnlineReport onlineReport, Database database, boolean readOnly, boolean recording){
+    public void setReportDatabasePermission(String key, OnlineReport onlineReport, Database database, boolean readOnly, boolean recording){
         //In order to test menus, developers must have the same permissions as users....
-       // if (!this.getUser().isDeveloper() && !this.getUser().isAdministrator()) {
+        // if (!this.getUser().isDeveloper() && !this.getUser().isAdministrator()) {
         if (database!=null){
-            reportIdDatabaseIdPermissions.put(key != null ? key : onlineReport.getReportName(), new ReportIdDatabaseId(onlineReport.getId(), database.getId(), readOnly, recording));
+            reportIdDatabaseIdPermissions.put(key != null ? key.toLowerCase() : onlineReport.getReportName().toLowerCase(), new ReportIdDatabaseId(onlineReport.getId(), database.getId(), readOnly, recording));
         }else{
-            reportIdDatabaseIdPermissions.put(key != null ? key : onlineReport.getReportName(), new ReportIdDatabaseId(onlineReport.getId(), 0, readOnly, recording));
+            reportIdDatabaseIdPermissions.put(key != null ? key.toLowerCase() : onlineReport.getReportName().toLowerCase(), new ReportIdDatabaseId(onlineReport.getId(), 0, readOnly, recording));
 
         }
-       // }
+        // }
     }
 
     public void setPermissionData(String key, String submenuName, int position){

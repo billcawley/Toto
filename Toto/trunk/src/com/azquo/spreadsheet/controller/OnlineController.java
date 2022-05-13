@@ -191,7 +191,7 @@ public class OnlineController {
                         book.getInternalBook().setAttribute(REPORT_ID, or.getId());
                         ReportRenderer.populateBook(book, 0);
                         // end duplicate so now we have to find the permission id
-                        permissionId = reportName.replace("_"," "); // I think that's it!
+                        permissionId = reportName.replace("_"," ").toLowerCase(); // I think that's it!
                     }
 
 
@@ -242,7 +242,7 @@ public class OnlineController {
                     //new logic for permissions ad hoc on a report
 //                    System.out.println("Checking permission : " + permissionId);
                      if (!loggedInUser.getUser().isAdministrator() && !loggedInUser.getUser().isDeveloper()){
-                       LoggedInUser.ReportDatabase permission = loggedInUser.getPermission(permissionId);
+                       LoggedInUser.ReportDatabase permission = loggedInUser.getPermission(permissionId.toLowerCase());
                        if (permission!=null){
                            readOnlyReport = permission.isReadOnly();
                            onlineReport = permission.getReport();

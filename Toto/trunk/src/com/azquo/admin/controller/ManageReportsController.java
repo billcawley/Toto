@@ -67,6 +67,13 @@ public class ManageReportsController {
             , @RequestParam(value = "submit", required = false) String submit
             , @RequestParam(value = "test", required = false) String test
     ) {
+        if ("true".equalsIgnoreCase(request.getParameter("testmode"))){
+            request.getSession().setAttribute("test", "true");
+        }
+        if ("false".equalsIgnoreCase(request.getParameter("testmode"))){
+            request.getSession().removeAttribute("test");
+        }
+
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
         // I assume secure until we move to proper spring security
         if (loggedInUser != null && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
@@ -171,12 +178,12 @@ public class ManageReportsController {
             model.put("developer", loggedInUser.getUser().isDeveloper());
             model.put("showexplanation", showExplanation);
             AdminService.setBanner(model,loggedInUser);
-            if (request.getParameter("newformat") != null){
+/*            if (request.getSession().getAttribute("test") != null){
                 // EFC : I know this is hacky, just trying to make it work
                 model.put("categorybefore", "</div><h1>");
                 model.put("categoryafter", "</h1><div class=\"columns is-multiline\">");
                 return "managereportscards";
-            }
+            }*/
                 return "managereports2";
         } else {
             return "redirect:/api/Login";

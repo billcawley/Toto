@@ -49,7 +49,7 @@
     </div>
 </nav>
 
-<c:if test="${reports != null && param.testmenu==true}">
+<c:if test="${reports != null && sessionScope.test != null}">
     <button class="button" data-show="quickview" data-target="quickviewDefault" style="
 	position: fixed;
     top: 5%;
@@ -110,7 +110,7 @@
 display:block;">
     </iframe>
 
-<c:if test="${reports != null && param.testmenu==true}">
+<c:if test="${reports != null && sessionScope.test != null}">
     <script type="text/javascript" src="/quickview/bulma-quickview.min.js"></script>
     <script>
         var quickviews = bulmaQuickview.attach(); // quickviews now contains an array of all Quickview instances

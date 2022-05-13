@@ -78,7 +78,7 @@
 		</div>
 	</div>
 </nav>
-<c:if test="${reports != null && param.testmenu==true}">
+<c:if test="${reports != null && sessionScope.test != null}">
 <button class="button" data-show="quickview" data-target="quickviewDefault" style="
 	position: fixed;
     top: 5%;

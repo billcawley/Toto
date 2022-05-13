@@ -59,6 +59,11 @@
 				   href="/api/ManageReportSchedules">Schedules
 				</a>
 			</c:if>
+			<c:if test="${sessionScope.test != null}">
+				<a class="navbar-item is-tab${fn:startsWith(requestScope['javax.servlet.forward.path_info'], '/RangeTest') ? ' is-active' : ''}"
+				   href="/api/RangeTest">Range Test (like new inspect)
+				</a>
+			</c:if>
 		</div>
 
 		<div class="navbar-end">
@@ -69,7 +74,7 @@
 		</div>
 	</div>
 </nav>
-<c:if test="${reports != null && param.testmenu==true}">
+<c:if test="${reports != null && sessionScope.test != null}">
 <button class="button" data-show="quickview" data-target="quickviewDefault" style="
 	position: fixed;
     top: 5%;

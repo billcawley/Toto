@@ -169,7 +169,7 @@ public class ZKComposer extends SelectorComposer<Component> {
             final SCell cell = myzss.getSelectedSheet().getInternalSheet().getCell(event.getRow(), event.getColumn());// we care about the contents of the left most cell
             if (!cell.isNull() && cell.getType().equals(SCell.CellType.STRING)) {
                 try {
-                    cellValue = cell.getStringValue().trim();
+                    cellValue = cell.getStringValue().toLowerCase(Locale.ROOT).trim();
                     if (cellValue.length() > 0) {
                          if (myzss.getSelectedSheet().getBook().hasNameRange(StringLiterals.AZMENUSPEC) && loggedInUser.getPermission(cellValue)!=null){
                             Clients.evalJavaScript("window.open(\"/api/Online?permissionid=" + URLEncoder.encode(cellValue, "UTF-8") + "\")");
