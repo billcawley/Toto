@@ -151,13 +151,11 @@ public class LoggedInUser implements Serializable {
     // report, database, generally set from a home user menu
     private final Map<String, ReportIdDatabaseId> reportIdDatabaseIdPermissions; // hold them here after they're set by a "home page" report for linking
 
-    // option to open iframes from the report menu
-    private final Map<String, String> iframeLookups; // hold them here after they're set by a "home page" report for linking
-
     private Set<String> formPermissions; // form permissions, more simple than above
 
     private OPCPackage opcPackage;
     private Workbook preprocessorLoaded;
+    private String preprocessorName;
 
     private Set<String> pendingUploadPermissions; // for users with status User to access the pending uploads but to be restricted to certain import template versions
 
@@ -206,10 +204,10 @@ public class LoggedInUser implements Serializable {
         formPermissions = new HashSet<>();
         opcPackage = null;
         preprocessorLoaded = null;
+        preprocessorName = null;
         pendingUploadPermissions = new HashSet<>();
 
-        iframeLookups = new HashMap<>();
-    }
+      }
 
     public JsonChildren.Node getFromJsTreeLookupMap(int jsTreeNodeId) {
         return jsTreeLookupMap.get(jsTreeNodeId);
@@ -395,13 +393,6 @@ public class LoggedInUser implements Serializable {
         return reportIdDatabaseIdPermissions;
     }
 
-    public void setIFrameLookup(String name, String url){
-        iframeLookups.put(name, url);
-    }
-
-    public String getIFrameUrl(String name) {
-        return iframeLookups.get(name.toLowerCase(Locale.ROOT));
-    }
 
     public Set<String> getFormPermissions() {
         return formPermissions;
@@ -418,6 +409,10 @@ public class LoggedInUser implements Serializable {
     public Workbook getPreprocessorLoaded() { return preprocessorLoaded; }
 
     public void setPreprocessorLoaded(Workbook preprocessorLoaded) {this.preprocessorLoaded = preprocessorLoaded; }
+
+    public String getPreprocessorName(){return preprocessorName; }
+
+    public void setPreprocessorName(String preprocessorName) {this.preprocessorName = preprocessorName; }
 
     // just pop it open and closed, should be a little cleaner
 /*    public void userLog(String message) {
