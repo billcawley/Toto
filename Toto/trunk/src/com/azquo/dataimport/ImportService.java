@@ -550,16 +550,6 @@ public final class ImportService {
                     */
                     if (or != null) {
                          // zap the old one first
-                        List<MenuItem> menuItems = MenuItemDAO.findForReportId(or.getId());
-                        for (MenuItem menuItem:menuItems){
-                            if (menuItem != null) {
-                                MenuItemDAO.removeById(menuItem);
-                            }
-                        }
-                        List<ImportdataUsage>importdataUsages = ImportdataUsageDAO.findForBusinessAndReportID(loggedInUser.getBusiness().getId(),or.getId());
-                        for (ImportdataUsage importdataUsage:importdataUsages){
-                            ImportdataUsageDAO.removeById(importdataUsage);
-                        }
                         try {
                             Files.deleteIfExists(Paths.get(SpreadsheetService.getHomeDir() + dbPath + pathName + onlineReportsDir + or.getFilenameForDisk()));
                         } catch (Exception e) {
@@ -573,42 +563,6 @@ public final class ImportService {
                     }
                     OnlineReportDAO.store(or); // store before or.getFilenameForDisk() or the id will be wrong!
                     List<org.apache.poi.ss.usermodel.Name> names = (List<Name>)book.getAllNames();
-                    for (org.apache.poi.ss.usermodel.Name name:names){
-                        if (name.getNameName().toLowerCase(Locale.ROOT).startsWith(StringLiterals.AZSHOWIN)){
-                            for (int col=1;col<10;col++) {
-
-                                Map<String, String> showinVals = rangeToMap(book, name, col);
-                                if (getMapValue(showinVals,"submenu name").length()==0){
-                                    break;
-                                }
-                                int azquoDatabaseId = 0;
-                                int position = 0;
-                                if (showinVals.get("position").length()> 0) {
-                                    position = Integer.parseInt(showinVals.get("position"));
-                                }
-                                String aDatabase = showinVals.get("azquo database");
-                                if (aDatabase.length() > 0) {
-                                    Database adb = DatabaseDAO.findForNameAndBusinessId(aDatabase, businessId);
-                                    if (adb!=null){
-                                        azquoDatabaseId = adb.getId();
-                                    }
-                                }
-                                MenuItem menuitem = new MenuItem(0, LocalDateTime.now(), businessId, or.getId(), showinVals.get("submenu name").toLowerCase(Locale.ROOT), getMapValue(showinVals,"shown report name"), getMapValue(showinVals,"explanation"),getMapValue(showinVals,"iframe"), position, azquoDatabaseId);
-                                MenuItemDAO.store(menuitem);
-                            }
-                        }
-                        if (name.getNameName().toLowerCase(Locale.ROOT).startsWith(StringLiterals.AZIMPORTDATA)){
-                            for (int col=1;col<10;col++) {
-
-                                Map<String, String> importdataVals = rangeToMap(book, name, col);
-                                String importdataName = getMapValue(importdataVals,"sheet/range name");
-                                if (importdataName.length()>0) {
-                                    ImportdataUsage importdataUsage = new ImportdataUsage(0, loggedInUser.getBusiness().getId(), importdataName,or.getId());
-                                    ImportdataUsageDAO.store(importdataUsage);
-                                }
-                            }
-                        }
-                    }
 
                     Path fullPath = Paths.get(SpreadsheetService.getHomeDir() + dbPath + pathName + onlineReportsDir + or.getFilenameForDisk());
                     Files.createDirectories(fullPath.getParent()); // in case it doesn't exist
@@ -944,14 +898,7 @@ public final class ImportService {
         for (int rNo = startRow; rNo <= endRow; rNo++) {
             List<String>dataline = new ArrayList<>();
             for (int cNo = startCol; cNo <= endCol; cNo++) {
-                String val = "";
-                Double d = getCellValue(sheet,rNo, cNo).getDouble();
-                if (d!=null){
-                    val = d + "";
-                } else {
-                    val = "'" + getCellValue(sheet, rNo, cNo).getString() + "'";
-                }
-                dataline.add(zapCRs(val));
+                dataline.add(zapCRs(getCellValue(sheet,rNo,cNo).getString()));
             }
             toReturn.add(dataline);
         }
@@ -2448,10 +2395,10 @@ fr.close();
         Workbook ppBook = null;
 
         try {
-            if (loggedInUser.getPreprocessorLoaded()==null) {
+            if (loggedInUser.getPreprocessorName()==null || !loggedInUser.getPreprocessorName().equals(preprocessor)) {
                  setUpPreprocessor(loggedInUser, uploadedFile, preprocessor);
             }
-               opcPackage = loggedInUser.getOpcPackage();
+
             ppBook = loggedInUser.getPreprocessorLoaded();
             if (ppBook==null){//json
                 return;
@@ -2994,6 +2941,7 @@ fr.close();
 
         }
         loggedInUser.setPreprocessorLoaded(ppBook);
+        loggedInUser.setPreprocessorName(preprocessor);
         loggedInUser.setOpcPackage(opcPackage);
 
     }
@@ -3671,18 +3619,22 @@ fr.close();
 
     public static void evaluateAllFormulaCells(Workbook wb, Name name) {
         FormulaEvaluator evaluator = wb.getCreationHelper().createFormulaEvaluator();
-        Sheet sheet = wb.getSheetAt(name.getSheetIndex());
         AreaReference ar = new AreaReference(name.getRefersToFormula(),null);
+        try {
+            Sheet sheet = wb.getSheet(ar.getFirstCell().getSheetName());
 
-        for(int rowNo = ar.getFirstCell().getRow(); rowNo <= ar.getLastCell().getRow(); rowNo++) {
-            if (sheet.getRow(rowNo)!=null) {
-                for (int colNo = ar.getFirstCell().getCol(); colNo <= ar.getLastCell().getCol(); colNo++) {
-                    Cell c = sheet.getRow(rowNo).getCell(colNo);
-                    if (c != null && c.getCellType() == CellType.FORMULA) {
-                        evaluator.evaluateFormulaCell(c);
+            for (int rowNo = ar.getFirstCell().getRow(); rowNo <= ar.getLastCell().getRow(); rowNo++) {
+                if (sheet.getRow(rowNo) != null) {
+                    for (int colNo = ar.getFirstCell().getCol(); colNo <= ar.getLastCell().getCol(); colNo++) {
+                        Cell c = sheet.getRow(rowNo).getCell(colNo);
+                        if (c != null && c.getCellType() == CellType.FORMULA) {
+                            evaluator.evaluateFormulaCell(c);
+                        }
                     }
                 }
             }
+        }catch(Exception e){
+            //dud reference
         }
 
     }
