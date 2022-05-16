@@ -2,6 +2,8 @@ package com.azquo.spreadsheet.zk;
 
 import com.azquo.DateUtils;
 import com.azquo.StringLiterals;
+import com.azquo.admin.onlinereport.ExternalDataRequest;
+import com.azquo.admin.onlinereport.ExternalDataRequestDAO;
 import com.azquo.spreadsheet.CommonReportUtils;
 import com.azquo.spreadsheet.LoggedInUser;
 import io.keikai.model.*;
@@ -514,49 +516,34 @@ java.lang.IllegalStateException: is ERROR, not the one of [STRING, BLANK]
             }
         }
     }
-    public static boolean  inExternalData(LoggedInUser loggedInUser,Range cell){
+    public static boolean  inExternalData(LoggedInUser loggedInUser,Range cell, List<SName>names){
         Book book = cell.getBook();
         for (SName name:book.getInternalBook().getNames()){
             int nameRow = -1;
             int saveRow = -1;
-             if (name.getName().toLowerCase(Locale.ROOT).startsWith(StringLiterals.AZIMPORTDATA)){
-                List<List<String>> importdataspec = BookUtils.replaceUserChoicesInRegionDefinition(loggedInUser, name);
-                int cols = importdataspec.get(0).size();
-                int rows = importdataspec.size();
-                for (int rowNo = 0;rowNo < rows;rowNo++){
-                    String heading = importdataspec.get(rowNo).get(0).toLowerCase(Locale.ROOT);
-                    if (heading.equals("sheet/range name")) nameRow = rowNo;
-                   if (heading.equals("save")) saveRow = rowNo;
+            List<ExternalDataRequest>externalDataRequests = ExternalDataRequestDAO.findForReportId(loggedInUser.getOnlineReport().getId());
+            for(ExternalDataRequest externalDataRequest:externalDataRequests){
+                boolean found = false;
+                Sheet sheet = null;
+                CellRegion cellRegion = null;
+                for (int i=0;i<book.getNumberOfSheets();i++){
+                    sheet = book.getSheetAt(i);
+                    if (sheet.getSheetName().equalsIgnoreCase(externalDataRequest.getSheetRangeName())){
+                        return true;
+                     }
                 }
-                if (nameRow < 0 || saveRow < 0){
-                    return false;
-                }
-                for (int col=1;col<cols;col++) {
-                    String rangeName = importdataspec.get(nameRow).get(col).toLowerCase(Locale.ROOT);
-                    if (rangeName.length() == 0){
-                        break;
-                    }
-                    String saveInstructions = importdataspec.get(saveRow).get(col).toLowerCase(Locale.ROOT);
-                    String keyName = null;
-                    if   (saveInstructions!=null && saveInstructions.length()>0) {
-                        for (int i = 0; i < book.getNumberOfSheets(); i++) {
-                            Sheet sheet = book.getSheetAt(i);
-                            if (sheet.getSheetName().toLowerCase(Locale.ROOT).equals(rangeName)) {
-                                return true;
-                            }
-                        }
-                        SName sourceName = book.getInternalBook().getNameByName(rangeName);
-                        if (sourceName != null  && inRange(cell,sourceName)) {
-                            return true;
-                        }
+                for (SName sName:names){
+                    if (sName.getName().equalsIgnoreCase(externalDataRequest.getSheetRangeName())){
+                        return true;
+
                     }
                 }
             }
         }
-    return false;
+        return false;
     }
 
-    private static boolean inRange(Range cell, SName name){
+        private static boolean inRange(Range cell, SName name){
          if (cell.getSheet().getSheetName().equals(name.getRefersToSheetName())
                 && cell.getRow()>= name.getRefersToCellRegion().getRow()
                 && cell.getRow() <= name.getRefersToCellRegion().getLastRow()

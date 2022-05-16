@@ -71,7 +71,7 @@
 		}
 		var toReturn = "";
 		for (let ch of choices.keys()){
-			toReturn+= ch + " = " + choices.get(ch) + "</br>";
+			toReturn+= ch + " = " + choices.get(ch) + "<br/>";
 		}
 		return toReturn;
 	}

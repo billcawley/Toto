@@ -47,7 +47,7 @@
         </c:forEach>
         </tbody>
     </table>
-    Ad Hoc Reports
+    Designed reports
     <table class="table is-striped is-fullwidth">
         <tbody>
         <c:forEach items="${adhoc_reports}" var="report">
@@ -63,7 +63,7 @@
         </c:forEach>
         <tr>
             <td></td>
-            <td><a href="/api/Online?reportid=ADHOC" target="_blank"> <span class="fa fa-table"></span> NEW AD-HOC REPORT</a></td>
+            <td><a href="/api/ManageReports?createnewreport=tobeentered" target="_blank"> <span class="fa fa-table"></span> NEW REPORT</a></td>
         </tr>
         </tbody>
     </table>

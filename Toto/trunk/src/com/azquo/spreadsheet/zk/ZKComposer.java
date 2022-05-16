@@ -460,7 +460,7 @@ public class ZKComposer extends SelectorComposer<Component> {
             for (SName name : headingNames) {
                 headingRowColsToSave.add(new RegionRowCol(name.getRefersToSheetName(), name.getName().substring(StringLiterals.AZDISPLAYROWHEADINGS.length()), row - name.getRefersToCellRegion().getRow(), col - name.getRefersToCellRegion().getColumn()));
             }
-            if (BookUtils.inExternalData(loggedInUser,cellEdited)){
+            if (BookUtils.inExternalData(loggedInUser,cellEdited, names)){
                 showSaveButton();
             }
             for (RegionRowCol regionRowCol : regionRowColsToSave) {

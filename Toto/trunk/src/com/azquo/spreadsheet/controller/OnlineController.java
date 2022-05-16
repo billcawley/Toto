@@ -9,9 +9,7 @@ import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseDAO;
 import com.azquo.admin.database.DatabaseServer;
 import com.azquo.admin.database.DatabaseServerDAO;
-import com.azquo.admin.onlinereport.DatabaseReportLinkDAO;
-import com.azquo.admin.onlinereport.OnlineReportDAO;
-import com.azquo.admin.onlinereport.OnlineReport;
+import com.azquo.admin.onlinereport.*;
 import com.azquo.dataimport.SFTPUtilities;
 import com.azquo.dataimport.ImportService;
 import com.azquo.memorydb.DatabaseAccessToken;
@@ -251,13 +249,7 @@ public class OnlineController {
                      }else{
                          onlineReport = OnlineReportDAO.findForDatabaseIdAndName(loggedInUser.getDatabase().getId(), permissionId);
                      }
-                    if (loggedInUser.getIFrameUrl(permissionId) != null) {
-                        model.put("iframesrc", loggedInUser.getIFrameUrl(permissionId));
-                        model.put("reports", AdminService.getReportList(loggedInUser, true));
-                        AdminService.setBanner(model, loggedInUser);
-                        return "showiframe";
-                    }
-                    if (onlineReport==null) {
+                     if (onlineReport==null) {
                           result = "error: user has no permission for this report";
 
                     }
@@ -307,6 +299,13 @@ public class OnlineController {
                 }
                 // db and report should be sorted by now
                 if (onlineReport != null) {
+                    if (onlineReport.getFilename().startsWith("IFRAME")){
+                            model.put("iframesrc", onlineReport.getFilename().substring(7));
+                            model.put("reports", AdminService.getReportList(loggedInUser, true));
+                            AdminService.setBanner(model, loggedInUser);
+                            return "showiframe";
+                     }
+
                     reportId = onlineReport.getId() + "";
                      // ok the new sheet and the loading screen have added chunks of code here, should it be in a service or can it "live" here?
                     final int valueId = ServletRequestUtils.getIntParameter(request, "valueid", 0); // the value to be selected if it's in any of the regions . . . how to select?

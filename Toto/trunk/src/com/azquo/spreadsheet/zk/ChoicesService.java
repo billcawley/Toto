@@ -3,6 +3,8 @@ package com.azquo.spreadsheet.zk;
 import com.azquo.ExternalConnector;
 import com.azquo.StringLiterals;
 import com.azquo.StringUtils;
+import com.azquo.admin.onlinereport.ExternalDataRequest;
+import com.azquo.admin.onlinereport.ExternalDataRequestDAO;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.CommonReportUtils;
@@ -63,10 +65,20 @@ public class ChoicesService {
         int numberOfValidationsAdded = 0;
         List<SName> dependentRanges = new ArrayList<>();
         for (SName name : book.getInternalBook().getNames()) {
-            String rangeName = name.getName().toLowerCase();
+            if (name.getName().toLowerCase().endsWith("chosen")) {
+                String choiceName = name.getName().substring(0, name.getName().length() - "chosen".length());
+                List<String> choiceOptions = loadExternalSelections(loggedInUser,choiceName + "choice");
+                if (choiceOptions!=null){
+                    return null;
+                }
+
+            }
+        }
+        for (SName chosen : book.getInternalBook().getNames()) {
+            String rangeName = chosen.getName().toLowerCase();
             // are pivot headings being used at all now? Shall I zap? TODO
             if (rangeName.toLowerCase().startsWith(StringLiterals.AZPIVOTFILTERS) || rangeName.toLowerCase().startsWith(StringLiterals.AZCONTEXTFILTERS)) {//the correct version should be 'az_ContextFilters'
-                String[] filters = BookUtils.getSnameCell(name).getStringValue().split(",");
+                String[] filters = BookUtils.getSnameCell(chosen).getStringValue().split(",");
                 SName contextChoices = book.getInternalBook().getNameByName(StringLiterals.AZCONTEXTHEADINGS);
                 if (contextChoices == null) {
                     //original name...
@@ -76,16 +88,16 @@ public class ChoicesService {
                     showChoices(loggedInUser, book, contextChoices, filters );
                 }
             }
-            if (name.getName().toLowerCase().endsWith("choice")) {
-                String choiceName = name.getName().substring(0, name.getName().length() - "choice".length());
-                SCell choiceCell = BookUtils.getSnameCell(name);
-//                System.out.println("debug:  trying to find the region " + choiceName + "chosen");
-                SName chosen = BookUtils.getNameByName(choiceName + "chosen", sheet);// as ever I do wonder about these string literals
-                if (name.getRefersToCellRegion() != null && chosen != null) {
+            if (chosen.getName().toLowerCase().endsWith("chosen")) {
+                String choiceName = chosen.getName().substring(0, chosen.getName().length() - "choice".length());
+   //                System.out.println("debug:  trying to find the region " + choiceName + "chosen");
+                SName choice = BookUtils.getNameByName(choiceName + "choice", sheet);// as ever I do wonder about these string literals
+                SCell choiceCell = BookUtils.getSnameCell(choice);
+                if (choice.getRefersToCellRegion() != null) {
                     CellRegion chosenRegion = chosen.getRefersToCellRegion();
                     if (chosenRegion != null) {
                         // EFC note - I made a hack for bonza to check this wasn't null but
-                        List<String> choiceOptions = choiceOptionsMap.get(name.getName().toLowerCase());
+                        List<String> choiceOptions = choiceOptionsMap.get(choice.getName().toLowerCase());
                         boolean dataRegionDropdown = !BookUtils.getNamedDataRegionForRowAndColumnSelectedSheet(chosenRegion.getRow(), chosenRegion.getColumn(), sheet).isEmpty();
                         if (choiceCell.getType() != SCell.CellType.ERROR && (choiceCell.getType() != SCell.CellType.FORMULA || choiceCell.getFormulaResultType() != SCell.CellType.ERROR)) {
                             // check to make it work for Darren after some recent changes - todo - address what's actually going on here
@@ -96,7 +108,7 @@ public class ChoicesService {
                             int contentPos = query.toLowerCase().indexOf(CONTENTS);
                             if ((chosenRegion.getRowCount() == 1 || dataRegionDropdown) && (choiceOptions != null || contentPos >= 0)) {// dataregiondropdown is to determine if it's in a data region, the choice drop downs are sometimes used (abused?) in such a manner, a bank of drop downs in a data region
                                 if (contentPos < 0) {//not a dependent range
-                                    BookUtils.setValue(validationSheet.getInternalSheet().getCell(0, numberOfValidationsAdded), name.getName());
+                                    BookUtils.setValue(validationSheet.getInternalSheet().getCell(0, numberOfValidationsAdded), choice.getName());
                                     int row = 0;
                                     // changing comment - I don't think this can NPE - IntelliJ just can't see the logic that either this isn't null or contentPos < 0, this is in a contentPos < 0 condition. Could rejig the logic?
                                     for (String choiceOption : choiceOptions) {
@@ -133,7 +145,7 @@ public class ChoicesService {
                                         System.out.println("no choices for : " + choiceCell.getStringValue());
                                     }
                                 } else {
-                                    dependentRanges.add(name);
+                                    dependentRanges.add(choice);
                                 }
                             }
                         }// do anything in the case of excel error?
@@ -144,6 +156,32 @@ public class ChoicesService {
         // should this be being dealt with in here?
         return dependentRanges;
     }
+
+    private static List<String> loadExternalSelections(LoggedInUser loggedInUser, String selectionName){
+        List<ExternalDataRequest>externalDataRequests = ExternalDataRequestDAO.findForReportId(loggedInUser.getOnlineReport().getId());
+        for (ExternalDataRequest externalDataRequest:externalDataRequests){
+            if (externalDataRequest.getSheetRangeName().equalsIgnoreCase(selectionName)){
+                try {
+                    List<List<String>> data = ExternalConnector.getData(loggedInUser, externalDataRequest.getConnectorId(), CommonReportUtils.replaceUserChoicesInQuery(loggedInUser, externalDataRequest.getReadSQL()), null, null);
+                    if (data != null) {
+                        List<String> toReturn = new ArrayList<>();
+                        for (List<String> dataline : data) {
+                            toReturn.add(dataline.get(0));
+                        }
+                        return toReturn;
+                    }
+                }catch(Exception e){
+                    List<String> toReturn = new ArrayList<>();
+                    toReturn.add(e.getMessage());
+                    return toReturn;
+                }
+                break;
+            }
+
+        }
+        return null;
+    }
+
 
     // shows choices on a pivot but need to be clearer on exactly what this is
     private static void showChoices(LoggedInUser loggedInUser, Book book, SName contextChoices, String[] filters) {
@@ -551,22 +589,6 @@ public class ChoicesService {
                 SpreadsheetService.setUserChoice(loggedInUser, choice, chosen);
             }
         }
-    }
-
-    private static List<String> loadExternalSelections(LoggedInUser loggedInUser,String selectionString)throws RemoteException{
-        String connectorName = StringUtils.findQuery("connector", selectionString);
-        String sql = StringUtils.findQuery("sql", selectionString);
-        if (connectorName!=null && sql!=null){
-            List<List<String>>data = ExternalConnector.getData(loggedInUser, connectorName, sql, null, null);
-            List<String>options = new ArrayList<>();
-            for (int i=1;i<data.size();i++){
-                options.add(data.get(i).get(0));
-            }
-            return options;
-        }
-
-        return new ArrayList<>();
-
     }
 
 

@@ -238,6 +238,10 @@ public class ZKSpreadsheetCommandController {
 
                     if ("ActuallySave".equals(action)) {
                         saveMessage = ReportService.save(ss,loggedInUser);
+                        if (saveMessage.length() > 0) {
+                            Clients.evalJavaScript("alert(\"" + saveMessage + "\")");
+                        }
+
                         Clients.clearBusy(ss);
                     }
 

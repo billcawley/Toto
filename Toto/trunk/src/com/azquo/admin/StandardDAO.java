@@ -138,20 +138,9 @@ public class StandardDAO {
 
 
 
-        jdbcTemplate.update("CREATE TABLE IF NOT EXISTS `master_db`.`menuitem` (" +
-                                              "`id` int(11) NOT NULL AUTO_INCREMENT" +
-                                              ",`date_created` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP" +
-                                              ",`business_id` int(11) NOT NULL" +
-                                              ",`report_id` int(11) NOT NULL" +
-                                              ",`submenu_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL" +
-                                              ",`menuitem_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL" +
-                                              ",`explanation` text COLLATE utf8_unicode_ci NOT NULL" +
-                                              ",`iframe` text COLLATE utf8_unicode_ci NOT NULL" +
-                                              ",`position_id` int(11) NOT NULL" +
-                                              ",`database_id` int(11) NOT NULL" +
-                                              ", PRIMARY KEY(`id`))" +
-          "ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;", new HashMap<>());
+        jdbcTemplate.update("DROP TABLE IF EXISTS `master_db`.`menuitem`",new HashMap<>());
 
+        jdbcTemplate.update("DROP TABLE IF EXISTS `master_db`.`importdata_usage`",new HashMap<>());
 
         jdbcTemplate.update("CREATE TABLE IF NOT EXISTS `master_db`.`importdata_usage` (" +
                                            "`id` int(11) NOT NULL AUTO_INCREMENT" +
@@ -211,8 +200,32 @@ public class StandardDAO {
 
 
 
+         jdbcTemplate.update("CREATE TABLE IF NOT EXISTS `master_db`.`menu_appearance` (" +
+                 "`id` int(11) NOT NULL AUTO_INCREMENT" +
+                 ",`business_id` int(11) NOT NULL" +
+                 ",`report_id` int(11) NOT NULL" +
+                 ",`submenu_name` varchar(255) COLLATE utf8_unicode_ci not null" +
+                 ",`importance` int(11) NOT NULL" +
+                 ",`showname` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,PRIMARY KEY (`id`)) ENGINE=InnoDB AUTO_INCREMENT=120 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;", new HashMap<>());
+
+        jdbcTemplate.update("CREATE TABLE IF NOT EXISTS `master_db`.`external_data_request` (" +
+                "`id` int(11) NOT NULL AUTO_INCREMENT" +
+                ",`report_id` int(11) NOT NULL" +
+                ",`sheet_range_name` varchar(255) COLLATE utf8_unicode_ci not null" +
+                ",`connector_id` int(11) NOT NULL" +
+                ",`read_SQL` varchar(1024) COLLATE utf8_unicode_ci not null" +
+                ",`save_keyfield` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL" +
+                ",`save_filename` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL" +
+                ",`save_insertkey_value` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL" +
+                ",`allow_delete` int(1) DEFAULT 0,PRIMARY KEY (`id`)) ENGINE=InnoDB AUTO_INCREMENT=120 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;", new HashMap<>());
+
+
+
         StandardDAO.jdbcTemplate = jdbcTemplate; // I realise that this is "naughty", see comments at the top.
-    }
+}
+
+
+
 
     private static <T extends StandardEntity> void updateById(final T entity, final String tableName, final Map<String, Object> columnNameValueMap) throws DataAccessException {
 //        final NamedParameterJdbcTemplate jdbcTemplate = jdbcTemplateFactory.getJDBCTemplateForEntity(entity);

@@ -8,7 +8,6 @@ import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseDAO;
 import com.azquo.admin.database.DatabaseServer;
 import com.azquo.admin.onlinereport.*;
-import com.azquo.admin.onlinereport.MenuItem;
 import com.azquo.admin.user.*;
 import com.azquo.dataimport.*;
 import com.azquo.rmi.RMIClient;
@@ -86,9 +85,9 @@ public class ReportRenderer {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        loadExternalData(book,loggedInUser);
         int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
         loggedInUser.setOnlineReport(OnlineReportDAO.findById(reportId));
+        loadExternalData(book,loggedInUser);
         Map<Sheet, String> sheetsToRename = new HashMap<>(); // the repeat sheet can require renaming the first "template" sheet but this seems to trip up ZK so do it at the end after all the expanding etc
         //String context = "";
         // why a sheet loop at the outside, why not just run all the names? Need to have a think . . .
@@ -316,10 +315,9 @@ public class ReportRenderer {
                     int menuLines = 0;
                     for (List<String> submenu: menuSpec){
                         String submenuName = submenu.get(1);
-                        List<MenuItem> menuItems;
-                         menuItems = filterMenuItems(submenuName, loggedInUser, searchReports);
-                        if (menuItems.size()>0){
-                            menuLines += 2 * menuItems.size() + 3;
+                        List<MenuAppearance> menuAppearances = filtermenuAppearances(submenuName, loggedInUser, searchReports);
+                        if (menuAppearances.size()>0){
+                            menuLines += 2 * menuAppearances.size() + 3;
                         }
                     }
                     SName menuRange =  BookUtils.getNameByName(StringLiterals.AZMENU, sheet);
@@ -341,39 +339,33 @@ public class ReportRenderer {
                             String submenuText = submenu.get(0);
                             String submenuName = submenu.get(1);
                             String submenuExplanation = submenu.get(2);
-                            List<MenuItem> menuItems = MenuItemDAO.findForNameAndBusinessId(submenuName, loggedInUser.getBusiness().getId());
-                            menuItems = filterMenuItems(submenuName, loggedInUser,searchReports);
-                            if (menuItems.size() > 0) {
+                            List<MenuAppearance> menuAppearances =  filtermenuAppearances(submenuName, loggedInUser,searchReports);
+                            if (menuAppearances.size() > 0) {
                                 if (firstRow< rowNo){
                                     CellOperationUtil.paste(titleModel, Ranges.range(sheet,rowNo, firstCol, rowNo + 1, firstCol + 3));
                                 }
                                 sheet.getInternalSheet().getCell(rowNo++, firstCol).setStringValue(submenuText);
                                 sheet.getInternalSheet().getCell(rowNo++, firstCol + 2).setStringValue(submenuExplanation);
-                                for (MenuItem menuItem:menuItems){
+                                for (MenuAppearance menuAppearance:menuAppearances){
                                     if (rowNo > firstRow + 2){
                                         CellOperationUtil.paste(itemModel, Ranges.range(sheet,rowNo, firstCol, rowNo + 1, firstCol + 3));
                                     }
-                                     OnlineReport or = OnlineReportDAO.findById(menuItem.getReportId());
-                                    String menuItemName= menuItem.getMenuItemName();
-                                    if (menuItemName.length()==0){
-                                        menuItemName = or.getReportName();
+                                     OnlineReport or = OnlineReportDAO.findById(menuAppearance.getReportId());
+                                    String menuAppearanceName= menuAppearance.getShowname();
+                                    if (menuAppearanceName==null || menuAppearanceName.length()==0){
+                                        menuAppearanceName = or.getReportName();
                                     }
-                                    String iframe = menuItem.getIframe();
-                                    if (iframe!=null && iframe.length()>0){
-                                        loggedInUser.setIFrameLookup(menuItemName.toLowerCase(Locale.ROOT), iframe.trim());
-
-                                    }
-                                    sheet.getInternalSheet().getCell(rowNo++, firstCol + 1).setStringValue(menuItemName);
-                                    sheet.getInternalSheet().getCell(rowNo++, firstCol + 2).setStringValue(menuItem.getExplanation());
-                                    Database db = DatabaseDAO.findById(menuItem.getId());
-                                    loggedInUser.setReportDatabasePermission(menuItemName,or,db,true, false);
+                                    sheet.getInternalSheet().getCell(rowNo++, firstCol + 1).setStringValue(menuAppearanceName);
+                                    sheet.getInternalSheet().getCell(rowNo++, firstCol + 2).setStringValue(or.getExplanation());
+                                    Database db = DatabaseDAO.findById(menuAppearance.getId());
+                                    loggedInUser.setReportDatabasePermission(menuAppearanceName,or,db,true, false);
                                     String menuPrefix = "";
                                     try{
                                         int existingMenuPrefix = Integer.parseInt(submenuText.substring(0,submenuText.indexOf(" ")));
                                     }catch(Exception e){
                                         menuPrefix = menuCount + " ";
                                     }
-                                    loggedInUser.setPermissionData(menuItemName,menuPrefix + submenuText,menuItem.getPosition());//saving for use in the side menu
+                                    loggedInUser.setPermissionData(menuAppearanceName,menuPrefix + submenuText,menuAppearance.getImportance());//saving for use in the side menu
 
                                 }
                                 rowNo++;//blank row between menus
@@ -585,11 +577,11 @@ public class ReportRenderer {
     }
 
 
-    private static List<MenuItem> filterMenuItems(String submenuName, LoggedInUser loggedInUser, String searchReports){
-       List<MenuItem> menuItems= MenuItemDAO.findForNameAndBusinessId(submenuName.toLowerCase(Locale.ROOT),loggedInUser.getBusiness().getId());
+    private static List<MenuAppearance> filtermenuAppearances(String submenuName, LoggedInUser loggedInUser, String searchReports){
+       List<MenuAppearance> menuAppearances= MenuAppearanceDAO.findForNameAndBusinessId(submenuName.toLowerCase(Locale.ROOT),loggedInUser.getBusiness().getId());
        Set<Integer> reportsFound = new HashSet<>();
-       for (MenuItem menuItem:menuItems){
-           reportsFound.add(menuItem.getReportId());
+       for (MenuAppearance menuAppearance:menuAppearances){
+           reportsFound.add(menuAppearance.getReportId());
        }
        int databaseId = 0;
        if (loggedInUser.getDatabase()!=null){
@@ -598,33 +590,33 @@ public class ReportRenderer {
        List<OnlineReport> onlineReports = OnlineReportDAO.findForDatabaseIdAndCategory(databaseId, submenuName);
        for (OnlineReport onlineReport:onlineReports){
            if (!reportsFound.contains(onlineReport.getId()) && onlineReport.getCategory().length() > 0){
-               menuItems.add(new MenuItem(0,onlineReport.getDateCreated(), loggedInUser.getBusiness().getId(),onlineReport.getId(), onlineReport.getCategory(),onlineReport.getReportName(),onlineReport.getExplanation(), null,99,databaseId));
+               menuAppearances.add(new MenuAppearance(0, loggedInUser.getBusiness().getId(),onlineReport.getId(), onlineReport.getCategory(),99,onlineReport.getReportName()));
            }
        }
-        Collections.sort(menuItems, new Comparator<MenuItem>() {
+        Collections.sort(menuAppearances, new Comparator<MenuAppearance>() {
 
-            public int compare(MenuItem m1, MenuItem m2) {
+            public int compare(MenuAppearance m1, MenuAppearance m2) {
                 // compare two instance of `Score` and return `int` as result.
                 int comp1 = m2.getSubmenuName().compareTo(m2.getSubmenuName());
                 if (comp1!=0) return comp1;
-                if (m2.getPosition()==0) return 1;
-                return m2.getPosition() - m2.getPosition();
+                if (m2.getImportance()==0) return -1;
+                return m2.getImportance() - m1.getImportance();
             }
         });
 
 
        if (searchReports==null || searchReports.length()==0){
-            return menuItems;
+            return menuAppearances;
         }
-        List<MenuItem> toReturn = new ArrayList<>();
-        for (MenuItem menuItem:menuItems){
-             OnlineReport or = OnlineReportDAO.findById(menuItem.getReportId());
-            String menuItemName= menuItem.getMenuItemName();
-            if (menuItemName.length()==0){
-                menuItemName = or.getReportName();
+        List<MenuAppearance> toReturn = new ArrayList<>();
+        for (MenuAppearance menuAppearance:menuAppearances){
+             OnlineReport or = OnlineReportDAO.findById(menuAppearance.getReportId());
+            String menuAppearanceName= menuAppearance.getShowname();
+            if (menuAppearanceName==null || menuAppearanceName.length()==0){
+                menuAppearanceName = or.getReportName();
             }
-            if (menuItemName.toLowerCase(Locale.ROOT).contains(searchReports.toLowerCase(Locale.ROOT))){
-                toReturn.add(menuItem);
+            if (menuAppearanceName.toLowerCase(Locale.ROOT).contains(searchReports.toLowerCase(Locale.ROOT))){
+                toReturn.add(menuAppearance);
             }
         }
         return toReturn;
@@ -1015,126 +1007,46 @@ public class ReportRenderer {
 
     private static void loadExternalData(Book book, LoggedInUser loggedInUser)throws Exception{
         loggedInUser.clearExternalData();
-        for (SName name:book.getInternalBook().getNames()){
-            int nameRow = -1;
-            int connectorRow =  -1;
-            int sqlRow = -1;
-            int saveRow = -1;
-            String keyName = null;
-            if (name.getName().toLowerCase(Locale.ROOT).startsWith(StringLiterals.AZIMPORTDATA)){
-                List<List<String>> importdataspec = BookUtils.replaceUserChoicesInRegionDefinition(loggedInUser, name);
-                int cols = importdataspec.get(0).size();
-                int rows = importdataspec.size();
-                for (int rowNo = 0;rowNo < rows;rowNo++){
-                    String heading = importdataspec.get(rowNo).get(0).toLowerCase(Locale.ROOT);
-                    if (heading.equals("sheet/range name")) nameRow = rowNo;
-                    if (heading.equals("connector")) connectorRow = rowNo;
-                    if (heading.equals("sql")) sqlRow = rowNo;
-                    if (heading.equals("save")) saveRow = rowNo;
-                }
-
-                if (nameRow < 0 || connectorRow < 0 || sqlRow < 0){
-                    return;
-                }
-                for (int col=1;col<cols;col++) {
-                    boolean saving = false;
-                    String rangeName = importdataspec.get(nameRow).get(col).toLowerCase(Locale.ROOT);
-                    if (rangeName.length() == 0){
-                        break;
-                    }
-                    String connectorName = importdataspec.get(connectorRow).get(col).toLowerCase(Locale.ROOT);
-                    String sqlName = importdataspec.get(sqlRow).get(col);
-                    boolean found = false;
-                    if (saveRow>=0) {
-                        String saveInstructions = importdataspec.get(saveRow).get(col);
-                        if (saveInstructions!=null && saveInstructions.length()>0) {
-                            saving = true;
-                        }
-                    }
-                    Sheet sheet = null;
-                    CellRegion cellRegion = null;
-                    for (int i=0;i<book.getNumberOfSheets();i++){
-                        sheet = book.getSheetAt(i);
-                        if (sheet.getSheetName().toLowerCase(Locale.ROOT).equals(rangeName)){
-                            found = true;
-                            break;
-                        }
-                    }
-                    if (!found){
-                        sheet = null;
-                        SName sourceName = book.getInternalBook().getNameByName(rangeName);
-                        if (sourceName !=null){
-                              sheet = book.getSheet(sourceName.getRefersToSheetName());
-                              cellRegion = sourceName.getRefersToCellRegion();
-                        }
-                    }
-                    if (sheet!=null) {
-                        getExternalData(loggedInUser, rangeName, connectorName, sqlName, sheet, cellRegion);
-                        if (saving){
-                            //keep a record of the values as seen in Excel (maybe reformatted...)
-                            loggedInUser.setExternalData(rangeName,ImportService.rangeToList(sheet,cellRegion));
-                        }
-                    }
-
+        List<ExternalDataRequest>externalDataRequests = ExternalDataRequestDAO.findForReportId(loggedInUser.getOnlineReport().getId());
+        for (ExternalDataRequest externalDataRequest:externalDataRequests){
+            boolean found = false;
+            Sheet sheet = null;
+            CellRegion cellRegion = null;
+            for (int i=0;i<book.getNumberOfSheets();i++){
+                sheet = book.getSheetAt(i);
+                if (sheet.getSheetName().equalsIgnoreCase(externalDataRequest.getSheetRangeName())){
+                    found = true;
+                    break;
                 }
             }
-
+            if (!found){
+                sheet = null;
+                SName sourceName = book.getInternalBook().getNameByName(externalDataRequest.getSheetRangeName());
+                if (sourceName !=null){
+                    sheet = book.getSheet(sourceName.getRefersToSheetName());
+                    cellRegion = sourceName.getRefersToCellRegion();
+                }
+            }
+            if (sheet!=null) {
+                getExternalData(loggedInUser, externalDataRequest, sheet, cellRegion);
+            }
 
         }
+     }
 
-    }
 
-
-    private static Map<String,List<String>> loadExternalSelections(Book book, LoggedInUser loggedInUser)throws Exception{
+    private static Map<String,List<String>> loadExternalSelections(OnlineReport or, LoggedInUser loggedInUser)throws Exception{
         Map<String,List<String>> toReturn = new HashMap<>();
         loggedInUser.clearExternalData();
-        for (SName name:book.getInternalBook().getNames()){
-            int selectionRow = -1;
-            int connectorRow = -1;
-
-            if (name.getName().toLowerCase(Locale.ROOT).startsWith(StringLiterals.AZIMPORTDATA)){
-                List<List<String>> importdataspec = BookUtils.replaceUserChoicesInRegionDefinition(loggedInUser, name);
-                int cols = importdataspec.get(0).size();
-                int rows = importdataspec.size();
-                for (int rowNo = 0;rowNo < rows;rowNo++){
-                    String heading = importdataspec.get(rowNo).get(0).toLowerCase(Locale.ROOT);
-                      if (heading.equals("selection")) selectionRow = rowNo;
-                      if (heading.equals("connector")) connectorRow = rowNo;
-                }
-                if (selectionRow < 0 || connectorRow < 0){
-                    return toReturn;
-                }
-                Sheet validationSheet = book.getSheet(ChoicesService.VALIDATION_SHEET);
-                for (int col=1;col<cols;col++) {
-                    boolean saving = false;
-                    String rangeName = importdataspec.get(0).get(col);
-                    if (rangeName.length() == 0){
-                        break;
-                    }
-                    String connectorName = importdataspec.get(connectorRow).get(col);
-                    String selectionList = importdataspec.get(selectionRow).get(col);
-                    String[] selections = selectionList.split(";");
-                    for (String selection:selections) {
-                        int equalPos = selection.indexOf("=");
-                        if (equalPos > 0) {
-                            String selectionName = selection.substring(0, equalPos).trim();
-                            String sql = selection.substring(equalPos + 1);
-                            List<List<String>>data = ExternalConnector.getData(loggedInUser, connectorName, sql, null, null);
-                            List<String>options = new ArrayList<>();
-                            for (List<String>dataline:data){
-                                options.add(dataline.get(0));
-                            }
-                            toReturn.put(selectionName,options);
-
-                        }
-                    }
-
-                }
-            }
+        List<ExternalDataRequest> externalDataRequests = ExternalDataRequestDAO.findForReportId(or.getId());
+        for (ExternalDataRequest externalDataRequest:externalDataRequests) {
+            //TODO SPECIFY!
         }
         return toReturn;
-
     }
+
+
+
 
 
 
@@ -1170,11 +1082,11 @@ public class ReportRenderer {
 
 
 
-   private static void getExternalData(LoggedInUser loggedInUser, String rangeName, String connectorName, String sql, Sheet sheet,CellRegion cellRegion)throws Exception {
+   private static void getExternalData(LoggedInUser loggedInUser, ExternalDataRequest externalDataRequest, Sheet sheet,CellRegion cellRegion)throws Exception {
        List<List<String>> data = new ArrayList<>();
-       if (connectorName.length() == 0) {
+       if (externalDataRequest.getConnectorId()==0) {
            char delimiter = ',';
-           ImportTemplate it = ImportTemplateDAO.findForNameAndBusinessId(rangeName, loggedInUser.getBusiness().getId());
+           ImportTemplate it = ImportTemplateDAO.findForNameAndBusinessId(externalDataRequest.getSheetRangeName(), loggedInUser.getBusiness().getId());
            if (it == null) {
                return;
            }
@@ -1211,9 +1123,12 @@ public class ReportRenderer {
                throw new Exception(it.getFilename() + ": Unable to read " + it.getFilename());
            }
        }else{
-           data = ExternalConnector.getData(loggedInUser, connectorName, sql, null, null);
+           data = ExternalConnector.getData(loggedInUser, externalDataRequest.getConnectorId(), CommonReportUtils.replaceUserChoicesInQuery(loggedInUser,externalDataRequest.getReadSQL()), null, null);
            if (data!=null&& data.size()>0 ){
                setData(data,sheet,cellRegion);
+               if (externalDataRequest.getSaveKeyfield()!=null){
+                   loggedInUser.setExternalData(externalDataRequest.getSheetRangeName().toLowerCase(Locale.ROOT),data);
+               }
            }
        }
    }

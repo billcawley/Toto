@@ -24,12 +24,12 @@ import java.util.Map;
 public class ExternalConnector {
 
 
-    public static List<List<String>> getData(LoggedInUser loggedInUser, String connectionName, String query, Map<String, String> valueMap, String keyField) throws RemoteException {
+    public static List<List<String>> getData(LoggedInUser loggedInUser, int connectionId, String query, Map<String, String> valueMap, String keyField) throws RemoteException {
         List<List<String>> toReturn = new ArrayList<>();
         // intial test code hard coded to snowflake
         Connection con = null;
         try {
-            ExternalDatabaseConnection externalDatabaseConnection = AdminService.getExternalDatabaseConnectionByName(connectionName, loggedInUser);
+            ExternalDatabaseConnection externalDatabaseConnection = AdminService.getExternalDatabaseConnectionById(connectionId, loggedInUser);
             if (externalDatabaseConnection != null) {
                 if (externalDatabaseConnection.getConnectionString().startsWith("jdbc:snowflake")) {
                     Class.forName("com.snowflake.client.jdbc.SnowflakeDriver");

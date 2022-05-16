@@ -699,9 +699,9 @@ public class ProvenanceService {
                     namesList.append("..." + (auditCounts.nameCount - count) + " more...");
                     break;
                 }
-                namesList.append(name.getDefaultDisplayName() + "</br>");
+                namesList.append(name.getDefaultDisplayName() + "<br/>");
             }
-            toReturn.setNames("<b>Names affected (max 100 shown): </b></br>" + namesList.toString());
+            toReturn.setNames("<b>Names affected (max 100 shown): </b><br/>" + namesList.toString());
             toReturn.setValue(auditCounts.nameList.size()+"");
 
         }

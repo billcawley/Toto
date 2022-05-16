@@ -279,15 +279,20 @@ this may now not work at all, perhaps delete?
         }else {
 
             List<Database> databases = DatabaseDAO.findForBusinessId(loggedInUser.getUser().getBusinessId());
+            List<OnlineReport> reports = OnlineReportDAO.findForDatabaseId(0);
+            for (OnlineReport report : reports) {
+                report.setDatabase("");
+            }
+            reportList.addAll(reports);
             for (Database database : databases) {
                 if (loggedInUser.getUser().isAdministrator()) {// admin gets all
-                    List<OnlineReport> reports = OnlineReportDAO.findForDatabaseId(database.getId());
+                    reports = OnlineReportDAO.findForDatabaseId(database.getId());
                     for (OnlineReport report : reports) {
                         report.setDatabase(database.getName());
                     }
                     reportList.addAll(reports);
                 } else if (loggedInUser.getUser().isDeveloper() && database.getUserId() == loggedInUser.getUser().getId()) { // developer constrained to their own database reports
-                    List<OnlineReport> reports = OnlineReportDAO.findForDatabaseId(database.getId());
+                    reports = OnlineReportDAO.findForDatabaseId(database.getId());
                     for (OnlineReport report : reports) {
                         report.setDatabase(database.getName());
                     }
@@ -295,7 +300,7 @@ this may now not work at all, perhaps delete?
                 }
             }
             if (loggedInUser.getUser().isAdministrator()) {
-                List<OnlineReport> reports = OnlineReportDAO.findForBusinessIdWithNoDatabase(loggedInUser.getUser().getBusinessId());
+                reports = OnlineReportDAO.findForBusinessIdWithNoDatabase(loggedInUser.getUser().getBusinessId());
                 for (OnlineReport report : reports) {
                     report.setDatabase("No database");
                 }
@@ -517,6 +522,7 @@ this may now not work at all, perhaps delete?
         return null;
     }
 
+
     public static ExternalDatabaseConnection getExternalDatabaseConnectionById(int id, LoggedInUser loggedInUser) {
         ExternalDatabaseConnection externalDatabaseConnection = ExternalDatabaseConnectionDAO.findById(id);
         if (externalDatabaseConnection != null && loggedInUser.getUser().getBusinessId() == externalDatabaseConnection.getBusinessId()) {
@@ -558,23 +564,24 @@ this may now not work at all, perhaps delete?
         OnlineReport onlineReport = OnlineReportDAO.findById(reportId);
         if (onlineReport != null && ((loggedInUser.getUser().isAdministrator() && onlineReport.getBusinessId() == loggedInUser.getUser().getBusinessId())
                 || (loggedInUser.getUser().isDeveloper() && onlineReport.getUserId() == loggedInUser.getUser().getId()))) {
-            Path fullPath = Paths.get(SpreadsheetService.getHomeDir() + dbPath + loggedInUser.getBusinessDirectory() + onlineReportsDir + onlineReport.getFilenameForDisk());
-            if (Files.exists(fullPath) || Files.isDirectory(fullPath)) {
-                try {
-                    Files.deleteIfExists(fullPath);
-                } catch (IOException e) {
-                    e.printStackTrace();
+            if (!onlineReport.getFilename().startsWith("IFRAME")){
+                Path fullPath = Paths.get(SpreadsheetService.getHomeDir() + dbPath + loggedInUser.getBusinessDirectory() + onlineReportsDir + onlineReport.getFilenameForDisk());
+                if (Files.exists(fullPath) || Files.isDirectory(fullPath)) {
+                    try {
+                        Files.deleteIfExists(fullPath);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
                 }
             }
-            List<MenuItem> menuItems = MenuItemDAO.findForReportId(onlineReport.getId());
-            for (MenuItem menuItem:menuItems){
-                MenuItemDAO.removeById(menuItem);
+            List<MenuAppearance> menuAppearances = MenuAppearanceDAO.findForReportId(onlineReport.getId());
+            for (MenuAppearance menuAppearance:menuAppearances){
+                MenuAppearanceDAO.removeById(menuAppearance.getId());
             }
-            List<ImportdataUsage>importdataUsages = ImportdataUsageDAO.findForBusinessAndReportID(loggedInUser.getBusiness().getId(),onlineReport.getId());
-            for (ImportdataUsage importdataUsage:importdataUsages){
-                ImportdataUsageDAO.removeById(importdataUsage);
+            List<ExternalDataRequest> externalDataRequests = ExternalDataRequestDAO.findForReportId(onlineReport.getId());
+            for (ExternalDataRequest externalDataRequest:externalDataRequests){
+                ExternalDataRequestDAO.removeById(externalDataRequest.getId());
             }
-
             OnlineReportDAO.removeById(onlineReport);
             // and the schedules
             List<ReportSchedule> reportSchedules = ReportScheduleDAO.findForReportId(reportId);
