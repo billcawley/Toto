@@ -715,11 +715,11 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
             }
 
             if (!uploadedFile.getLinesRejected().isEmpty()) {
-                String error = "Line errors: " + uploadedFile.getLinesRejected().size() + "\n</br>";
+                String error = "Line errors: " + uploadedFile.getLinesRejected().size() + "\n<br/>";
                 error += "</b>";
                 if (uploadedFile.getLinesRejected().size() < 100) {
                     for (UploadedFile.RejectedLine lineRejected : uploadedFile.getLinesRejected()) {
-                        error += lineRejected.getLineNo() + ":" + lineRejected.getErrors() + "\n</br>";
+                        error += lineRejected.getLineNo() + ":" + lineRejected.getErrors() + "\n<br/>";
                     }
                 }
                 error += "<b>";
@@ -939,7 +939,7 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
             }
         }
         if (errorList.length() > 0) {
-            return "<b>" + errorList.toString() + "\n</br></b>" + toReturn.toString();
+            return "<b>" + errorList.toString() + "</b>\n<br/>" + toReturn.toString();
         }
         return toReturn.toString();
     }
