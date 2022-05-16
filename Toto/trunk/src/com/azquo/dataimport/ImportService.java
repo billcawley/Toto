@@ -160,7 +160,7 @@ public final class ImportService {
             session.removeAttribute(ManageDatabasesController.IMPORTSTATUS);
         }
         loggedInUser.copyMode = false; // an exception might have left it true
-        if (loggedInUser.getDatabase() == null) {
+        if (!userComment.startsWith("Report name = ") && loggedInUser.getDatabase() == null) {
             throw new Exception("No database set");
         }
         /*
@@ -525,10 +525,14 @@ public final class ImportService {
             String reportName = null;
             // a misleading name now we have the ImportTemplate object
             org.apache.poi.ss.usermodel.Name reportRange = BookUtils.getName(book, StringLiterals.AZREPORTNAME);
-            if (reportRange != null) {
-                CellReference sheetNameCell = BookUtils.getNameCell(reportRange);
-                if (sheetNameCell != null) {
-                    reportName = book.getSheet(reportRange.getSheetName()).getRow(sheetNameCell.getRow()).getCell(sheetNameCell.getCol()).getStringCellValue();
+            if (userComment.startsWith("Report name = ") || reportRange != null) {
+                if (reportRange != null) {
+                    CellReference sheetNameCell = BookUtils.getNameCell(reportRange);
+                    if (sheetNameCell != null) {
+                        reportName = book.getSheet(reportRange.getSheetName()).getRow(sheetNameCell.getRow()).getCell(sheetNameCell.getCol()).getStringCellValue();
+                    }
+                }else{
+                    reportName = userComment.substring("Report name = ".length());
                 }
             }
             if (reportName != null) {
