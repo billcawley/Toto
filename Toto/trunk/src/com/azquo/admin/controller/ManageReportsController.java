@@ -281,7 +281,7 @@ public class ManageReportsController {
                         model.put("reportname", editOr.getReportName());
                         model.put("sheetRangeName", toEdit.getSheetRangeName());
                         model.put("connectorName", externalDatabaseConnection.getName());
-                        model.put("readSQL", toEdit.getReadSQL());
+                        model.put("readSQL", fixQuotes(toEdit.getReadSQL()));
                         model.put("saveKeyfield", toEdit.getSaveKeyfield());
                         model.put("saveFilename", toEdit.getSaveFilename());
                         model.put("saveInsertKeyValue", toEdit.getSaveInsertkey());
@@ -372,6 +372,10 @@ public class ManageReportsController {
         } else {
             return "redirect:/api/Login";
         }
+    }
+
+    private String fixQuotes(String orig){
+        return orig.replace("\"","&quot;");
     }
 
     @RequestMapping(headers = "content-type=multipart/*")
