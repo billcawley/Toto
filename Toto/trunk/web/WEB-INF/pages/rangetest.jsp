@@ -69,6 +69,31 @@
                 rows += row + '<tr>';
             }
         }
+
+        if ($('#rowsaql').val().length > 0 && $('#colsaql').val().length > 0){
+            let data = await azquoSend("op=getdropdownlistforquery&choice=" + encodeURIComponent($('#colsaql').val())+ "&sessionid=${pageContext.session.id}&database="  + encodeURIComponent($('#database').val()));
+            var userChoices = await data.json();
+
+            //alert(userChoices);
+            var rows = '';
+            // todo limit cols??
+            var row = '<tr>';
+            $.each(userChoices, function(index, item) {
+                if (item.toString().startsWith("Error :")){
+                    row += '<td><span  style="color:red">' + item + '</span></td>';
+                } else {
+                    row += '<td>' + item + '</td>';
+                }
+            });
+            rows += row + '<tr>';
+            for (j = 0; j < 10; j++){
+                row = '<tr>';
+                $.each(userChoices, function(index, item) {
+                    row += '<td></td>';
+                });
+                rows += row + '<tr>';
+            }
+        }
         $('#data-table').html(rows);
     }
 
