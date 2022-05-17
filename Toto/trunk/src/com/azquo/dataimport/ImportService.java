@@ -160,7 +160,7 @@ public final class ImportService {
             session.removeAttribute(ManageDatabasesController.IMPORTSTATUS);
         }
         loggedInUser.copyMode = false; // an exception might have left it true
-        if (!userComment.startsWith("Report name = ") && loggedInUser.getDatabase() == null) {
+        if ((userComment == null  || !userComment.startsWith("Report name = ")) && loggedInUser.getDatabase() == null) {
             throw new Exception("No database set");
         }
         /*
