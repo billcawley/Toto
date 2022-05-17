@@ -8,7 +8,7 @@
 
 <div class="box">
     <h1 class="title">Edit Report Details</h1>
-    <div class="is-danger">${error}</div>
+    <div class="has-text-danger">${error}</div>
     <form action="/api/ManageReports" method="post" enctype="multipart/form-data">
         <input type="hidden" name="editId" value="${id}"/>
         <!-- no business id -->
@@ -16,28 +16,31 @@
         <table class="table">
             <tbody>
             <tr>
-                <td width="50%">
-                    <div>
-                        <div class="field">
-                            <label class="label">File</label>
-                            <label class="label">${file}</label>
-                        </div>
+                <label class="label">File: ${file}</label>
+            </tr>
+            <tr>
+                <td>
+                    <label class="label">Name</label>
+                </td>
+                <td>
 
-                        <div class="field">
-                            <label class="label">Name</label>
-                            <input class="input is-small" name="newReportName" id="newReportName"
-                                   value="${newReportName}">
-                        </div>
-                        <div>
-                            <br/>
-                        </div>
+                    <div class="field">
+                        <input class="input is-small" name="newReportName" id="newReportName"
+                               value="${newReportName}">
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td>
 
-                        </div>
-                        <div class="file has-name is-small" id="file-js-example">
-                            <label class="file-label">
-                                <input class="file-input is-small" type="file" name="uploadFile"
-                                       id="uploadFile">
-                                <span class="file-cta is-small">
+                </td>
+                <td>
+
+                    <div class="file has-name is-small" id="file-js-example">
+                        <label class="file-label">
+                            <input class="file-input is-small" type="file" name="uploadFile"
+                                   id="uploadFile">
+                            <span class="file-cta is-small">
                                               <span class="file-icon is-small">
                                                 <i class="fas fa-upload"></i>
                                               </span>
@@ -45,32 +48,22 @@
                                                 Select File
                                               </span>
                                             </span>
-                                <span class="file-name is-small">
+                            <span class="file-name is-small">
                                             </span>
-                            </label>
-                        </div>
-                        <div><br/></div>
-
-                        <div class="field">
-                            <label class="label">OR: specify an iFrame address</label>
-                            <input class="input is-small" name="iframe" id="iframe" value="${iframe}">
-                        </div>
-                        <div class="field">
-                            <label class="label">OR <a href="/api/Online?reportid=ADHOC" target="_blank"> design new report</a></label>
-                        </div>
-                        <div class="field">
-                            <label class="label">Admin Category</label>
-                            <input class="input is-small" name="category" id="category" value="${category}">
-                        </div>
-                        <div class="field">
-                            <label class="label">Explanation</label>
-                            <textarea class="textarea is-small" name="explanation" rows="3"
-                                      cols="80">${explanation}</textarea>
-                        </div>
-
+                        </label>
                     </div>
+                    <div><br/></div>
+
+                    <div class="field">
+                        <label class="label">OR: specify an iFrame address</label>
+                        <input class="input is-small" name="iframe" id="iframe" value="${iframe}">
+                    </div>
+                    <div class="field">
+                        <label class="label">OR <a href="/api/Online?reportid=ADHOC" target="_blank"> design new report</a></label>
+                    </div>
+
                 </td>
-                <td width="50%">
+                <td>
                     <div class="field">
                         <label class="label">Associated Databases</label>
                         <c:forEach items="${databasesSelected}" var="databaseSelected">
@@ -80,6 +73,35 @@
                         </c:forEach>
                     </div>
                 </td>
+            </tr>
+            <tr>
+                <td>
+                <label class="label">Optional information</label>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <label class="label">Admin Category</label>
+
+                </td>
+                <td>
+                    <div class="field">
+                        <input class="input is-small" name="category" id="category" value="${category}">
+                    </div>
+                </td>
+            </tr>
+             <tr>
+                <td>
+                    <label class="label">Explanation</label>
+                </td>
+                <td>
+                    <div class="field">
+                         <textarea class="textarea is-small" name="explanation" rows="3"
+                                   cols="80">${explanation}</textarea>
+                    </div>
+
+                </td>
+            </tr>
             </tbody>
         </table>
         <c:if test="${id > 0}">
@@ -93,7 +115,6 @@
                 <tr>
                     <th>Role/Submenu name</th>
                     <th>Importance</th>
-                    <th>Shown name on menu</th>
                     <th width="30"></th>
                     <th width="30"></th>
                 </tr>
@@ -103,7 +124,6 @@
                     <tr>
                         <td>${menuappearance.submenuName}</td>
                         <td>${menuappearance.importance}</td>
-                        <td>${menuappearance.showname}</td>
                         <td><a href="/api/ManageReports?menuAppearanceDeleteId=${menuappearance.id}&editId=${id}"
                                title="Delete ${user.name}"
                                onclick="return confirm('Are you sure?')" class="button is-small"><span

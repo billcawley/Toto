@@ -96,7 +96,7 @@
         <h5 class="title is-5">Import Version : ${importversion}</h5>
             <h5 class="title is-5">Preprocessor : ${preprocessor}</h5>
                 <h5 class="title is-5">Month : ${month}</h5>
-        <div class="is-danger">${error}</div>
+        <div class="has-text-danger">${error}</div>
         <!-- params passed if they need to be set-->
         <c:if test="${runClearExecute == true}">
             <h5 class="title is-5">Clear ${month} data before upload : <input type="checkbox" name="runClearExecute"></h5>

@@ -6,7 +6,7 @@
 
 <div class="box">
     <h1 class="title">Edit/Menu Appearance</h1>
-    <div class="is-danger">${error}</div>
+    <div class="has-text-danger">${error}</div>
     <form action="/api//ManageReports" method="post">
         <input type="hidden" name="editId" value="${reportid}"/>
         <input type="hidden" name="menuAppearanceId" id="menuAppearanceId" value = "${id}" />
@@ -18,27 +18,33 @@
         <table class="table">
             <tbody>
             <tr>
-                <td width="50%">
+                <td>
+                    <label class="label">Role/menu name</label>
+                </td>
+                <td>
                     <div class="field">
-                        <label class="label">Role/menu name</label>
                         <input class="input is-small" name="submenuName" id="submenuName" value="${submenuName}">
                     </div>
+                </td>
+            </tr>
+            <tr>
+
+                <td>
+                    <label class="label">Importance (numerical...high numbers appear higher in the menu)</label>
+                </td>
+                <td>
                     <div class="field">
-                        <label class="label">Importance (numerical...high numbers appear higher in the menu)</label>
                         <input class="input is-small" name="importance" id="importance" value="${importance}">
                     </div>
-                    <div class="field">
-                        <label class="label">OPTIONAL - Shown name(if, for instance, the same report name applies to different databases)</label>
-                        <input class="input is-small" name="showname" id="showname" value="${showname}">
-                    </div>
                 </td>
-             </tbody>
+            </tr>
+          </tbody>
         </table>
 
         <div class="centeralign">
             <button type="submit" name="submit" value="save" class="button is-small">Save</button>
-                <button type="submit" name="submit" value="cancel" class="button is-small">Cancel
-                </button>
+            <button type="submit" name="submit" value="cancel" class="button is-small">Cancel
+            </button>
         </div>
     </form>
 

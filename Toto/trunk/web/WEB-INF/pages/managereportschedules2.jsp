@@ -5,7 +5,7 @@
 <%@ include file="../includes/admin_header2.jsp" %>
 <div class="box">
     <form action="/api/ManageReportSchedules" method="post">
-        <div class="is-danger">${error}</div>
+        <div class="has-text-danger">${error}</div>
         <table class="table is-striped is-fullwidth">
             <thead>
             <tr>

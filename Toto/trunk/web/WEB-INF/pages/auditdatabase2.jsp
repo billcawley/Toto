@@ -23,7 +23,7 @@
     </Table>
 
     <form action="/api/AuditDatabase" method="post">
-        <div class="is-danger">${error}</div>
+        <div class="has-text-danger">${error}</div>
         <table class="table is-striped is-fullwidth">
             <thead>
             <tr>

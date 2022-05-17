@@ -4,7 +4,7 @@
 <c:set var="title" scope="request" value="Manage Database Connections"/>
 <%@ include file="../includes/admin_header2.jsp" %>
 <div class="box">
-    <div class="is-danger">${error}</div>
+    <div class="has-text-danger">${error}</div>
     <table class="table is-striped is-fullwidth">
         <thead>
         <tr>

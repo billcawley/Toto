@@ -6,7 +6,7 @@
 
 <div class="box">
     <h1 class="title">Edit/New Connection</h1>
-    <div class="is-danger">${error}</div>
+    <div class="has-text-danger">${error}</div>
     <form action="/api//ManageDatabaseConnections" method="post">
         <input type="hidden" name="editId" value="${id}"/>
         <!-- no business id -->

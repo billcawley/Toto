@@ -34,7 +34,7 @@ Copyright (C) 2016 Azquo Ltd.
 <div class="box">
     <h1>Restore a backup for ${database}</h1>
     Note : this will roll the database back or forward to the selected version. It will not affect reports associated with the database.
-<div class="is-danger">${error}</div>
+<div class="has-text-danger">${error}</div>
     <div id="working" class="loading" style="display:none"><h3>Working...</h3>
         <div class="loader"><span class="fa fa-spin fa-cog"></span></div>
     </div>

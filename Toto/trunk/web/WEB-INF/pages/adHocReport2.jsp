@@ -37,7 +37,7 @@
 </script>
 <div class="box">
     Ad-hoc Report
-    <div class="is-danger">${error}</div>
+    <div class="has-text-danger">${error}</div>
     <form action="/api/Online?opcode=adhocreport" method="post">
         <input type="hidden" name="reportid" value="">
         <div>
