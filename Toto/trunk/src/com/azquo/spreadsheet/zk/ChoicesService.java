@@ -56,29 +56,26 @@ public class ChoicesService {
             sheetName = sheetName.substring(0, 10);
         }
         String validationSheetName = sheetName + VALIDATION_SHEET;
-        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
-        if (book.getSheet(validationSheetName) == null) {
+         if (book.getSheet(validationSheetName) == null) {
             book.getInternalBook().createSheet(validationSheetName);
         }
         Sheet validationSheet = book.getSheet(validationSheetName);
         validationSheet.getInternalSheet().setSheetVisible(SSheet.SheetVisible.HIDDEN);
         int numberOfValidationsAdded = 0;
         List<SName> dependentRanges = new ArrayList<>();
-        for (SName name : book.getInternalBook().getNames()) {
-            if (name.getName().toLowerCase().endsWith("chosen")) {
-                String choiceName = name.getName().substring(0, name.getName().length() - "chosen".length());
-                List<String> choiceOptions = loadExternalSelections(loggedInUser,choiceName + "choice");
+        for (SName chosen : book.getInternalBook().getNames()) {
+            if (chosen.getName().toLowerCase().endsWith("chosen")) {
+                List<String> choiceOptions = loadExternalSelections(loggedInUser,chosen.getName());
                 if (choiceOptions!=null){
-                    return null;
+                    int row = setChoices(sheet, chosen, choiceOptions, validationSheet, numberOfValidationsAdded++);
                 }
-
             }
         }
-        for (SName chosen : book.getInternalBook().getNames()) {
-            String rangeName = chosen.getName().toLowerCase();
+        for (SName name : book.getInternalBook().getNames()) {
+            String rangeName = name.getName().toLowerCase();
             // are pivot headings being used at all now? Shall I zap? TODO
             if (rangeName.toLowerCase().startsWith(StringLiterals.AZPIVOTFILTERS) || rangeName.toLowerCase().startsWith(StringLiterals.AZCONTEXTFILTERS)) {//the correct version should be 'az_ContextFilters'
-                String[] filters = BookUtils.getSnameCell(chosen).getStringValue().split(",");
+                String[] filters = BookUtils.getSnameCell(name).getStringValue().split(",");
                 SName contextChoices = book.getInternalBook().getNameByName(StringLiterals.AZCONTEXTHEADINGS);
                 if (contextChoices == null) {
                     //original name...
@@ -88,16 +85,16 @@ public class ChoicesService {
                     showChoices(loggedInUser, book, contextChoices, filters );
                 }
             }
-            if (chosen.getName().toLowerCase().endsWith("chosen")) {
-                String choiceName = chosen.getName().substring(0, chosen.getName().length() - "choice".length());
-   //                System.out.println("debug:  trying to find the region " + choiceName + "chosen");
-                SName choice = BookUtils.getNameByName(choiceName + "choice", sheet);// as ever I do wonder about these string literals
-                SCell choiceCell = BookUtils.getSnameCell(choice);
-                if (choice.getRefersToCellRegion() != null) {
+            if (name.getName().toLowerCase().endsWith("choice")) {
+                String choiceName = name.getName().substring(0, name.getName().length() - "choice".length());
+                SCell choiceCell = BookUtils.getSnameCell(name);
+//                System.out.println("debug:  trying to find the region " + choiceName + "chosen");
+                SName chosen = BookUtils.getNameByName(choiceName + "chosen", sheet);// as ever I do wonder about these string literals
+                if (name.getRefersToCellRegion() != null && chosen != null) {
                     CellRegion chosenRegion = chosen.getRefersToCellRegion();
                     if (chosenRegion != null) {
                         // EFC note - I made a hack for bonza to check this wasn't null but
-                        List<String> choiceOptions = choiceOptionsMap.get(choice.getName().toLowerCase());
+                        List<String> choiceOptions = choiceOptionsMap.get(name.getName().toLowerCase());
                         boolean dataRegionDropdown = !BookUtils.getNamedDataRegionForRowAndColumnSelectedSheet(chosenRegion.getRow(), chosenRegion.getColumn(), sheet).isEmpty();
                         if (choiceCell.getType() != SCell.CellType.ERROR && (choiceCell.getType() != SCell.CellType.FORMULA || choiceCell.getFormulaResultType() != SCell.CellType.ERROR)) {
                             // check to make it work for Darren after some recent changes - todo - address what's actually going on here
@@ -108,44 +105,12 @@ public class ChoicesService {
                             int contentPos = query.toLowerCase().indexOf(CONTENTS);
                             if ((chosenRegion.getRowCount() == 1 || dataRegionDropdown) && (choiceOptions != null || contentPos >= 0)) {// dataregiondropdown is to determine if it's in a data region, the choice drop downs are sometimes used (abused?) in such a manner, a bank of drop downs in a data region
                                 if (contentPos < 0) {//not a dependent range
-                                    BookUtils.setValue(validationSheet.getInternalSheet().getCell(0, numberOfValidationsAdded), choice.getName());
-                                    int row = 0;
-                                    // changing comment - I don't think this can NPE - IntelliJ just can't see the logic that either this isn't null or contentPos < 0, this is in a contentPos < 0 condition. Could rejig the logic?
-                                    for (String choiceOption : choiceOptions) {
-                                        row++;// like starting at 1
-                                        SCell vCell = validationSheet.getInternalSheet().getCell(row, numberOfValidationsAdded);
-                                        vCell.setCellStyle(sheet.getInternalSheet().getCell(chosenRegion.getRow(), chosenRegion.getColumn()).getCellStyle());
-                                        // so the following bit of code was parsing a date on, for example 2020-11-24 policies which we wouldn't want it to. For the mo will check for spaces and not do the parse then
-                                        if (choiceOption.trim().contains(" ")){
-                                            BookUtils.setValue(vCell, choiceOption);
-                                        } else {
-                                            try {
-                                                Date date = df.parse(choiceOption);
-                                                vCell.setDateValue(date);
-                                            } catch (Exception e) {
-                                                BookUtils.setValue(vCell, choiceOption);
-                                            }
-                                        }
-                                    }
-                                    if (row > 0) { // if choice options is empty this will not work
-                                        Range validationValues = Ranges.range(validationSheet, 1, numberOfValidationsAdded, row, numberOfValidationsAdded);
-                                        //validationValues.createName("az_Validation" + numberOfValidationsAdded);
-                                        for (int rowNo = chosenRegion.getRow(); rowNo < chosenRegion.getRow() + chosenRegion.getRowCount(); rowNo++) {
-                                            for (int colNo = chosenRegion.getColumn(); colNo < chosenRegion.getColumn() + chosenRegion.getColumnCount(); colNo++) {
-                                                Range chosenRange = Ranges.range(sheet, rowNo, colNo, rowNo, colNo);
-                                                //chosenRange.setValidation(Validation.ValidationType.LIST, false, Validation.OperatorType.EQUAL, true, "\"az_Validation" + numberOfValidationsAdded +"\"", null,
-                                                chosenRange.setValidation(Validation.ValidationType.LIST, false, Validation.OperatorType.EQUAL, true, "=" + validationValues.asString(), null,
-                                                        //true, "title", "msg",
-                                                        true, "", "",
-                                                        false, Validation.AlertStyle.WARNING, "alert title", "alert msg");
-                                            }
-                                        }
-                                        numberOfValidationsAdded++;
-                                    } else {
+                                     int row = setChoices(sheet, chosen, choiceOptions, validationSheet, numberOfValidationsAdded++);
+                                    if (row==0){
                                         System.out.println("no choices for : " + choiceCell.getStringValue());
                                     }
-                                } else {
-                                    dependentRanges.add(choice);
+                                    } else {
+                                    dependentRanges.add(name);
                                 }
                             }
                         }// do anything in the case of excel error?
@@ -157,6 +122,46 @@ public class ChoicesService {
         return dependentRanges;
     }
 
+    private static int setChoices(Sheet sheet, SName chosen, List<String>choiceOptions, Sheet validationSheet, int numberOfValidationsAdded){
+        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+        BookUtils.setValue(validationSheet.getInternalSheet().getCell(0, numberOfValidationsAdded), chosen.getName());
+        CellRegion chosenRegion = chosen.getRefersToCellRegion();
+        int row = 0;
+         // changing comment - I don't think this can NPE - IntelliJ just can't see the logic that either this isn't null or contentPos < 0, this is in a contentPos < 0 condition. Could rejig the logic?
+        for (String choiceOption : choiceOptions) {
+            row++;// like starting at 1
+            SCell vCell = validationSheet.getInternalSheet().getCell(row, numberOfValidationsAdded);
+            vCell.setCellStyle(sheet.getInternalSheet().getCell(chosenRegion.getRow(), chosenRegion.getColumn()).getCellStyle());
+            // so the following bit of code was parsing a date on, for example 2020-11-24 policies which we wouldn't want it to. For the mo will check for spaces and not do the parse then
+            if (choiceOption.trim().contains(" ")){
+                BookUtils.setValue(vCell, choiceOption);
+            } else {
+                try {
+                    Date date = df.parse(choiceOption);
+                    vCell.setDateValue(date);
+                } catch (Exception e) {
+                    BookUtils.setValue(vCell, choiceOption);
+                }
+            }
+        }
+        if (row > 0) { // if choice options is empty this will not work
+            Range validationValues = Ranges.range(validationSheet, 1, numberOfValidationsAdded, row, numberOfValidationsAdded);
+            //validationValues.createName("az_Validation" + numberOfValidationsAdded);
+            for (int rowNo = chosenRegion.getRow(); rowNo < chosenRegion.getRow() + chosenRegion.getRowCount(); rowNo++) {
+                for (int colNo = chosenRegion.getColumn(); colNo < chosenRegion.getColumn() + chosenRegion.getColumnCount(); colNo++) {
+                    Range chosenRange = Ranges.range(sheet, rowNo, colNo, rowNo, colNo);
+                    //chosenRange.setValidation(Validation.ValidationType.LIST, false, Validation.OperatorType.EQUAL, true, "\"az_Validation" + numberOfValidationsAdded +"\"", null,
+                    chosenRange.setValidation(Validation.ValidationType.LIST, false, Validation.OperatorType.EQUAL, true, "=" + validationValues.asString(), null,
+                            //true, "title", "msg",
+                            true, "", "",
+                            false, Validation.AlertStyle.WARNING, "alert title", "alert msg");
+                }
+            }
+        }
+        return row;
+
+    }
+
     private static List<String> loadExternalSelections(LoggedInUser loggedInUser, String selectionName){
         List<ExternalDataRequest>externalDataRequests = ExternalDataRequestDAO.findForReportId(loggedInUser.getOnlineReport().getId());
         for (ExternalDataRequest externalDataRequest:externalDataRequests){
@@ -165,6 +170,7 @@ public class ChoicesService {
                     List<List<String>> data = ExternalConnector.getData(loggedInUser, externalDataRequest.getConnectorId(), CommonReportUtils.replaceUserChoicesInQuery(loggedInUser, externalDataRequest.getReadSQL()), null, null);
                     if (data != null) {
                         List<String> toReturn = new ArrayList<>();
+                        data.remove(data.get(0));//remove the field name
                         for (List<String> dataline : data) {
                             toReturn.add(dataline.get(0));
                         }
