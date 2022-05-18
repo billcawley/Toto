@@ -71,28 +71,61 @@
         }
 
         if ($('#rowsaql').val().length > 0 && $('#colsaql').val().length > 0){
-            let data = await azquoSend("op=getdropdownlistforquery&choice=" + encodeURIComponent($('#colsaql').val())+ "&sessionid=${pageContext.session.id}&database="  + encodeURIComponent($('#database').val()));
-            var userChoices = await data.json();
 
-            //alert(userChoices);
+
+
+
+            /*
+
+   rowHeadingsSource: string[][],
+    columnHeadingsSource: string[][],
+    columnHeadings: string[][],
+    rowHeadings: string[][],
+    context: string[][],
+    data: string[][],
+    highlight: boolean[][],
+    comments: string[][]
+    options: string,
+    lockresult: string
+             */
+
+            let data = await azquoSend("op=loadregion&reportname=meh&json=" + encodeURIComponent(JSON.stringify({
+                reportId : '',
+                sheetName : "sheetname",
+                region: "$region",
+                optionsSource: "",
+                rowHeadings: [[$('#rowsaql').val()]],
+                columnHeadings: [[$('#colsaql').val()]],
+                context: [[$('#context').val()]],
+                query: [[]],
+                userContext: "",
+                data: [[]],
+                comments: [[]]
+            })) + "&sessionid=${pageContext.session.id}&database="  + encodeURIComponent($('#database').val()));;
+            var dataJson = await data.json();
+
+
+            //alert(dataJson);
             var rows = '';
             // todo limit cols??
-            var row = '<tr>';
-            $.each(userChoices, function(index, item) {
-                if (item.toString().startsWith("Error :")){
-                    row += '<td><span  style="color:red">' + item + '</span></td>';
-                } else {
-                    row += '<td>' + item + '</td>';
-                }
-            });
-            rows += row + '<tr>';
-            for (j = 0; j < 10; j++){
-                row = '<tr>';
-                $.each(userChoices, function(index, item) {
-                    row += '<td></td>';
+            $.each(dataJson.columnHeadings, function(index, item) {
+                var row = '<tr><td></td>';
+                $.each(item, function(index, field) {
+                        row += '<td>' + field + '</td>';
                 });
                 rows += row + '<tr>';
-            }
+            });
+            $.each(dataJson.data, function(index, item) {
+                var row = '<tr><td>' + dataJson.rowHeadings[index] + '</td>';
+                $.each(item, function(index, field) {
+                    if (field.toString().startsWith("Error :")){
+                        row += '<td><span  style="color:red">' + item + '</span></td>';
+                    } else {
+                        row += '<td>' + field + '</td>';
+                    }
+                });
+                rows += row + '<tr>';
+            });
         }
         $('#data-table').html(rows);
     }
@@ -135,8 +168,9 @@
     <br/>Rows AQL : <input class="input is-small" name="rowsaql" id="rowsaql"/> &nbsp;Cols AQL : <input class="input is-small" name="colsaql" id="colsaql"/>&nbsp;Context : <input class="input is-small" name="context" id="context"/>
     <br/>
     <br/>
-
+    <div class="table-container">
     <table class="table is-bordered" id="data-table">
     </table>
+    </div>
 </div>
 <%@ include file="../includes/admin_footer.jsp" %>

@@ -904,7 +904,8 @@ public class ExcelController {
                         cellsAndHeadingsForDisplay.setOptions(null);
                         System.out.println("NPE checking : " + loggedInUser.getOnlineReport());
                         System.out.println("NPE checking : " + excelJsonRequest);
-                        loggedInUser.setSentCells(loggedInUser.getOnlineReport().getId(), excelJsonRequest.sheetName, excelJsonRequest.region, cellsAndHeadingsForDisplay);
+                        // Edd allowing null online report for the new range test. Don't think it will cause harm
+                        loggedInUser.setSentCells(loggedInUser.getOnlineReport() != null ? loggedInUser.getOnlineReport().getId() : 0, excelJsonRequest.sheetName, excelJsonRequest.region, cellsAndHeadingsForDisplay);
                         result = jacksonMapper.writeValueAsString(new CellsAndHeadingsForExcel(excelJsonRequest, cellsAndHeadingsForDisplay));
                         cellsAndHeadingsForDisplay.setOptions(holdOptions);
                         System.out.println("About to return result which is " + result.length() + " long in " + (System.currentTimeMillis() - time));
