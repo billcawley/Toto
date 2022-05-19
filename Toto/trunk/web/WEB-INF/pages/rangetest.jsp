@@ -156,14 +156,7 @@
             <option value="${database.name}">${database.name}</option>
         </c:forEach></select>
     </div>
-    &nbsp;
-    <a href="#" class="button is-small" onclick="switchHeadings(false, true)">Assign Each Row Heading</a>&nbsp;
-    &nbsp;
-    <a href="#" class="button is-small" onclick="switchHeadings(true, false)">Assign Each Column Heading</a>&nbsp;
-    &nbsp;
-    <a href="#" class="button is-small" onclick="switchHeadings(false, false)">Reset</a>&nbsp;
-    &nbsp;
-    <a href="#" class="button is-small" onclick="getData()">Test</a>&nbsp;
+    <a href="#" class="button is-small" onclick="getData()">Run Query</a>&nbsp;
     <br/>
     <br/>Rows AQL : <input class="input is-small" name="rowsaql" id="rowsaql"/> &nbsp;Cols AQL : <input class="input is-small" name="colsaql" id="colsaql"/>&nbsp;Context : <input class="input is-small" name="context" id="context"/>
     <br/>
