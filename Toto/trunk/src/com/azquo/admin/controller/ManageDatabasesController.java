@@ -367,7 +367,7 @@ public class ManageDatabasesController {
                         String fileName = uploadFile.getOriginalFilename();
                         File moved = new File(SpreadsheetService.getHomeDir() + "/temp/" + System.currentTimeMillis() + fileName); // timestamp to stop file overwriting
                         uploadFile.transferTo(moved);
-                        model.put("error", BackupService.loadBackup(loggedInUser, moved, database));
+                        model.put("results", BackupService.loadBackup(loggedInUser, moved, database));
                         // todo - "import templates" being detected internally also - do we need to do it here? I guess it's to do with user feedback
                     } else if ("true".equals(template) || uploadFile.getOriginalFilename().toLowerCase().contains("import templates") && uploadFiles.length == 1) {
                         try {
