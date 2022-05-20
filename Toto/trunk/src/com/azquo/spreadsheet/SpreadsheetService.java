@@ -754,7 +754,7 @@ public class SpreadsheetService {
                                 }
                             }
                             if (hasData) {
-                                dataline.set(keyCol, externalDataRequest.getSaveInsertkey());
+                                dataline.set(keyCol, externalDataRequest.getSaveInsertKeyValue());
                                 ExternalConnector.getData(loggedInUser, externalDataRequest.getConnectorId(), externalDataRequest.getSaveFilename(), createMap(headingRow, dataline), null);
                                 savedRows++;
                             }
