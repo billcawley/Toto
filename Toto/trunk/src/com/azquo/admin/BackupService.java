@@ -332,69 +332,76 @@ public class BackupService {
                         fileName = f.getName();
                     }
                     if (jReports != null) {
-                        JSONObject jReport = jReports.getJSONObject(f.getName());
-
-                        String reportName = jReport.getString("name");
-
-                        uploadedFiles.addAll(ImportService.importTheFile(loggedInUser
-                                , new UploadedFile(f.getAbsolutePath(), Collections.singletonList(fileName), false), null, null, "Report name = " + reportName));
-                        OnlineReport or = OnlineReportDAO.findForNameAndBusinessId(reportName, loggedInUser.getBusiness().getId());
-                        or.setCategory(findOneInFeatures(jReport, "category"));
-                        or.setExplanation(findOneInFeatures(jReport, "explanation"));
-                        OnlineReportDAO.store(or);
-                        AdminService.removeMenusAndDataRequests(or.getId());
                         try {
-                            JSONObject jExternalDatabaseConnections = jReport.getJSONObject("externaldatabaseconnections");
-                            Iterator<String> names = jExternalDatabaseConnections.keys();
-                            while(names.hasNext()){
-                                String name = names.next();
-                                Object object = jExternalDatabaseConnections.get(name);
-                                JSONObject jObject = (JSONObject) object;
-                                ExternalDatabaseConnection externalDatabaseConnection = ExternalDatabaseConnectionDAO.findForNameAndBusinessId(name, loggedInUser.getBusiness().getId());
-                                if (externalDatabaseConnection == null) {
-                                    externalDatabaseConnection = new ExternalDatabaseConnection(0, loggedInUser.getBusiness().getId(), name, jObject.getString("connectionstring"), jObject.getString("user"), jObject.getString("password"), jObject.getString("database"));
-                                    ExternalDatabaseConnectionDAO.store(externalDatabaseConnection);
+                            JSONObject jReport = jReports.getJSONObject(f.getName());
+
+                            String reportName = jReport.getString("name");
+
+                            uploadedFiles.addAll(ImportService.importTheFile(loggedInUser
+                                    , new UploadedFile(f.getAbsolutePath(), Collections.singletonList(fileName), false), null, null, "Report name = " + reportName));
+                            OnlineReport or = OnlineReportDAO.findForNameAndBusinessId(reportName, loggedInUser.getBusiness().getId());
+                            or.setCategory(findOneInFeatures(jReport, "category"));
+                            or.setExplanation(findOneInFeatures(jReport, "explanation"));
+                            OnlineReportDAO.store(or);
+                            AdminService.removeMenusAndDataRequests(or.getId());
+                            try {
+                                JSONObject jExternalDatabaseConnections = jReport.getJSONObject("externaldatabaseconnections");
+                                Iterator<String> names = jExternalDatabaseConnections.keys();
+                                while (names.hasNext()) {
+                                    String name = names.next();
+                                    Object object = jExternalDatabaseConnections.get(name);
+                                    JSONObject jObject = (JSONObject) object;
+                                    ExternalDatabaseConnection externalDatabaseConnection = ExternalDatabaseConnectionDAO.findForNameAndBusinessId(name, loggedInUser.getBusiness().getId());
+                                    if (externalDatabaseConnection == null) {
+                                        externalDatabaseConnection = new ExternalDatabaseConnection(0, loggedInUser.getBusiness().getId(), name, jObject.getString("connectionstring"), jObject.getString("user"), jObject.getString("password"), jObject.getString("database"));
+                                        ExternalDatabaseConnectionDAO.store(externalDatabaseConnection);
+                                    }
                                 }
+                            } catch (Exception e) {
+                                //no connections
                             }
-                        }catch(Exception e){
-                            //no connections
-                        }
 
-                        try {
-                            JSONObject jMenuAppearances = jReport.getJSONObject("menuappearances");
-                            Iterator<String> names = jMenuAppearances.keys();
-                            while(names.hasNext()){
-                                String name = names.next();
-                                Object object = jMenuAppearances.get(name);
-                                JSONObject jObject = (JSONObject) object;
-                                MenuAppearance menuAppearance = new MenuAppearance(0, loggedInUser.getBusiness().getId(), or.getId(), name, jObject.getInt("importance"), null);
-                                MenuAppearanceDAO.store(menuAppearance);
-                            }
-                        }catch(Exception e){
-                            //none
-                        }
-                        try {
-                            JSONObject jExternalDataRequests = jReport.getJSONObject("externaldatarequests");
-                            Iterator<String> names = jExternalDataRequests.keys();
-                            while(names.hasNext()){
-                                String name = names.next();
-                                Object object = jExternalDataRequests.get(name);
-                                JSONObject jObject = (JSONObject) object;
-                                try{
-                                    boolean allowDelete = false;
-                                    ExternalDatabaseConnection externalDatabaseConnection = ExternalDatabaseConnectionDAO.findForNameAndBusinessId(jObject.getString("connectionname"), loggedInUser.getBusiness().getId());
-                                    ExternalDataRequest externalDataRequest = new ExternalDataRequest(0, or.getId(), name, externalDatabaseConnection.getId(), jObject.getString("readsql"), jObject.getString("savekeyfield"), jObject.getString("savefilename"), jObject.getString("saveinsertkeyvalue"), jObject.getBoolean("allowdelete"));
-                                    ExternalDataRequestDAO.store(externalDataRequest);
-                                }catch(Exception e){
-                                    ExternalDataRequest externalDataRequest = new ExternalDataRequest(0, or.getId(), name, 0,"","","","",false);
-                                    ExternalDataRequestDAO.store(externalDataRequest);
-
+                            try {
+                                JSONObject jMenuAppearances = jReport.getJSONObject("menuappearances");
+                                Iterator<String> names = jMenuAppearances.keys();
+                                while (names.hasNext()) {
+                                    String name = names.next();
+                                    Object object = jMenuAppearances.get(name);
+                                    JSONObject jObject = (JSONObject) object;
+                                    MenuAppearance menuAppearance = new MenuAppearance(0, loggedInUser.getBusiness().getId(), or.getId(), name, jObject.getInt("importance"), null);
+                                    MenuAppearanceDAO.store(menuAppearance);
                                 }
+                            } catch (Exception e) {
+                                //none
+                            }
+                            try {
+                                JSONObject jExternalDataRequests = jReport.getJSONObject("externaldatarequests");
+                                Iterator<String> names = jExternalDataRequests.keys();
+                                while (names.hasNext()) {
+                                    String name = names.next();
+                                    Object object = jExternalDataRequests.get(name);
+                                    JSONObject jObject = (JSONObject) object;
+                                    try {
+                                        boolean allowDelete = false;
+                                        ExternalDatabaseConnection externalDatabaseConnection = ExternalDatabaseConnectionDAO.findForNameAndBusinessId(jObject.getString("connectionname"), loggedInUser.getBusiness().getId());
+                                        ExternalDataRequest externalDataRequest = new ExternalDataRequest(0, or.getId(), name, externalDatabaseConnection.getId(), jObject.getString("readsql"), jObject.getString("savekeyfield"), jObject.getString("savefilename"), jObject.getString("saveinsertkeyvalue"), jObject.getBoolean("allowdelete"));
+                                        ExternalDataRequestDAO.store(externalDataRequest);
+                                    } catch (Exception e) {
+                                        ExternalDataRequest externalDataRequest = new ExternalDataRequest(0, or.getId(), name, 0, "", "", "", "", false);
+                                        ExternalDataRequestDAO.store(externalDataRequest);
+
+                                    }
+                                }
+                            } catch (Exception e) {
+                                //no external data requests
+
                             }
                         }catch(Exception e){
-                            //no external data requests
-
+                            //this file is not a report.  Upload it anyway - it will be an import template
+                            uploadedFiles.addAll(ImportService.importTheFile(loggedInUser
+                                    , new UploadedFile(f.getAbsolutePath(), Collections.singletonList(fileName), false), null, null, ""));
                         }
+
                     }else{
 
                         // hacky way of dealing with categories
