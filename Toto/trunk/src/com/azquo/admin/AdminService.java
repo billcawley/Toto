@@ -238,9 +238,6 @@ this may now not work at all, perhaps delete?
     }
 
 
-
-
-
     public static List<OnlineReport> getReportList(final LoggedInUser loggedInUser, boolean webFormat) {
         List<OnlineReport> reportList = new ArrayList<>();
         if (!loggedInUser.getUser().isAdministrator() && !loggedInUser.getUser().isDeveloper()) {
@@ -574,20 +571,29 @@ this may now not work at all, perhaps delete?
                     }
                 }
             }
-            List<MenuAppearance> menuAppearances = MenuAppearanceDAO.findForReportId(onlineReport.getId());
-            for (MenuAppearance menuAppearance:menuAppearances){
-                MenuAppearanceDAO.removeById(menuAppearance.getId());
-            }
-            List<ExternalDataRequest> externalDataRequests = ExternalDataRequestDAO.findForReportId(onlineReport.getId());
-            for (ExternalDataRequest externalDataRequest:externalDataRequests){
-                ExternalDataRequestDAO.removeById(externalDataRequest.getId());
-            }
+            removeMenusAndDataRequests(reportId);
             OnlineReportDAO.removeById(onlineReport);
             // and the schedules
             List<ReportSchedule> reportSchedules = ReportScheduleDAO.findForReportId(reportId);
             for (ReportSchedule reportSchedule : reportSchedules) {
                 ReportScheduleDAO.removeById(reportSchedule);
             }
+
+
+        }
+    }
+
+    public static void removeMenusAndDataRequests(int reportId) {
+       List<MenuAppearance> menuAppearances = MenuAppearanceDAO.findForReportId(reportId);
+        for (
+                MenuAppearance menuAppearance : menuAppearances) {
+            MenuAppearanceDAO.removeById(menuAppearance.getId());
+        }
+
+        List<ExternalDataRequest> externalDataRequests = ExternalDataRequestDAO.findForReportId(reportId);
+        for (
+                ExternalDataRequest externalDataRequest : externalDataRequests) {
+            ExternalDataRequestDAO.removeById(externalDataRequest.getId());
         }
     }
 
