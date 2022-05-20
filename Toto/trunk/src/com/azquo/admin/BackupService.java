@@ -9,9 +9,7 @@ Report server logic for creating and restoring backups
 
 import com.azquo.admin.controller.ManageDatabasesController;
 import com.azquo.admin.database.*;
-import com.azquo.admin.onlinereport.DatabaseReportLinkDAO;
-import com.azquo.admin.onlinereport.OnlineReport;
-import com.azquo.admin.onlinereport.OnlineReportDAO;
+import com.azquo.admin.onlinereport.*;
 import com.azquo.admin.user.User;
 import com.azquo.admin.user.UserDAO;
 import com.azquo.dataimport.*;
@@ -28,13 +26,17 @@ import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.dataformat.csv.CsvMapper;
 import com.fasterxml.jackson.dataformat.csv.CsvParser;
 import com.fasterxml.jackson.dataformat.csv.CsvSchema;
+import jdk.nashorn.internal.parser.JSONParser;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.math.NumberUtils;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.zeroturnaround.zip.FileSource;
 import org.zeroturnaround.zip.ZipEntrySource;
 import org.zeroturnaround.zip.ZipUtil;
 
 import java.io.*;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -46,9 +48,25 @@ import static com.azquo.dataimport.ImportService.importTemplatesDir;
 
 
 public class BackupService {
+
+    public static class ReportFeature {
+        String featureName;
+        String featureValue;
+
+        ReportFeature(String featureName, String featureValue){
+            this.featureName = featureName;
+            this.featureValue = featureValue;
+        }
+
+    }
+
+
+
     private static final String CATEGORYBREAK = "~~~"; // I'm not proud of this
+
     private static final String CATEGORYBREAKOLD = "|||"; // tripped up windows
     private static final String TYPEBREAK = "~~T~~"; // I'm not proud of this
+
 
     public static File createDBandReportsAndTemplateBackup(LoggedInUser loggedInUser, String nameSubset, boolean justReports) throws Exception {
         // ok, new code to dump a database and all reports. The former being the more difficult bit.
@@ -98,13 +116,10 @@ public class BackupService {
             toZip.add(new FileSource(dbFile.getName(), dbFile));
             zipFiles.add(dbFile.getName());
         }
+        JSONObject jReports = new JSONObject();
         for (OnlineReport onlineReport : onlineReports) {
-            String category = null;
-            if (onlineReport.getCategory() != null && !onlineReport.getCategory().isEmpty()) {
-                category = onlineReport.getCategory();
-            }
             // this little chunk to stop duplicate entries
-            String zipPath = (category != null ? category + CATEGORYBREAK : "") + onlineReport.getFilename();
+            String zipPath =onlineReport.getFilename();
             if (zipFiles.contains(zipPath)) {
                 int counter = 0;
                 while (zipFiles.contains(counter + zipPath)) {
@@ -112,10 +127,71 @@ public class BackupService {
                 }
                 zipPath = counter + zipPath;
             }
+            JSONObject jreport = new JSONObject();
+            jreport.put("name", onlineReport.getReportName());
+            jreport.put("category", onlineReport.getCategory());
+            jreport.put("explanation", onlineReport.getExplanation());
+            if (onlineReport.getFilename().startsWith("IFRAME")){
+                jreport.put("iframe",onlineReport.getFilename());
+            }else {
 
-            toZip.add(new FileSource(zipPath, new File(SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + onlineReport.getFilenameForDisk())));
-            zipFiles.add(zipPath);
+                toZip.add(new FileSource(zipPath, new File(SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + onlineReport.getFilenameForDisk())));
+                zipFiles.add(zipPath);
+                //there  now further information that needs to be saved on each report.  Also the report may not contain the report name.  Must be obtained from OnlineReport
+                JSONObject jMenuAppearances = new JSONObject();
+                List<MenuAppearance> menuAppearances = MenuAppearanceDAO.findForReportId(onlineReport.getId());
+                for (MenuAppearance menuAppearance : menuAppearances) {
+                    JSONObject jMenuAppearance = new JSONObject();
+                    jMenuAppearance.put("importance",menuAppearance.getImportance());
+                    jMenuAppearances.put(menuAppearance.getSubmenuName(),jMenuAppearance);
+                }
+                jreport.put("menuappearances",jMenuAppearances);
+                List<Integer> connectionIds = new ArrayList<>();
+                JSONObject jExternalDataRequests = new JSONObject();
+                JSONObject jExternalDatabaseConnections = new JSONObject();
+                List<ExternalDataRequest> externalDataRequests = ExternalDataRequestDAO.findForReportId(onlineReport.getId());
+                for (ExternalDataRequest externalDataRequest : externalDataRequests) {
+                    int connectionId = externalDataRequest.getConnectorId();
+                    if (connectionId > 0) {
+                        ExternalDatabaseConnection externalDatabaseConnection = ExternalDatabaseConnectionDAO.findById(connectionId);
+                        if (!connectionIds.contains(connectionId)) {
+                            JSONObject jExternalDatabaseConnection = new JSONObject();
+                            connectionIds.add(connectionId);
+                            jExternalDatabaseConnection.put("connectionstring",externalDatabaseConnection.getConnectionString());
+                            jExternalDatabaseConnection.put("user",externalDatabaseConnection.getUser());
+                            jExternalDatabaseConnection.put("password",externalDatabaseConnection.getPassword());
+                            jExternalDatabaseConnection.put("database",externalDatabaseConnection.getDatabase());
+                            jExternalDatabaseConnections.put(externalDatabaseConnection.getName(),jExternalDatabaseConnection);
+                        }
+                        JSONObject jExternalDataRequest = new JSONObject();
+                          jExternalDataRequest.put("connectionname" ,externalDatabaseConnection.getName());
+                        jExternalDataRequest.put("readsql", externalDataRequest.getReadSQL());
+                        jExternalDataRequest.put("savekeyfield",externalDataRequest.getSaveKeyfield());
+                        jExternalDataRequest.put("savefilename", externalDataRequest.getSaveFilename());
+                        jExternalDataRequest.put("saveinsertkeyvalue", externalDataRequest.getSaveInsertKeyValue());
+                        jExternalDataRequest.put("allowdelete",(externalDataRequest.getAllowDelete()));
+                        jExternalDataRequests.put(externalDataRequest.getSheetRangeName(),jExternalDataRequest);
+                    } else {
+                        jExternalDataRequests.put(externalDataRequest.getSheetRangeName(),new JSONObject());
+                    }
+                }
+                jreport.put("externaldatabaseconnections",jExternalDatabaseConnections);
+                jreport.put("externaldatarequests",jExternalDataRequests);
+            }
+            jReports.put(zipPath, jreport);
+
+
+
         }
+          String outFile = "reportInfo.json";
+        File writeFile = new File(outFile);
+        writeFile.delete(); // to avoid confusion
+        BufferedWriter fileWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(outFile), StandardCharsets.UTF_8));
+        fileWriter.write(jReports.toString());
+        fileWriter.flush();
+        fileWriter.close();
+        toZip.add(new FileSource("report Info", new File(writeFile.getAbsolutePath())));
+        zipFiles.add(writeFile.getAbsolutePath());
         if (importTemplate != null) {
             // this little chunk to stop duplicate entries
             String zipPath = importTemplate.getFilenameForDisk();
@@ -201,10 +277,41 @@ public class BackupService {
             }
         }
 
+        JSONObject jReports = null;
+        for (File f:files){
+            if (f.getName().equalsIgnoreCase("report info")){
+                String data = new String(Files.readAllBytes(Paths.get(f.getAbsolutePath())));
+                jReports = new JSONObject(data);
+                Iterator<String> names = jReports.keys();
+                while (names.hasNext()){
+                    String name = names.next();
+                    JSONObject jReport = jReports.getJSONObject(name);
+                    String iFrame = findOneInFeatures(jReport,"iframe");
+                    if (iFrame!=null&& iFrame.length()>0){
+                        OnlineReport or = OnlineReportDAO.findForNameAndBusinessId(jReport.getString("name"),loggedInUser.getBusiness().getId());
+                        if (or!=null) {
+                            AdminService.removeReportByIdWithBasicSecurity(loggedInUser, or.getId());
+
+                        }
+                        or = new OnlineReport(0, LocalDateTime.now(), loggedInUser.getBusiness().getId(), loggedInUser.getUser().getId(), "", jReport.getString("name"), iFrame, findOneInFeatures(jReport,"explanation"), findOneInFeatures(jReport,"category"));
+                        OnlineReportDAO.store(or);
+                        AdminService.removeMenusAndDataRequests(or.getId());
+                        DatabaseReportLinkDAO.link(loggedInUser.getDatabase().getId(),or.getId());
+                    }
+                }
+                break;
+            }
+        }
+
         // now reports
+        List<UploadedFile>uploadedFiles = new ArrayList<>();
+        DatabaseReportLinkDAO.unLinkDatabase(loggedInUser.getDatabase().getId());
+
+
         for (File f : files) {
-            if (!f.getName().endsWith(".db")) {
+            if (!f.getName().endsWith(".db") && !f.getName().toLowerCase(Locale.ROOT).equals("report info")) {
                 // deal with the moved (typed) uploads first
+
                 if (f.getName().contains(TYPEBREAK)) {
                     // fragments of the code to make an upload record without actually uploading
                     String type = f.getName().substring(0, f.getName().indexOf(TYPEBREAK));
@@ -224,34 +331,102 @@ public class BackupService {
                     } else {
                         fileName = f.getName();
                     }
-                    // hacky way of dealing with categories
-                    String category = null;
-                    if (fileName.contains(CATEGORYBREAK)) {
-                        category = fileName.substring(0, fileName.indexOf(CATEGORYBREAK));
-                        fileName = f.getName().substring(fileName.indexOf(CATEGORYBREAK) + CATEGORYBREAK.length());
-                    }
-                    if (fileName.contains(CATEGORYBREAKOLD)) {
-                        category = fileName.substring(0, fileName.indexOf(CATEGORYBREAKOLD));
-                        fileName = f.getName().substring(fileName.indexOf(CATEGORYBREAKOLD) + CATEGORYBREAKOLD.length());
-                    }
-                    List<UploadedFile> uploadedFiles = ImportService.importTheFile(loggedInUser
-                            , new UploadedFile(f.getAbsolutePath(), Collections.singletonList(fileName), false), null, null);
-                    // EFC : got to hack the category in, I don't like this . . .
-                    if (category != null) {
-                        for (UploadedFile uploadedFile : uploadedFiles) {
-                            if (uploadedFile.getReportName() != null) {
-                                OnlineReport or = OnlineReportDAO.findForNameAndUserId(uploadedFile.getReportName(), loggedInUser.getUser().getId());
-                                if (or != null) {
-                                    or.setCategory(category);
-                                    OnlineReportDAO.store(or);
+                    if (jReports != null) {
+                        JSONObject jReport = jReports.getJSONObject(f.getName());
+
+                        String reportName = jReport.getString("name");
+
+                        uploadedFiles.addAll(ImportService.importTheFile(loggedInUser
+                                , new UploadedFile(f.getAbsolutePath(), Collections.singletonList(fileName), false), null, null, "Report name = " + reportName));
+                        OnlineReport or = OnlineReportDAO.findForNameAndBusinessId(reportName, loggedInUser.getBusiness().getId());
+                        or.setCategory(findOneInFeatures(jReport, "category"));
+                        or.setExplanation(findOneInFeatures(jReport, "explanation"));
+                        OnlineReportDAO.store(or);
+                        AdminService.removeMenusAndDataRequests(or.getId());
+                        try {
+                            JSONObject jExternalDatabaseConnections = jReport.getJSONObject("externaldatabaseconnections");
+                            Iterator<String> names = jExternalDatabaseConnections.keys();
+                            while(names.hasNext()){
+                                String name = names.next();
+                                Object object = jExternalDatabaseConnections.get(name);
+                                JSONObject jObject = (JSONObject) object;
+                                ExternalDatabaseConnection externalDatabaseConnection = ExternalDatabaseConnectionDAO.findForNameAndBusinessId(name, loggedInUser.getBusiness().getId());
+                                if (externalDatabaseConnection == null) {
+                                    externalDatabaseConnection = new ExternalDatabaseConnection(0, loggedInUser.getBusiness().getId(), name, jObject.getString("connectionstring"), jObject.getString("user"), jObject.getString("password"), jObject.getString("database"));
+                                    ExternalDatabaseConnectionDAO.store(externalDatabaseConnection);
+                                }
+                            }
+                        }catch(Exception e){
+                            //no connections
+                        }
+
+                        try {
+                            JSONObject jMenuAppearances = jReport.getJSONObject("menuappearances");
+                            Iterator<String> names = jMenuAppearances.keys();
+                            while(names.hasNext()){
+                                String name = names.next();
+                                Object object = jMenuAppearances.get(name);
+                                JSONObject jObject = (JSONObject) object;
+                                MenuAppearance menuAppearance = new MenuAppearance(0, loggedInUser.getBusiness().getId(), or.getId(), name, jObject.getInt("importance"), null);
+                                MenuAppearanceDAO.store(menuAppearance);
+                            }
+                        }catch(Exception e){
+                            //none
+                        }
+                        try {
+                            JSONObject jExternalDataRequests = jReport.getJSONObject("externaldatarequests");
+                            Iterator<String> names = jExternalDataRequests.keys();
+                            while(names.hasNext()){
+                                String name = names.next();
+                                Object object = jExternalDataRequests.get(name);
+                                JSONObject jObject = (JSONObject) object;
+                                try{
+                                    boolean allowDelete = false;
+                                    ExternalDatabaseConnection externalDatabaseConnection = ExternalDatabaseConnectionDAO.findForNameAndBusinessId(jObject.getString("connectionname"), loggedInUser.getBusiness().getId());
+                                    ExternalDataRequest externalDataRequest = new ExternalDataRequest(0, or.getId(), name, externalDatabaseConnection.getId(), jObject.getString("readsql"), jObject.getString("savekeyfield"), jObject.getString("savefilename"), jObject.getString("saveinsertkeyvalue"), jObject.getBoolean("allowdelete"));
+                                    ExternalDataRequestDAO.store(externalDataRequest);
+                                }catch(Exception e){
+                                    ExternalDataRequest externalDataRequest = new ExternalDataRequest(0, or.getId(), name, 0,"","","","",false);
+                                    ExternalDataRequestDAO.store(externalDataRequest);
+
+                                }
+                            }
+                        }catch(Exception e){
+                            //no external data requests
+
+                        }
+                    }else{
+
+                        // hacky way of dealing with categories
+                        String category = null;
+                        if (fileName.contains(CATEGORYBREAK)) {
+                            category = fileName.substring(0, fileName.indexOf(CATEGORYBREAK));
+                            fileName = f.getName().substring(fileName.indexOf(CATEGORYBREAK) + CATEGORYBREAK.length());
+                        }
+                        if (fileName.contains(CATEGORYBREAKOLD)) {
+                            category = fileName.substring(0, fileName.indexOf(CATEGORYBREAKOLD));
+                            fileName = f.getName().substring(fileName.indexOf(CATEGORYBREAKOLD) + CATEGORYBREAKOLD.length());
+                        }
+                        uploadedFiles.addAll(ImportService.importTheFile(loggedInUser
+                                , new UploadedFile(f.getAbsolutePath(), Collections.singletonList(fileName), false), null, null));
+                        // EFC : got to hack the category in, I don't like this . . .
+                        if (category != null) {
+                            for (UploadedFile uploadedFile : uploadedFiles) {
+                                if (uploadedFile.getReportName() != null) {
+                                    OnlineReport or = OnlineReportDAO.findForNameAndUserId(uploadedFile.getReportName(), loggedInUser.getUser().getId());
+                                    if (or != null) {
+                                        or.setCategory(category);
+                                        OnlineReportDAO.store(or);
+                                    }
                                 }
                             }
                         }
                     }
-                    toReturn.append(ManageDatabasesController.formatUploadedFiles(uploadedFiles, -1, false, null)).append("<br/>");
                 }
             }
         }
+        toReturn.append(ManageDatabasesController.formatUploadedFiles(uploadedFiles, -1, false, null)).append("<br/>");
+
 /*        long secondstaken = (System.currentTimeMillis() - time) / 1000;
         System.gc();
         final Runtime runtime = Runtime.getRuntime();
@@ -264,7 +439,18 @@ public class BackupService {
         return toReturn.toString();
     }
 
-    // should be in shared?
+      private static String findOneInFeatures(JSONObject reportFeatures,String toFind){
+
+        try {
+            String found = reportFeatures.getString(toFind);
+            return found;
+        }catch(Exception e){
+            return "";
+        }
+    }
+
+
+            // should be in shared?
     private static int batchSize = 100_000;
 
     public static void loadDBBackup(LoggedInUser loggedInUser, File file, String database, StringBuilder log, boolean justEmpty) {
