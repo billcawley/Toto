@@ -63,7 +63,9 @@
         </c:forEach>
         <tr>
             <td></td>
-            <td><a href="/api/ManageReports?createnewreport=tobeentered" target="_blank"> <span class="fa fa-table"></span> NEW REPORT</a></td>
+            <c:if test="${sessionScope.test != null}">
+                <td><a href="/api/ManageReports?createnewreport=tobeentered" target="_blank"> <span class="fa fa-table"></span> NEW REPORT</a></td>
+            </c:if>
         </tr>
         </tbody>
     </table>

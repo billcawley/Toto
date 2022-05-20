@@ -525,7 +525,7 @@ public final class ImportService {
             String reportName = null;
             // a misleading name now we have the ImportTemplate object
             org.apache.poi.ss.usermodel.Name reportRange = BookUtils.getName(book, StringLiterals.AZREPORTNAME);
-            if (userComment.startsWith("Report name = ") || reportRange != null) {
+            if (userComment!=null && userComment.startsWith("Report name = ") || reportRange != null) {
                 if (reportRange != null) {
                     CellReference sheetNameCell = BookUtils.getNameCell(reportRange);
                     if (sheetNameCell != null) {
@@ -3398,7 +3398,7 @@ fr.close();
                 }
                 loggedInUser.setLastFileName(zipforuploadresult.getFileName().toString() + ".zip");
                 // should probably not be HTML in here . . .
-                model.put("error", "<a href=\"/api/Download?lastFile=true\">DOWNLOAD pre-processor test results " + zipforuploadresult.getFileName().toString() + ".zip" + "</a>");
+                model.put("results", "<a href=\"/api/Download?lastFile=true\">DOWNLOAD pre-processor test results " + zipforuploadresult.getFileName().toString() + ".zip" + "</a>");
 
 
             } catch (Exception e) {
