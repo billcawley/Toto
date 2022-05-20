@@ -33,7 +33,7 @@ public final class ExternalDataRequestDAO {
         toReturn.put(READSQL, externalDataRequest.getReadSQL());
         toReturn.put(SAVEKEYFIELD,externalDataRequest.getSaveKeyfield());
         toReturn.put(SAVEFILENAME, externalDataRequest.getSaveFilename());
-        toReturn.put(SAVEINSERTKEYVALUE, externalDataRequest.getSaveInsertkey());
+        toReturn.put(SAVEINSERTKEYVALUE, externalDataRequest.getSaveInsertKeyValue());
         toReturn.put(ALLOWDELETE, externalDataRequest.getAllowDelete());
         return toReturn;
     }

@@ -2,6 +2,8 @@ package com.azquo.admin.onlinereport;
 
 import com.azquo.admin.StandardEntity;
 
+import java.util.Locale;
+
 public final class ExternalDataRequest extends StandardEntity {
 
     final private int reportId;
@@ -10,10 +12,10 @@ public final class ExternalDataRequest extends StandardEntity {
     private String readSQL;
     private String saveKeyfield;
     private String saveFilename;
-    private String saveInsertkey;
+    private String saveInsertkeyValue;
     private boolean allowDelete;
 
-    public ExternalDataRequest(int id, int reportId, String sheetRangeName, int connectorId, String readSQL, String saveKeyfield, String saveFilename, String saveInsertkey, boolean allowDelete) {
+    public ExternalDataRequest(int id, int reportId, String sheetRangeName, int connectorId, String readSQL, String saveKeyfield, String saveFilename, String saveInsertkeyValue, boolean allowDelete) {
         this.id = id;
         this.reportId = reportId;
         this.sheetRangeName = sheetRangeName;
@@ -21,8 +23,8 @@ public final class ExternalDataRequest extends StandardEntity {
         this.readSQL = readSQL;
         this.saveKeyfield = saveKeyfield;
         this.saveFilename = saveFilename;
-        this.saveInsertkey = saveInsertkey;
-        this.allowDelete = allowDelete;
+        this.saveInsertkeyValue = saveInsertkeyValue;
+        this.allowDelete = allowDelete;;
     }
 
     public int getReportId(){return reportId; }
@@ -78,29 +80,19 @@ public final class ExternalDataRequest extends StandardEntity {
         this.saveFilename = saveFilename;
     }
 
-    public String getSaveInsertkey() {
-        return saveInsertkey;
-    }
-
     public String getSaveInsertKeyValue(){
-        return saveInsertkey;
+        return saveInsertkeyValue;
     }
-    public void setSaveInsertkey(String saveInsertkey) {
-        this.saveInsertkey = saveInsertkey;
-    }
-
-    public boolean getAllowDelete() {
-        return allowDelete;
+    public void setSaveInsertkeyValue(String saveInsertkeyValue) {
+        this.saveInsertkeyValue = saveInsertkeyValue;
     }
 
-    public void setAllowDelete(boolean allowDelete) {
-        this.allowDelete = allowDelete;
-    }
+    public boolean getAllowDelete() {return allowDelete; }
 
-    public String getSaveAllowDelete(){
-        if (allowDelete) return "Y";
-        return "N";
-    }
+    public String getSaveAllowDelete() {return allowDelete?"Y":"N"; }
+
+
+    public void setAllowDelete(boolean allowDelete) {this.allowDelete = allowDelete; }
 
 }
 

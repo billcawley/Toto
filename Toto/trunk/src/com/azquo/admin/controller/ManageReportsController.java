@@ -121,6 +121,7 @@ public class ManageReportsController {
             if (deleteId != null) {
                 AdminService.removeReportByIdWithBasicSecurity(loggedInUser, Integer.parseInt(deleteId));
                 model.put("reports", AdminService.getReportList(loggedInUser, true));
+                AdminService.setBanner(model, loggedInUser);
                 return "managereports2";
             }
             if (menuAppearanceDeleteId != null) {
@@ -224,16 +225,16 @@ public class ManageReportsController {
                     if (externalConnector != null && (readSQL == null || !readSQL.toLowerCase(Locale.ROOT).startsWith("select "))) {
                         error.append("the read SQL should start 'select ...'<br/>");
                     }
-                    String allowDelete = null;
-                    boolean deleteOk = false;
+                    String allowDelete = "n";
+                    boolean isDelete = false;
                     if (saveAllowDelete != null && !saveAllowDelete.isEmpty()) {
                         allowDelete = saveAllowDelete.toLowerCase(Locale.ROOT).substring(0, 1);
                     }
-                    if (allowDelete != null && allowDelete.charAt(0) != 'y' && allowDelete.charAt(0) != 'n') {
+                    if (allowDelete.charAt(0) != 'y' && allowDelete.charAt(0) != 'n') {
                         error.append("Allow delete must start 'Y' or 'N'<br/>");
                     }
-                    if (allowDelete != null && allowDelete.charAt(0) == 'y') {
-                        deleteOk = true;
+                    if (allowDelete.charAt(0)=='y'){
+                        isDelete = true;
                     }
                     int externalConnectorId = 0;
                     if (externalConnector != null) {
@@ -242,15 +243,15 @@ public class ManageReportsController {
                     if (error.length() == 0) {
                         // then store, it might be new
                         if (toEdit == null) {
-                            ExternalDataRequestDAO.store(new ExternalDataRequest(0, reportId, sheetRangeName, externalConnectorId, readSQL, saveKeyfield, saveFilename, saveInsertKeyValue, deleteOk));
+                            ExternalDataRequestDAO.store(new ExternalDataRequest(0, reportId, sheetRangeName, externalConnectorId, readSQL, saveKeyfield, saveFilename, saveInsertKeyValue, isDelete));
                         } else {
                             toEdit.setSheetRangeName(sheetRangeName);
                             toEdit.setConnectorId(externalConnector.getId());
                             toEdit.setReadSQL(readSQL);
                             toEdit.setSaveKeyfield(saveKeyfield);
                             toEdit.setSaveFilename(saveFilename);
-                            toEdit.setSaveInsertkey(saveInsertKeyValue);
-                            toEdit.setAllowDelete(deleteOk);
+                            toEdit.setSaveInsertkeyValue(saveInsertKeyValue);
+                            toEdit.setAllowDelete(isDelete);
                             ExternalDataRequestDAO.store(toEdit);
                         }
                         requestEdited = true;
@@ -273,10 +274,6 @@ public class ManageReportsController {
                     if (toEdit != null) {
                         ExternalDatabaseConnection externalDatabaseConnection = ExternalDatabaseConnectionDAO.findById(toEdit.getConnectorId());
                         model.put("reportid", editId);
-                        saveAllowDelete = "N";
-                        if (toEdit.getAllowDelete()) {
-                            saveAllowDelete = "Y";
-                        }
                         model.put("id", externaldatarequestId);
                         model.put("reportname", editOr.getReportName());
                         model.put("sheetRangeName", toEdit.getSheetRangeName());
@@ -284,8 +281,8 @@ public class ManageReportsController {
                         model.put("readSQL", fixQuotes(toEdit.getReadSQL()));
                         model.put("saveKeyfield", toEdit.getSaveKeyfield());
                         model.put("saveFilename", toEdit.getSaveFilename());
-                        model.put("saveInsertKeyValue", toEdit.getSaveInsertkey());
-                        model.put("saveAllowDelete", saveAllowDelete);
+                        model.put("saveInsertKeyValue", toEdit.getSaveInsertKeyValue());
+                        model.put("saveAllowDelete", toEdit.getAllowDelete()?"Y":"N");
                     } else {
                         model.put("reportid", editId);
                         model.put("id", "0");
@@ -408,9 +405,10 @@ public class ManageReportsController {
                     Database db = DatabaseDAO.findForNameAndBusinessId(databaseName, loggedInUser.getBusiness().getId());
                     if (db == null) {
                         try {
-                            AdminService.createDatabase(databaseName, loggedInUser, loggedInUser.getDatabaseServer());
+                            db = AdminService.createDatabase(databaseName, loggedInUser, loggedInUser.getDatabaseServer());
                         } catch (Exception e) {
                             error.append("cannot create a default database</br>");
+                            return "editreport2";
                         }
                     }
                     databaseIdList = new String[1];
@@ -437,6 +435,7 @@ public class ManageReportsController {
                 if (iframe != null && iframe.length() > 0) {
                     OnlineReport or = new OnlineReport(0, LocalDateTime.now(), loggedInUser.getBusiness().getId(), loggedInUser.getUser().getId(), null, newReportName, "IFRAME:" + iframe, "", "");
                     OnlineReportDAO.store(or);
+                    DatabaseReportLinkDAO.link(loggedInUser.getDatabase().getId(),or.getId());
                 } else {
                     if (uploadFile != null && !uploadFile.isEmpty()) {
                         try {
@@ -458,6 +457,7 @@ public class ManageReportsController {
                     if (editOr > 0) {
                         theReport.setExplanation(explanation);
                         theReport.setCategory(category);
+                        OnlineReportDAO.store(theReport);
                         DatabaseReportLinkDAO.unLinkReport(theReport.getId());
                         for (String databaseId : databaseIdList) {
                             int dbId = Integer.parseInt(databaseId);
@@ -472,6 +472,7 @@ public class ManageReportsController {
                 }
             }
             model.put("reports", AdminService.getReportList(loggedInUser, true));
+            AdminService.setBanner(model, loggedInUser);
             return "managereports2";
         } else {
             return "redirect:/api/Login";
