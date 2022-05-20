@@ -1123,11 +1123,18 @@ public class ReportRenderer {
                throw new Exception(it.getFilename() + ": Unable to read " + it.getFilename());
            }
        }else{
-           data = ExternalConnector.getData(loggedInUser, externalDataRequest.getConnectorId(), CommonReportUtils.replaceUserChoicesInQuery(loggedInUser,externalDataRequest.getReadSQL()), null, null);
-           if (data!=null&& data.size()>0 ){
-               setData(data,sheet,cellRegion);
-               if (externalDataRequest.getSaveKeyfield()!=null){
-                   loggedInUser.setExternalData(externalDataRequest.getSheetRangeName().toLowerCase(Locale.ROOT),data);
+           try {
+               data = ExternalConnector.getData(loggedInUser, externalDataRequest.getConnectorId(), CommonReportUtils.replaceUserChoicesInQuery(loggedInUser, externalDataRequest.getReadSQL()), null, null);
+           }catch(Exception e){
+               List<String> error = new ArrayList<>();
+               error.add(e.getMessage());
+               data.add(error);
+           }
+
+           if (data != null && data.size() > 0) {
+               setData(data, sheet, cellRegion);
+               if (externalDataRequest.getSaveKeyfield() != null) {
+                   loggedInUser.setExternalData(externalDataRequest.getSheetRangeName().toLowerCase(Locale.ROOT), data);
                }
            }
        }
