@@ -42,7 +42,7 @@
 			   href="/api/ManageDatabases">
 				Databases
 			</a>
-			<c:if test="${!developer}">
+			<c:if test="${!developer&& sessionScope.test != null}">
 				<a class="navbar-item is-tab${fn:startsWith(requestScope['javax.servlet.forward.path_info'], '/ManageDatabaseConnections') ? ' is-active' : ''}"
 				   href="/api/ManageDatabaseConnections">
 					Connections

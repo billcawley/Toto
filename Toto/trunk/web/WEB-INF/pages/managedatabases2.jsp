@@ -69,8 +69,9 @@ Created by IntelliJ IDEA.
             <li><a>Import Templates</a></li>
         </ul>
     </div>
-    <c:if test="${!empty error}">
-        <div style="width:100%;font:12px monospace;overflow:auto;padding:10px;max-height: 200px; background-color: #FFEEEE">${error}</div>
+    <div class="has-text-danger">${error}</div>
+    <c:if test="${!empty results}">
+        <div style="width:100%;font:12px monospace;overflow:auto;padding:10px;max-height: 200px; background-color: #FFEEEE">${results}</div>
     </c:if>
     <div id="working" style="display:none;padding:10px"><h3 class="title is-3">Working... <span
             class="fa fa-spin fa-cog"></span></h3></div>
