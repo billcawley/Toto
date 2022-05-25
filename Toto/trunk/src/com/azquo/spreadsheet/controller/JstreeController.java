@@ -75,7 +75,7 @@ public class JstreeController {
             model.addAttribute("content", "error:not logged in");
             return "utf8page";
         }
-        if (!"children".equals("op") && !loggedInUser.getUser().isDeveloper() && !loggedInUser.getUser().isAdministrator()&& (query==null || query.length()==0)) {
+        if (!"children".equals(op) && !loggedInUser.getUser().isDeveloper() && !loggedInUser.getUser().isAdministrator()&& (query==null || query.length()==0)) {
             model.addAttribute("content", "error:access denied");
             return "utf8page";
         }

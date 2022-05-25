@@ -1,3 +1,11 @@
+20-05-22
+
+Zip on auto backup - the drive will fill a lot slower
+
+zk security patch
+
+Various bug fixes, one that affects globe production. This needs to be tested on UAT
+
 28-04-22
 
 UI updates for Ed P prod

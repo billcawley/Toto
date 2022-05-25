@@ -948,7 +948,7 @@ But can use a library?
                 if (attValue != null) {
                     count++;
                     boolean inParents = false;
-                    if (n.getParents()!=null){
+                    if (n.hasParents()){
                         for (Name parent:n.getParents()) {
                             if (parent.getDefaultDisplayName()!=null && parent.getDefaultDisplayName().equals(attValue)) {
                                 inParents = true;

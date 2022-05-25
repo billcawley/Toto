@@ -73,7 +73,7 @@ class RowFiller implements Callable<List<AzquoCell>> {
             if (lastErrorPrintMillis < (System.currentTimeMillis() - (1_000 * 10))){ // only log this kind of error once every 10 seconds, it can cause havok!
                 lastErrorPrintMillis = System.currentTimeMillis();
 //                System.out.println("in row filler, tostring : " + toString());
-                System.out.println("in row filler");
+                System.out.println("in row filler " + e);
                 e.printStackTrace();
             }
             throw e;
