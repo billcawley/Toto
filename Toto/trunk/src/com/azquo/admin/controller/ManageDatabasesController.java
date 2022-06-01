@@ -171,6 +171,7 @@ public class ManageDatabasesController {
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
         if (loggedInUser != null && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
             StringBuilder error = new StringBuilder();
+            StringBuilder results = new StringBuilder();
             // EFC - I can't see a way around this one currently. I want to use @SuppressWarnings very sparingly
             List<UploadedFile> importResult = null;
             try{
@@ -179,7 +180,7 @@ public class ManageDatabasesController {
                 //if the error is a singleton, it causes a problem - ignore it at the moment.
             }
             if (importResult != null) {
-                error.append(formatUploadedFiles(importResult, -1, false, null));
+                results.append(formatUploadedFiles(importResult, -1, false, null));
                 request.getSession().removeAttribute(ManageDatabasesController.IMPORTRESULT);
             }
             if ("1".equals(templateassign)) {
@@ -234,6 +235,9 @@ public class ManageDatabasesController {
             }
             if (error.length() > 0) {
                 model.put("error", error.toString());
+            }
+            if (results.length() > 0) {
+                model.put("results", results.toString());
             }
             List<Database> databaseList = AdminService.getDatabaseListForBusinessWithBasicSecurity(loggedInUser);
             List<DisplayDataBase> displayDataBases = new ArrayList<>();
