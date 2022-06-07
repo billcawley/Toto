@@ -135,6 +135,8 @@ public final class ImportService {
     private static final String IMPORTTEMPLATE = "importtemplate";
     public static final String IMPORTVERSION = "importversion";
     public static final String PREPROCESSOR = "preprocessor";
+    public static final String WORKBOOK_PROCESSOR = "workbook processor";
+    public static final String WORKBOOKPROCESSOR = "workbookprocessor";
     public static final String IMPORTMODEL = "Import Model";
     public static final String SHEETNAME = "sheet name";
     public static final String FILEENCODING = "fileencoding";
@@ -590,6 +592,28 @@ public final class ImportService {
         long sheetExcelLoadTimeShare = (System.currentTimeMillis() - time) / book.getNumberOfSheets();
         // with more than one sheet to convert this is why the function returns a list
         List<UploadedFile> toReturn = new ArrayList<>();
+        Map<String,String> paras = uploadedFile.getParameters();
+        //new behaviour June 2022 - if there exists a preprocessor with a given name which matches part of the input file name, and no preprocessor is specified, then use it.
+        if (paras.get(PREPROCESSOR)==null && paras.get(WORKBOOKPROCESSOR)==null) {
+            List<ImportTemplate> forBusinessId = ImportTemplateDAO.findForBusinessId(loggedInUser.getBusiness().getId());
+            for (ImportTemplate importTemplate:forBusinessId) {
+                String file = importTemplate.getTemplateName();
+                int ppPos = file.indexOf(PREPROCESSOR);
+                if (ppPos > 0) {
+                    if (uploadedFile.getFileName().toLowerCase(Locale.ROOT).contains(file.substring(0, ppPos).trim().toLowerCase(Locale.ROOT))) {
+                        paras.put(PREPROCESSOR, file);
+                        uploadedFile.setParameters(paras);
+                        break;
+                    }
+                }
+                int wpPos = file.indexOf(WORKBOOK_PROCESSOR);
+                if (wpPos> 0 && uploadedFile.getFileName().toLowerCase(Locale.ROOT).contains(file.substring(0, wpPos).trim().toLowerCase(Locale.ROOT))) {
+                    paras.put(WORKBOOKPROCESSOR, file);
+                    uploadedFile.setParameters(paras);
+                    break;
+                }
+            }
+        }
 
         // check for whether the book should be transformed using the workbook processor - a bit like the preprocessor but all in one shot
     /* For Bonza - check the Bonza Appraisal Preprocessor
@@ -597,7 +621,7 @@ public final class ImportService {
        and any sheet labelled 'output' will be output - assuming here no further need for import templates (though these could be added)
 
      */
-        String preprocessor = uploadedFile.getParameter("workbookprocessor");
+        String preprocessor = uploadedFile.getParameter(WORKBOOKPROCESSOR);
         if (preprocessor!= null) {
             if (!preprocessor.toLowerCase(Locale.ROOT).endsWith(".xlsx")){
                 preprocessor +=".xlsx";
@@ -1863,7 +1887,7 @@ public final class ImportService {
         return getCellValue(sheet,areaRef.getFirstCell().getRow(),areaRef.getFirstCell().getCol());
     }
 
-    private static String getCellValue(Sheet sheet, int row, int col) {
+    public static String getCellValue(Sheet sheet, int row, int col) {
         try{
             Cell cell = sheet.getRow(row).getCell(col);
             try{
