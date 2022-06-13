@@ -3549,11 +3549,11 @@ fr.close();
         }
     }
 
-    private static String zapCRs(String text){
+    public static String zapCRs(String text){
         return text.replace("\n", "\\\\n").replace("\r", "").replace("\t", "\\\\t");
     }
 
-    private static boolean traverseJSON(JsonRule jsonRule,String[] jsonPath,JSONObject jsonNext, int level, List<JsonRule>  jsonRules) throws Exception{
+    public static boolean traverseJSON(JsonRule jsonRule,String[] jsonPath,JSONObject jsonNext, int level, List<JsonRule>  jsonRules) throws Exception{
         if (level < jsonPath.length - 1) {
             JSONArray jsonArray1 = new JSONArray();
             try {
@@ -3612,7 +3612,7 @@ fr.close();
         return true;
     }
 
-    private static boolean hasCondition(List<JsonRule>jsonRules, String condition){
+    public static boolean hasCondition(List<JsonRule>jsonRules, String condition){
         if(condition.toLowerCase(Locale.ROOT).startsWith("only ")) {
             condition = condition.substring(5);
         }
