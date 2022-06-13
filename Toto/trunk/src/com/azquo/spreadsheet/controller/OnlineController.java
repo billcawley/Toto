@@ -153,6 +153,7 @@ public class OnlineController {
                 }
                 // dealing with the report/database combo WAS below but I see no reason for this, try and resolve it now
                 OnlineReport onlineReport = null;
+                loggedInUser.setWizardInfo(null);//clear space - file may be long
 
                 // for direct linking to reports it's useful to be able to set choices. From an email sent to Shaun :
                 // choice_month=Nov-20&choice_costcentre=somewhere
