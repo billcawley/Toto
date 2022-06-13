@@ -11,6 +11,7 @@ import com.azquo.admin.onlinereport.UserActivity;
 import com.azquo.admin.onlinereport.UserActivityDAO;
 import com.azquo.admin.user.User;
 import com.azquo.dataimport.ImportService;
+import com.azquo.dataimport.WizardInfo;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.spreadsheet.transport.json.JsonChildren;
 import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
@@ -172,6 +173,7 @@ public class LoggedInUser implements Serializable {
     // a bit hacky, I just want a place to put the last converted file. For Modus, won't support more than one file etc. Just make it work for the mo
     private String lastFile = null;
     private String lastFileName = null;
+    private WizardInfo wizardInfo = null;
 
     // public allowing hack for xml scanning - need to sort - todo
     public LoggedInUser(final User user, DatabaseServer databaseServer, Database database, String imageStoreName, Business business) {
@@ -461,5 +463,13 @@ public class LoggedInUser implements Serializable {
 
     public void setLastFileName(String lastFileName) {
         this.lastFileName = lastFileName;
+    }
+
+    public WizardInfo getWizardInfo() {
+        return wizardInfo;
+    }
+
+    public void setWizardInfo(WizardInfo wizardInfo) {
+        this.wizardInfo = wizardInfo;
     }
 }
