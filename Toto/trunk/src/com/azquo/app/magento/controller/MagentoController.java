@@ -80,7 +80,6 @@ public class MagentoController {
                     Business business = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
                     String title = SpreadsheetService.getAlias() +  " Magento db clear " + logon + " - " + loggedInUser.getUser().getStatus() + " - " + (business != null ? business.getBusinessName() : "") + " from " + request.getRemoteAddr();
                     AzquoMailer.sendEMail("edd@azquo.com", "Edd", title, title);
-                    AzquoMailer.sendEMail("ed.lennox@azquo.com", "Ed", title, title);
                     AzquoMailer.sendEMail("bill@azquo.com", "Bill", title, title);
                     AzquoMailer.sendEMail("nic@azquo.com", "Nic", title, title);
                 }
@@ -106,7 +105,6 @@ public class MagentoController {
                         Business business = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
                         String title = SpreadsheetService.getAlias() +  " Magento file upload " + logon + " - " + loggedInUser.getUser().getStatus() + " - " + (business != null ? business.getBusinessName() : "") + " from " + request.getRemoteAddr() + " elapsed time " + elapsed + " millisec";
                         AzquoMailer.sendEMail("edd@azquo.com", "Edd", title, title);
-                        AzquoMailer.sendEMail("ed.lennox@azquo.com", "Ed", title, title);
                         AzquoMailer.sendEMail("bill@azquo.com", "Bill", title, title);
                         AzquoMailer.sendEMail("nic@azquo.com", "Nic", title, title);
                     }

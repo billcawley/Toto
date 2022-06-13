@@ -3,7 +3,7 @@
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
 <c:set var="title" scope="request" value="Manage Reports"/>
 <%@ include file="../includes/admin_header2.jsp" %>
-
+<div class="box">
 <div class="container is-fluid">
     <div class="columns is-multiline">
 
@@ -11,7 +11,6 @@
             <c:if test="${report.category != ''}">
                 ${categorybefore} ${report.category} ${categoryafter}
             </c:if>
-
             <div class="column is-4">
                 <div class="card">
                     <header class="card-header">
@@ -48,5 +47,6 @@
             </div>
         </c:forEach>
     </div>
+</div>
 </div>
 <%@ include file="../includes/admin_footer.jsp" %>

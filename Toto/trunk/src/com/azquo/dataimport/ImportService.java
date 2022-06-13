@@ -142,6 +142,8 @@ public final class ImportService {
     public static final String FILEENCODING = "fileencoding";
     public static final String JSONFIELDDIVIDER = "|";
 
+    // todo - ignore Sheet1 etc and blank
+
 
     /* external entry point, moves the file to a temp directory in case pre processing is required
     (decompress or sheets in a book to individual csv files before sending to the db server).

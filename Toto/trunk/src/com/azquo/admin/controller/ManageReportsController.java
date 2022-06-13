@@ -122,6 +122,9 @@ public class ManageReportsController {
                 AdminService.removeReportByIdWithBasicSecurity(loggedInUser, Integer.parseInt(deleteId));
                 model.put("reports", AdminService.getReportList(loggedInUser, true));
                 AdminService.setBanner(model, loggedInUser);
+                if (request.getSession().getAttribute("test") != null){
+                    return "managereportscards";
+                }
                 return "managereports2";
             }
             if (menuAppearanceDeleteId != null) {
@@ -365,6 +368,9 @@ public class ManageReportsController {
             model.put("developer", loggedInUser.getUser().isDeveloper());
             model.put("showexplanation", showExplanation);
             AdminService.setBanner(model, loggedInUser);
+            if (request.getSession().getAttribute("test") != null){
+                return "managereportscards";
+            }
             return "managereports2";
         } else {
             return "redirect:/api/Login";
@@ -473,6 +479,9 @@ public class ManageReportsController {
             }
             model.put("reports", AdminService.getReportList(loggedInUser, true));
             AdminService.setBanner(model, loggedInUser);
+            if (request.getSession().getAttribute("test") != null){
+                return "managereportscards";
+            }
             return "managereports2";
         } else {
             return "redirect:/api/Login";
