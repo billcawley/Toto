@@ -302,6 +302,11 @@ Created by IntelliJ IDEA.
                                                                title="Unload ${database.name}"><span class="fa fa-eject"
                                                                                                      title="Unload"></span></a></c:if>
                         </td>
+                        <c:if test="${!developer&& sessionScope.test != null}">
+                            <td><a href="/api/ImportWizard?database=${database.name}" class="button is-small"
+                                   title="Import Wizard"><span
+                                    class="fa fa-upload" title="Import Wizard"></span> </a></td>
+                        </c:if>
                     </tr>
                 </c:forEach>
                 </tbody>
