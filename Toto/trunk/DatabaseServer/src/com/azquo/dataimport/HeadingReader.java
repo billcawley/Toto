@@ -67,7 +67,7 @@ Attributes of the names in other cells can be referenced also
     static final String REMOVESPACES = "removespaces";
     private static final String REQUIRED = "required";
     static final String DATELANG = "date";
-    private static final String USDATELANG = "us date";
+    static final String USDATELANG = "us date";
     private static final String STRING = "string";
     private static final String NUMBER = "number";
     static final String ONLY = "only";
