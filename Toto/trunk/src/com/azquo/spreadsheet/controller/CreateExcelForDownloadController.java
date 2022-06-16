@@ -113,16 +113,16 @@ public class CreateExcelForDownloadController {
                     }
                     Business businessById = null;
                     for (String field: wizardInfo.getFields().keySet()) {
-                            WizardField wizardField = wizardInfo.getFields().get(field);
-                            // todo don't show admins if not admin
-                            importSheet.getInternalSheet().getCell(row, col).setStringValue(field);
+                        WizardField wizardField = wizardInfo.getFields().get(field);
+                        if (!wizardField.getIgnore()) {
+                            importSheet.getInternalSheet().getCell(row, col).setStringValue(wizardField.getImportedName());
                             importSheet.getInternalSheet().getCell(row, col + 1).setStringValue(wizardField.getName());
-                            if (wizardField.getIgnore()){
-                                importSheet.getInternalSheet().getCell(row, col + 2).setStringValue("ignore");
-
+                            if (wizardField.getAdded()) {
+                                importSheet.getInternalSheet().getCell(row, col + 2).setStringValue("added");
                             }
-                            importSheet.getInternalSheet().getCell(row, col +3).setStringValue(wizardField.getInterpretation());
+                            importSheet.getInternalSheet().getCell(row, col + 3).setStringValue(wizardField.getInterpretation());
                             row++;
+                        }
                     }
                     if (business != null && businessById != null) {
                         book.getSheetAt(0).getInternalSheet().getCell(business.getRefersToCellRegion().getRow(), business.getRefersToCellRegion().getColumn()).setStringValue(businessById.getBusinessName());

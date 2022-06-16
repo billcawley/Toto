@@ -28,8 +28,9 @@
         }
         selectedItem = fieldName;
         document.getElementById(selectedItem).style.fontWeight = "bold";
-        var value = document.getElementById(fieldName).value;
-        document.getElementById("pathSelected").value = fieldName + "|" + value;
+        var selectedValue = document.getElementById(fieldName).value;
+        document.getElementById("valueSelected").value = selectedValue;
+        document.getElementById("fieldSelected").value = fieldName;
 
     }
 
@@ -41,7 +42,8 @@
     <h1 class="title">Import Wizard</h1>
     <div class="has-text-danger">${error}</div>
     <form action="/api//ImportWizard" method="post" id="wform" enctype="multipart/form-data">
-        <input type="hidden" name="pathSelected" id="pathSelected" value=""/>
+        <input type="hidden" name="fieldSelected" id="fieldSelected" value=""/>
+        <input type="hidden" name="valueSelected" id="valueSelected" value=""/>
         <input type="hidden" name="stage" id="stage" value="${stage}"/>
         <!-- no business id -->
         <table>
@@ -149,23 +151,35 @@
                      </td>
                 </tr>
 
-                <c:forEach items="${fields.keySet()}" var="field">
+                <c:forEach items="${fields.keySet()}" var="field" varStatus="loop">
+                    <c:set var="wizardField" value="${fields.get(field)}"/>
                     <tr>
                         <td>
-                            <label class="label">${field}</label>
-                        </td>
-                        <td>
                             <c:choose>
-                                <c:when test="${fields.get(field).valuesFound.size() == 1}">
-                                    <c:if test="${headigChosen!=null && headingChosen.equals(field)}"><b>${fields.get(field).valuesFound.get(0)}</b></c:if>
-                                    ${fields.get(field).valuesFound.get(0)}
+                                <c:when test="${stage==2 && loop.index==fieldCount}">
+                                    <input name="newfieldname" type="text" value="${newfieldname}"/>
+                                </c:when>
+                                <c:otherwise>
+                                    <label class="label">${wizardField.importedName}</label>
+                                </c:otherwise>
+                            </c:choose>
+                        </td>
+                        <td style="width:50px;overflow:hidden">
+                            <c:choose>
+                                <c:when test="${wizardField.valuesFound.size() == 0}">
+                                </c:when>
+                                <c:when test="${wizardField.valuesFound.size() == 1 && field.equals(headingChosen)}">
+                                    <b>${wizardField.valuesFound.get(0)}</b>
+                                </c:when>
+                                <c:when test="${wizardField.valuesFound.size() == 1}">
+                                    ${wizardField.valuesFound.get(0)}
                                 </c:when>
                                 <c:otherwise>
 
                                     <select name="${field}" onfocus=selectionChange("${field}")
                                             onchange=selectionChange("${field}") id="${field}">
-                                        <c:forEach items="${fields.get(field).valuesFound}" var="instance">
-                                            <option onclick=clickget(value="${instance}")>${instance}</option>
+                                        <c:forEach items="${wizardField.valuesFound}" var="instance">
+                                            <option onclick=clickget(value="${instance}")>${fn:substring(instance,0,30)}</option>
                                         </c:forEach>
                                     </select>
                                 </c:otherwise>
@@ -173,17 +187,31 @@
                         </td>
                         <td>
                             <c:if test="${stage==2}">
-                                <input type="text" value="${fields.get(field).name}" name="name_${field}"/>
+                                <input type="text" value="${wizardField.name}" name="name_${field}"/>
                             </c:if>
-                            <c:if test="${stage>2}">${fields.get(field).name}
+                            <c:if test="${stage>2}">${wizardField.name}
                             </c:if>
 
                         </td>
                         <c:if test="${stage==2}">
                             <td>
-                                <input type="checkbox" name="ignore_${field}" value="true" <c:if
-                                        test="${fields.get(field).ignore}"> checked </c:if>>
-                                <label for="ignore_${field}">Do not upload"</label>
+                                <c:if test="${fieldCount>loop.index}">
+
+                                    <input type="checkbox" name="ignore_${field}" value="true" <c:if
+                                            test="${wizardField.ignore}"> checked </c:if>>
+                                    <label for="ignore_${field}">
+                                        <c:choose>
+
+                                            <c:when test="${wizardField.added==true}">
+                                                Delete
+                                            </c:when>
+                                            <c:otherwise>
+                                                Do not upload
+                                            </c:otherwise>
+
+                                        </c:choose>
+                                    </label>
+                                </c:if>
                             </td>
                         </c:if>
                         <c:if test="${stage==3}">
@@ -192,7 +220,7 @@
                                     <option value="null"></option>
                                     <c:forEach items="${options}" var="type">
                                     <option value="${type}"
-                                            <c:if test="${fields.get(field).type.equals(type)}"> selected </c:if>>${type}</option>
+                                            <c:if test="${wizardField.type.equals(type)}"> selected </c:if>>${type}</option>
                                     </c:forEach>
                                 </select>
                             </td>
@@ -200,11 +228,11 @@
                         <c:if test="${stage==4}">
                             <td>
                                 <c:choose>
-                                    <c:when test="${\"date\".equals(fields.get(field).type)|| \"time\".equals(fields.get(field).type)}">${fields.get(field).type}</c:when>
-                                    <c:when test="${\"data\".equals(fields.get(field).type)&& (dataparent==null || !dataparent.equals(fields.get(field).parent))}">${fields.get(field).interpretation}</c:when>
+                                    <c:when test="${\"date\".equals(wizardField.type)|| \"time\".equals(wizardField.type)}">${wizardField.type}</c:when>
+                                    <c:when test="${\"data\".equals(wizardField.type)&& (dataparent==null || !dataparent.equals(wizardField.parent))}">${wizardField.interpretation}</c:when>
                                     <c:otherwise>
                                         <input type="checkbox" name="child_${field}" value="true"
-                                        <c:if test="${fields.get(field).parent!=null && fields.get(field).parent.equals(dataparent)}">
+                                        <c:if test="${wizardField.parent!=null && wizardField.parent.equals(dataparent)}">
                                                checked </c:if>>
                                         <label for="child_${field}">Select Data</label>
                                     </c:otherwise>
@@ -220,7 +248,7 @@
                                         <c:if test="${fn:contains(peersChosen,field)}"> checked </c:if>>
                                         <label for="child_${field}">Select Peer</label>
                                     </c:when>
-                                    <c:when test="${\"data\".equals(fields.get(field).type)}">${fields.get(field).interpretation}</c:when>
+                                    <c:when test="${\"data\".equals(wizardField.type)}">${wizardField.interpretation}</c:when>
 
                                 </c:choose>
                             </td>
@@ -234,13 +262,13 @@
                                             <c:forEach items="${possibleChildFields}" var="child">
                                                 <c:if test="${!child.equals(field)}">
                                                 <option value="${child}"
-                                                        <c:if test="${child.equals(fields.get(field).child)}"> selected </c:if>>${fields.get(child).name}</option>
+                                                        <c:if test="${child.equals(wizardField.child)}"> selected </c:if>>${fields.get(child).name}</option>
                                                 </c:if>
                                             </c:forEach>
                                         </select>
                                       </c:when>
                                     <c:otherwise>
-                                       ${fields.get(field).interpretation}
+                                       ${wizardField.interpretation}
                                     </c:otherwise>
                                 </c:choose>
                             </td>
@@ -253,19 +281,19 @@
                                             <option value=""></option>
                                             <c:forEach items="${possibleAnchorFields}" var="anchor">
                                                 <option value="${anchor}"
-                                                            <c:if test="${anchor.equals(fields.get(field).anchor)}"> selected </c:if>>${fields.get(anchor).name}</option>
+                                                            <c:if test="${anchor.equals(wizardField.anchor)}"> selected </c:if>>${fields.get(anchor).name}</option>
                                              </c:forEach>
                                         </select>
                                     </c:when>
                                     <c:otherwise>
-                                        ${fields.get(field).interpretation}
+                                        ${wizardField.interpretation}
                                     </c:otherwise>
                                 </c:choose>
                             </td>
                         </c:if>
                         <c:if test="${stage==8}">
                             <td>
-                                    ${fields.get(field).interpretation}
+                                    ${wizardField.interpretation}
                             </td>
                         </c:if>
 

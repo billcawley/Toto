@@ -9,12 +9,14 @@ public class WizardInfo {
     String importFileData;
     Map<String, WizardField> fields;
     String lastDataField;
+    int lineCount;
 
     public WizardInfo(String importFileName, String importFileData){
         this.importFileName = importFileName;
         this.importFileData = importFileData;
         this.fields = new LinkedHashMap<>();
         this.lastDataField = null;
+        this.lineCount = 0;
      }
 
     public String getImportFileName() {
@@ -30,6 +32,12 @@ public class WizardInfo {
     public String getLastDataField(){return lastDataField; }
 
     public void setLastDataField(String lastDataField){this.lastDataField = lastDataField; }
+
+    public int getLineCount(){return lineCount; }
+
+    public void setLineCount(int lineCount){this.lineCount = lineCount; }
+
+
 
 
 }

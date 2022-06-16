@@ -5,10 +5,12 @@ import com.azquo.admin.business.Business;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.transport.UploadedFile;
 import com.azquo.spreadsheet.zk.BookUtils;
+import com.csvreader.CsvWriter;
 import io.keikai.api.Importers;
 import io.keikai.api.model.Book;
 import io.keikai.api.model.Sheet;
 import io.keikai.model.SName;
+import org.apache.poi.openxml4j.opc.OPCPackage;
 import org.apache.poi.ss.formula.functions.Value;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -20,10 +22,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.ui.ModelMap;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.OutputStreamWriter;
+import java.io.*;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -34,19 +33,30 @@ import java.util.regex.Pattern;
 
 public class ImportWizard {
 
-    public static class ValueFound {
-        String heading;
-        List<String> values;
 
-        ValueFound(String heading, List<String> values) {
-            this.heading = heading;
-            this.values = values;
+
+
+    static class JSONtest {
+        String target;
+        String source;
+        String jsonField;
+        String jsonPartner;
+        String jsonValue;
+        String testValue;
+
+        JSONtest(String field, String jsonField, String jsonPartner, String jsonValue, String testValue) {
+            this.target = field;
+            int lastFieldPos = jsonField.lastIndexOf(ImportService.JSONFIELDDIVIDER);
+            this.source = ImportService.JSONFIELDDIVIDER + jsonField.substring(0,lastFieldPos);
+            this.jsonField = jsonField.substring(lastFieldPos + 1);
+            this.jsonPartner = jsonPartner;
+            this.jsonValue = jsonValue;
+            this.testValue = testValue;
         }
 
-        public String getHeading() { return heading; }
-
-        public List<String> getValues(){return values;   }
     }
+
+    public static final String[] TYPEOPTIONS = {"key field id","key field name", "date","time","datetime"};
 
     private static int nthLastIndexOf(int nth, String ch, String string) {
         if (nth <= 0) return string.length();
@@ -54,12 +64,75 @@ public class ImportWizard {
         return nthLastIndexOf(--nth, ch, string.substring(0, string.lastIndexOf(ch)));
     }
 
+    public static Map<String,WizardField> readTheFile(ModelMap model, WizardInfo wizardInfo, String testField, String testItem) {
+        try{
+            if (wizardInfo.getImportFileData()!=null){
+                Map<String,WizardField> list = readTheFile(wizardInfo,testField,testItem);
+                if (testItem==null){
+                    for (String field:wizardInfo.getFields().keySet()){
+                        WizardField wizardField = wizardInfo.getFields().get(field);
+                        if (wizardField.getAdded()){
+                            list.put(field,wizardField);
+                        }
+                    }
+                }
+                return list;
 
-    public static Map<String,WizardField> readTheFile(WizardInfo wizardInfo, String testItem)  {
+            }else{
+                Map<String,WizardField> list = new LinkedHashMap<>();
+                boolean found = false;
+                for (String field:wizardInfo.getFields().keySet()){
+                    WizardField wizardField = wizardInfo.getFields().get(field);
+                    wizardField.setValuesFound(new ArrayList<>());
+                    if (testItem==null || testItem.length()==0) {
+                        for (int i = 0; i < 20; i++) {
+                            wizardField.getValuesFound().add(wizardField.getValuesOnFile().get(i));
+                        }
+                    }
+                    if (!wizardField.getIgnore()){
+                        list.put(field,wizardField);
+                    }
+                }
+                if (testField!=null && testField.length() > 0){
+                    WizardField wizardField = wizardInfo.getFields().get(testField);
+                    for (int i=0;i<wizardInfo.getLineCount();i++){
+                        if (wizardField.getValuesOnFile().get(i).equals(testItem)){
+                            for (String field:wizardInfo.getFields().keySet()){
+                                WizardField wizardField1 = wizardInfo.getFields().get(field);
+                                wizardField1.getValuesFound().add(wizardField1.getValuesFound().get(i));
+                            }
+                        }
+                    }
+                }
+                return list;
+            }
+        }catch (Exception e){
+            model.put("error", e.getMessage());
+            return new LinkedHashMap<>();
+        }
+    }
+
+
+
+    public static Map<String,WizardField> readTheFile(WizardInfo wizardInfo, String testField, String testItem)throws Exception  {
         Map<String,List<String>> fieldsFound = new LinkedHashMap<>();
+        for (String field:wizardInfo.getFields().keySet()){
+            wizardInfo.getFields().get(field).setValuesFound(null);
+        }
+        List<JSONtest> jsonTests = new ArrayList<>();
+        String error = createJSONTests(wizardInfo, jsonTests, testField, testItem);
+        if (testItem==null){
+            testItem = "*";
+        }
+        if (testField!=null && testField.length()> 0 && !wizardInfo.getFields().get(testField).getAdded()){
+            testItem = ImportService.JSONFIELDDIVIDER + testField + ImportService.JSONFIELDDIVIDER + testItem;
+        }else{
+            testItem = "";
+        }
+
         try {
             JSONObject jsonObject = new JSONObject(wizardInfo.getImportFileData());//remove line feeds
-            traverseJSON(fieldsFound, "", jsonObject,10, ImportService.JSONFIELDDIVIDER + testItem);
+            traverseJSON(fieldsFound, "", jsonObject,10, testItem, jsonTests);
             if (wizardInfo.getFields().size() == 0) {
                 Map<String ,String> reverseNames = new HashMap<>();
                 for (String field : fieldsFound.keySet()) {
@@ -79,8 +152,9 @@ public class ImportWizard {
                     }catch(Exception e){
                      }
                     reverseNames.put(suggestedName,field);
-                    wizardInfo.getFields().put(field,new WizardField(null,fieldsFound.get(field),null));
-                    wizardInfo.getFields().get(field).setName(suggestedName);
+                    WizardField wizardField = new WizardField(field,suggestedName,false);
+                    wizardField.setValuesFound(fieldsFound.get(field));
+                    wizardInfo.getFields().put(field,wizardField);
                 }
             }else{
                 for (String field:fieldsFound.keySet()){
@@ -107,18 +181,44 @@ public class ImportWizard {
 
     }
 
-    private static boolean traverseJSON(Map<String,List<String>>fieldsFound, String jsonPath,JSONObject jsonNext, int maxArraySize, String testItem) throws Exception{
+    private static boolean traverseJSON(Map<String,List<String>>fieldsFound, String jsonPath,JSONObject jsonNext, int maxArraySize, String testItem, List<JSONtest> jsonTests) throws Exception{
         boolean found = false;
         String[] jsonNames = JSONObject.getNames(jsonNext);
+        boolean tested = false;
+        for(JSONtest jsoNtest:jsonTests){
+            if (jsoNtest.source.equals(jsonPath)){
+                try{
+                    tested = true;
+                    String jsonOtherValue = jsonNext.getString(jsoNtest.jsonPartner);
+                    if (jsonOtherValue.equals(jsoNtest.jsonValue)){
+                        String jsonValue = jsonNext.getString(jsoNtest.jsonField);
+                        if (jsoNtest.testValue==null || jsoNtest.testValue.equals(jsonValue)) {
+                            try {
+                                fieldsFound.get(jsoNtest.target).add(jsonValue);
+                            } catch (Exception e) {
+                                fieldsFound.put(jsoNtest.target, new ArrayList<>());
+                                fieldsFound.get(jsoNtest.target).add(jsonValue);
+                            }
+                            if (jsoNtest.testValue!=null){
+                                found = true;
+                            }
+                        }
+                    }
+                }catch(Exception e){
+                    //should we return an error?
+                }
+            }
+        }
+        if (tested) return found;
         for (String jsonName:jsonNames){
             String newPath = jsonPath + ImportService.JSONFIELDDIVIDER + jsonName;
-            if (testItem.length()>1 && fieldsFound.get(newPath.substring(1))!=null){
+            if (testItem.length()>0 && fieldsFound.get(newPath.substring(1))!=null){
                 fieldsFound.get(newPath.substring(1)).clear();
             }
-            if(testItem.length()==1 || testItem.startsWith(jsonPath)) {
+            if(testItem.length()==0 || testItem.startsWith(jsonPath)) {
                 try {
                     JSONObject jsonObject = jsonNext.getJSONObject(jsonName);
-                    if(traverseJSON(fieldsFound, newPath, jsonObject, maxArraySize, testItem)){
+                    if(traverseJSON(fieldsFound, newPath, jsonObject, maxArraySize, testItem, jsonTests)){
                         found = true;
                     };
                 } catch (Exception e) {
@@ -128,7 +228,7 @@ public class ImportWizard {
                         int count = 0;
                         for (Object jsonObject1 : jsonArray) {
                             if (found) break;
-                            if(traverseJSON(fieldsFound, newPath, (JSONObject) jsonObject1, maxArraySize, testItem)){
+                            if(traverseJSON(fieldsFound, newPath, (JSONObject) jsonObject1, maxArraySize, testItem, jsonTests)){
                                 found = true;
                             };
                             if (count++ == maxArraySize) {
@@ -137,16 +237,20 @@ public class ImportWizard {
 
                         }
                     } catch (Exception e2) {
-                        String value = jsonNext.get(jsonName).toString();
-                        if (testItem.equals(newPath+ImportService.JSONFIELDDIVIDER + value) || testItem.equals(newPath+ImportService.JSONFIELDDIVIDER + "*")){
+
+                        String value = jsonNext.get(jsonName).toString().trim();
+                        if (value.length()>0 && (testItem.equals(newPath+ImportService.JSONFIELDDIVIDER + value) || testItem.equals(newPath+ImportService.JSONFIELDDIVIDER + "*"))){
+
                             found = true;
                         }
-                        List<String>valuesFound = fieldsFound.get(newPath.substring(1));
-                        if (valuesFound==null){
-                            valuesFound = new ArrayList<>();
-                            fieldsFound.put(newPath.substring(1), valuesFound);
+                        if (value.length()>0) {
+                            List<String> valuesFound = fieldsFound.get(newPath.substring(1));
+                            if (valuesFound == null) {
+                                valuesFound = new ArrayList<>();
+                                fieldsFound.put(newPath.substring(1), valuesFound);
+                            }
+                            fieldsFound.get(newPath.substring(1)).add(value);
                         }
-                        fieldsFound.get(newPath.substring(1)).add(value);
                         //set the value
                     }
                 }
@@ -165,29 +269,53 @@ public class ImportWizard {
             int row = areaReference.getFirstCell().getRow() + 1;
             int col = areaReference.getFirstCell().getCol();
             int startRow = row;
-            //import the names first - peers are described by the chosen names rather than the import file names.
+            //remove the added fields...
+            List<String> addedFields = new ArrayList<>();
             for (String field : wizardInfo.getFields().keySet()) {
-                WizardField wizardField = wizardInfo.getFields().get(field);
-                String loadedField = ImportService.getCellValue(importSheet, row, col);
-                if (!field.equals(loadedField)) {
-                    return "Expected " + field + " - found " + loadedField;
+                if (wizardInfo.getFields().get(field).getAdded()) {
+                    addedFields.add(field);
                 }
-                wizardField.setName(ImportService.getCellValue(importSheet, row, col + 1));
-                row++;
+                wizardInfo.getFields().get(field).setIgnore(true);
             }
+            for (String field:addedFields){
+                wizardInfo.getFields().remove(field);
+            }
+
+                //import the names first - peers are described by the chosen names rather than the import file names.
+
+            while(ImportService.getCellValue(importSheet,row,col).length()>0){
+               String loadedField = ImportService.getCellValue(importSheet, row, col);
+                String azquoName = ImportService.getCellValue(importSheet,row,col + 1);
+                WizardField wizardField = wizardInfo.getFields().get(HTMLify(loadedField));
+               if (wizardField==null){
+                   wizardField = new WizardField(loadedField,azquoName,true);
+                   wizardInfo.getFields().put(HTMLify(loadedField),wizardField);
+                }else{
+                   wizardField.setName(azquoName);
+               }
+               wizardField.setIgnore(false);
+               row++;
+
+           }
             row = startRow;
-            for (String field : wizardInfo.getFields().keySet()) {
-                WizardField wizardField = wizardInfo.getFields().get(field);
-                String loadedField = ImportService.getCellValue(importSheet,row,col);
-                if (ImportService.getCellValue(importSheet,row, col + 2).length()>0)
-                    wizardField.setIgnore(true);
+            while(ImportService.getCellValue(importSheet,row,col).length()>0){
+                String loadedField = ImportService.getCellValue(importSheet, row, col);
+                WizardField wizardField = wizardInfo.getFields().get(HTMLify(loadedField));
                 String interpetation = ImportService.getCellValue(importSheet,row,col + 3);
                 String[] clauses = interpetation.split(";");
-                wizardField.setType(clauses[0]);
-                String dataParent = getClause("datatype", clauses);
-                if (dataParent==null && clauses[0].equals("data")){
-                    wizardField.setType(null);
+                if (Arrays.asList(TYPEOPTIONS).contains(clauses[0])){
+                    wizardField.setType(clauses[0]);
+
                 }
+                String dataChild = getClause("parent of", clauses);
+                if (dataChild!=null){
+                    wizardField.setChild(findFieldFromName(wizardInfo,dataChild));
+                }
+                String dataAnchor = getClause("attribute of", clauses);
+                if (dataAnchor!=null){
+                    wizardField.setAnchor(findFieldFromName(wizardInfo,dataAnchor));
+                }
+                String dataParent = getClause("datatype", clauses);
                 wizardField.setParent(dataParent);
                 String peersString = getClause("peers", clauses);
                 if (peersString!=null){
@@ -243,10 +371,6 @@ public class ImportWizard {
 
 
         StringBuffer toReturn = new StringBuffer();
-        if ("null".equals(wizardField.getType()) || "".equals(wizardField.getType())) {
-            wizardField.setType(null);
-
-        }
 
         String peerType = null;
         if (peerHeadings.size() > 0){
@@ -258,7 +382,12 @@ public class ImportWizard {
         String type = wizardField.getType();
 
         if (wizardField.getChild()!=null){
-            type ="parent  of " + wizardInfo.getFields().get(wizardField.getChild()).getName();
+            if (type==null) {
+                type = "";
+            }else{
+                type = type + ";";
+             }
+            type +="parent of " + wizardInfo.getFields().get(wizardField.getChild()).getName();
         }
         if (wizardField.getAnchor()!=null){
             type = "attribute of " + wizardInfo.getFields().get(wizardField.getAnchor()).getName();
@@ -269,19 +398,21 @@ public class ImportWizard {
             peerType = null;
 
         }
+        if (wizardField.getParent()!=null){
+            type ="datatype " + wizardField.getParent();
+        }
 
 
 
         if (type==null ) {
-            wizardField.setInterpretation("");
+
+            wizardField.setInterpretation(checkForParents(wizardInfo, wizardField));
+
             return;
         }
 
         toReturn.append(";"+type);
-        if (wizardField.getParent()!=null){
-            toReturn.append(";datatype " + wizardField.getParent());
-        }
-        if (peerType!=null){
+         if (peerType!=null){
             toReturn.append(";"+ peerType);
         }
         if (wizardField.getPeers()!=null && wizardField.getPeers().size()>0){
@@ -302,38 +433,81 @@ public class ImportWizard {
 
         }
         else{
-            wizardField.setInterpretation("");
+            wizardField.setInterpretation(checkForParents(wizardInfo,wizardField));
         }
+    }
+
+    private static String checkForParents(WizardInfo wizardInfo, WizardField wizardField) {
+        for (String possibleParent : wizardInfo.getFields().keySet()) {
+            if (wizardField.getName().equals(wizardInfo.getFields().get(possibleParent).getChild())) {
+                return "Key field";
+            }
+        }
+        return "";
     }
 
     private static String findFieldFromName(WizardInfo wizardInfo, String fieldName){
         for (String field:wizardInfo.getFields().keySet()){
-            if (wizardInfo.getFields().get(field).getName().equals(fieldName.trim())){
+            if (wizardInfo.getFields().get(field).getName().equalsIgnoreCase(fieldName.trim())){
                 return field;
             }
         }
         return null;
     }
 
+    public static String HTMLify(String string){
+        return string.replace(" ","_").replace("\"","").replace("'","").replace("`","");
+    }
+
+
     public static void createDB(LoggedInUser loggedInUser) throws Exception{
         WizardInfo wizardInfo = loggedInUser.getWizardInfo();
         String dataField = null;
-        Map<String, List<String>> pathsRequired = new LinkedHashMap<>();
+        Set<String> pathsRequired = new HashSet<>();
         Map<String,List<String>> flatfileData = new LinkedHashMap<>();
+        Map<String,List<String>> onePassValues = new HashMap<>();
+        boolean isJSON = true;
+        String extractLevel = null;
         for (String field:wizardInfo.getFields().keySet()){
             WizardField wizardField = wizardInfo.getFields().get(field);
             if (!wizardField.getIgnore() && wizardField.getInterpretation().length() > 0) {
                if (wizardInfo.getFields().get(field).getParent() != null) {
                     dataField = field;
                }
-               pathsRequired.put(field, new ArrayList<>());
-               flatfileData.put(field,new ArrayList<>());
+               if (!field.startsWith("jsonrule:")){
+                   pathsRequired.add(ImportService.JSONFIELDDIVIDER + field);
+                   if (extractLevel==null){
+                       extractLevel = field;
+                   }else{
+                       int endChar = 0;
+                       while (endChar<field.length() && endChar < extractLevel.length() && extractLevel.charAt(endChar)==field.charAt(endChar)){
+                           endChar++;
+                       }
+                       extractLevel = extractLevel.substring(0,endChar);
+                   }
+               }
+                if (wizardField.getValuesOnFile()!=null){
+                    flatfileData.put(field,wizardField.getValuesOnFile());
+                    isJSON = false;
+                }else {
+                    flatfileData.put(field, new ArrayList<>());
+                    onePassValues.put(field, new ArrayList<>());
+                }
             }
         }
-        if (dataField==null){
-            throw new Exception("no data fields");
+        if (isJSON) {
+            List<JSONtest> jsonTests = new ArrayList<>();
+            String error = createJSONTests(wizardInfo, jsonTests, null, null);
+            for (JSONtest jsoNtest : jsonTests) {
+                pathsRequired.add(jsoNtest.source);
+            }
+            try {
+
+                traverseJSON3(flatfileData, pathsRequired, onePassValues, "", new JSONObject(wizardInfo.getImportFileData()), jsonTests, extractLevel);
+            } catch (Exception e) {
+                throw e;
+            }
         }
-         traverseJSON3(flatfileData,pathsRequired,"", new JSONObject(wizardInfo.getImportFileData()));
         /*
         START HERE
         the field names are in wizardInfo - Azquo names as '.name'
@@ -353,24 +527,41 @@ public class ImportWizard {
     }
 
 
-    private static boolean traverseJSON3(Map<String,List<String>> output, Map<String,List<String>> pathsRequired, String jsonPath,JSONObject jsonNext) throws Exception{
-        boolean found = false;
+    private static boolean traverseJSON3(Map<String,List<String>> output, Set<String> pathsRequired, Map<String,List<String>> onePassValues,String jsonPath,JSONObject jsonNext,List<JSONtest>jsonTests, String extractLevel) throws Exception{
+        boolean tested = false;
+        for(JSONtest jsoNtest:jsonTests){
+            if (jsoNtest.source.equals(jsonPath)){
+                try{
+                    tested = true;
+                    String jsonOtherValue = jsonNext.getString(jsoNtest.jsonPartner);
+                    if (jsonOtherValue.equals(jsoNtest.jsonValue)){
+                        String jsonValue = jsonNext.getString(jsoNtest.jsonField);
+                        if (jsoNtest.testValue==null || jsoNtest.testValue.equals(jsonValue)) {
+                             onePassValues.get(jsoNtest.target).add(jsonValue);
+                        }
+                    }
+                }catch(Exception e){
+                    //should we return an error?
+                }
+            }
+        }
+        if (tested) return true;
+
         String[] jsonNames = JSONObject.getNames(jsonNext);
         for (String jsonName:jsonNames){
             String newPath = jsonPath + ImportService.JSONFIELDDIVIDER + jsonName;
-            if(inRequired(newPath.substring(1), pathsRequired)) {
+            if(inRequired(newPath, pathsRequired)) {
                 try {
                     JSONObject jsonObject = jsonNext.getJSONObject(jsonName);
-                    found = traverseJSON3(output, pathsRequired, newPath, jsonObject);
+                    traverseJSON3(output, pathsRequired, onePassValues,newPath, jsonObject, jsonTests, extractLevel);
                 } catch (Exception e) {
                     try {
 
                         JSONArray jsonArray = jsonNext.getJSONArray(jsonName);
                     } catch (Exception e2) {
                         String value = jsonNext.get(jsonName).toString();
-                        if (pathsRequired.get(newPath.substring(1))!=null){
-                            pathsRequired.get(newPath.substring(1)).add(value);
-                            found = true;
+                        if (onePassValues.get(newPath.substring(1))!=null){
+                            onePassValues.get(newPath.substring(1)).add(value);
                         }
                     }
                 }
@@ -378,7 +569,7 @@ public class ImportWizard {
         }
         for (String jsonName:jsonNames){
             String newPath = jsonPath + ImportService.JSONFIELDDIVIDER + jsonName;
-            if(inRequired(newPath.substring(1), pathsRequired)) {
+            if(inRequired(newPath, pathsRequired)) {
                 try {
                     JSONObject jsonObject = jsonNext.getJSONObject(jsonName);
                 } catch (Exception e) {
@@ -387,22 +578,21 @@ public class ImportWizard {
                         JSONArray jsonArray = jsonNext.getJSONArray(jsonName);
                         int count = 0;
                         for (Object jsonObject1 : jsonArray) {
-                             found = traverseJSON3(output, pathsRequired, newPath, (JSONObject) jsonObject1);
+                            traverseJSON3(output, pathsRequired, onePassValues,newPath, (JSONObject) jsonObject1, jsonTests,extractLevel       );
+                            //if (newPath.startsWith(ImportService.JSONFIELDDIVIDER+extractLevel)&& newPath.indexOf(String.valueOf(ImportService.JSONFIELDDIVIDER),extractLevel.length() +1)<0){
+                                outputAdd(output,onePassValues);
+                            //}
                         }
-                        if (found){
-                            outputAdd(output,pathsRequired);
-                            found = false;
-                        }
-                    } catch (Exception e2) {
+                     } catch (Exception e2) {
                     }
                 }
             }
         }
-        return found;
+        return true;
     }
 
-    private static boolean inRequired(String toTest, Map<String, List<String>> required){
-        for (String maybe:required.keySet()){
+    private static boolean inRequired(String toTest, Set<String> required){
+        for (String maybe:required){
             if (maybe.startsWith(toTest)){
                 return true;
             }
@@ -421,13 +611,114 @@ public class ImportWizard {
         for (String field:output.keySet()){
             output.get(field).addAll(found.get(field));
             if (found.get(field).size() < maxCount){
-                for (int i = found.get(field).size();i < maxCount;i++){
-                    output.get(field).add(found.get(field).get(0));
+                String filler = "";
+                if (found.get(field).size()>0){
+                    filler = found.get(field).get(0);
                 }
-            }else{
-                found.get(field).clear();
+                for (int i = found.get(field).size();i < maxCount;i++){
+                    output.get(field).add(filler);
+                }
+            }
+            found.get(field).clear();
+         }
+    }
+
+    public static String createJSONTests(WizardInfo wizardInfo, List<JSONtest> jsoNtests, String testField, String testValue)throws Exception{
+        String error = null;
+        for (String field:wizardInfo.getFields().keySet()){
+            WizardField wizardField = wizardInfo.getFields().get(field);
+            if (wizardField.getAdded() && wizardField.getImportedName().toLowerCase(Locale.ROOT).startsWith("jsonrule:")){
+                String jsonRule = wizardField.getImportedName().substring(9).trim();
+                String errorFound = "Json rule should be of the form `jsonrule: <azquoname>` where '<jsonname>' = \"<jsonvalue>\" :" + jsonRule;
+                String azquoField = getField(jsonRule,'`');
+                if (azquoField==null){
+                      error = errorFound;
+                      break;
+                }
+                String fieldName = findFieldFromName(wizardInfo,azquoField);
+                if (fieldName == null){
+                    error = errorFound;
+                    break;
+                }
+                jsonRule = jsonRule.substring(azquoField.length() + 2).trim();
+                 if (!jsonRule.toLowerCase(Locale.ROOT).startsWith("where ")){
+                    error = errorFound;
+                    break;
+
+                }
+                jsonRule = jsonRule.substring(6).trim();
+                String jsonField = getField(jsonRule,'\'');
+                if (jsonField == null){
+                    error = errorFound;
+                    break;
+                }
+                jsonRule = jsonRule.substring(jsonField.length() + 2).trim();
+                if (jsonRule.charAt(0)!='='){
+                    error = errorFound;
+                    break;
+                }
+                jsonRule = jsonRule.substring(1).trim();
+                String jsonValue = getField(jsonRule,'"');
+                if (jsonValue==null){
+                    error = errorFound;
+                    break;
+                }
+                if (!field.equals(testField)){
+                    testValue = null;
+                }
+                jsoNtests.add(new JSONtest(field,fieldName, jsonField, jsonValue, testValue));
             }
         }
+
+        return error;
     }
+
+    private static  String getField(String from, char quote){
+        if (from.length()< 2 || from.charAt(0)!=quote || from.indexOf(String.valueOf(quote),1)< 0){
+            return null;
+        }
+        return from.substring(1,from.indexOf(String.valueOf(quote),1));
+
+    }
+
+
+
+    public static int readBook(File uploadedFile, Map<String,WizardField> wizardFields, boolean usDates) throws Exception{
+        OPCPackage opcPackage;
+        try (FileInputStream fi = new FileInputStream(uploadedFile)) { // this will hopefully guarantee that the file handler is released under windows
+            opcPackage = OPCPackage.open(fi);
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new IOException("Cannot load file");
+        }
+        org.apache.poi.ss.usermodel.Workbook book = new XSSFWorkbook(opcPackage);
+
+        org.apache.poi.ss.usermodel.Sheet sheet = book.getSheetAt(0);
+        Map<Integer,String> colMap = new HashMap<>();
+        int lineCount = -1;
+        try {
+            boolean firstRow = true;
+            for (org.apache.poi.ss.usermodel.Row row : sheet) {
+                for (Iterator<org.apache.poi.ss.usermodel.Cell> ri = row.cellIterator(); ri.hasNext(); ) {
+                    org.apache.poi.ss.usermodel.Cell cell = ri.next();
+                    final String value = ImportService.getCellValueUS(cell, usDates);
+                    if (firstRow){
+                        colMap.put(cell.getColumnIndex(),value);
+                        WizardField wizardField = new WizardField(value,value,false);
+                        wizardField.setValuesOnFile(new ArrayList<>());
+                        wizardFields.put(value,wizardField);
+                    }else{
+                        wizardFields.get(colMap.get(cell.getColumnIndex())).getValuesOnFile().add(value);
+                    }
+                }
+                firstRow = false;
+                lineCount++;
+            }
+        }catch (Exception e){
+            throw e;
+        }
+        return lineCount;
+    }
+
 
 }
