@@ -1,5 +1,6 @@
 package com.azquo.dataimport;
 
+import com.azquo.DateUtils;
 import com.azquo.StringLiterals;
 import com.azquo.admin.business.Business;
 import com.azquo.spreadsheet.LoggedInUser;
@@ -10,8 +11,15 @@ import io.keikai.api.Importers;
 import io.keikai.api.model.Book;
 import io.keikai.api.model.Sheet;
 import io.keikai.model.SName;
+import org.apache.commons.lang.math.NumberUtils;
 import org.apache.poi.openxml4j.opc.OPCPackage;
+import org.apache.poi.ss.formula.functions.FreeRefFunction;
 import org.apache.poi.ss.formula.functions.Value;
+import org.apache.poi.ss.formula.udf.AggregatingUDFFinder;
+import org.apache.poi.ss.formula.udf.DefaultUDFFinder;
+import org.apache.poi.ss.formula.udf.UDFFinder;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.FormulaEvaluator;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.util.AreaReference;
@@ -27,6 +35,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.text.Normalizer;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.regex.Pattern;
@@ -56,12 +65,25 @@ public class ImportWizard {
 
     }
 
+    static Workbook wb = new XSSFWorkbook();
+    // fragment to add our function(s) -  NEEDS WORK!
+    //String[] functionNames = {"standardise"};
+    //FreeRefFunction[] functionImpls = {new POIStandardise()};
+    //UDFFinder udfs = new DefaultUDFFinder(functionNames, functionImpls);
+    //UDFFinder udfToolpack = new AggregatingUDFFinder(udfs);
+
+    //wb.addToolPack(udfToolpack);
+    static Cell excelCell = wb.createSheet("new sheet").createRow(0).createCell(0);
+    static final FormulaEvaluator formulaEvaluator = wb.getCreationHelper().createFormulaEvaluator();
+
+
     public static final String[] TYPEOPTIONS = {"key field id","key field name", "date","time","datetime"};
 
     private static int nthLastIndexOf(int nth, String ch, String string) {
         if (nth <= 0) return string.length();
         if (string.lastIndexOf(ch)==-1) return -1;//start of string
         return nthLastIndexOf(--nth, ch, string.substring(0, string.lastIndexOf(ch)));
+
     }
 
     public static Map<String,WizardField> readTheFile(ModelMap model, WizardInfo wizardInfo, String testField, String testItem) {
@@ -99,8 +121,10 @@ public class ImportWizard {
                         if (wizardField.getValuesOnFile().get(i).equals(testItem)){
                             for (String field:wizardInfo.getFields().keySet()){
                                 WizardField wizardField1 = wizardInfo.getFields().get(field);
-                                wizardField1.getValuesFound().add(wizardField1.getValuesFound().get(i));
+                                wizardField1.getValuesFound().add(wizardField1.getValuesOnFile().get(i));
+
                             }
+                            break;
                         }
                     }
                 }
@@ -121,6 +145,9 @@ public class ImportWizard {
         }
         List<JSONtest> jsonTests = new ArrayList<>();
         String error = createJSONTests(wizardInfo, jsonTests, testField, testItem);
+        if (error!=null){
+            throw new Exception(error);
+        }
         if (testItem==null){
             testItem = "*";
         }
@@ -158,7 +185,7 @@ public class ImportWizard {
                 }
             }else{
                 for (String field:fieldsFound.keySet()){
-                      wizardInfo.getFields().get(field).setValuesFound(fieldsFound.get(field));
+                      wizardInfo.getFields().get(HTMLify(field)).setValuesFound(fieldsFound.get(field));
                 }
             }
             Map<String,WizardField> toReturn = new LinkedHashMap<>();
@@ -340,7 +367,8 @@ public class ImportWizard {
                 row++;
                 // todo don't show admins if not admin
             }
-             return "";
+            calcXL(loggedInUser.getWizardInfo());
+            return "";
         }catch(Exception e){
             return e.getMessage();
         }
@@ -467,32 +495,22 @@ public class ImportWizard {
         Map<String,List<String>> flatfileData = new LinkedHashMap<>();
         Map<String,List<String>> onePassValues = new HashMap<>();
         boolean isJSON = true;
-        String extractLevel = null;
         for (String field:wizardInfo.getFields().keySet()){
             WizardField wizardField = wizardInfo.getFields().get(field);
             if (!wizardField.getIgnore() && wizardField.getInterpretation().length() > 0) {
                if (wizardInfo.getFields().get(field).getParent() != null) {
                     dataField = field;
                }
-               if (!field.startsWith("jsonrule:")){
+               if (!field.contains(" where ")){
                    pathsRequired.add(ImportService.JSONFIELDDIVIDER + field);
-                   if (extractLevel==null){
-                       extractLevel = field;
-                   }else{
-                       int endChar = 0;
-                       while (endChar<field.length() && endChar < extractLevel.length() && extractLevel.charAt(endChar)==field.charAt(endChar)){
-                           endChar++;
-                       }
-                       extractLevel = extractLevel.substring(0,endChar);
-                   }
                }
-                if (wizardField.getValuesOnFile()!=null){
+               if (wizardField.getValuesOnFile()!=null){
                     flatfileData.put(field,wizardField.getValuesOnFile());
                     isJSON = false;
-                }else {
+               }else {
                     flatfileData.put(field, new ArrayList<>());
                     onePassValues.put(field, new ArrayList<>());
-                }
+               }
             }
         }
         if (isJSON) {
@@ -503,7 +521,7 @@ public class ImportWizard {
             }
             try {
 
-                traverseJSON3(flatfileData, pathsRequired, onePassValues, "", new JSONObject(wizardInfo.getImportFileData()), jsonTests, extractLevel);
+                traverseJSON3(flatfileData, pathsRequired, onePassValues, "", new JSONObject(wizardInfo.getImportFileData()), jsonTests, null);
             } catch (Exception e) {
                 throw e;
             }
@@ -577,11 +595,14 @@ public class ImportWizard {
 
                         JSONArray jsonArray = jsonNext.getJSONArray(jsonName);
                         int count = 0;
+                        if (extractLevel==null){
+                            extractLevel = newPath;
+                        }
                         for (Object jsonObject1 : jsonArray) {
-                            traverseJSON3(output, pathsRequired, onePassValues,newPath, (JSONObject) jsonObject1, jsonTests,extractLevel       );
-                            //if (newPath.startsWith(ImportService.JSONFIELDDIVIDER+extractLevel)&& newPath.indexOf(String.valueOf(ImportService.JSONFIELDDIVIDER),extractLevel.length() +1)<0){
-                                outputAdd(output,onePassValues);
-                            //}
+                            traverseJSON3(output, pathsRequired, onePassValues,newPath, (JSONObject) jsonObject1, jsonTests,extractLevel    );
+                            if (extractLevel.equals(newPath)){
+                                outputAdd(output,onePassValues, newPath.substring(1));
+                            }
                         }
                      } catch (Exception e2) {
                     }
@@ -600,7 +621,7 @@ public class ImportWizard {
         return false;
     }
 
-    private static void outputAdd(Map<String,List<String>> output, Map<String,List<String>> found){
+    private static void outputAdd(Map<String,List<String>> output, Map<String,List<String>> found, String extractLevel){
         int maxCount = 0;
         for (String field:found.keySet()){
             int count = found.get(field).size();
@@ -619,7 +640,9 @@ public class ImportWizard {
                     output.get(field).add(filler);
                 }
             }
-            found.get(field).clear();
+            if (field.startsWith(extractLevel)){
+                found.get(field).clear();
+            }
          }
     }
 
@@ -627,27 +650,27 @@ public class ImportWizard {
         String error = null;
         for (String field:wizardInfo.getFields().keySet()){
             WizardField wizardField = wizardInfo.getFields().get(field);
-            if (wizardField.getAdded() && wizardField.getImportedName().toLowerCase(Locale.ROOT).startsWith("jsonrule:")){
-                String jsonRule = wizardField.getImportedName().substring(9).trim();
-                String errorFound = "Json rule should be of the form `jsonrule: <azquoname>` where '<jsonname>' = \"<jsonvalue>\" :" + jsonRule;
-                String azquoField = getField(jsonRule,'`');
-                if (azquoField==null){
+            if (wizardField.getAdded() && wizardField.getImportedName().toLowerCase(Locale.ROOT).contains(" where ")){
+                String jsonRule = wizardField.getImportedName();
+                String errorFound = "Json rule should be of the form `<jsonpath>` where `peertag` = \"<jsonvalue>\" (e.g)  'data|value' where 'name'=\"contact_name\": " + jsonRule;
+                String fieldName = getField(jsonRule,'`');
+                if (fieldName==null){
                       error = errorFound;
                       break;
                 }
-                String fieldName = findFieldFromName(wizardInfo,azquoField);
-                if (fieldName == null){
+                int divPos = fieldName.lastIndexOf(String.valueOf(ImportService.JSONFIELDDIVIDER));
+                if (divPos < 0){
                     error = errorFound;
                     break;
                 }
-                jsonRule = jsonRule.substring(azquoField.length() + 2).trim();
-                 if (!jsonRule.toLowerCase(Locale.ROOT).startsWith("where ")){
+                jsonRule = jsonRule.substring(fieldName.length() + 2).trim();
+                if (!jsonRule.toLowerCase(Locale.ROOT).startsWith("where ")){
                     error = errorFound;
                     break;
 
                 }
                 jsonRule = jsonRule.substring(6).trim();
-                String jsonField = getField(jsonRule,'\'');
+                String jsonField = getField(jsonRule,'`');
                 if (jsonField == null){
                     error = errorFound;
                     break;
@@ -663,10 +686,11 @@ public class ImportWizard {
                     error = errorFound;
                     break;
                 }
-                if (!field.equals(testField)){
-                    testValue = null;
+                String valueToTest = null;
+                if (field.equals(testField)){
+                    valueToTest = testValue;
                 }
-                jsoNtests.add(new JSONtest(field,fieldName, jsonField, jsonValue, testValue));
+                jsoNtests.add(new JSONtest(field, fieldName, jsonField, jsonValue, valueToTest));
             }
         }
 
@@ -699,9 +723,14 @@ public class ImportWizard {
         try {
             boolean firstRow = true;
             for (org.apache.poi.ss.usermodel.Row row : sheet) {
+                int col = 0;
                 for (Iterator<org.apache.poi.ss.usermodel.Cell> ri = row.cellIterator(); ri.hasNext(); ) {
                     org.apache.poi.ss.usermodel.Cell cell = ri.next();
-                    final String value = ImportService.getCellValueUS(cell, usDates);
+                    while (cell.getColumnIndex() > col){
+                        wizardFields.get(colMap.get(col++)).getValuesOnFile().add("");
+                    }
+                    String value = ImportService.getCellValueUS(cell, usDates);
+                    if (value==null) value = "";
                     if (firstRow){
                         colMap.put(cell.getColumnIndex(),value);
                         WizardField wizardField = new WizardField(value,value,false);
@@ -710,6 +739,7 @@ public class ImportWizard {
                     }else{
                         wizardFields.get(colMap.get(cell.getColumnIndex())).getValuesOnFile().add(value);
                     }
+                    col++;
                 }
                 firstRow = false;
                 lineCount++;
@@ -720,5 +750,54 @@ public class ImportWizard {
         return lineCount;
     }
 
+
+    public static void calcXL(WizardInfo wizardInfo)throws Exception{
+
+        for (String maybeXL:wizardInfo.getFields().keySet()){
+            if(maybeXL.toLowerCase(Locale.ROOT).startsWith("az=")){
+                WizardField xlField = wizardInfo.getFields().get(maybeXL);
+
+                Map<String,String> fieldList = new HashMap<>();
+                for (String field:wizardInfo.getFields().keySet()){
+                    WizardField wizardField = wizardInfo.getFields().get(field);
+                    if (xlField.getImportedName().contains(StringLiterals.QUOTE + wizardField.getName() + StringLiterals.QUOTE)){
+                        fieldList.put(StringLiterals.QUOTE + wizardField.getName() + StringLiterals.QUOTE, field);
+                    }
+                }
+                xlField.setValuesOnFile(new ArrayList<>());
+                for(int i=0;i <wizardInfo.getLineCount();i++){
+                    String compositionPattern = xlField.getImportedName().substring(3);
+                    for (String field:fieldList.keySet()) {
+                        compositionPattern = compositionPattern.replace(field, getXLTerm(wizardInfo,fieldList.get(field),i));
+                    }
+                    excelCell.setCellFormula(compositionPattern);
+                    formulaEvaluator.clearAllCachedResultValues();
+                    compositionPattern = formulaEvaluator.evaluate(excelCell).formatAsString();
+                    if (compositionPattern.startsWith("\"") && compositionPattern.endsWith("\"")) {
+                        compositionPattern = compositionPattern.substring(1, compositionPattern.length() - 1);
+                    }
+                    // for Excel date is a number - on the way out standardise to our typically used date format
+                    if (HeadingReader.DATELANG.equals(xlField.getType()) || HeadingReader.USDATELANG.equals(xlField.getType())){
+                        try{
+                            compositionPattern = DateUtils.toDate(compositionPattern);
+                        } catch (Exception e){
+                            throw new Exception("Cannot read : " + compositionPattern + " as date. Try surrounding with DATEVALUE()?");
+                        }
+                    }
+                    xlField.getValuesOnFile().add(compositionPattern);
+                }
+            }
+        }
+
+    }
+
+    public static String getXLTerm(WizardInfo wizardInfo, String field, int i){
+     String sourceVal =  wizardInfo.getFields().get(field).getValuesOnFile().get(i);
+     if (NumberUtils.isNumber(sourceVal)){
+         return sourceVal;
+     }
+     return "\"" + sourceVal + "\"";
+
+}
 
 }

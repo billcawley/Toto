@@ -7,6 +7,7 @@ import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseServerDAO;
 import com.azquo.dataimport.*;
 import com.azquo.spreadsheet.LoggedInUser;
+import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.controller.LoginController;
 import com.azquo.spreadsheet.transport.UploadedFile;
@@ -22,6 +23,7 @@ import org.apache.commons.lang.math.NumberUtils;
 import org.apache.poi.openxml4j.opc.OPCPackage;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.json.JSONObject;
+import org.springframework.context.annotation.Import;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -64,7 +66,16 @@ import java.util.*;
             LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
             // I assume secure until we move to proper spring security
             if (loggedInUser != null && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
+                String database = request.getParameter("database");
+                if (database!=null){
+                    try {
+                        LoginService.switchDatabase(loggedInUser, database);
+                    }catch (Exception e){
+                        model.put("error","No such database: " + database);
+                    }
+                }
                 AdminService.setBanner(model, loggedInUser);
+
                 fillStages(model,1, null);
                 return "importwizard";
             } else {
@@ -133,6 +144,13 @@ import java.util.*;
                         newFieldAzquoName = "new name";
                     }
                     wizardInfo.getFields().put(ImportWizard.HTMLify(newFieldName),new WizardField(newFieldName, newFieldAzquoName,true));
+                    if (newFieldName.startsWith("az=")){
+                        try{
+                            ImportWizard.calcXL(wizardInfo);
+                        }catch(Exception e){
+                            model.put("error", e.getMessage());
+                        }
+                    }
                     nextStage = stage;
                 }
 
@@ -344,7 +362,8 @@ import java.util.*;
             switch (stage) {
                 case 1:
                     model.put("stageheading", "1 Load the file");
-                    model.put("stageexplanation", "1 Use the button to upload a text or JSON file, and press 'next' at the bottom.");
+                    model.put("stageexplanation", "<b>You are strongly advised to make a copy of your database before continuing</b>" +
+                            "<br/>1 Use the button to upload a text or JSON file, and press 'next'.");
                     break;
                 case 2:
                     model.put("stageheading", "2 Name the fields");
