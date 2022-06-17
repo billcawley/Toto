@@ -53,11 +53,11 @@ public class AdminService {
             , final String address3
             , final String address4
             , final String postcode
-            , final String telephone, final String website, String bannerColor, String logo) throws Exception {
+            , final String telephone, final String website, String bannerColor, String ribbonColor,  String ribbonLinkColor, String sideMenuColor, String sideMenuLinkColor, String logo) throws Exception {
         // we need to check for existing businesses
         final String key = shaHash(System.currentTimeMillis() + "");
         final Business.BusinessDetails bd = new Business.BusinessDetails(address1, address2, address3, address4, postcode, telephone, website, key);
-        final Business business = new Business(0, businessName, bd, bannerColor, logo, null);
+        final Business business = new Business(0, businessName, bd, bannerColor,ribbonColor, ribbonLinkColor, sideMenuColor, sideMenuLinkColor,logo,null, null);
         final Business existing = BusinessDAO.findByName(businessName);
         if (existing != null) {
             throw new Exception(businessName + " already registered");
@@ -744,10 +744,26 @@ this may now not work at all, perhaps delete?
         Business business = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
         String bannerColor = business.getBannerColor();
         if (bannerColor == null || bannerColor.length() == 0) bannerColor = "#F58030";
+        String ribbonColor = business.getRibbonColor();
+        if (ribbonColor == null || ribbonColor.length() == 0) ribbonColor = "#000000";
+        String ribbonLinkColor = business.getRibbonLinkColor();
+        if (ribbonLinkColor == null || ribbonLinkColor.length() == 0) ribbonLinkColor = bannerColor;
+        String sideMenuColor = business.getSideMenuColor();
+        if (sideMenuColor == null || sideMenuColor.length() == 0) sideMenuColor = "#FFFFFF";
+        String sideMenuLinkColor = business.getSideMenuLinkColor();
+        if (sideMenuLinkColor == null || sideMenuLinkColor.length() == 0) sideMenuLinkColor = bannerColor;
         String logo = business.getLogo();
         if (logo == null || logo.length() == 0) logo = "logo_admin.png";
+        String cornerLogo = business.getCornerLogo();
+        if (cornerLogo == null || cornerLogo.length() == 0) cornerLogo = logo;
         model.addAttribute("bannerColor", bannerColor);
+        model.addAttribute("ribbonColor", ribbonColor);
+        model.addAttribute("ribbonLinkColor", ribbonLinkColor);
+        model.addAttribute("loadingColor", !"#000000".equals(ribbonColor) ? ribbonColor : bannerColor);
+        model.addAttribute("sideMenuColor", sideMenuColor);
+        model.addAttribute("sideMenuLinkColor", sideMenuLinkColor);
         model.addAttribute("logo", getLogoPath(logo));
+        model.addAttribute("cornerLogo", getLogoPath(cornerLogo));
 
     }
 

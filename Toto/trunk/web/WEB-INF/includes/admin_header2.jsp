@@ -22,55 +22,55 @@
 		.ui-widget .ui-widget-header li.ui-state-active {background-color:${bannerColor}}
 		a:link {color:${bannerColor}}
 		a:visited {color:${bannerColor}}
-
+		.navbar {background-color:${ribbonColor}}
 	</style>
 </head>
 <body>
-<nav class="navbar is-black" role="navigation" aria-label="main navigation">
+<nav class="navbar" role="navigation" aria-label="main navigation">
 	<div class="navbar-brand">
 		<a class="navbar-item" href="/api/Online?reportid=1">
-			<img src="${logo}">
+			<img src="${cornerLogo}">
 		</a>
 	</div>
 	<div id="navbarBasicExample" class="navbar-menu">
 		<div class="navbar-start">
 
 					<a class="navbar-item is-tab${fn:startsWith(requestScope['javax.servlet.forward.path_info'], '/ManageReports') ? ' is-active' : ''}"
-					   href="/api/ManageReports">
+					   href="/api/ManageReports" style="color: ${ribbonLinkColor}">
 						Reports</a>
 			<a class="navbar-item is-tab${fn:startsWith(requestScope['javax.servlet.forward.path_info'], '/ManageDatabases') ? ' is-active' : ''}"
-			   href="/api/ManageDatabases">
+			   href="/api/ManageDatabases" style="color: ${ribbonLinkColor}">
 				Databases
 			</a>
 			<c:if test="${!developer&& sessionScope.test != null}">
 				<a class="navbar-item is-tab${fn:startsWith(requestScope['javax.servlet.forward.path_info'], '/ManageDatabaseConnections') ? ' is-active' : ''}"
-				   href="/api/ManageDatabaseConnections">
+				   href="/api/ManageDatabaseConnections" style="color: ${ribbonLinkColor}">
 					Connections
 				</a>
 			</c:if>
 			<c:if test="${!developer}">
 				<a class="navbar-item is-tab${fn:startsWith(requestScope['javax.servlet.forward.path_info'], '/ManageUsers') ? ' is-active' : ''}"
-				   href="/api/ManageUsers">
+				   href="/api/ManageUsers" style="color: ${ribbonLinkColor}">
 					Users
 				</a>
 			</c:if>
 			<c:if test="${!developer}">
 				<a class="navbar-item is-tab${fn:startsWith(requestScope['javax.servlet.forward.path_info'], '/ManageReportSchedules') ? ' is-active' : ''}"
-				   href="/api/ManageReportSchedules">Schedules
+				   href="/api/ManageReportSchedules" style="color: ${ribbonLinkColor}">Schedules
 				</a>
 			</c:if>
 			<c:if test="${sessionScope.test != null}">
 				<a class="navbar-item is-tab${fn:startsWith(requestScope['javax.servlet.forward.path_info'], '/RangeTest') ? ' is-active' : ''}"
-				   href="/api/RangeTest">Range Test (like new inspect)
+				   href="/api/RangeTest" style="color: ${ribbonLinkColor}">Range Test (like new inspect)
 				</a>
 			</c:if>
 		</div>
 
 		<div class="navbar-end">
 			<c:if test="${sessionScope.LOGGED_IN_USERS_SESSION != null}">
-				<a  class="navbar-item" href="/api/Login?select=true"><!--Logged in under ${sessionScope.LOGGED_IN_USER_SESSION.user.businessName}. --><i class="fa-solid fa-sitemap"></i></a>
+				<a  class="navbar-item is-tab" href="/api/Login?select=true" style="color: ${ribbonLinkColor}"><!--Logged in under ${sessionScope.LOGGED_IN_USER_SESSION.user.businessName}. --><i class="fa-solid fa-sitemap"></i></a>
 			</c:if>
-			<a class="navbar-item" href="/api/Login?logoff=true">Sign Out</a>
+			<a class="navbar-item is-tab" href="/api/Login?logoff=true" style="color: ${ribbonLinkColor}">Sign Out</a>
 		</div>
 	</div>
 </nav>
@@ -80,9 +80,9 @@
     top: 5%;
 "><i class="fa-solid fa-chevron-right"></i></button>
 
-<div id="quickviewDefault" class="quickview is-left">
+<div id="quickviewDefault" class="quickview is-left" style="background-color: ${sideMenuColor}">
 	<header class="quickview-header">
-		<p class="title">Reports</p>
+		<p style="color:${sideMenuLinkColor}" class="title">Reports</p>
 		<span class="delete" data-dismiss="quickview"></span>
 	</header>
 
@@ -91,11 +91,11 @@
 			<c:forEach items="${reports}" var="report">
 				<c:if test="${report.database != 'None'}">
 					<c:if test="${report.category != ''}">
-						<hr>
-						&nbsp;&nbsp;${report.category}
-						<hr>
+						<hr style="height: 0px">
+						&nbsp;&nbsp;<span style="color:${sideMenuLinkColor};text-decoration: underline">${report.category}</span>
+						<hr style="height: 0px">
 					</c:if>
-					<a href="/api/Online?reportid=${report.id}&amp;database=${report.database}">
+					<a href="/api/Online?reportid=${report.id}&amp;database=${report.database}"  style="color:${sideMenuLinkColor}">
 						&nbsp;&nbsp;&nbsp;&nbsp;${report.untaggedReportName}<br/>
 					</a>
 				</c:if>

@@ -18,7 +18,12 @@ public final class Business extends StandardEntity {
     private String businessName;
     private BusinessDetails businessDetails;
     private String bannerColor;
+    private String ribbonColor;
+    private String ribbonLinkColor;
+    private String sideMenuColor;
+    private String sideMenuLinkColor;
     private String logo;
+    private String cornerLogo;
     // as in charterhouse.gingerblack.com or whatever. Change branding on the login page
     private String serverName;
 
@@ -26,12 +31,23 @@ public final class Business extends StandardEntity {
             , String businessName
             , BusinessDetails businessDetails
             , String bannerColor
-            , String logo, String serverName) {
+            , String ribbonColor
+            , String ribbonLinkColor
+            , String sideMenuColor
+            , String sideMenuLinkColor
+            , String logo
+            , String cornerLogo
+            , String serverName) {
         this.id = id;
         this.businessName = businessName;
         this.businessDetails = businessDetails;
         this.bannerColor = bannerColor;
+        this.ribbonColor = ribbonColor;
+        this.ribbonLinkColor = ribbonLinkColor;
+        this.sideMenuColor = sideMenuColor;
+        this.sideMenuLinkColor = sideMenuLinkColor;
         this.logo = logo;
+        this.cornerLogo = cornerLogo;
         this.serverName = serverName;
     }
 
@@ -79,15 +95,56 @@ public final class Business extends StandardEntity {
         this.serverName = serverName;
     }
 
+    public String getRibbonColor() {
+        return ribbonColor;
+    }
+
+    public void setRibbonColor(String ribbonColor) {
+        this.ribbonColor = ribbonColor;
+    }
+
+    public String getRibbonLinkColor() {
+        return ribbonLinkColor;
+    }
+
+    public void setRibbonLinkColor(String ribbonLinkColor) {
+        this.ribbonLinkColor = ribbonLinkColor;
+    }
+
+    public String getSideMenuColor() {
+        return sideMenuColor;
+    }
+
+    public void setSideMenuColor(String sideMenuColor) {
+        this.sideMenuColor = sideMenuColor;
+    }
+
+    public String getSideMenuLinkColor() {
+        return sideMenuLinkColor;
+    }
+
+    public void setSideMenuLinkColor(String sideMenuLinkColor) {
+        this.sideMenuLinkColor = sideMenuLinkColor;
+    }
+
+    public String getCornerLogo() {
+        return cornerLogo;
+    }
+
+    public void setCornerLogo(String cornerLogo) {
+        this.cornerLogo = cornerLogo;
+    }
+
     @Override
     public String toString() {
         return "Business{" +
                 "businessName='" + businessName + '\'' +
                 ", businessDetails=" + businessDetails +
                 ", bannerColor='" + bannerColor + '\'' +
+                ", ribbonColor='" + ribbonColor + '\'' +
+                ", sideMenuColor='" + sideMenuColor + '\'' +
                 ", logo='" + logo + '\'' +
                 ", serverName='" + serverName + '\'' +
-                ", id=" + id +
                 '}';
     }
 

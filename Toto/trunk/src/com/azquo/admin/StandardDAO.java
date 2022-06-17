@@ -221,6 +221,48 @@ public class StandardDAO {
 
 
 
+        if (jdbcTemplate.queryForObject("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS\n" +
+                "    WHERE\n" +
+                "      (table_name = \"business\")\n" +
+                "      AND (table_schema = \"master_db\")\n" +
+                "      AND (column_name = \"ribbon_color\")", new HashMap<>(), Integer.class) == 0){
+            jdbcTemplate.update("ALTER TABLE `master_db`.`business` ADD `ribbon_color` VARCHAR(255) NULL DEFAULT NULL ;", new HashMap<>());
+        }
+
+        if (jdbcTemplate.queryForObject("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS\n" +
+                "    WHERE\n" +
+                "      (table_name = \"business\")\n" +
+                "      AND (table_schema = \"master_db\")\n" +
+                "      AND (column_name = \"ribbon_link_color\")", new HashMap<>(), Integer.class) == 0){
+            jdbcTemplate.update("ALTER TABLE `master_db`.`business` ADD `ribbon_link_color` VARCHAR(255) NULL DEFAULT NULL ;", new HashMap<>());
+        }
+
+        if (jdbcTemplate.queryForObject("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS\n" +
+                "    WHERE\n" +
+                "      (table_name = \"business\")\n" +
+                "      AND (table_schema = \"master_db\")\n" +
+                "      AND (column_name = \"side_menu_color\")", new HashMap<>(), Integer.class) == 0){
+            jdbcTemplate.update("ALTER TABLE `master_db`.`business` ADD `side_menu_color` VARCHAR(255) NULL DEFAULT NULL ;", new HashMap<>());
+        }
+
+        if (jdbcTemplate.queryForObject("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS\n" +
+                "    WHERE\n" +
+                "      (table_name = \"business\")\n" +
+                "      AND (table_schema = \"master_db\")\n" +
+                "      AND (column_name = \"side_menu_link_color\")", new HashMap<>(), Integer.class) == 0){
+            jdbcTemplate.update("ALTER TABLE `master_db`.`business` ADD `side_menu_link_color` VARCHAR(255) NULL DEFAULT NULL ;", new HashMap<>());
+        }
+
+        if (jdbcTemplate.queryForObject("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS\n" +
+                "    WHERE\n" +
+                "      (table_name = \"business\")\n" +
+                "      AND (table_schema = \"master_db\")\n" +
+                "      AND (column_name = \"corner_logo\")", new HashMap<>(), Integer.class) == 0){
+            jdbcTemplate.update("ALTER TABLE `master_db`.`business` ADD `corner_logo` VARCHAR(255) NULL DEFAULT NULL ;", new HashMap<>());
+        }
+
+
+
         StandardDAO.jdbcTemplate = jdbcTemplate; // I realise that this is "naughty", see comments at the top.
 }
 

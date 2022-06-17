@@ -26,7 +26,12 @@ public final class BusinessDAO {
     private static final String BUSINESSNAME = "business_name";
     private static final String BUSINESSDETAILS = "business_details";
     private static final String BANNERCOLOR = "banner_color";
+    private static final String RIBBONCOLOR = "ribbon_color";
+    private static final String RIBBONLINKCOLOR = "ribbon_link_color";
+    private static final String SIDEMENUCOLOR = "side_menu_color";
+    private static final String SIDEMENULINKCOLOR = "side_menu_link_color";
     private static final String LOGO = "logo";
+    private static final String CORNERLOGO = "corner_logo";
     private static final String SERVERNAME = "server_name";
 
     public static Map<String, Object> getColumnNameValueMap(final Business business) {
@@ -52,7 +57,12 @@ public final class BusinessDAO {
                         , jacksonMapper.readValue(rs.getString(BUSINESSDETAILS)
                         , Business.BusinessDetails.class)
                         , rs.getString(BANNERCOLOR)
+                        , rs.getString(RIBBONCOLOR)
+                        , rs.getString(RIBBONLINKCOLOR)
+                        , rs.getString(SIDEMENUCOLOR)
+                        , rs.getString(SIDEMENULINKCOLOR)
                         , rs.getString(LOGO)
+                        , rs.getString(CORNERLOGO)
                         , rs.getString(SERVERNAME)
                 );
             } catch (Exception e) {

@@ -1,3 +1,9 @@
+13-06-22
+
+Better error feedback on uploaded files
+
+Adjusted to recognise 'workbook processor' as an import template
+
 20-05-22
 
 Zip on auto backup - the drive will fill a lot slower

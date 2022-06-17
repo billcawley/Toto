@@ -26,40 +26,41 @@
 		.ui-widget .ui-widget-header li.ui-state-active {background-color:${bannerColor}}
 		a:link {color:${bannerColor}}
 		a:visited {color:${bannerColor}}
-		
+		.navbar {background-color:${ribbonColor}}
+
 	</style>
 </head>
 <body>
 
-<nav class="navbar is-black" role="navigation" aria-label="main navigation">
+<nav class="navbar" role="navigation" aria-label="main navigation">
 	<div class="navbar-brand">
 		<a class="navbar-item" href="/api/Online?reportid=1">
-			<img src="${logo}">
+			<img src="${cornerLogo}">
 		</a>
 	</div>
 	<div id="navbarBasicExample" class="navbar-menu">
 		<div class="navbar-start">
 					<a class="navbar-item is-tab${fn:startsWith(requestScope['javax.servlet.forward.path_info'], '/ManageReports') ? ' is-active' : ''}"
-					   href="/api/Online?reportid=1">
+					   href="/api/Online?reportid=1" style="color: ${ribbonLinkColor}">
 						Reports</a>
 
-			<c:if test="${showInspect == true}"><a class="navbar-item" href="#" onclick="return inspectDatabase();" title="Inspect database"><span class="fa fa-eye"></span>&nbsp;Inspect database</a> <!--<span class="fa fa-question-circle" onclick="showInspectHelp(); return false;"></span>--></c:if>
-			<c:if test="${xml == true}"><a class="navbar-item" href="#" onclick="postAjax('XML');return false;">Send XML</a></c:if>
-			<c:if test="${xmlzip == true}"><a class="navbar-item" href="#" onclick="postAjax('XMLZIP');return false;">Download XML</a></c:if>
-			<c:if test="${showTemplate == true}"><a class="navbar-item" href="#" onclick="window.location.assign(window.location.href+='&opcode=template')">View Template</a></c:if>
-			<c:if test="${execute == true}"><a class="navbar-item" href="#" onclick="postAjax('ExecuteSave');window.location.assign(window.location.href+='&opcode=execute')">Execute</a></c:if>
-			<c:if test="${userUploads == true}"><a class="navbar-item" href="/api/UserUpload">Validate File</a></c:if>
-			<a id="unlockButton" <c:if test="${showUnlockButton == false}"></c:if> class="navbar-item" href="#" onclick="postAjax('Unlock')">Unlock</a>
-			<a id="saveDataButton" <c:if test="${showSave == false}"> style="display:none;"</c:if> class="navbar-item" href="#" onclick="postAjax('Save')">Save Data</a>
-			<a id="restoreDataButton" <c:if test="${showSave == false}"> style="display:none;"</c:if> class="navbar-item" href="#" onclick="postAjax('RestoreSavedValues')">Restore Saved Values</a>
+			<c:if test="${showInspect == true}"><a class="navbar-item is-tab" href="#" onclick="return inspectDatabase();" title="Inspect database" style="color: ${ribbonLinkColor}"><span class="fa fa-eye"></span>&nbsp;Inspect database</a> <!--<span class="fa fa-question-circle" onclick="showInspectHelp(); return false;"></span>--></c:if>
+			<c:if test="${xml == true}"><a class="navbar-item is-tab" href="#" onclick="postAjax('XML');return false;" style="color: ${ribbonLinkColor}">Send XML</a></c:if>
+			<c:if test="${xmlzip == true}"><a class="navbar-item is-tab" href="#" onclick="postAjax('XMLZIP');return false;" style="color: ${ribbonLinkColor}">Download XML</a></c:if>
+			<c:if test="${showTemplate == true}"><a class="navbar-item is-tab" href="#" onclick="window.location.assign(window.location.href+='&opcode=template')" style="color: ${ribbonLinkColor}">View Template</a></c:if>
+			<c:if test="${execute == true}"><a class="navbar-item is-tab" href="#" onclick="postAjax('ExecuteSave');window.location.assign(window.location.href+='&opcode=execute')" style="color: ${ribbonLinkColor}">Execute</a></c:if>
+			<c:if test="${userUploads == true}"><a class="navbar-item is-tab" href="/api/UserUpload" style="color: ${ribbonLinkColor}">Validate File</a></c:if>
+			<a id="unlockButton" <c:if test="${showUnlockButton == false}"></c:if> class="navbar-item is-tab" href="#" onclick="postAjax('Unlock')" style="color: ${ribbonLinkColor}">Unlock</a>
+			<a id="saveDataButton" <c:if test="${showSave == false}"> style="display:none;"</c:if> class="navbar-item is-tab" href="#" onclick="postAjax('Save')" style="color: ${ribbonLinkColor}">Save Data</a>
+			<a id="restoreDataButton" <c:if test="${showSave == false}"> style="display:none;"</c:if> class="navbar-item is-tab" href="#" onclick="postAjax('RestoreSavedValues')" style="color: ${ribbonLinkColor}">Restore Saved Values</a>
 		</div>
 		<div class="navbar-end">
 			<c:if test="${sessionScope.LOGGED_IN_USERS_SESSION != null}">
-				<a class="navbar-item" href="/api/Login?select=true"><i class="fa-solid fa-sitemap"></i></a>
+				<a class="navbar-item is-tab" href="/api/Login?select=true" style="color: ${ribbonLinkColor}"><i class="fa-solid fa-sitemap"></i></a>
 			</c:if>
-			<a class="navbar-item" href="/api/Login?logoff=true">Sign Out</a>
+			<a class="navbar-item is-tab" href="/api/Login?logoff=true" style="color: ${ribbonLinkColor}">Sign Out</a>
 			<div class="navbar-item has-dropdown is-hoverable">
-				<a class="navbar-link is-arrowless" >
+				<a class="navbar-link is-arrowless"  style="color: ${ribbonLinkColor}">
 					<span class="fa fa-bars"></span>
 				</a>
 				<div class="navbar-dropdown is-boxed is-right">
@@ -85,9 +86,9 @@
         z-index: 34;
 "><i class="fa-solid fa-chevron-right"></i></button>
 
-<div id="quickviewDefault" class="quickview is-left">
+<div id="quickviewDefault" class="quickview is-left" style="background-color: ${sideMenuColor}">
 	<header class="quickview-header">
-		<p class="title">Reports</p>
+		<p style="color:${sideMenuLinkColor}" class="title">Reports</p>
 		<span class="delete" data-dismiss="quickview"></span>
 	</header>
 
@@ -96,11 +97,11 @@
 			<c:forEach items="${reports}" var="report">
 				<c:if test="${report.database != 'None'}">
 					<c:if test="${report.category != ''}">
-						<hr>
-						&nbsp;&nbsp;${report.category}
-						<hr>
+						<hr style="height: 0px">
+						&nbsp;&nbsp;<span style="color:${sideMenuLinkColor};text-decoration: underline">${report.category}</span>
+						<hr style="height: 0px">
 					</c:if>
-					<a href="/api/Online?reportid=${report.id}&amp;database=${report.database}&amp;permissionid=${report.untaggedReportName}">
+					<a href="/api/Online?reportid=${report.id}&amp;database=${report.database}&amp;permissionid=${report.untaggedReportName}"   style="color:${sideMenuLinkColor}">
 						&nbsp;&nbsp;&nbsp;&nbsp;${report.untaggedReportName}<br/>
 					</a>
 				</c:if>

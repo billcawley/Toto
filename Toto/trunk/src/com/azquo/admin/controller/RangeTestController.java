@@ -44,6 +44,7 @@ public class RangeTestController {
         // I assume secure until we move to proper spring security
         if (loggedInUser != null && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
             model.put("databases", AdminService.getDatabaseListForBusinessWithBasicSecurity(loggedInUser));
+            AdminService.setBanner(model, loggedInUser);
             return "rangetest";
         } else {
             return "redirect:/api/Login";
