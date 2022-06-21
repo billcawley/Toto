@@ -13,6 +13,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>${title} - Azquo</title>
     <link rel="stylesheet" href="/quickview/bulma-quickview.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+
     <link rel="stylesheet" href="/sass/mystyles.css">
     <!-- <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css"> -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -113,7 +117,9 @@ display:block;">
 <c:if test="${reports != null && sessionScope.test != null}">
     <script type="text/javascript" src="/quickview/bulma-quickview.min.js"></script>
     <script>
-        var quickviews = bulmaQuickview.attach(); // quickviews now contains an array of all Quickview instances
+        window.addEventListener('DOMContentLoaded', (event) => {
+            var quickviews = bulmaQuickview.attach(); // quickviews now contains an array of all Quickview instances
+        });
     </script>
 </c:if>
 

@@ -31,7 +31,7 @@
     background-color: #fff;
     max-width: calc(100% - 50px);
     position: fixed;
-    top: 5%;
+    top: 6%;
     bottom: 0;
     z-index: 35;
     -webkit-transform: translateZ(0);
