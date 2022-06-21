@@ -218,6 +218,7 @@ public class LoginController {
         Business check = BusinessDAO.findByServerName(request.getServerName());
         if (check != null){
             if (check.getLogo() != null){
+                model.put("color", check.getBannerColor());
                 model.put("logo", "/images/" + check.getLogo());
             }
         }

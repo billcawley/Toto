@@ -20,10 +20,14 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.ValueNode;
 import com.github.rcaller.rstuff.RCaller;
 import com.github.rcaller.rstuff.RCode;
+import com.google.gson.JsonObject;
+import org.apache.commons.io.FileUtils;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.util.PDFTextStripper;
 import org.apache.pdfbox.util.TextPosition;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.springframework.http.HttpRequest;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -376,6 +380,24 @@ public class TestController {
     public String handleRequest(
             @RequestParam(value = "something", required = false) String something, HttpServletRequest request
     ) {
+
+        if ("weather".equals(something)){
+
+            try {
+                JSONObject json = new JSONObject(FileUtils.readFileToString(new File("/home/edward/Downloads/locations.json")));
+                JSONArray locations = json.getJSONObject("Locations").getJSONArray("Location");
+                for (Object object : locations){
+                    JSONObject jobject = (JSONObject) object;
+
+                    FileUtils.copyURLToFile(new URL("http://datapoint.metoffice.gov.uk/public/data/val/wxfcs/all/json/" + jobject.get("id") + "?res=3hourly&key=7b14eaf3-5404-40e1-8c17-93414ce4ba63"), new File("/home/edward/Downloads/locations/" + jobject.get("id") + ".json"));
+
+                    System.out.println(jobject.get("id"));
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
         if ("email".equals(something)){
             AzquoMailer.sendEMail("edd@azquo.com", "Edd", "here is a test", "test body");
         }

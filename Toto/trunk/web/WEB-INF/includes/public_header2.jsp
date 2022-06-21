@@ -82,7 +82,7 @@
 <c:if test="${reports != null && sessionScope.test != null}">
 <button class="button" data-show="quickview" data-target="quickviewDefault" style="
 	position: fixed;
-    top: 5%;
+    top: 6%;
         z-index: 34;
 "><i class="fa-solid fa-chevron-right"></i></button>
 

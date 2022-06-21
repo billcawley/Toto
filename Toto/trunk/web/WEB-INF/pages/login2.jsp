@@ -11,7 +11,7 @@
 
                         <c:choose>
                             <c:when test="${!empty logo}">
-                                <div class="box">
+                                <div class="box"  style="background-color:${loadingColor}">
                                     <img src="${logo}" alt="azquo">
                                 </div>
                             </c:when>

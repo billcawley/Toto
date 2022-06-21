@@ -77,7 +77,7 @@
 <c:if test="${reports != null && sessionScope.test != null}">
 <button class="button" data-show="quickview" data-target="quickviewDefault" style="
 	position: fixed;
-    top: 5%;
+    top: 6%;
 "><i class="fa-solid fa-chevron-right"></i></button>
 
 <div id="quickviewDefault" class="quickview is-left" style="background-color: ${sideMenuColor}">
