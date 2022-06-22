@@ -129,6 +129,16 @@ class RMIImplementation implements RMIInterface {
     }
 
     @Override
+    public void uploadWizardData(DatabaseAccessToken databaseAccessToken, Map<String,String>wizardDefs, Map<String,List<String>>data) throws RemoteException {
+        try {
+            DSImportService.uploadWizardData(databaseAccessToken, wizardDefs,data);
+        } catch (Exception e) {
+            throw new RemoteException("Database Server Exception", e);
+        }
+    }
+
+
+    @Override
     public void checkTemporaryCopyExists(DatabaseAccessToken databaseAccessToken) throws RemoteException {
         try {
             DSImportService.checkTemporaryCopyExists(databaseAccessToken);
