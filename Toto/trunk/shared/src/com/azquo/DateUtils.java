@@ -27,6 +27,8 @@ public class DateUtils {
     private static final DateTimeFormatter usdf3 = DateTimeFormatter.ofPattern("MMM-d-yyyy");
     private static final DateTimeFormatter usdf3a = DateTimeFormatter.ofPattern("MMM-d-yy");
     private static final DateTimeFormatter usdf4 = DateTimeFormatter.ofPattern("M-d-yyyy");
+    private static final DateTimeFormatter dt1 = DateTimeFormatter.ofPattern("yyyy-MM-dd hh:mm:ss");
+    private static final DateTimeFormatter dt2 = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
     private static final LocalDate start = LocalDate.of(1899, 12, 30);
 
     // bottom two lines off the net, needed as result sets don't use the new date classes
@@ -55,6 +57,20 @@ public class DateUtils {
 
     // how many years in the future will we allow on two digit dates before we take 100 years off the date
     private static final long towDigitYearFutureThreshold = 10;
+
+
+    public static  LocalDate isDateTime(String maybeDateTime){
+        if (maybeDateTime.length()< 19) return null;
+        maybeDateTime = maybeDateTime.substring(0,19);
+
+        LocalDate date = tryDate(maybeDateTime, dt1);
+        if (date!=null){
+            return date;
+        }
+        return tryDate(maybeDateTime, dt2);
+
+    }
+
 
     public static LocalDate isADate(String maybeDate) {
         if (maybeDate.length() > 10 && !maybeDate.substring(10).contains(":")) return null;//date ranges are not dates
