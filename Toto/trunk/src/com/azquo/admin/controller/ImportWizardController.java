@@ -1,40 +1,21 @@
 package com.azquo.admin.controller;
 
 import com.azquo.admin.AdminService;
-import com.azquo.admin.BackupService;
-import com.azquo.admin.business.Business;
-import com.azquo.admin.database.Database;
-import com.azquo.admin.database.DatabaseServerDAO;
 import com.azquo.dataimport.*;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.controller.LoginController;
-import com.azquo.spreadsheet.transport.UploadedFile;
-import io.keikai.api.Exporter;
-import io.keikai.api.Exporters;
-import io.keikai.api.Importers;
-import io.keikai.api.model.Book;
-import io.keikai.api.model.Sheet;
-import io.keikai.model.SName;
-import net.snowflake.client.jdbc.internal.google.api.client.util.ArrayMap;
-import org.apache.commons.lang.StringUtils;
-import org.apache.commons.lang.math.NumberUtils;
 import org.apache.poi.openxml4j.opc.OPCPackage;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.json.JSONObject;
-import org.springframework.context.annotation.Import;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
-import org.zeroturnaround.zip.ZipUtil;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.OutputStream;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -111,16 +92,35 @@ import java.util.*;
                     nextStage = stage - 1;
                     fieldSelected="";
                 }
-                if ("makedb".equals(submit)){
+                 if ("makedb".equals(submit)){
                     try {
                         ImportWizard.createDB(loggedInUser);
                         return "redirect:/api/ManageReports";
                     }catch(Exception e){
-                        model.put("error", e.getMessage());
+                        String error = e.getMessage();
+                        int ePos = error.indexOf("Exception:");
+                        if (ePos >=0){
+                            error = error.substring(ePos + 10);
+                        }
+                        model.put("error", error);
                     }
                 }
 
                 WizardInfo wizardInfo = loggedInUser.getWizardInfo();
+                if ("togglesuggestion".equals(submit)){
+                    if (wizardInfo.getHasSuggestions()){
+                        wizardInfo.setHasSuggestions(false);
+                    }else{
+                        wizardInfo.setHasSuggestions(true);
+                    }
+                    nextStage = stage;
+
+                }
+                if (submit.equals("acceptsuggestion")){
+                    ImportWizard.acceptSuggestions(wizardInfo);
+                }else{
+                    if (stage > 1) wizardInfo.setSuggestionActions(new ArrayList<>());
+                }
                 String dataParent = request.getParameter("existingparent");
                 String newParent = request.getParameter("newparent");
                 if (newParent != null && newParent.length() > 0) {
@@ -173,13 +173,17 @@ import java.util.*;
 
                             }
                             else {
-                                String data = new String(Files.readAllBytes(Paths.get(moved.getAbsolutePath())), Charset.defaultCharset());
-                                if (data.charAt(0) == '[') {
-                                    data = "{data:" + data + "}";
+                                try {
+                                    String data = new String(Files.readAllBytes(Paths.get(moved.getAbsolutePath())), Charset.defaultCharset());
+                                    if (data.charAt(0) == '[') {
+                                        data = "{data:" + data + "}";
+                                    }
+                                    data = data.replace("\n", "");//remove line feeds
+                                    wizardInfo = new WizardInfo(moved.getName(), data);
+                                    loggedInUser.setWizardInfo(wizardInfo);
+                                }catch(Exception e){
+                                    model.put("error","nothing to read");
                                 }
-                                data = data.replace("\n", "");//remove line feeds
-                                wizardInfo = new WizardInfo(moved.getName(), data);
-                                loggedInUser.setWizardInfo(wizardInfo);
                             }
                         }else{
                             OPCPackage opcPackage = org.apache.poi.openxml4j.opc.OPCPackage.open(new FileInputStream(new File(moved.getAbsolutePath())));
@@ -211,109 +215,12 @@ import java.util.*;
                         }
                     }
                     StringBuffer error = new StringBuffer();
-                    List<String> peersChosen = new ArrayList<>();
                     if (wizardInfo.getFields()!=null && !importedSavedVersion){
-                        Map<String, String> reverseMap = new HashMap<>();
-                                 model.put("dataparent", dataParent);
-                        if (dataParent!=null && stage!= 5){
-                            for (String heading:wizardInfo.getFields().keySet()){
-                                WizardField wizardField = wizardInfo.getFields().get(heading);
-                                if (dataParent.equals(wizardField.getParent())){
-                                    peersChosen = wizardField.getPeers();
-                                    break;
-                                }
-                            }
-                        }
-                        for (String heading : wizardInfo.getFields().keySet()) {
-                            WizardField wizardField = wizardInfo.getFields().get(heading);
-                            String suggestedName = request.getParameter("name_" + heading);
-                            if (suggestedName != null) {
-                                if (reverseMap.get(suggestedName) != null) {
-                                    error.append("Duplicate names for " + reverseMap.get(suggestedName) + " and " + heading + "</br>");
-                                    fieldSelected = "";
-                                }
-                                reverseMap.put(suggestedName, heading);
-                                wizardField.setName(suggestedName);
-                            }
-                            if (stage == 2) {
-                                String ignore = request.getParameter("ignore_" + heading);
-                                if (ignore != null) {
-                                    if (wizardField.getAdded()){
-                                        wizardInfo.getFields().remove(heading);
-                                        nextStage = stage;
-                                    }else{
-                                        wizardField.setIgnore(true);
-                                    }
-                                } else {
-                                    wizardField.setIgnore(false);
-                                }
-                            }
-                            if (stage == 3) {
-                                String type = request.getParameter("type_" + heading);
-                                if ("null".equals(type) || "".equals(type)) type=null;
-                                 wizardField.setType(type);
+                        model.put("dataparent", dataParent);
+                        error.append(ImportWizard.processFound(request,wizardInfo, stage));
 
-                            }
-                            if (stage == 4 && newParent != null && newParent.length() > 0) {
-                                if (request.getParameter("child_" + heading) != null) {
-                                    wizardField.setParent(newParent);
-                                    wizardField.setPeers(peersChosen);
-                                } else {
-                                    if (wizardField.getParent() != null && wizardField.getParent().equalsIgnoreCase(newParent)) {
-                                        wizardField.setParent(null);
-                                        wizardField.setPeers(null);
-                                    }
-                                }
-                            }
-                            if (stage == 5) {
-                                if (request.getParameter("peer_" + heading) != null) {
-                                    peersChosen.add(heading);
-                                }
-                            }
-                            if (stage == 6) {
-                                String child =request.getParameter("child_" + heading);
-                                if (child != null && child.length()>0){
-                                    wizardField.setChild(child);
-                                }else{
-                                    wizardField.setChild(null);
-                                }
-                            }
-                            if (stage == 7) {
-                                String anchor =request.getParameter("attribute_" + heading);
-                                if (anchor != null && anchor.length()>0){
-                                    wizardField.setAnchor(anchor);
-                                }else{
-                                    wizardField.setAnchor(null);
-                                }
-                            }
-                            ImportWizard.setInterpretation(wizardInfo,wizardField);
-
-                        }
-
-
-                        if (peersChosen.size() > 0) {
-                            for (String heading : wizardInfo.getFields().keySet()) {
-                                WizardField wizardField = wizardInfo.getFields().get(heading);
-                                if (newParent.equals(wizardField.getParent())){
-                                    wizardField.setPeers(peersChosen);
-                                    ImportWizard.setInterpretation(wizardInfo,wizardField);
-                                }
-                            }
-                        }
                     }
-                     if (nextStage==5){
-                         boolean hasData = false;
-                         for (String heading:wizardInfo.getFields().keySet()){
-                             if ("data".equals(wizardInfo.getFields().get(heading).getType())){
-                                 hasData = true;
-                                 break;
-                             }
-                         }
-                         if (!hasData){
-                             model.put("error","You should usually set up some data fields before proceding - press 'last' to do so");
-                          }
-                     }
-                     if (nextStage==6){
+                    if (nextStage==6){
                          for (String heading:wizardInfo.getFields().keySet()){
                              if ("data".equals(wizardInfo.getFields().get(heading).getType()) && wizardInfo.getFields().get(heading).getPeers()==null){
                                  model.put("error","You must allocate peers to " + wizardInfo.getFields().get(heading).getParent());
@@ -353,9 +260,17 @@ import java.util.*;
                  }
                 fillStages(model, nextStage, wizardInfo);
                 setStageOptions(model, loggedInUser.getWizardInfo(), nextStage, dataParent);
+                model.put("hasSuggestions",wizardInfo.getHasSuggestions());
+                ImportWizard.makeSuggestion(model, wizardInfo,nextStage);
+
+
+
                 return "importwizard";
             }
         }
+
+
+
 
         private void fillStages(ModelMap model, int stage, WizardInfo wizardInfo) {
             model.put("stage", stage);
@@ -453,8 +368,8 @@ import java.util.*;
                             Map<String, WizardField> list = ImportWizard.readTheFile(model, wizardInfo, heading, null);//find all relevant fields
                             List<String> potentialPeers = new ArrayList<>();
                             for (String potentialName : list.keySet()) {
-                                String type = list.get(potentialName).getType();
-                                if (!"data".equals(list.get(potentialName).getType())) {
+                                String parent = list.get(potentialName).getParent();
+                                if (parent==null) {
                                     potentialPeers.add(potentialName);
                                 }
                             }
@@ -478,7 +393,7 @@ import java.util.*;
 
                     WizardField wizardField = wizardInfo.getFields().get(heading);
                     if (!wizardField.getIgnore()) {
-                        if ("data".equals(wizardField.getType())) {
+                        if (wizardField.getParent()!=null) {
                             peers.addAll(wizardField.getPeers());
                         } else {
                             undefinedFields.add(heading);

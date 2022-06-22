@@ -2,43 +2,25 @@ package com.azquo.dataimport;
 
 import com.azquo.DateUtils;
 import com.azquo.StringLiterals;
-import com.azquo.admin.business.Business;
+import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.LoggedInUser;
-import com.azquo.spreadsheet.transport.UploadedFile;
 import com.azquo.spreadsheet.zk.BookUtils;
-import com.csvreader.CsvWriter;
-import io.keikai.api.Importers;
-import io.keikai.api.model.Book;
-import io.keikai.api.model.Sheet;
-import io.keikai.model.SName;
+import javafx.collections.transformation.SortedList;
+import jdk.nashorn.internal.ir.RuntimeNode;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.poi.openxml4j.opc.OPCPackage;
-import org.apache.poi.ss.formula.functions.FreeRefFunction;
-import org.apache.poi.ss.formula.functions.Value;
-import org.apache.poi.ss.formula.udf.AggregatingUDFFinder;
-import org.apache.poi.ss.formula.udf.DefaultUDFFinder;
-import org.apache.poi.ss.formula.udf.UDFFinder;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.FormulaEvaluator;
-import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.util.AreaReference;
-import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.jfree.data.Values;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.ui.ModelMap;
 
+import javax.servlet.http.HttpServletRequest;
 import java.io.*;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.text.Normalizer;
-import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.regex.Pattern;
 
 public class ImportWizard {
 
@@ -77,7 +59,7 @@ public class ImportWizard {
     static final FormulaEvaluator formulaEvaluator = wb.getCreationHelper().createFormulaEvaluator();
 
 
-    public static final String[] TYPEOPTIONS = {"key field id","key field name", "date","time","datetime"};
+    public static final String[] TYPEOPTIONS = {"key field id","key field name", "date",  "us date", "time","datetime"};
 
     private static int nthLastIndexOf(int nth, String ch, String string) {
         if (nth <= 0) return string.length();
@@ -138,6 +120,7 @@ public class ImportWizard {
 
 
 
+
     public static Map<String,WizardField> readTheFile(WizardInfo wizardInfo, String testField, String testItem)throws Exception  {
         Map<String,List<String>> fieldsFound = new LinkedHashMap<>();
         for (String field:wizardInfo.getFields().keySet()){
@@ -181,12 +164,14 @@ public class ImportWizard {
                     reverseNames.put(suggestedName,field);
                     WizardField wizardField = new WizardField(field,suggestedName,false);
                     wizardField.setValuesFound(fieldsFound.get(field));
+                    //adjustValuesFound(wizardField,fieldsFound.get(field));
                     wizardInfo.getFields().put(field,wizardField);
                 }
             }else{
                 for (String field:fieldsFound.keySet()){
-                      wizardInfo.getFields().get(HTMLify(field)).setValuesFound(fieldsFound.get(field));
-                }
+                    wizardInfo.getFields().get(field).setValuesFound(fieldsFound.get(field));
+                    //adjustValuesFound(wizardInfo.getFields().get(field),fieldsFound.get(field));
+                 }
             }
             Map<String,WizardField> toReturn = new LinkedHashMap<>();
             for (String field:fieldsFound.keySet()){
@@ -200,6 +185,67 @@ public class ImportWizard {
         }
         return null;
     }
+
+    private static void adjustValuesFound(WizardField wizardField, List<String>values){
+
+        if ("date".equals(wizardField.getType()) ){
+            wizardField.setValuesFound(adjustDates(values))
+            ;                       }else{
+            if ("time".equals(wizardField.getType())){
+                wizardField.setValuesFound(adjustTImes(values));
+            }else{
+                wizardField.setValuesFound(values);
+            }
+        }
+    }
+
+    private static List<String> adjustDates(List<String> values) {
+        List<String >toReturn = new ArrayList<>();
+        for (String value : values) {
+            if (value.length() > 10) {
+                value = value.substring(0, 10);
+            }
+            try {
+                DateUtils.isADate(value);
+                toReturn.add(value);
+            } catch (Exception e) {
+                toReturn.add("invalid date: " + value);
+            }
+        }
+        return toReturn;
+    }
+
+
+    private static List<String> adjustTImes(List<String> values) {
+        List<String> toReturn = new ArrayList<>();
+        for (String value : values) {
+            if (value.length() < 5) {
+                try {
+                    int time = NumberUtils.toInt(value);
+                    int hours = time / 60;
+                    int mins = time - 60 * hours;
+                    toReturn.add(pad(hours, 2) + ":" + pad(mins, 2));
+                } catch (Exception e) {
+                    toReturn.add(value);
+                }
+            } else {
+                toReturn.add(value);
+            }
+        }
+        return toReturn;
+    }
+
+
+    private static String pad(int val, int len) {
+        String toReturn = val + "";
+        if (toReturn.length()<len){
+            return "000000".substring(0,len-toReturn.length()) + toReturn;
+        }
+        return toReturn;
+
+
+    }
+
 
     private static String humanifyName(String name){
         name = name.replace("_"," ").replace(ImportService.JSONFIELDDIVIDER + ""," ");
@@ -276,7 +322,7 @@ public class ImportWizard {
                                 valuesFound = new ArrayList<>();
                                 fieldsFound.put(newPath.substring(1), valuesFound);
                             }
-                            fieldsFound.get(newPath.substring(1)).add(value);
+                             fieldsFound.get(newPath.substring(1)).add(value);
                         }
                         //set the value
                     }
@@ -346,31 +392,42 @@ public class ImportWizard {
                 wizardField.setParent(dataParent);
                 String peersString = getClause("peers", clauses);
                 if (peersString!=null){
-                    peersString = peersString.trim();
-                    peersString = peersString.substring(1,peersString.length()-1);//strip{}
-                    String[]peers = peersString.split(",");
-                    List<String> dataPeers = new ArrayList<>();
-                    for (String peer:peers){
-                        String dataField = findFieldFromName(wizardInfo,peer);
-                        if (dataField != null){
-                            dataPeers.add(dataField);
-
-                        }
-                    }
-                    if (dataPeers.size()>0){
-                        wizardField.setPeers(dataPeers);
-                    }else{
-                        wizardField.setPeers(null);
-                    }
-                }
+                    setPeers(wizardInfo, wizardField, peersString);
+                 }
                 setInterpretation(wizardInfo,wizardField);
                 row++;
                 // todo don't show admins if not admin
             }
+            //repass interpretations to get all 'peer for' instances
+            for (String field:wizardInfo.getFields().keySet()){
+                setInterpretation(wizardInfo,wizardInfo.getFields().get(field));
+            }
+
             calcXL(loggedInUser.getWizardInfo());
             return "";
         }catch(Exception e){
             return e.getMessage();
+        }
+
+
+    }
+
+    private static void setPeers(WizardInfo wizardInfo, WizardField wizardField, String peersString){
+        peersString = peersString.trim();
+        peersString = peersString.substring(1,peersString.length()-1);//strip{}
+        String[]peers = peersString.split(",");
+        List<String> dataPeers = new ArrayList<>();
+        for (String peer:peers){
+            String dataField = findFieldFromName(wizardInfo,peer);
+            if (dataField != null){
+                dataPeers.add(dataField);
+
+            }
+        }
+        if (dataPeers.size()>0){
+            wizardField.setPeers(dataPeers);
+        }else{
+            wizardField.setPeers(null);
         }
 
     }
@@ -379,6 +436,117 @@ public class ImportWizard {
         for(String element:array){
             if (element.startsWith(toFind)){
                 return element.substring(toFind.length()).trim();
+            }
+        }
+        return null;
+    }
+
+    public static String processFound(HttpServletRequest request, WizardInfo wizardInfo, int stage){
+        String dataParent = request.getParameter("existingparent");
+        String newParent = request.getParameter("newparent");
+        if (dataParent==null || dataParent.length()==0){
+            dataParent = newParent;
+        }
+        List<String> peersChosen = new ArrayList<>();
+        if (dataParent!=null && stage!= 5){
+            for (String heading:wizardInfo.getFields().keySet()){
+                WizardField wizardField = wizardInfo.getFields().get(heading);
+                if (dataParent.equals(wizardField.getParent())){
+                    peersChosen = wizardField.getPeers();
+                    break;
+                }
+            }
+        }
+        Map<String, String> reverseMap = new HashMap<>();
+        for (String heading : wizardInfo.getFields().keySet()) {
+            WizardField wizardField = wizardInfo.getFields().get(heading);
+            String suggestedName = request.getParameter("name_" + heading);
+            String newValue = findAction(wizardInfo,heading, "name");
+            if (newValue!=null){
+                suggestedName = newValue;
+            }
+            if (suggestedName != null) {
+                if (reverseMap.get(suggestedName) != null) {
+                    return  "Duplicate names for " + reverseMap.get(suggestedName) + " and " + heading + "</br>";
+                }
+                reverseMap.put(suggestedName, heading);
+                wizardField.setName(suggestedName);
+            }
+            if (stage == 2 && findAction(wizardInfo,heading,"ignore")==null) {
+                String ignore = request.getParameter("ignore_" + heading);
+                if (ignore != null) {
+                    if (wizardField.getAdded()){
+                        wizardInfo.getFields().remove(heading);
+                    }else{
+                        wizardField.setIgnore(true);
+                    }
+                } else {
+                    wizardField.setIgnore(false);
+                }
+            }
+            if (stage == 3) {
+                if (findAction(wizardInfo,heading,"type")==null) {
+                    String type = request.getParameter("type_" + heading);
+                    if ("null".equals(type) || "".equals(type)) type = null;
+                    wizardField.setType(type);
+                }
+
+            }
+            if (stage == 4 && newParent != null && newParent.length() > 0 && findAction(wizardInfo,heading,"child")==null) {
+
+                if (request.getParameter("child_" + heading) != null) {
+                    wizardField.setParent(newParent);
+                    wizardField.setPeers(peersChosen);
+                } else {
+                    if (wizardField.getParent() != null && wizardField.getParent().equalsIgnoreCase(newParent)) {
+                        wizardField.setParent(null);
+                        wizardField.setPeers(null);
+                    }
+                }
+            }
+            if (stage == 5&& findAction(wizardInfo,heading,"peers")==null) {
+                if (request.getParameter("peer_" + heading) != null) {
+                    peersChosen.add(heading);
+                }
+            }
+            if (stage == 6&& findAction(wizardInfo,heading,"parent")==null) {
+                String child =request.getParameter("child_" + heading);
+                if (child != null && child.length()>0){
+                    wizardField.setChild(child);
+                }else{
+                    wizardField.setChild(null);
+                }
+            }
+            if (stage == 7&& findAction(wizardInfo,heading,"anchor")==null) {
+                String anchor =request.getParameter("attribute_" + heading);
+                if (anchor != null && anchor.length()>0){
+                    wizardField.setAnchor(anchor);
+                }else{
+                    wizardField.setAnchor(null);
+                }
+            }
+            ImportWizard.setInterpretation(wizardInfo,wizardField);
+
+        }
+        if (peersChosen.size() > 0) {
+            for (String heading : wizardInfo.getFields().keySet()) {
+                WizardField wizardField = wizardInfo.getFields().get(heading);
+                if (newParent.equals(wizardField.getParent())){
+                    wizardField.setPeers(peersChosen);
+                    ImportWizard.setInterpretation(wizardInfo,wizardField);
+                }
+            }
+        }
+        return "";
+
+
+    }
+
+    private static String findAction(WizardInfo wizardInfo, String field, String action){
+        for (String actionString:wizardInfo.getSuggestionActions()){
+            String[]elements = actionString.split(";");
+            if (field.equals(elements[0])&& action.equals(elements[1])){
+                return elements[2];
             }
         }
         return null;
@@ -400,49 +568,39 @@ public class ImportWizard {
 
         StringBuffer toReturn = new StringBuffer();
 
+        String type = wizardField.getType();
+        if (type!=null){
+            toReturn.append(";" + type);
+        }
         String peerType = null;
         if (peerHeadings.size() > 0){
             peerType ="peer for " + peerHeadings.get(0);
             for (int peer = 1;peer<peerHeadings.size();peer++){
                 peerType +="," +peerHeadings.get(peer);
             }
+           toReturn.append(";" + peerType);
         }
-        String type = wizardField.getType();
 
         if (wizardField.getChild()!=null){
-            if (type==null) {
-                type = "";
-            }else{
-                type = type + ";";
-             }
-            type +="parent of " + wizardInfo.getFields().get(wizardField.getChild()).getName();
+             toReturn.append(";parent of " + wizardInfo.getFields().get(wizardField.getChild()).getName());
         }
         if (wizardField.getAnchor()!=null){
-            type = "attribute of " + wizardInfo.getFields().get(wizardField.getAnchor()).getName();
+            toReturn.append(";attribute of " + wizardInfo.getFields().get(wizardField.getAnchor()).getName());
         }
 
-        if (peerType!=null && type==null){
-            type=peerType;
-            peerType = null;
-
-        }
         if (wizardField.getParent()!=null){
-            type ="datatype " + wizardField.getParent();
+            toReturn.append(";datatype " + wizardField.getParent());
         }
 
 
 
-        if (type==null ) {
+        if (toReturn.length()==0) {
 
             wizardField.setInterpretation(checkForParents(wizardInfo, wizardField));
 
             return;
         }
 
-        toReturn.append(";"+type);
-         if (peerType!=null){
-            toReturn.append(";"+ peerType);
-        }
         if (wizardField.getPeers()!=null && wizardField.getPeers().size()>0){
             //this is rather a tiresome routine to mark the peers with 'peer for <data parent name>' - we don't need this info in Azquo, but it's helpful to the user
             toReturn.append(";peers {");
@@ -456,13 +614,8 @@ public class ImportWizard {
             }
             toReturn.append("}");
         }
-           if (toReturn.length()>0){
-            wizardField.setInterpretation(toReturn.toString().substring(1));
+        wizardField.setInterpretation(toReturn.toString().substring(1));
 
-        }
-        else{
-            wizardField.setInterpretation(checkForParents(wizardInfo,wizardField));
-        }
     }
 
     private static String checkForParents(WizardInfo wizardInfo, WizardField wizardField) {
@@ -526,6 +679,15 @@ public class ImportWizard {
                 throw e;
             }
         }
+        for (String field:wizardInfo.getFields().keySet()){
+            WizardField wizardField = wizardInfo.getFields().get(field);
+            if ("date".equals(wizardField.getType())){
+                flatfileData.put(field,adjustDates(flatfileData.get(field)));
+            }
+            if ("time".equals(wizardField.getType())){
+                flatfileData.put(field,adjustTImes(flatfileData.get(field)));
+            }
+        }
         /*
         START HERE
         the field names are in wizardInfo - Azquo names as '.name'
@@ -538,14 +700,38 @@ public class ImportWizard {
          Dates.   check max and min, and create a setup sheet for Years, Months, Days to cover the required period
          Needed:
          A database and one or more reports.
-
-
 */
+        uploadData(loggedInUser,flatfileData);
 
     }
 
 
+    private static void uploadData(LoggedInUser loggedInUser, Map<String,List<String>> data)throws Exception{
+
+
+        Map<String,String> wizardDefs = new HashMap<>();
+        WizardInfo wizardInfo = loggedInUser.getWizardInfo();
+        for (String field:wizardInfo.getFields().keySet()){
+            if (data.get(field)!=null) {
+
+                WizardField wizardField = wizardInfo.getFields().get(field);
+                if (wizardField.getInterpretation() != null) {
+                    wizardDefs.put(field, wizardField.getName() + ";" + wizardField.getInterpretation());
+                }
+            }
+        }
+
+        RMIClient.getServerInterface(loggedInUser.getDatabaseServer().getIp()).uploadWizardData(loggedInUser.getDataAccessToken(),wizardDefs , data);
+
+
+
+    }
+
+
+
     private static boolean traverseJSON3(Map<String,List<String>> output, Set<String> pathsRequired, Map<String,List<String>> onePassValues,String jsonPath,JSONObject jsonNext,List<JSONtest>jsonTests, String extractLevel) throws Exception{
+
+
         boolean tested = false;
         for(JSONtest jsoNtest:jsonTests){
             if (jsoNtest.source.equals(jsonPath)){
@@ -611,6 +797,7 @@ public class ImportWizard {
         }
         return true;
     }
+
 
     private static boolean inRequired(String toTest, Set<String> required){
         for (String maybe:required){
@@ -754,8 +941,8 @@ public class ImportWizard {
     public static void calcXL(WizardInfo wizardInfo)throws Exception{
 
         for (String maybeXL:wizardInfo.getFields().keySet()){
-            if(maybeXL.toLowerCase(Locale.ROOT).startsWith("az=")){
-                WizardField xlField = wizardInfo.getFields().get(maybeXL);
+           WizardField xlField = wizardInfo.getFields().get(maybeXL);
+             if (xlField.getAdded()){
 
                 Map<String,String> fieldList = new HashMap<>();
                 for (String field:wizardInfo.getFields().keySet()){
@@ -766,7 +953,7 @@ public class ImportWizard {
                 }
                 xlField.setValuesOnFile(new ArrayList<>());
                 for(int i=0;i <wizardInfo.getLineCount();i++){
-                    String compositionPattern = xlField.getImportedName().substring(3);
+                    String compositionPattern = xlField.getImportedName();
                     for (String field:fieldList.keySet()) {
                         compositionPattern = compositionPattern.replace(field, getXLTerm(wizardInfo,fieldList.get(field),i));
                     }
@@ -792,12 +979,236 @@ public class ImportWizard {
     }
 
     public static String getXLTerm(WizardInfo wizardInfo, String field, int i){
-     String sourceVal =  wizardInfo.getFields().get(field).getValuesOnFile().get(i);
-     if (NumberUtils.isNumber(sourceVal)){
-         return sourceVal;
-     }
-     return "\"" + sourceVal + "\"";
+        String sourceVal =  wizardInfo.getFields().get(field).getValuesOnFile().get(i);
+        if (NumberUtils.isNumber(sourceVal)){
+            return sourceVal;
+        }
+        return "\"" + sourceVal + "\"";
 
-}
+    }
 
-}
+    public static void acceptSuggestions(WizardInfo wizardInfo){
+        for (String action:wizardInfo.getSuggestionActions()){
+            String[]elements = action.split(";");
+            WizardField wizardField = wizardInfo.getFields().get(elements[0]);
+
+            if (elements[1].equals("name")){
+                wizardField.setName(elements[2]);
+            }
+            if (elements[1].equals("type")){
+                wizardField.setType(elements[2]);
+            }
+
+
+            if (elements[1].equals("parent")){
+                wizardField.setParent(elements[2]);
+            }
+            if (elements[1].equals("child")){
+                wizardField.setChild(elements[2]);
+            }
+            if (elements[1].equals("anchor")){
+                wizardField.setAnchor(elements[2]);
+            }
+            if (elements[1].equals("peers")){
+                setPeers(wizardInfo,wizardField,elements[2]);
+
+            }
+        }
+
+    }
+
+    public static void makeSuggestion(ModelMap model, WizardInfo wizardInfo, int stage) {
+        model.put("suggestion", "no suggestion");
+        wizardInfo.setLastDataField(null);
+        wizardInfo.setSuggestionActions(new ArrayList<>());
+        if (!wizardInfo.hasSuggestions){
+            return;
+        }
+        StringBuffer suggestion = new StringBuffer();
+        List<String> suggestionActions= new ArrayList<>();
+        try {
+            switch (stage) {
+                case 2:
+                    //check names for short names
+                    Set<String> shortNames = new HashSet<>();
+                    for (String field : wizardInfo.getFields().keySet()) {
+                        String name = wizardInfo.getFields().get(field).getName();
+                        if (name.length() < 4) {
+                            shortNames.add(name);
+                        }
+                    }
+                    if (shortNames.size() > 0) {
+                        for (String field : wizardInfo.getFields().keySet()) {
+                            WizardField wizardField = wizardInfo.getFields().get(field);
+
+                            Set<String> fieldData = new HashSet<>(wizardField.getValuesFound());
+                            fieldData.retainAll(shortNames);
+                            if (fieldData.size() > 1) {
+                                //this is prbably a lookup for the field names
+                                String fullNameField = null;
+                                for (String shortName : fieldData) {
+                                    Map<String, WizardField> list = readTheFile(model, wizardInfo, field, shortName);
+                                    for (String indexField:list.keySet() ){
+                                        List<String> vals = list.get(indexField).getValuesFound();
+                                        if (vals!=null && vals.size()==1 && vals.get(0).length() > 3){
+                                            //probably the field name
+                                            fullNameField = indexField;
+                                            break;
+                                        }
+                                    }
+                                }
+                                if (fullNameField!=null) {
+                                    suggestion.append("Map the following names: ");
+                                    for (String shortName : fieldData) {
+                                        Map<String, WizardField> list = readTheFile(model, wizardInfo, field, shortName);
+                                        String fullName = list.get(fullNameField).getValuesFound().get(0);
+                                        suggestionActions.add(findFieldFromName(wizardInfo, shortName) + ";name;" + fullName);
+                                        suggestion.append(shortName + "->" + fullName + ", ");
+                                    }
+                                    wizardInfo.setSuggestionActions(suggestionActions);
+
+                                    model.put("suggestionReason", "The field names are appreviations, which all appear in the data for " + field + ".<br/> The suggested names are data from the associated field " + fullNameField);
+                                    model.put("suggestion", suggestion.toString().substring(0,suggestion.length()-1));
+                                    return;
+                                }
+
+                            }
+                        }
+                    }
+                    break;
+
+                case 3:
+                    //dates times, key fields
+                    String suggestionReason = "data can be interpreted as ";
+                    for (String field:wizardInfo.getFields().keySet()) {
+                        WizardField wizardField = wizardInfo.getFields().get(field);
+                        int valCOunt = wizardField.getValuesFound().size();
+                        if (valCOunt > 100) {
+                            valCOunt = 100;
+
+                        }
+                        boolean found = true;
+                        for (int i = 0; i < valCOunt; i++) {
+                            java.time.LocalDate date = DateUtils.isDateTime(wizardField.getValuesFound().get(i));
+                            if (date==null){
+                                found = false;
+                                break;
+                            }
+                        }
+                        if (found && wizardField.getType()==null) {
+                            suggestion.append(field + " is datetime, ");
+                            suggestionActions.add(field + ";type;datetime");
+                            if (!suggestionReason.contains("datetime,")) {
+                                suggestionReason += "datetime,";
+                            }
+                        }
+                        if(!found) {
+                            found = true;
+                            for (int i = 0; i < valCOunt; i++) {
+                                String val = wizardField.getValuesFound().get(i);
+                                if (val.length()>10){
+                                    val = val.substring(0,10);
+                                }
+                                java.time.LocalDate date = DateUtils.isADate(val);
+                                if (date == null) {
+                                    found = false;
+                                    break;
+                                }
+                            }
+                            if (found && wizardField.getType() == null) {
+                                suggestion.append(field + " is date, ");
+                                suggestionActions.add(field + ";type;date");
+                                if (!suggestionReason.contains("date,")) {
+                                    suggestionReason += "date,";
+                                }
+                            }
+                        }
+                        found = true;
+                        for (int i = 0; i < valCOunt; i++) {
+                            try {
+                                int j = Integer.parseInt(wizardField.getValuesFound().get(i));
+                                if (j % 15 > 0) {
+                                    found = false;
+                                    break;
+                                }
+                            } catch (Exception e) {
+                                found = false;
+                                break;
+
+                            }
+                        }
+                        if (found && wizardField.getType()==null) {
+                            suggestion.append(field + " is time, ");
+                            suggestionActions.add(field + ";type;time");
+                            String timeString = "time(data is integral multiples of 15),";
+                            if (!suggestionReason.contains(timeString)) {
+                                suggestionReason += timeString;
+
+                            }
+                        }
+                    }
+                    if (suggestionActions.size()>0){
+                        wizardInfo.setSuggestionActions(suggestionActions);
+                        model.put("suggestion",suggestion);
+                        model.put("suggestionReason", suggestionReason);
+                        return;
+
+                    }
+                    break;
+                case 4:
+                    int maxCount = 0;
+                    String parent = null;
+                    for (String field:wizardInfo.getFields().keySet()){
+                        WizardField wizardField = wizardInfo.getFields().get(field);
+                        if ("key field name".equals(wizardField.getType())){
+                            parent = wizardField.getName() + " data";
+                        }
+                        if (wizardField.getValuesFound().size()>maxCount){
+                            maxCount = wizardField.getValuesFound().size();
+
+                        }
+                    }
+                    List<String>possibleData = new ArrayList<>();
+                    for (String field:wizardInfo.getFields().keySet()){
+                        WizardField wizardField = wizardInfo.getFields().get(field);
+                        if (wizardField.getValuesFound().size()==maxCount &&  !Arrays.asList(TYPEOPTIONS).contains(wizardField.getType())){
+                            possibleData.add(field);
+                            if (!NumberUtils.isNumber(wizardField.getValuesFound().get(0)) && parent==null){
+                                parent = "Measures";
+                            }
+                        }
+                    }
+                    if (parent== null) parent = "Values";
+                    if (possibleData.size()> 0){
+                        suggestion.append("possible data fields are ");
+                        for (String field:possibleData){
+                            parent = "Values";
+                            suggestion.append(wizardInfo.getFields().get(field).getName() + ",");
+                            wizardInfo.suggestionActions.add(field + ";child;" + parent);
+                        }
+                        suggestionReason="These are the fields with the most values (excepting time and date fields). <br/> You can accept the set, then change the dataset name at the top if you want something more specific";
+                        if (parent.equals("Measures")){
+                            suggestionReason+="<br/>Please note that some of the data fields are not numbers, so cannot be added together";
+                        }
+                        if (suggestionActions.size()>0){
+                            wizardInfo.setSuggestionActions(suggestionActions);
+                            model.put("suggestion",suggestion);
+                            model.put("suggestionReason", suggestionReason);
+                            wizardInfo.setLastDataField(parent);
+                            return;
+
+                         }
+                     }
+
+
+                     }
+
+
+        } catch (Exception e) {
+
+        }
+    }
+
+
+
+    }
