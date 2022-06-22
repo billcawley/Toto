@@ -1,8 +1,6 @@
 package com.azquo.dataimport;
 
-import com.azquo.LineIdentifierLineValue;
-import com.azquo.RowColumn;
-import com.azquo.StringLiterals;
+import com.azquo.*;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.core.AzquoMemoryDB;
@@ -24,7 +22,16 @@ import java.nio.charset.MalformedInputException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.Period;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 /**
  * Copyright (C) 2018 Azquo Ltd.
@@ -128,7 +135,7 @@ public class DSImportService {
                     }
                     // hack based off an Ed Broking file that tripped us up - if it's converted from a worksheet then it's
                     // *always* tab separated, if not then try to detect from the file
-                    if (uploadedFile.isConvertedFromWorksheet()){
+                    if (uploadedFile.isConvertedFromWorksheet()) {
                         delimiter = '\t';
                     } else {
                         if (firstLine.contains("|")) {
@@ -226,7 +233,7 @@ public class DSImportService {
             if (uploadedFile.getSimpleHeadings() == null) { // if there were simple headings then we read NO headings off the file
                 if (uploadedFile.getHeadingsByFileHeadingsWithInterimLookup() != null) { // then we need to find the headings specified
                     int headingDepth = uploadedFile.getHeadingDepth();
-                    if (headingDepth == 0){ // then try to derive
+                    if (headingDepth == 0) { // then try to derive
                         for (List<String> headingsToFind : uploadedFile.getHeadingsByFileHeadingsWithInterimLookup().keySet()) {
                             if (headingsToFind.size() > headingDepth) {
                                 headingDepth = headingsToFind.size();
@@ -254,13 +261,13 @@ public class DSImportService {
                         }
                     }
 
-                    if (uploadedFile.getTemplateParameter("inheritheadings")!=null){
-                        List<String>lastHeading =  new ArrayList<>();
-                        for (int i =0;i<headingsFromTheFile.size();i++){
-                            List<String>heading = headingsFromTheFile.get(i);
-                            if (heading.size()>0&&heading.size() < lastHeading.size()){
+                    if (uploadedFile.getTemplateParameter("inheritheadings") != null) {
+                        List<String> lastHeading = new ArrayList<>();
+                        for (int i = 0; i < headingsFromTheFile.size(); i++) {
+                            List<String> heading = headingsFromTheFile.get(i);
+                            if (heading.size() > 0 && heading.size() < lastHeading.size()) {
                                 List<String> newHeading = new ArrayList<>();
-                                newHeading.addAll(lastHeading.subList(0,lastHeading.size() - heading.size()));
+                                newHeading.addAll(lastHeading.subList(0, lastHeading.size() - heading.size()));
                                 newHeading.addAll(heading);
                                 headingsFromTheFile.set(i, newHeading);
                             }
@@ -314,7 +321,7 @@ public class DSImportService {
                             if (toCheckAgainstTopHeadings.contains(";")) {
                                 toCheckAgainstTopHeadings = toCheckAgainstTopHeadings.substring(0, toCheckAgainstTopHeadings.indexOf(";"));
                                 if (topHeadingsValues.containsKey(toCheckAgainstTopHeadings) && !"FOUND".equals(topHeadingsValues.get(toCheckAgainstTopHeadings))) {
-                                    headingToAdd = leftOver.getHeading() + ";"+ HeadingReader.COMPOSITION + " " + topHeadingsValues.remove(toCheckAgainstTopHeadings);
+                                    headingToAdd = leftOver.getHeading() + ";" + HeadingReader.COMPOSITION + " " + topHeadingsValues.remove(toCheckAgainstTopHeadings);
                                 }
                             }
                         }
@@ -374,7 +381,7 @@ public class DSImportService {
                             uploadedFile.setError("Unable to find suitable stacked headings.");
                             return uploadedFile;
                         } else {
-                            if (!lineIterator.hasNext()){ // if we just jammed some headings together from the total contents of a file that's no good either
+                            if (!lineIterator.hasNext()) { // if we just jammed some headings together from the total contents of a file that's no good either
                                 uploadedFile.setError("Unable to find suitable stacked headings.");
                                 return uploadedFile;
                             }
@@ -520,7 +527,7 @@ public class DSImportService {
         char delimiter = ',';
 //        System.out.println("get lines with values and column, col index : " + columnIndex);
 //        System.out.println("get lines with values and column, values to check : " + valuesToCheck);
-        if (uploadedFile.isConvertedFromWorksheet()){
+        if (uploadedFile.isConvertedFromWorksheet()) {
             delimiter = '\t';
         } else {
             try (BufferedReader br = Files.newBufferedReader(Paths.get(uploadedFile.getPath()), StandardCharsets.UTF_8)) {
@@ -587,30 +594,30 @@ public class DSImportService {
             for (String heading : nextLine) {
                 if (!heading.equals("--")) { //ignore "--", can be used to give space below the headers
                     // logic had to be altered to account for gaps in the headers - blank columns which can be a problem if the top line is sparse
-                    if (heading.contains(StringLiterals.languageIndicator)){
-                        languagePrefix = heading.substring(0,heading.indexOf(StringLiterals.languageIndicator) + StringLiterals.languageIndicator.length());
+                    if (heading.contains(StringLiterals.languageIndicator)) {
+                        languagePrefix = heading.substring(0, heading.indexOf(StringLiterals.languageIndicator) + StringLiterals.languageIndicator.length());
                         heading = heading.substring(languagePrefix.length());
 
                     }
-                    if (languagePrefix!=null){
+                    if (languagePrefix != null) {
                         heading = languagePrefix + heading;
                     }
-                    if (heading.contains(StringLiterals.MEMBEROF)){
-                        try{
-                            String setName = heading.substring(0,heading.indexOf(StringLiterals.MEMBEROF));
-                            saveSetName = NameService.findByName(azquoMemoryDBConnection,setName);
+                    if (heading.contains(StringLiterals.MEMBEROF)) {
+                        try {
+                            String setName = heading.substring(0, heading.indexOf(StringLiterals.MEMBEROF));
+                            saveSetName = NameService.findByName(azquoMemoryDBConnection, setName);
                             heading = heading.substring(setName.length() + StringLiterals.MEMBEROF.length());
-                        }catch(Exception e){
+                        } catch (Exception e) {
                             //may need handling
                         }
-                     }
-                     if (saveSetName!=null){
-                         try{
-                             NameService.findOrCreateNameInParent(azquoMemoryDBConnection,heading,saveSetName, false);
-                         }  catch(Exception e){
-                             //may need handling
-                         }
-                     }
+                    }
+                    if (saveSetName != null) {
+                        try {
+                            NameService.findOrCreateNameInParent(azquoMemoryDBConnection, heading, saveSetName, false);
+                        } catch (Exception e) {
+                            //may need handling
+                        }
+                    }
                     if (colNo >= headings.size()) {
                         headings.add(heading);
                         // todo - clean up logic
@@ -625,7 +632,7 @@ public class DSImportService {
                                 headings.set(colNo, heading);
                             } else {
                                 if (findReservedWord(heading)) {
-                                     headings.set(colNo, headings.get(colNo) + ";" + heading.trim());
+                                    headings.set(colNo, headings.get(colNo) + ";" + heading.trim());
                                 } else {
                                     headings.set(colNo, heading.trim() + "|" + headings.get(colNo));
                                 }
@@ -676,4 +683,223 @@ public class DSImportService {
                 || heading.startsWith(HeadingReader.REPLACE)
                 || heading.startsWith(HeadingReader.SPLIT);
     }
+
+    public static void uploadWizardData(DatabaseAccessToken databaseAccessToken, Map<String, String> wizardDefs, Map<String, List<String>> data) throws Exception {
+        AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
+        List<MutableImportHeading> headings = new ArrayList<>();
+        String keyFieldId = null;
+        String keyField = null;
+        for (String field : wizardDefs.keySet()) {
+            String wizardDef = wizardDefs.get(field);
+            String[] clauses = wizardDef.split(";");
+            if (clauses.length > 1) {
+                if (clauses[1].equals("key field id")) {
+                    keyFieldId = field;
+                }
+                if (clauses[1].equals("key field name")) {
+                    keyField = field;
+                }
+            }
+        }
+
+        for (String field : wizardDefs.keySet()) {
+            String wizardDef = wizardDefs.get(field);
+            String[] clauses = wizardDef.split(";");
+            StringBuffer modifiedHeading = new StringBuffer();
+            if (clauses.length > 1) {
+                String fieldName = clauses[0];
+                String dataAnchor = getClause("attribute of", clauses);
+                if (dataAnchor != null) {
+                    modifiedHeading = new StringBuffer();
+                    modifiedHeading.append(dataAnchor + ";attribute " + fieldName);
+                } else {
+                    modifiedHeading.append(fieldName);
+                }
+                if (clauses[1].equals(HeadingReader.DATELANG) || clauses[1].equals(HeadingReader.USDATELANG)) {
+                    modifiedHeading.append(";datatype " + clauses[1]);
+                    checkDates(azquoMemoryDBConnection,data.get(field));
+
+                }
+                if(clauses[1].equals("time")){
+                    checkTimes(azquoMemoryDBConnection,data.get(field));
+                }
+                if (clauses[0].equals("key field name")) {
+                    if (keyFieldId != null) {
+                        modifiedHeading.append(keyFieldId + ".name");
+                    } else {
+                        modifiedHeading.append(";child of " + fieldName);
+                        NameService.findOrCreateNameInParent(azquoMemoryDBConnection, fieldName, null, false);
+                    }
+                }
+                if (clauses[0].equals("key field id")) {
+                    modifiedHeading.append(";language " + keyField + ";child of " + keyField);
+                }
+                String dataChild = getClause("parent of", clauses);
+                if (dataChild != null) {
+                    modifiedHeading.append(";classification " + dataChild);
+                    NameService.findOrCreateNameInParent(azquoMemoryDBConnection, fieldName, null, false);
+                }
+                String dataParent = getClause("datatype", clauses);
+                if (dataParent != null) {
+                    Name dataName = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Data", null, false);
+                    Name parentName = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, dataParent, dataName, false);
+                    NameService.findOrCreateNameInParent(azquoMemoryDBConnection, fieldName, parentName, false);
+                }
+                String peersString = getClause("peers", clauses);
+                if (peersString != null) {
+                    modifiedHeading.append(";peers " + peersString);
+                }
+                String peerFor = getClause("peer for", clauses);
+                if (peerFor != null) {
+                    modifiedHeading.append(";child of " + fieldName);
+                    NameService.findOrCreateNameInParent(azquoMemoryDBConnection, fieldName, null, false);
+                }
+                List<String> languages = new ArrayList<>();
+                languages.add(StringLiterals.DEFAULT_DISPLAY_NAME);
+                final MutableImportHeading heading = HeadingReader.interpretHeading(azquoMemoryDBConnection, modifiedHeading.toString(), languages, null);
+                headings.add(heading);
+            }
+        }
+        HeadingReader.resolvePeersAttributesAndParentOf(azquoMemoryDBConnection, headings);
+        Map<String, ImmutableImportHeading> fieldLinks = new HashMap<>();
+        List<ImmutableImportHeading> immutableImportHeadings = headings.stream().map(ImmutableImportHeading::new).collect(Collectors.toList());
+        int fieldno = 0;
+        List<String> fieldList = new ArrayList<>();
+        for (String field : wizardDefs.keySet()) {
+            fieldList.add(field);
+            fieldLinks.put(field, immutableImportHeadings.get(fieldno++));
+        }
+        int batchSize = 1000;
+        ArrayList<LineDataWithLineNumber> linesBatched = new ArrayList<>(batchSize);
+        List<Future<?>> futureBatches = new ArrayList<>();
+        final Map<String, Name> namesFoundCache = new ConcurrentHashMap<>();
+        // new format. Line number, the line itself and then a list of errors
+        final Map<Integer, List<String>> linesRejected = new ConcurrentHashMap<>(); // track line numbers rejected
+        final AtomicInteger noLinesRejected = new AtomicInteger(); // track no lines rejected
+        for (int lineNo = 0; lineNo < data.get(fieldList.get(0)).size(); lineNo++) {
+            List<ImportCellWithHeading> importCellsWithHeading = new ArrayList<>();
+            for (String field : wizardDefs.keySet()) {
+                ImmutableImportHeading heading = fieldLinks.get(field);
+                importCellsWithHeading.add(new ImportCellWithHeading(heading, data.get(field).get(lineNo)));
+                linesBatched.add(new LineDataWithLineNumber(importCellsWithHeading, lineNo));
+                // Start processing this batch. As the file is read the active threads will rack up to the maximum number allowed rather than starting at max. Store the futures to confirm all are done after all lines are read.
+                // batch size is derived by getLineIteratorAndBatchSize
+                if (linesBatched.size() == batchSize) {
+                    futureBatches.add(ThreadPools.getMainThreadPool().submit(
+                            new BatchImporter(azquoMemoryDBConnection
+                                    , linesBatched
+                                    , namesFoundCache
+                                    , linesRejected
+                                    , noLinesRejected
+                                    , new UploadedFile("", fieldList, null, false, false)
+                                    , null))
+
+                    );
+                    linesBatched = new ArrayList<>(batchSize);
+                }
+            }
+        }
+        futureBatches.add(ThreadPools.getMainThreadPool().submit(new BatchImporter(azquoMemoryDBConnection
+                , linesBatched
+                , namesFoundCache
+                , linesRejected
+                , noLinesRejected
+                , new UploadedFile("", fieldList, null, false, false)
+                , null)));
+        // check all work is done and memory is in sync
+        for (Future<?> futureBatch : futureBatches) {
+            futureBatch.get(1, TimeUnit.HOURS);
+        }
+        //TODO MAYBE SET ERROR MESSAGES??
+        //  uploadedFile.setNoData(linesImported == 0);
+        // uploadedFile.setProcessingDuration((System.currentTimeMillis() - track) / 1000);
+        // uploadedFile.setNoLinesImported(linesImported - noLinesRejected.get());
+        // connection.addToUserLogNoException("Imported " + (linesImported - noLinesRejected.get()) + " lines", true); // does the user log require more details??
+    }
+
+    private static void checkDates(AzquoMemoryDBConnection azquoMemoryDBConnection, List<String> vals)throws Exception {
+        String[] strDays = new String[]{
+                "Sunday",
+                "Monday",
+                "Tuesday",
+                "Wednesday",
+                "Thusday",
+                "Friday",
+                "Saturday"
+        };
+
+
+        String minDate = "zzz";
+        String maxDate = "000";
+        for (int i = 0; i < vals.size(); i++) {
+            if (minDate.compareTo(vals.get(i)) > 0) {
+                minDate = vals.get(i);
+            }
+            if (maxDate.compareTo(vals.get(i)) < 0) {
+                maxDate = vals.get(i);
+            }
+        }
+        LocalDate mind = DateUtils.isADate(minDate);
+
+        LocalDate maxd = DateUtils.isADate(maxDate);
+        if (mind==null || maxd==null){
+            return;
+        }
+        LocalDate start = java.time.LocalDate.of(mind.getYear(),1,1);
+        LocalDate end = java.time.LocalDate.of(maxd.getYear(),12,31);
+        List<String>languages = new ArrayList<>();
+        languages.add("date");
+        Name dateName = NameService.findOrCreateNameInParent(azquoMemoryDBConnection,"Date",null, false, languages);
+        Name yearName = NameService.findOrCreateNameInParent(azquoMemoryDBConnection,"Year", dateName,false,languages);
+        Name monthName = NameService.findOrCreateNameInParent(azquoMemoryDBConnection,"Month", dateName,false,languages);
+        Name dayName = NameService.findOrCreateNameInParent(azquoMemoryDBConnection,"Day", dateName,false,languages);
+        Name weekdayName = NameService.findOrCreateNameInParent(azquoMemoryDBConnection,"Weekday", dateName,false,languages);
+        List<Name>azquoWeekdays = new ArrayList<>();
+        for (int d=0;d<7;d++) {
+            azquoWeekdays.add(NameService.findOrCreateNameInParent(azquoMemoryDBConnection, strDays[d], weekdayName, false, languages));
+        }
+        for (LocalDate date=start; date.isBefore(end);date=date.plusDays(1)) {
+            String year = date.getYear()+"";
+            String month = date.format(DateTimeFormatter.ofPattern("MMM-yy"));
+            String thisdate = date.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+            int dayOfWeek = date.getDayOfWeek().getValue();
+            Name oneYear = NameService.findOrCreateNameInParent(azquoMemoryDBConnection,year, yearName,false,languages);
+            Name oneMonth = NameService.findOrCreateNameInParent(azquoMemoryDBConnection,month,monthName,false,languages);
+            NameService.findOrCreateNameInParent(azquoMemoryDBConnection,month,oneYear,false,languages);
+           NameService.findOrCreateNameInParent(azquoMemoryDBConnection,thisdate,dayName,false,languages);
+            NameService.findOrCreateNameInParent(azquoMemoryDBConnection,thisdate, oneMonth,false,languages);
+            NameService.findOrCreateNameInParent(azquoMemoryDBConnection,thisdate,azquoWeekdays.get(dayOfWeek-1),false,languages);
+
+        }
+
+
+    }
+    private static void checkTimes(AzquoMemoryDBConnection azquoMemoryDBConnection, List<String>vals)throws Exception{
+
+        Set<String> times = new HashSet<>();
+        for (int i = 0;i<vals.size();i++){
+            times.add(vals.get(i));
+        }
+        List<String> sortedTimes = (new ArrayList<String>(times));
+        Collections.sort(sortedTimes);
+        Name timeName = NameService.findOrCreateNameInParent(azquoMemoryDBConnection,"Times",null, false);
+        for (String time:sortedTimes) {
+            NameService.findOrCreateNameInParent(azquoMemoryDBConnection, time, timeName, false);
+        }
+
+    }
+
+
+
+
+    private static String getClause(String toFind, String[] array){
+        for(String element:array){
+            if (element.startsWith(toFind)){
+                return element.substring(toFind.length()).trim();
+            }
+        }
+        return null;
+    }
+
 }
+
