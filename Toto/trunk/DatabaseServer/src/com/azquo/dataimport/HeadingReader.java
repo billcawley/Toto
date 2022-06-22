@@ -231,7 +231,7 @@ Attributes of the names in other cells can be referenced also
 
     //headings are clauses separated by semicolons, first is the heading name then onto the extra stuff
     //essentially parsing through all the relevant things in a heading to populate a MutableImportHeading
-    private static MutableImportHeading interpretHeading(AzquoMemoryDBConnection azquoMemoryDBConnection, String headingString, List<String> attributeNames, List<String> fileNames) throws Exception {
+    public static MutableImportHeading interpretHeading(AzquoMemoryDBConnection azquoMemoryDBConnection, String headingString, List<String> attributeNames, List<String> fileNames) throws Exception {
         MutableImportHeading heading = new MutableImportHeading();
         List<String> clauses = new ArrayList<>(Arrays.asList(headingString.split(";")));
         Iterator<String> clauseIt = clauses.iterator();
@@ -522,7 +522,7 @@ Attributes of the names in other cells can be referenced also
 
     /* Fill heading information that is interdependent, so called after resolving individual headings as much as possible */
 
-    private static void resolvePeersAttributesAndParentOf(AzquoMemoryDBConnection azquoMemoryDBConnection, List<MutableImportHeading> headings) throws Exception {
+    public static void resolvePeersAttributesAndParentOf(AzquoMemoryDBConnection azquoMemoryDBConnection, List<MutableImportHeading> headings) throws Exception {
         // while looping collect column indexes that indicate that the cell value in that column needs to be resolved to a name, crucial to flagging things correctly
         Set<Integer> indexesNeedingNames = new HashSet<>();
         for (int headingNo = 0; headingNo < headings.size(); headingNo++) {
