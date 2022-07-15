@@ -5,8 +5,6 @@ import com.azquo.StringLiterals;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.zk.BookUtils;
-import javafx.collections.transformation.SortedList;
-import jdk.nashorn.internal.ir.RuntimeNode;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.poi.openxml4j.opc.OPCPackage;
 import org.apache.poi.ss.usermodel.Cell;
@@ -937,6 +935,9 @@ public class ImportWizard {
         return lineCount;
     }
 
+    static final String DATELANG = "date";
+    static final String USDATELANG = "us date";
+
 
     public static void calcXL(WizardInfo wizardInfo)throws Exception{
 
@@ -964,7 +965,7 @@ public class ImportWizard {
                         compositionPattern = compositionPattern.substring(1, compositionPattern.length() - 1);
                     }
                     // for Excel date is a number - on the way out standardise to our typically used date format
-                    if (HeadingReader.DATELANG.equals(xlField.getType()) || HeadingReader.USDATELANG.equals(xlField.getType())){
+                    if (DATELANG.equals(xlField.getType()) || USDATELANG.equals(xlField.getType())){
                         try{
                             compositionPattern = DateUtils.toDate(compositionPattern);
                         } catch (Exception e){

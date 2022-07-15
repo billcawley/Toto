@@ -73,7 +73,7 @@ CREATE TABLE IF NOT EXISTS `online_report` (
   `business_id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
   `report_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-  `filename` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+  `filename` varchar(512) COLLATE utf8_unicode_ci NOT NULL,
   `explanation` text COLLATE utf8_unicode_ci NOT NULL
 
 ) ENGINE=InnoDB AUTO_INCREMENT=223 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;

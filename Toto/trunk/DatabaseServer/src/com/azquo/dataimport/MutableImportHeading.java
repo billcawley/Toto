@@ -111,6 +111,8 @@ class MutableImportHeading {
     //See BatchImporter checkLookup, this can get complex
     int lookupParentIndex = -1;
     String lookupString = null;
+    // required to load Ed B GXB tracking. Essentially call an attribute something01 and if it's sequential and the attribute is imported multiple times it goes in as something01, something02, something03 etc rather than overwriting
+    boolean sequentialAttribute = false;
     // same as the option that can be put in for a whole file but now for a column
     boolean cleardata = false;
 

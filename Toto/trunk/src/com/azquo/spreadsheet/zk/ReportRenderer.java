@@ -1005,7 +1005,7 @@ public class ReportRenderer {
         }
     }
 
-    private static void loadExternalData(Book book, LoggedInUser loggedInUser)throws Exception{
+    public static void loadExternalData(Book book, LoggedInUser loggedInUser)throws Exception{
         loggedInUser.clearExternalData();
         List<ExternalDataRequest>externalDataRequests = ExternalDataRequestDAO.findForReportId(loggedInUser.getOnlineReport().getId());
         for (ExternalDataRequest externalDataRequest:externalDataRequests){

@@ -1164,6 +1164,16 @@ public class BatchImporter implements Callable<Void> {
                         for (Name name : identityCell.getLineNames()) {
                             // provisional means if there's a value there already don't change it
                             if (!cell.getImmutableImportHeading().provisional || name.getAttribute(attribute) == null) {
+                                // new logic by Edd for GXB tracking import
+                                // I'm allowing attribute01, attribute 02 ets
+                                if (cell.getImmutableImportHeading().sequentialAttribute && NumberUtils.isNumber(attribute.substring(attribute.length() - 2))){
+                                    while (name.getAttribute(attribute) != null){
+                                        int number = NumberUtils.toInt(attribute.substring(attribute.length() - 2));
+                                        number++;
+                                        attribute = attribute.substring(0, attribute.length() - 2) + (number > 9 ? number + "" : "0" + number);
+                                    }
+                                }
+
                                 if (debug && cell.getDebugInfo() != null) {
                                     name.setAttributeWillBePersisted(attribute, cell.getLineValue() + DEBUGMARKER + cell.getDebugInfo(), azquoMemoryDBConnection);
                                 } else {

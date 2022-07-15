@@ -6,6 +6,7 @@ import com.azquo.admin.database.DatabaseDAO;
 import com.azquo.admin.onlinereport.DatabaseReportLinkDAO;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
+import com.azquo.spreadsheet.CommonReportUtils;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.controller.LoginController;
 import com.azquo.spreadsheet.zk.ReportAnalysis;
@@ -44,6 +45,8 @@ public class RangeTestController {
         // I assume secure until we move to proper spring security
         if (loggedInUser != null && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
             model.put("databases", AdminService.getDatabaseListForBusinessWithBasicSecurity(loggedInUser));
+            List<String> dropdownListForQuery = CommonReportUtils.getDropdownListForQuery(loggedInUser, "`Data->Values` children");
+            model.put("topDataSet", dropdownListForQuery);
             AdminService.setBanner(model, loggedInUser);
             return "rangetest";
         } else {

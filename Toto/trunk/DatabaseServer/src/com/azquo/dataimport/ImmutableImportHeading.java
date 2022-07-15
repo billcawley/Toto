@@ -48,6 +48,7 @@ public class ImmutableImportHeading {
     final boolean provisional;
     final int lookupParentIndex;
     final String lookupString;
+    final boolean sequentialAttribute;
     final boolean clearData;
 
 
@@ -83,6 +84,7 @@ public class ImmutableImportHeading {
         this.lookupParentIndex = mutableImportHeading.lookupParentIndex;
         this.lookupString = mutableImportHeading.lookupString;
         this.clearData = mutableImportHeading.cleardata;
+        this.sequentialAttribute = mutableImportHeading.sequentialAttribute;
     }
 
     public static class DictionaryTerm {

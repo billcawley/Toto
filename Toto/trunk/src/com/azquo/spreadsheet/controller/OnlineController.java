@@ -336,6 +336,9 @@ public class OnlineController {
                         model.put("showTemplate", loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster() || loggedInUser.getUser().isDeveloper());
                         model.put("showInspect", loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper());
                         model.put("execute", session.getAttribute(reportId + EXECUTE_FLAG));
+                        if (session.getAttribute("test") != null){
+                            model.put("reloadExternal", "true");
+                        }
                         session.removeAttribute(reportId + SAVE_FLAG);// get rid of it from the session
                         session.removeAttribute(reportId + EXECUTE_FLAG);
                         // sort the pdf merges, had forgotten this . . .

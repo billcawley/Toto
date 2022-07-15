@@ -158,6 +158,13 @@
     </div>
     <a href="#" class="button is-small" onclick="getData()">Run Query</a>&nbsp;
     <br/>
+    What data interests you?
+    <div class="select is-small">
+        <select name="select1" id="select1"><c:forEach items="${topDataSet}" var="topDataItem">
+            <option value="${topDataItem}">${topDataItem}</option>
+        </c:forEach></select>
+    </div>
+    <br/>
     <br/>Rows AQL : <input class="input is-small" name="rowsaql" id="rowsaql"/> &nbsp;Cols AQL : <input class="input is-small" name="colsaql" id="colsaql"/>&nbsp;Context : <input class="input is-small" name="context" id="context"/>
     <br/>
     <br/>

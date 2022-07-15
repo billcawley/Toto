@@ -45,6 +45,7 @@
 						Reports</a>
 
 			<c:if test="${showInspect == true}"><a class="navbar-item is-tab" href="#" onclick="return inspectDatabase();" title="Inspect database" style="color: ${ribbonLinkColor}"><span class="fa fa-eye"></span>&nbsp;Inspect database</a> <!--<span class="fa fa-question-circle" onclick="showInspectHelp(); return false;"></span>--></c:if>
+			<c:if test="${reloadExternal == true}"><a class="navbar-item is-tab" href="#" onclick="postAjax('RELOADEXTERNAL');return false;" style="color: ${ribbonLinkColor}">Reload External Data</a></c:if>
 			<c:if test="${xml == true}"><a class="navbar-item is-tab" href="#" onclick="postAjax('XML');return false;" style="color: ${ribbonLinkColor}">Send XML</a></c:if>
 			<c:if test="${xmlzip == true}"><a class="navbar-item is-tab" href="#" onclick="postAjax('XMLZIP');return false;" style="color: ${ribbonLinkColor}">Download XML</a></c:if>
 			<c:if test="${showTemplate == true}"><a class="navbar-item is-tab" href="#" onclick="window.location.assign(window.location.href+='&opcode=template')" style="color: ${ribbonLinkColor}">View Template</a></c:if>

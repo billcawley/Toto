@@ -322,6 +322,16 @@ public class ZKSpreadsheetCommandController {
                         }
                     }
                 }
+                if ("RELOADEXTERNAL".equals(action)) {
+                    Clients.showBusy(ss,"Processing ...");
+                    Clients.evalJavaScript("postAjax('ActuallyRELOADEXTERNAL');");
+                }
+
+                if ("ActuallyRELOADEXTERNAL".equals(action)) {
+                    ReportRenderer.loadExternalData(ss.getBook(), loggedInUser);
+                    Clients.clearBusy(ss);
+                }
+
 
             } catch (Exception e) {
                 e.printStackTrace();

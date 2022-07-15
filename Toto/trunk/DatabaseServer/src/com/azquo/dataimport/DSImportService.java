@@ -681,6 +681,7 @@ public class DSImportService {
                 || heading.startsWith(HeadingReader.DICTIONARY)
                 || heading.startsWith(HeadingReader.CLASSIFICATION)
                 || heading.startsWith(HeadingReader.REPLACE)
+                || heading.startsWith(HeadingReader.SEQUENTIALATTRIBUTE)
                 || heading.startsWith(HeadingReader.SPLIT);
     }
 

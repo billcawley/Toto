@@ -101,6 +101,8 @@ Attributes of the names in other cells can be referenced also
     see checkLookup in BatchImporter, this can be quite involved
      */
     public static final String LOOKUP = "lookup";
+    // required to load Ed B GXB tracking. Essentially call an attribute something01 and if it's sequential and the attribute is imported multiple times it goes in as something01, something02, something03 etc rather than overwriting
+    public static final String SEQUENTIALATTRIBUTE = "sequentialattribute";
 
     private static final int FINDATTRIBUTECOLUMN = -2;
 
@@ -302,6 +304,7 @@ Attributes of the names in other cells can be referenced also
                 && !firstWord.equals(EXISTING)
                 && !firstWord.equals(OPTIONAL)
                 && !firstWord.equals(NOFILEHEADING)
+                && !firstWord.equals(SEQUENTIALATTRIBUTE)
                 && !firstWord.equals(PROVISIONAL)) { // empty clause, exception unless one which allows blank
             throw new Exception(clause + " empty in " + heading.heading + " in headings"); // other clauses cannot be blank!
         }
@@ -510,6 +513,9 @@ Attributes of the names in other cells can be referenced also
                 break;
             case PROVISIONAL:
                 heading.provisional = true;
+                break;
+            case SEQUENTIALATTRIBUTE:
+                heading.sequentialAttribute = true;
                 break;
             default:
                 String headingName = heading.heading;
