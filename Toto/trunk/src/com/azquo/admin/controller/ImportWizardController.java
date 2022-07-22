@@ -7,6 +7,8 @@ import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.controller.LoginController;
 import org.apache.poi.openxml4j.opc.OPCPackage;
+import org.json.JSONObject;
+import org.json.XML;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -53,6 +55,7 @@ import java.util.*;
                         LoginService.switchDatabase(loggedInUser, database);
                     }catch (Exception e){
                         model.put("error","No such database: " + database);
+                        return "importwizard";
                     }
                 }
                 AdminService.setBanner(model, loggedInUser);
@@ -74,6 +77,7 @@ import java.util.*;
 
         ) {
 
+            StringBuffer error = new StringBuffer();
             LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
             // I assume secure until we move to proper spring security
             if (submit==null) submit="";
@@ -97,12 +101,13 @@ import java.util.*;
                         ImportWizard.createDB(loggedInUser);
                         return "redirect:/api/ManageReports";
                     }catch(Exception e){
-                        String error = e.getMessage();
-                        int ePos = error.indexOf("Exception:");
+                        String err = e.getMessage();
+                        int ePos = err.indexOf("Exception:");
                         if (ePos >=0){
-                            error = error.substring(ePos + 10);
+                            err = err.substring(ePos + 10);
                         }
-                        model.put("error", error);
+                        model.put("error", err);
+                        return "importwizard";
                     }
                 }
 
@@ -116,8 +121,10 @@ import java.util.*;
                     nextStage = stage;
 
                 }
+                boolean autoFilled = false;
                 if (submit.equals("acceptsuggestion")){
                     ImportWizard.acceptSuggestions(wizardInfo);
+                    autoFilled = true;
                 }else{
                     if (stage > 1) wizardInfo.setSuggestionActions(new ArrayList<>());
                 }
@@ -149,6 +156,7 @@ import java.util.*;
                             ImportWizard.calcXL(wizardInfo);
                         }catch(Exception e){
                             model.put("error", e.getMessage());
+                            return "importwizard";
                         }
                     }
                     nextStage = stage;
@@ -163,7 +171,7 @@ import java.util.*;
                         File moved = new File(SpreadsheetService.getHomeDir() + "/temp/" + System.currentTimeMillis() + fileName); // timestamp to stop file overwriting
                         uploadFile.transferTo(moved);
                         if (stage==1) {
-                            if(fileName.toLowerCase(Locale.ROOT).contains(".xls")){
+                             if(fileName.toLowerCase(Locale.ROOT).contains(".xls")){
                                 Map<String,WizardField>wizardFields = new LinkedHashMap<>();
                                 int lineCount = ImportWizard.readBook(moved,wizardFields,false);
                                 wizardInfo = new  WizardInfo(fileName,null);
@@ -171,25 +179,52 @@ import java.util.*;
                                 wizardInfo.setLineCount(lineCount);
                                 loggedInUser.setWizardInfo(wizardInfo);
 
-                            }
-                            else {
-                                try {
-                                    String data = new String(Files.readAllBytes(Paths.get(moved.getAbsolutePath())), Charset.defaultCharset());
-                                    if (data.charAt(0) == '[') {
-                                        data = "{data:" + data + "}";
+                            }else if (fileName.toLowerCase(Locale.ROOT).contains(".json")) {
+                                    try {
+                                        String data = new String(Files.readAllBytes(Paths.get(moved.getAbsolutePath())), Charset.defaultCharset());
+                                        JSONObject jsonObject = null;
+                                        if (moved.getAbsolutePath().toLowerCase(Locale.ROOT).endsWith(".xml")) {
+                                            jsonObject = XML.toJSONObject(data);
+                                        } else {
+                                            if (data.charAt(0) == '[') {
+                                                data = "{data:" + data + "}";
+                                            }
+                                            data = data.replace("\n", "");//remove line feeds
+                                            jsonObject = new JSONObject(data);
+                                        }
+
+                                        wizardInfo = new WizardInfo(moved.getName(), jsonObject);
+                                        loggedInUser.setWizardInfo(wizardInfo);
+                                    } catch (Exception e) {
+                                        model.put("error", "nothing to read");
+                                        return "importwizard";
                                     }
-                                    data = data.replace("\n", "");//remove line feeds
-                                    wizardInfo = new WizardInfo(moved.getName(), data);
+                            }else{
+                                try {
+                                    Map<String,String>fileNameParameters = new HashMap<>();
+                                    ImportService.addFileNameParametersToMap(moved.getName(),fileNameParameters);
+
+                                    Map<String, WizardField> wizardFields = ImportWizard.readCSVFile(moved.getAbsolutePath(), fileNameParameters.get("fileencoding"));
+                                    wizardInfo = new WizardInfo(fileName, null);
+                                    wizardInfo.setFields(wizardFields);
+                                    for (String field:wizardFields.keySet()){
+                                        WizardField wizardField = wizardFields.get(field);
+                                        wizardInfo.setLineCount(wizardField.getValuesFound().size());
+                                        break;
+                                    }
+
                                     loggedInUser.setWizardInfo(wizardInfo);
-                                }catch(Exception e){
-                                    model.put("error","nothing to read");
+                                }catch (Exception e){
+                                    model.put("error", e.getMessage());
+                                    return "importwizard";
                                 }
+
                             }
                         }else{
                             OPCPackage opcPackage = org.apache.poi.openxml4j.opc.OPCPackage.open(new FileInputStream(new File(moved.getAbsolutePath())));
                             org.apache.poi.ss.usermodel.Workbook book;
                             book = new org.apache.poi.xssf.usermodel.XSSFWorkbook(opcPackage);
-                            String error = ImportWizard.reloadWizardInfo(loggedInUser, book);
+                            String err = ImportWizard.reloadWizardInfo(loggedInUser, book);
                             nextStage = 2;
                             for (String field:wizardInfo.getFields().keySet()){
                                  WizardField wizardField = wizardInfo.getFields().get(field);
@@ -207,15 +242,14 @@ import java.util.*;
                                 }
                             }
                             stage = nextStage;
-                            model.put("error", error);
+                            model.put("error", err);
                             if (opcPackage != null) opcPackage.revert();
                             importedSavedVersion = true;
 
 
                         }
                     }
-                    StringBuffer error = new StringBuffer();
-                    if (wizardInfo.getFields()!=null && !importedSavedVersion){
+                    if (wizardInfo.getFields()!=null && !importedSavedVersion && !autoFilled){
                         model.put("dataparent", dataParent);
                         error.append(ImportWizard.processFound(request,wizardInfo, stage));
 
@@ -366,17 +400,21 @@ import java.util.*;
                         if (dataParent!=null && dataParent.equals(wizardField.getParent())) {
                              wizardInfo.setLastDataField(heading);
                             Map<String, WizardField> list = ImportWizard.readTheFile(model, wizardInfo, heading, null);//find all relevant fields
-                            List<String> potentialPeers = new ArrayList<>();
+                            Map<String,String> potentialPeers = new HashMap<>();
                             for (String potentialName : list.keySet()) {
                                 String parent = list.get(potentialName).getParent();
                                 if (parent==null) {
-                                    potentialPeers.add(potentialName);
+                                    potentialPeers.put(potentialName, potentialName);
                                 }
                             }
                             model.put("potentialPeers", potentialPeers);
                             List<String> peersChosen = wizardField.getPeers();
                             if (peersChosen != null) {
-                                model.put("peersChosen", peersChosen);
+                                Map<String,String> peersList = new HashMap<>();
+                                for(String peer:peersChosen){
+                                    peersList.put(peer,peer);
+                                }
+                                 model.put("peersChosen", peersList);
 
                             }
                         }
@@ -387,7 +425,7 @@ import java.util.*;
 
                 Map<String, WizardField> list = ImportWizard.readTheFile(model, wizardInfo, wizardInfo.getLastDataField() ,null);//find all relevant fields
                  Set<String> peers = new HashSet<>();
-                Set<String> undefinedFields = new LinkedHashSet<>();
+                Map<String,String> undefinedFields = new HashMap<>();
                 Set<String> possibleChildFields = new LinkedHashSet<>();
                 for (String heading : list.keySet()) {
 
@@ -396,13 +434,15 @@ import java.util.*;
                         if (wizardField.getParent()!=null) {
                             peers.addAll(wizardField.getPeers());
                         } else {
-                            undefinedFields.add(heading);
+                            undefinedFields.put(heading,heading);
                             possibleChildFields.add(heading);
                         }
                     }
                 }
                 model.put("possibleChildFields", possibleChildFields);
-                undefinedFields.removeAll(peers);
+                for (String peer:peers){
+                    undefinedFields.remove(peer);
+                }
                 model.put("undefinedFields", undefinedFields);
             }
             if (wizardInfo.getFields() != null) {
@@ -414,16 +454,16 @@ import java.util.*;
                 Map<String, WizardField> list = ImportWizard.readTheFile(model, wizardInfo, wizardInfo.getLastDataField() ,null);//find all relevant fields
                 Set<String> peers = new HashSet<>();
                 Set<String> possibleAnchorFields = new LinkedHashSet<>();
-                Set<String> possibleAttributeFields = new LinkedHashSet<>();
+                Map<String,String> possibleAttributeFields = new HashMap<>();
                 for (String heading : list.keySet()) {
 
                     WizardField wizardField = wizardInfo.getFields().get(heading);
                     if (!wizardField.getIgnore()) {
                         String interpretation = wizardField.getInterpretation();
-                        if (interpretation == null || interpretation.length() == 0 || interpretation.startsWith("attribute of ")) {
-                            possibleAttributeFields.add(heading);
+                        if (!interpretation.contains("key field") && wizardField.getChild()==null && wizardField.getParent()==null && !interpretation.contains("peer")) {
+                            possibleAttributeFields.put(heading,heading);//mappings used so that JSTL can use 'not empty' instead of 'contains'
                         } else {
-                            if (!interpretation.contains("datatype")) {
+                            if (!interpretation.contains("datagroup")) {
                                 possibleAnchorFields.add(heading);
                             }
                         }

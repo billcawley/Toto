@@ -65,6 +65,8 @@
                         <tr>
                             <td>Heading</td>
                             <td>Values found - select to find associated values</td>
+                            <td>No. Distinct Values</td>
+                            <td>Current value</td>
                             <td>Suggested name</td>
                             <td>
                                 <c:if test="${stage>2}">
@@ -97,9 +99,6 @@
                                     <c:choose>
                                         <c:when test="${wizardField.valuesFound.size() == 0}">
                                         </c:when>
-                                        <c:when test="${wizardField.valuesFound.size() == 1 && field.equals(headingChosen)}">
-                                            <b>${wizardField.valuesFound.get(0)}</b>
-                                        </c:when>
                                         <c:when test="${wizardField.valuesFound.size() == 1}">
                                             ${wizardField.valuesFound.get(0)}
                                         </c:when>
@@ -107,13 +106,25 @@
 
                                             <select name="${field}" onfocus=selectionChange("${field}")
                                                     onchange=selectionChange("${field}") id="${field}">
-                                                <c:forEach items="${wizardField.valuesFound}" var="instance">
+                                                <c:forEach begin="0" end="100" items="${wizardField.valuesFound}" var="instance">
                                                     <option onclick=clickget(value="${instance}")>${fn:substring(instance,0,30)}</option>
                                                 </c:forEach>
                                             </select>
                                         </c:otherwise>
                                     </c:choose>
                                 </td>
+                                <td>${wizardField.distinctCount}</td>
+                                <td style="width:50px;overflow:hidden">
+                                    <c:choose>
+                                        <c:when test="${field==headingChosen}">
+                                            <b>${wizardField.valueFound}</b>
+                                        </c:when>
+                                        <c:otherwise>
+                                            ${wizardField.valueFound}
+
+                                        </c:otherwise>
+                                    </c:choose>
+                                 </td>
                                 <td>
                                     <c:if test="${stage==2}">
                                         <input type="text" value="${wizardField.name}" name="name_${field}"/>
@@ -157,7 +168,7 @@
                                 <c:if test="${stage==4}">
                                     <td>
                                         <c:choose>
-                                            <c:when test="${\"date\".equals(wizardField.type)|| \"time\".equals(wizardField.type)}">${wizardField.type}</c:when>
+                                            <c:when test="${\"date\".equals(wizardField.type)|| \"time\".equals(wizardField.type)|| \"key field id\".equals(wizardField.type)|| \"key field name\".equals(wizardField.type)}">${wizardField.type}</c:when>
                                             <c:when test="${\"data\".equals(wizardField.type)&& (dataparent==null || !dataparent.equals(wizardField.parent))}">${wizardField.interpretation}</c:when>
                                             <c:otherwise>
                                                 <input type="checkbox" name="child_${field}" value="true" onchange="dataChecked()"
@@ -172,9 +183,9 @@
                                 <c:if test="${stage==5}">
                                     <td>
                                         <c:choose>
-                                            <c:when test="${fn:contains(potentialPeers,field)}">
+                                            <c:when test="${not empty potentialPeers[field]}">
                                                 <input type="checkbox" name="peer_${field}" value="true"
-                                                <c:if test="${fn:contains(peersChosen,field)}"> checked </c:if>>
+                                                <c:if test="${not empty peersChosen[field]}"> checked </c:if>>
                                                 <label for="child_${field}">Select Peer</label>
                                             </c:when>
                                             <c:when test="${\"data\".equals(wizardField.type)}">${wizardField.interpretation}</c:when>
@@ -185,7 +196,7 @@
                                 <c:if test="${stage==6}">
                                     <td>
                                         <c:choose>
-                                            <c:when test="${fn:contains(undefinedFields,field)}">
+                                            <c:when test="${not empty undefinedFields[field]}">
                                                 <select name="child_${field}">
                                                     <option value=""></option>
                                                     <c:forEach items="${possibleChildFields}" var="child">
@@ -205,7 +216,7 @@
                                 <c:if test="${stage==7}">
                                     <td>
                                         <c:choose>
-                                            <c:when test="${fn:contains(possibleAttributeFields,field)}">
+                                            <c:when test="${not empty possibleAttributeFields[field]}">
                                                 <select name="attribute_${field}">
                                                     <option value=""></option>
                                                     <c:forEach items="${possibleAnchorFields}" var="anchor">

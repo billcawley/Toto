@@ -7,6 +7,7 @@ import com.azquo.memorydb.core.AzquoMemoryDB;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.service.NameQueryParser;
 import com.azquo.memorydb.service.NameService;
+import com.azquo.spreadsheet.DSSpreadsheetService;
 import com.azquo.spreadsheet.transport.HeadingWithInterimLookup;
 import com.azquo.spreadsheet.transport.UploadedFile;
 import com.fasterxml.jackson.databind.MappingIterator;
@@ -695,26 +696,30 @@ public class DSImportService {
             String[] clauses = wizardDef.split(";");
             if (clauses.length > 1) {
                 if (clauses[1].equals("key field id")) {
-                    keyFieldId = field;
-                }
-                if (clauses[1].equals("key field name")) {
-                    keyField = field;
+                    keyFieldId = clauses[0];
                 }
             }
         }
 
         for (String field : wizardDefs.keySet()) {
+            //this conversion is complicated by the fact that we do not want the 'id' fields to be names, but do want them to continue as attributes( 'product id' is attribute of 'product')
             String wizardDef = wizardDefs.get(field);
             String[] clauses = wizardDef.split(";");
             StringBuffer modifiedHeading = new StringBuffer();
             if (clauses.length > 1) {
                 String fieldName = clauses[0];
+                String fieldNameSansId = removeId(fieldName);
                 String dataAnchor = getClause("attribute of", clauses);
+
                 if (dataAnchor != null) {
+                    dataAnchor = removeId(dataAnchor);
                     modifiedHeading = new StringBuffer();
+                    if (dataAnchor.toLowerCase(Locale.ROOT).endsWith("id") && fieldName.toLowerCase(Locale.ROOT).endsWith("name")){
+                        fieldName = "name";
+                    }
                     modifiedHeading.append(dataAnchor + ";attribute " + fieldName);
                 } else {
-                    modifiedHeading.append(fieldName);
+                    modifiedHeading.append(fieldNameSansId);
                 }
                 if (clauses[1].equals(HeadingReader.DATELANG) || clauses[1].equals(HeadingReader.USDATELANG)) {
                     modifiedHeading.append(";datatype " + clauses[1]);
@@ -724,36 +729,44 @@ public class DSImportService {
                 if(clauses[1].equals("time")){
                     checkTimes(azquoMemoryDBConnection,data.get(field));
                 }
-                if (clauses[0].equals("key field name")) {
+                if (clauses[1].equals("key field name")) {
                     if (keyFieldId != null) {
-                        modifiedHeading.append(keyFieldId + ".name");
+                        modifiedHeading = new StringBuffer();
+                        modifiedHeading.append(removeId(keyFieldId) + ";attribute name");
                     } else {
-                        modifiedHeading.append(";child of " + fieldName);
+                        modifiedHeading.append(";child of " + fieldNameSansId);
                         NameService.findOrCreateNameInParent(azquoMemoryDBConnection, fieldName, null, false);
                     }
                 }
-                if (clauses[0].equals("key field id")) {
-                    modifiedHeading.append(";language " + keyField + ";child of " + keyField);
+                if (clauses[1].equals("key field id") || fieldName.toLowerCase(Locale.ROOT).endsWith("id")) {
+                     modifiedHeading.append(";language " +fieldName + ";child of " + fieldNameSansId);
                 }
                 String dataChild = getClause("parent of", clauses);
                 if (dataChild != null) {
-                    modifiedHeading.append(";classification " + dataChild);
-                    NameService.findOrCreateNameInParent(azquoMemoryDBConnection, fieldName, null, false);
+                    modifiedHeading.append(";classification " + removeId(dataChild));
+                    NameService.findOrCreateNameInParent(azquoMemoryDBConnection, fieldNameSansId, null, false);
                 }
-                String dataParent = getClause("datatype", clauses);
+                String dataParent = getClause("datagroup", clauses);
                 if (dataParent != null) {
                     Name dataName = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Data", null, false);
                     Name parentName = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, dataParent, dataName, false);
                     NameService.findOrCreateNameInParent(azquoMemoryDBConnection, fieldName, parentName, false);
                 }
+
                 String peersString = getClause("peers", clauses);
                 if (peersString != null) {
+                    if (peersString.toLowerCase(Locale.ROOT).endsWith("id}")){
+                        peersString = peersString.substring(0,peersString.length()-3).trim()+"}";
+                    }
                     modifiedHeading.append(";peers " + peersString);
                 }
                 String peerFor = getClause("peer for", clauses);
                 if (peerFor != null) {
-                    modifiedHeading.append(";child of " + fieldName);
-                    NameService.findOrCreateNameInParent(azquoMemoryDBConnection, fieldName, null, false);
+                     String clause = ";child of " + fieldNameSansId;
+                    if (!modifiedHeading.toString().contains(clause)){
+                        modifiedHeading.append(";child of " + fieldNameSansId);
+                    }
+                    NameService.findOrCreateNameInParent(azquoMemoryDBConnection, fieldNameSansId, null, false);
                 }
                 List<String> languages = new ArrayList<>();
                 languages.add(StringLiterals.DEFAULT_DISPLAY_NAME);
@@ -811,11 +824,21 @@ public class DSImportService {
         for (Future<?> futureBatch : futureBatches) {
             futureBatch.get(1, TimeUnit.HOURS);
         }
+        DSSpreadsheetService.persistDatabase(databaseAccessToken);
+
         //TODO MAYBE SET ERROR MESSAGES??
         //  uploadedFile.setNoData(linesImported == 0);
         // uploadedFile.setProcessingDuration((System.currentTimeMillis() - track) / 1000);
         // uploadedFile.setNoLinesImported(linesImported - noLinesRejected.get());
         // connection.addToUserLogNoException("Imported " + (linesImported - noLinesRejected.get()) + " lines", true); // does the user log require more details??
+    }
+
+    private static String removeId(String fieldName){
+        if (fieldName.toLowerCase(Locale.ROOT).endsWith("id")){
+            return fieldName.substring(0,fieldName.length()-2).trim();
+        }else{
+            return fieldName;
+        }
     }
 
     private static void checkDates(AzquoMemoryDBConnection azquoMemoryDBConnection, List<String> vals)throws Exception {

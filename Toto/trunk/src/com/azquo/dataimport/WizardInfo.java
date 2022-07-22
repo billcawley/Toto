@@ -1,5 +1,7 @@
 package com.azquo.dataimport;
 
+import org.json.JSONObject;
+
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -7,14 +9,14 @@ import java.util.Map;
 
 public class WizardInfo {
     String importFileName;
-    String importFileData;
+    JSONObject importFileData;
     Map<String, WizardField> fields;
     String lastDataField;
     int lineCount;
     boolean hasSuggestions;
     List<String> suggestionActions;
 
-    public WizardInfo(String importFileName, String importFileData){
+    public WizardInfo(String importFileName, JSONObject importFileData){
         this.importFileName = importFileName;
         this.importFileData = importFileData;
         this.fields = new LinkedHashMap<>();
@@ -28,7 +30,7 @@ public class WizardInfo {
         return importFileName;
     }
 
-    public String getImportFileData(){return importFileData; }
+    public JSONObject getImportFileData(){return importFileData; }
 
     public Map<String,WizardField>getFields(){return fields; }
 

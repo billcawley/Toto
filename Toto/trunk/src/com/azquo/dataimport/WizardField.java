@@ -5,8 +5,9 @@ import java.util.List;
 public class WizardField {
     private String importedName;
     private String name;
-    private List<String> valuesOnFile;
     private List<String> valuesFound;
+    private String valueFound;
+    private int distinctCount;
     private String interpretation;
     private boolean ignore;
     private String type;
@@ -19,8 +20,9 @@ public class WizardField {
     public WizardField(String importedName, String name, boolean added){
         this.importedName = importedName;
         this.name = name;
-        this.valuesOnFile = null;
         this.valuesFound = null;
+        this.distinctCount = 0;
+        this.valueFound = null;
         this.interpretation = null;
         this.ignore = false;
         this.type = null;
@@ -39,13 +41,18 @@ public class WizardField {
     public String getName() {return name; }
     public void setName(String name){this.name = name; }
 
-    public List<String> getValuesOnFile(){return valuesOnFile; }
-
-    public void setValuesOnFile(List<String>valuesOnFile){this.valuesOnFile = valuesOnFile; }
-
     public List<String> getValuesFound(){return valuesFound; }
 
     public void setValuesFound(List<String>valuesFound){this.valuesFound = valuesFound; }
+
+    public int getDistinctCount(){ return distinctCount; }
+
+    public void setDistinctCount(int distinctCount){this.distinctCount = distinctCount; }
+
+    public String getValueFound(){return valueFound; }
+
+    public void setValueFound(String valueFound){this.valueFound = valueFound; }
+
 
     public java.lang.String getInterpretation() {
         return interpretation;
