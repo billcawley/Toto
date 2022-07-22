@@ -1,18 +1,14 @@
 package com.azquo.dataimport;
 
 import com.azquo.DateUtils;
-import com.azquo.LineIdentifierLineValue;
 import com.azquo.StringLiterals;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.LoggedInUser;
-import com.azquo.spreadsheet.transport.UploadedFile;
 import com.azquo.spreadsheet.zk.BookUtils;
 import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.dataformat.csv.CsvMapper;
 import com.fasterxml.jackson.dataformat.csv.CsvParser;
 import com.fasterxml.jackson.dataformat.csv.CsvSchema;
-import javafx.collections.transformation.SortedList;
-import jdk.nashorn.internal.ir.RuntimeNode;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.poi.openxml4j.opc.OPCPackage;
 import org.apache.poi.ss.usermodel.Cell;
@@ -1027,7 +1023,7 @@ public class ImportWizard {
                         compositionPattern = compositionPattern.substring(1, compositionPattern.length() - 1);
                     }
                     // for Excel date is a number - on the way out standardise to our typically used date format
-                    if (HeadingReader.DATELANG.equals(xlField.getType()) || HeadingReader.USDATELANG.equals(xlField.getType())){
+                    if ("date".equals(xlField.getType()) || "us date".equals(xlField.getType())){
                         try{
                             compositionPattern = DateUtils.toDate(compositionPattern);
                         } catch (Exception e){
