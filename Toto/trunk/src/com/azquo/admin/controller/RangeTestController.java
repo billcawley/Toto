@@ -45,8 +45,11 @@ public class RangeTestController {
         // I assume secure until we move to proper spring security
         if (loggedInUser != null && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
             model.put("databases", AdminService.getDatabaseListForBusinessWithBasicSecurity(loggedInUser));
-            List<String> dropdownListForQuery = CommonReportUtils.getDropdownListForQuery(loggedInUser, "`Data->Values` children");
+            List<String> dropdownListForQuery = CommonReportUtils.getDropdownListForQuery(loggedInUser, "`Data` children");
             model.put("topDataSet", dropdownListForQuery);
+            List<String> topNames = CommonReportUtils.getDropdownListForQuery(loggedInUser, "TOPNAMES - Data");
+            model.put("topNames", topNames);
+
             AdminService.setBanner(model, loggedInUser);
             return "rangetest";
         } else {

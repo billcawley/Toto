@@ -253,7 +253,7 @@ I should be ok for StringTokenizer at this point
                 || term.equalsIgnoreCase(StringLiterals.SELECT) || term.equalsIgnoreCase(StringLiterals.CONTAINS)
                 || term.equalsIgnoreCase(StringLiterals.DELETE) || term.equalsIgnoreCase(StringLiterals.WHERE)
                 || term.equalsIgnoreCase(StringLiterals.CLASSIFYBY)
-                || term.equalsIgnoreCase(StringLiterals.EXP) || term.equalsIgnoreCase(StringLiterals.FILTERBY);
+                || term.equalsIgnoreCase(StringLiterals.EXP) || term.equalsIgnoreCase(StringLiterals.FILTERBY) || term.equalsIgnoreCase(StringLiterals.TOPNAMES);
     }
 
 

@@ -62,6 +62,7 @@ public class StringLiterals {
     public static final char ASSYMBOL = '@';// if a name had an e-mail might this be a problem?
     public static final char CONTAINSSYMBOL = 127;
     public static final char FILTERBYSYMBOL = 128;// I think this will work, These are a bit hacky overall
+    public static final char TOPNAMESSYMBOL = 129;// who knows?? EFC note 23/07/22, maybe make better later
     public static final char ASGLOBALSYMBOL = '¬';//searching for symbols!
     public static final String WHERE = "where";
     public static final String languageIndicator = "<-";
@@ -136,5 +137,6 @@ public class StringLiterals {
     public static final String AZMENUSPEC = "az_menuspec";
     public static final String AZIMPORTDATA = "az_importdata";
 
+    public static final String TOPNAMES = "TOPNAMES";
 
 }

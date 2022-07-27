@@ -148,6 +148,40 @@
             console.log(e)
         }
     }
+
+    async function updateLevel2Dropdown(level1selection) {
+        // right, got to use the value selected to get the level below. Should be able to use the Excel Plugin again
+
+        let data = await azquoSend("op=getdropdownlistforquery&choice=" + encodeURIComponent("`Data->" + level1selection + "` children")+ "&sessionid=${pageContext.session.id}&database="  + encodeURIComponent($('#database').val()));
+        var userChoices = await data.json();
+        var selections = '<select name="select2" id="select2" onchange="something(document.getElementById(\'select2\').options[document.getElementById(\'select2\').selectedIndex].value)">';
+        $.each(userChoices, function(index, item) {
+            if (index < 50){
+                selections += '<option value="' + item + '">' + item + '</option>';
+            }
+        });
+        selections += "</select>";
+        $('#level2selection').html(selections);
+    }
+
+    async function updateTopNamesLevel2Dropdown(topName) {
+        // right, got to use the value selected to get the level below. Should be able to use the Excel Plugin again
+
+        let data = await azquoSend("op=getdropdownlistforquery&choice=" + encodeURIComponent("`" + topName + "` children")+ "&sessionid=${pageContext.session.id}&database="  + encodeURIComponent($('#database').val()));
+        var userChoices = await data.json();
+        var selections = '<select name="topName2" id="topName2" onchange="something(document.getElementById(\'select2\').options[document.getElementById(\'select2\').selectedIndex].value)">';
+        $.each(userChoices, function(index, item) {
+            if (index < 50){
+                selections += '<option value="' + item + '">' + item + '</option>';
+            }
+        });
+        selections += "</select>";
+        $('#topName2div').html(selections);
+    }
+
+
+
+
 </script>
 <div class="box">
     Database :
@@ -159,10 +193,25 @@
     <a href="#" class="button is-small" onclick="getData()">Run Query</a>&nbsp;
     <br/>
     What data interests you?
+    <br/>
     <div class="select is-small">
-        <select name="select1" id="select1"><c:forEach items="${topDataSet}" var="topDataItem">
+        <select name="select1" id="select1" onchange="updateLevel2Dropdown(document.getElementById('select1').options[document.getElementById('select1').selectedIndex].value)"><c:forEach items="${topDataSet}" var="topDataItem">
             <option value="${topDataItem}">${topDataItem}</option>
         </c:forEach></select>
+    </div>
+    <br/>
+    <div class="select is-small" id="level2selection">
+    </div>
+    <br/>
+
+    <div class="select is-small">
+        <select name="topNames" id="topNames" onchange="updateTopNamesLevel2Dropdown(document.getElementById('topNames').options[document.getElementById('topNames').selectedIndex].value)"><c:forEach items="${topNames}" var="topName">
+            <option value="${topName}">${topName}</option>
+        </c:forEach></select>
+    </div>
+
+    <br/>
+    <div class="select is-small" id="topName2div">
     </div>
     <br/>
     <br/>Rows AQL : <input class="input is-small" name="rowsaql" id="rowsaql"/> &nbsp;Cols AQL : <input class="input is-small" name="colsaql" id="colsaql"/>&nbsp;Context : <input class="input is-small" name="context" id="context"/>
@@ -173,4 +222,7 @@
     </table>
     </div>
 </div>
+<script>
+    updateLevel2Dropdown(document.getElementById('select1').options[document.getElementById('select1').selectedIndex].value);
+</script>
 <%@ include file="../includes/admin_footer.jsp" %>

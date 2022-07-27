@@ -181,7 +181,8 @@ public class NameQueryParser {
         // replace on space before and after as to stop classification becoming cl@asification or the like
         setFormula = setFormula.replace(" " + StringLiterals.AS, " " + StringLiterals.ASSYMBOL)
                 .replace(StringLiterals.AS + " ", StringLiterals.ASSYMBOL + " ")
-                .replace(StringLiterals.CONTAINS, StringLiterals.CONTAINSSYMBOL + "");
+                .replace(StringLiterals.CONTAINS, StringLiterals.CONTAINSSYMBOL + "")
+                .replace(StringLiterals.TOPNAMES, StringLiterals.TOPNAMESSYMBOL + "");
 
 
 
@@ -222,6 +223,10 @@ public class NameQueryParser {
                 stackCount++;
                 // now returns a custom little object that hods a list a set and whether it's immutable
                 nameStack.add(interpretSetTerm(null, setFormula.substring(pos, nextTerm - 1), formulaStrings, referencedNames, attributeStrings, azquoMemoryDBConnection, attributeNames, setFormula));
+            } else if (op == StringLiterals.TOPNAMESSYMBOL) { // needs more testing but it meas as it says, the set of names at the root
+                stackCount++;
+                // now returns a custom little object that hods a list a set and whether it's immutable
+                nameStack.add(new NameSetList(null, NameService.findTopNames(azquoMemoryDBConnection, StringLiterals.DEFAULT_DISPLAY_NAME), true));
             } else if (op == StringLiterals.FILTERBYSYMBOL) { // filter by is unique - it's not an operator which takes two name sets, it simply applies a condition to the set before so the stack can be one for this operator
                 NameStackOperators.filterBy(nameStack, filterByCriteria, azquoMemoryDBConnection, contextSource, languages);
             } else if (stackCount-- < 2) {
@@ -403,6 +408,7 @@ public class NameQueryParser {
                 if (setTerm.indexOf(' ') > 0) {
                     nameString = setTerm.substring(0, setTerm.indexOf(' ')).trim();
                 }
+
                 name = getNameFromListAndMarker(nameString, referencedNames);
                 if (name == null) {
                     throw new Exception(" not understood: " + nameString);

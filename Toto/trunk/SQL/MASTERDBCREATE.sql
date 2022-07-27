@@ -170,7 +170,9 @@ CREATE TABLE IF NOT EXISTS `upload_record` (
   `user_id` int(11) NOT NULL,
   `file_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   `file_type` text COLLATE utf8_unicode_ci NOT NULL,
-  `comments` longtext COLLATE utf8_unicode_ci NOT NULL
+  `comments` longtext COLLATE utf8_unicode_ci NOT NULL,
+  `temp_path` varchar(1024) COLLATE utf8_unicode_ci NOT NULL,
+      `user_comment` longtext COLLATE utf8_unicode_ci NOT NULL
 ) ENGINE=InnoDB AUTO_INCREMENT=207 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- --------------------------------------------------------
