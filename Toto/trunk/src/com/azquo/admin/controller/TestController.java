@@ -4,6 +4,7 @@ import com.azquo.ExternalConnector;
 import com.azquo.admin.StandardDAO;
 import com.azquo.dataimport.*;
 import com.azquo.spreadsheet.LoggedInUser;
+import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.controller.LoginController;
 import com.azquo.util.AzquoMailer;
 import com.csvreader.CsvWriter;
@@ -629,6 +630,108 @@ public class TestController {
             caller.runAndReturnResult("avg");
             double[] result = caller.getParser().getAsDoubleArray("avg");
 //            return result[0] + "";
+        }
+
+        if ("xmlumrscan".equals(something)) {
+            /*XSSFWorkbook wb = new XSSFWorkbook();
+            XSSFSheet user_activity = wb.createSheet("User Activity");
+            int rownum = 0;
+            XSSFRow toprow = user_activity.createRow(rownum);
+            toprow.createCell(0).setCellValue("Page");
+            toprow.createCell(1).setCellValue("SKU");
+            toprow.createCell(2).setCellValue("Location");
+            toprow.createCell(3).setCellValue("Page %");*/
+
+            try (Stream<Path> transferDir = Files.list(Paths.get("/home/edward/Downloads/xmlscan"))) {
+                Iterator<Path> transferDirIterator = transferDir.iterator();
+                // go through the main directory looking for directories that match a DB name
+                String riskNumberOpen = "<RiskNumber>";
+                String riskNumberClose = "</RiskNumber>";
+                String UCROpen = "<UCR>";
+                String UCRClose = "</UCR>";
+                Map<String, Set<String>> premiumUMRs = new HashMap<>();
+                Map<String, Set<String>> claimUCRs = new HashMap<>();
+                while (transferDirIterator.hasNext()) {
+                    Path p = transferDirIterator.next();
+                    if (p.toString().endsWith(".xml")) {
+                        // try to get the properties
+                        String fileKey = p.getFileName().toString().substring(0,p.getFileName().toString().length() - 4);
+                        String dbName = "";
+                        if (Files.exists(Paths.get("/home/edward/Downloads/xmlscan/" + fileKey + ".properties"))) {
+                            try (InputStream is = new FileInputStream("/home/edward/Downloads/xmlscan/" + fileKey + ".properties")) {
+                                Properties properties = new Properties();
+                                properties.load(is);
+                                dbName = properties.getProperty("AZQUODATABASEPERSISTENCENAME");
+                                if (dbName.contains("_")){
+                                    dbName = dbName.substring(dbName.indexOf("_") + 1);
+                                    if (dbName.equals("risksolutions")){
+                                        dbName = "AllRisks";
+                                    }
+                                }
+                            }
+                        }
+
+
+
+                        String bdxmonth = p.getFileName().toString().substring(2,7);
+                        //System.out.println(p.getFileName());
+                        String xml = FileUtils.readFileToString(p.toFile());
+                        int start = xml.indexOf(riskNumberOpen);
+                        String UMR = "";
+                        if (start > 0){
+                            start += riskNumberOpen.length();
+                            int end = xml.indexOf(riskNumberClose, start);
+                            if (end > 0){
+                                UMR = xml.substring(start, end);
+                                if (dbName.length() > 0){
+                                    UMR += (", " + dbName);
+                                }
+                                premiumUMRs.computeIfAbsent(bdxmonth, t -> new HashSet<String>()).add(UMR);
+                            }
+                        }
+                        if (p.getFileName().toString().startsWith("CS")){ // premium
+                            start = xml.indexOf(UCROpen);
+                            if (start > 0){
+                                start += UCROpen.length();
+                                int end = xml.indexOf(UCRClose, start);
+                                if (end > 0){
+                                    String UCR = xml.substring(start, end);
+                                    if (UMR.length() > 0){ // add extra info
+                                        UCR += (", " + UMR);
+                                    }
+                                    claimUCRs.computeIfAbsent(bdxmonth, t -> new HashSet<String>()).add(UCR);
+                                }
+                            }
+
+                        }
+                    }
+                }
+                CsvWriter csvW = new CsvWriter("/home/edward/Downloads/premiumsUMRlist.csv", ',', StandardCharsets.UTF_8);
+                csvW.setUseTextQualifier(false);
+                for (String bdxMonth : premiumUMRs.keySet()){
+                    for (String UMR : premiumUMRs.get(bdxMonth)){
+                        csvW.write(bdxMonth);
+                        csvW.write(UMR);
+                        csvW.endRecord();
+
+                    }
+                }
+                csvW.close();
+                csvW = new CsvWriter("/home/edward/Downloads/claimUCRlist.csv", ',', StandardCharsets.UTF_8);
+                csvW.setUseTextQualifier(false);
+                for (String bdxMonth : claimUCRs.keySet()){
+                    for (String UCR : claimUCRs.get(bdxMonth)){
+                        csvW.write(bdxMonth);
+                        csvW.write(UCR);
+                        csvW.endRecord();
+
+                    }
+                }
+                csvW.close();
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
 
         if ("shopwaretest".equals(something)) {
