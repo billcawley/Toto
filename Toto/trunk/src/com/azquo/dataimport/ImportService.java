@@ -2425,9 +2425,10 @@ fr.close();
         Workbook ppBook = null;
 
         try {
-            if (loggedInUser.getPreprocessorName()==null || !loggedInUser.getPreprocessorName().equals(preprocessor)) {
+            // WARNING!!! EFC note - this cacheing of workbooks causes problems. I'm commenting, if uncommented without investigation PROBLEMS WILL RECUR
+            //if (loggedInUser.getPreprocessorName()==null || !loggedInUser.getPreprocessorName().equals(preprocessor)) {
                  setUpPreprocessor(loggedInUser, uploadedFile, preprocessor);
-            }
+            //}
 
             ppBook = loggedInUser.getPreprocessorLoaded();
             if (ppBook==null){//json
