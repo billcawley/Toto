@@ -151,6 +151,9 @@ public interface RMIInterface extends Remote {
 
     String getMostRecentProvenance(String persistenceName) throws RemoteException;
 
+    List<String>getPossibleHeadings(DatabaseAccessToken databaseAccessToken, String dataItem) throws RemoteException;
 
 
-}
+
+
+    }

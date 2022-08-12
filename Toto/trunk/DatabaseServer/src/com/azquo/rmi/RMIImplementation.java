@@ -650,4 +650,18 @@ class RMIImplementation implements RMIInterface {
             //if no log - ignore!
         }
     }
-}
+
+    public List<String>getPossibleHeadings(DatabaseAccessToken databaseAccessToken, String dataItem) throws RemoteException {
+        try {
+            return NameService.getPossibleHeadings(databaseAccessToken, dataItem);
+        } catch (Exception e) {
+            throw new RemoteException("Database server Exception", e);
+        }
+    }
+
+
+
+
+ }
+
+
