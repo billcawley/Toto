@@ -415,7 +415,7 @@ class NameEditFunctions {
                 if (dupeNames.size() > 1) {
                     Name baseName = null;
                     for (Name name:dupeNames){
-                        if (name.getAttribute(attName)==null){
+                        if (attName==null || name.getAttribute(attName)!=null){
                             baseName = name;
                             break;
                         }
