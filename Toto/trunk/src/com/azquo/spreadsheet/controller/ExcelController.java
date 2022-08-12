@@ -9,10 +9,7 @@ import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.user.UserRegionOptions;
 import com.azquo.admin.user.UserRegionOptionsDAO;
-import com.azquo.dataimport.ImportService;
-import com.azquo.dataimport.ImportTemplate;
-import com.azquo.dataimport.ImportTemplateDAO;
-import com.azquo.dataimport.ImportTemplateData;
+import com.azquo.dataimport.*;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.*;
 import com.azquo.spreadsheet.transport.*;
@@ -22,6 +19,8 @@ import com.azquo.spreadsheet.transport.json.ExcelRegionModification;
 import com.azquo.spreadsheet.zk.ChoicesService;
 import com.azquo.spreadsheet.zk.ReportExecutor;
 import com.azquo.spreadsheet.zk.ReportRenderer;
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -999,6 +998,42 @@ public class ExcelController {
                 }
                 return result;
             }
+            if (op.equals("reportwizard")){
+                class Selection {
+                    String selName;
+                    List<String> selValues;
+
+                    Selection(String selName, List<String> selValues) {
+                        this.selName = selName;
+                        this.selValues = selValues;
+                    }
+                }
+
+                String dataChosen = request.getParameter("datachosen");
+                String rowChosen = removeSelected(request.getParameter("rowchosen"));
+                String columnChosen = removeSelected(request.getParameter("columnchosen"));
+                List<Selection> selections = new ArrayList<>();
+                if (dataChosen.length() > 0) {
+
+                    List<String> setOptions = ReportWizard.getPossibleHeadings(loggedInUser, dataChosen);
+
+                    List<String> rowOptions = ReportWizard.createList(setOptions, rowChosen, columnChosen);
+                    rowChosen = ReportWizard.chooseSuitable(setOptions, rowChosen, columnChosen);
+                    Selection rows = new Selection("rows", rowOptions);
+                    selections.add(rows);
+                    List<String> columnOptions = ReportWizard.createList(setOptions, columnChosen, rowChosen);
+                    Selection columns = new Selection("columns", columnOptions);
+                    selections.add(columns);
+                    Selection templates = new Selection("templates", ReportWizard.getTemplateList(loggedInUser));
+                    selections.add(templates);
+                }
+
+                jacksonMapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
+                String done = jacksonMapper.writeValueAsString(selections);
+                return done;
+
+
+            }
         } catch (NullPointerException npe) {
             npe.printStackTrace();
             result = "null pointer, json passed?";
@@ -1007,6 +1042,13 @@ public class ExcelController {
             result = e.getMessage();
         }
         return jsonError(result);
+    }
+
+    private static String removeSelected(String value){
+        if (value.endsWith(" selected")){
+            return value.substring(0, value.length() - 9);
+        }
+        return value;
     }
 
     private static List<List<String>> replaceUserChoicesInHeadings(LoggedInUser loggedInUser, List<List<String>> headings) {
