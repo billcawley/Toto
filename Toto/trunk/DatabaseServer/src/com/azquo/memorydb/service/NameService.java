@@ -1,10 +1,12 @@
 package com.azquo.memorydb.service;
 
 import com.azquo.StringLiterals;
+import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.StringUtils;
 import com.azquo.memorydb.core.StandardName;
+import com.azquo.memorydb.core.Value;
 import com.azquo.spreadsheet.UserChoiceService;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 import org.apache.log4j.Logger;
@@ -498,7 +500,157 @@ public final class NameService {
         return languages;
     }
 
-    public static void printFunctionCountStats() {
+    static class SetInfo {
+        String setName;
+        int maxElements;
+
+
+        SetInfo(String setName) {
+            this.setName = setName;
+            this.maxElements = 0;
+        }
+    }
+
+    public static List<String>getPossibleHeadings(DatabaseAccessToken databaseAccessToken,  String dataItem)throws Exception{
+
+        AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
+
+        Collection<Name> dataNames = NameQueryParser.parseQuery(azquoMemoryDBConnection, dataItem);
+        if (dataNames==null){
+            return null;
+        }
+        Name dataName = dataNames.iterator().next();
+        if (dataName.getValues().size()==0){
+            return null;
+        }
+        //top names must not include 'data' or 'date', but must include date children.
+
+        Collection<Name> topNames = NameQueryParser.parseQuery(azquoMemoryDBConnection, StringLiterals.TOPNAMES);
+        Collection<Name> dates = NameQueryParser.parseQuery(azquoMemoryDBConnection,"date");
+        Name date = dates.iterator().next();
+        topNames.removeAll(dates);
+        topNames.addAll(date.getChildren());
+        Collection<Name> dataNameAsList = NameQueryParser.parseQuery(azquoMemoryDBConnection,"data");
+        topNames.removeAll(dataNameAsList);
+        List<SetInfo> setInfoList = new ArrayList();
+
+        Value value = dataName.getValues().iterator().next();
+        Set<Name>topNameParents = new HashSet<>();
+        for (Name valueName:value.getNames()){
+            if (valueName!=dataName){
+                topNameParents.addAll(valueName.findAllParents());
+
+            }
+        }
+        topNameParents.retainAll(topNames);
+        //copy tne names and deleting large sets
+        Set<Name> tooBigSets = new HashSet<>();
+        Set<Name> tooBig = new HashSet<>();
+         for (Name topName:topNameParents) {
+             if (topName.getChildren().size() > 200000) {
+                 tooBig.add(topName);
+                 tooBigSets.addAll(topName.getChildren());
+             }
+         }
+          topNameParents.removeAll(tooBig);
+          for (Name parent:topNameParents){
+               setInfoList.addAll(getSetInfo(parent, topNameParents, tooBigSets));
+
+         }
+
+
+        List<String> toReturn = new ArrayList<>();
+
+        for (SetInfo setInfo:setInfoList){
+            String setName = setInfo.setName;
+            int memberPos = setName.indexOf(StringLiterals.MEMBEROF);
+            String parent = null;
+            if (memberPos>0){
+                parent = setInfo.setName.substring(0,memberPos);
+            }
+            while (parent!=null){
+                String toFind = StringLiterals.MEMBEROF + parent;
+                parent = null;
+                for (SetInfo si:setInfoList){
+                    int memberPos2 =si.setName.indexOf(toFind);
+                    if (memberPos2 > 0){
+                        setName = si.setName.substring(0,memberPos2) + StringLiterals.MEMBEROF + setName;
+                        parent = si.setName.substring(0,memberPos2);
+                        break;
+                    }
+                }
+            }
+            toReturn.add(setInfo.maxElements + ";" + setName);
+        }
+
+        return toReturn;
+    }
+
+
+
+
+    private static List<SetInfo> getSetInfo(Name setName, Collection<Name>topNames, Set<Name>tooBigSets){
+        /*
+        This routine looks for sets that might be suitable as row or column headings.   These must have less than <maxAllowableSize> elements
+        The return is a set of possibles, together with the max set size that each possible would entail.
+
+        e.g.  if the set is the set of dates, the return might be
+
+        Years->Months->Dates   31 (max dates in a month)
+        Months->Dates     31
+        Dates           1234  (all dates found)
+
+        The report would ask for each level chosen.  Note - at this stage the result does not check whether the dropdown lists (e.g months without the year being chosen) would be excessive.
+
+
+
+         */
+
+        List<SetInfo> toReturn = new ArrayList<>();
+        int maxAllowableSize = 100;
+        int children = setName.getChildren().size();
+        if (children==0){
+            return null;
+        }
+        if (children <= maxAllowableSize){
+            SetInfo setInfo = new SetInfo(setName.getDefaultDisplayName());
+            setInfo.maxElements = children;
+            toReturn.add(setInfo);
+        }
+        Collection<Name> grandParents = new HashSet<>();
+         Collection<Name> possibleTopNameParents = new HashSet<>(topNames);
+        possibleTopNameParents.remove(setName);
+        for (Name child:setName.getChildren()){
+            Collection<Name> parents = child.getParents();
+            for (Name parent:parents){
+                 grandParents.addAll(parent.getParents());
+            }
+            grandParents.addAll(parents);
+            possibleTopNameParents.retainAll(grandParents);
+
+        }
+        for (Name parent:possibleTopNameParents){
+            if (parent.getChildren().size() < setName.getChildren().size()) {//the routine above can find duplicate sets...
+                String parentString = parent.getDefaultDisplayName();
+                Name segmentParent = parent;
+                SetInfo setInfo = new SetInfo(parentString + StringLiterals.MEMBEROF + setName.getDefaultDisplayName());
+                int maxElements = 0;
+                for (Name segment : segmentParent.getChildren()) {
+                    int grandChildren = segment.getChildren().size();
+                    if (grandChildren > maxElements) {
+                        maxElements = grandChildren;
+
+                    }
+                }
+                setInfo.maxElements = maxElements;
+                toReturn.add(setInfo);
+            }
+        }
+        return toReturn;
+
+    }
+
+       public static void printFunctionCountStats() {
         System.out.println("######### NAME SERVICE FUNCTION COUNTS");
         System.out.println("nameCompareCount\t\t\t\t\t\t\t\t" + nameCompareCount.get());
         System.out.println("sortCaseInsensitiveCount\t\t\t\t\t\t\t\t" + sortCaseInsensitiveCount.get());
