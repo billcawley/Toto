@@ -359,6 +359,9 @@ public class OnlineController {
                         AdminService.setBanner(model, loggedInUser);
                         // todo - report list based off home menu? Doable?
                         model.put("reports", AdminService.getReportList(loggedInUser, true));
+                        if (request.getParameter("newdesign") != null){
+                            return "zsshowsheet";
+                        }
                         return "zsshowsheet2";
                     }
                     // ok now I need to set the sheet loading but on a new thread

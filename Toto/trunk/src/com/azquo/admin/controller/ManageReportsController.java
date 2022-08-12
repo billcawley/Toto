@@ -365,6 +365,9 @@ public class ManageReportsController {
             model.put("developer", loggedInUser.getUser().isDeveloper());
             model.put("showexplanation", showExplanation);
             AdminService.setBanner(model, loggedInUser);
+            if (request.getParameter("newdesign") != null){
+                return "managereports";
+            }
             return "managereports2";
         } else {
             return "redirect:/api/Login";
