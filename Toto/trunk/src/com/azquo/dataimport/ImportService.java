@@ -541,44 +541,8 @@ public final class ImportService {
             }
             if (reportName != null) {
                 if ((loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
-                    // ---- upload the report (pushing a function back into here)
-                    uploadedFile.setDataModified(true); // ok so it's not technically data modified but the file has been processed correctly. The report menu will have been modified
-                    int businessId = loggedInUser.getUser().getBusinessId();
-                    int databaseId = loggedInUser.getDatabase().getId();
-                    String pathName = loggedInUser.getBusinessDirectory();
-                    // used to only overwrite if uploaded by this user, we;ll go back to replacing one for the same business
-                    //OnlineReport or = OnlineReportDAO.findForNameAndUserId(reportName, loggedInUser.getUser().getId());
-                    OnlineReport or = OnlineReportDAO.findForNameAndBusinessId(reportName, loggedInUser.getUser().getBusinessId());
-/* todo - category names here as with the backup restore why was this commented? Just never used?
-                    String category = null;
-                    if (fileName.contains(CATEGORYBREAK)) {
-                        category = fileName.substring(0, fileName.indexOf(CATEGORYBREAK));
-                        fileName = f.getName().substring(fileName.indexOf(CATEGORYBREAK) + CATEGORYBREAK.length());
-                    }
-                    */
-                    if (or != null) {
-                         // zap the old one first
-                        try {
-                            Files.deleteIfExists(Paths.get(SpreadsheetService.getHomeDir() + dbPath + pathName + onlineReportsDir + or.getFilenameForDisk()));
-                        } catch (Exception e) {
-                            System.out.println("problem deleting old report");
-                            e.printStackTrace();
-                        }
-                        or.setFilename(uploadedFile.getFileName()); // it might have changed, I don't think much else under these circumstances
-                        or.setUserId(loggedInUser.getUser().getId());
-                    } else {
-                        or = new OnlineReport(0, LocalDateTime.now(), businessId, loggedInUser.getUser().getId(), loggedInUser.getDatabase().getName(), reportName, uploadedFile.getFileName(), "", "");
-                    }
-                    OnlineReportDAO.store(or); // store before or.getFilenameForDisk() or the id will be wrong!
-                    List<org.apache.poi.ss.usermodel.Name> names = (List<Name>)book.getAllNames();
-
-                    Path fullPath = Paths.get(SpreadsheetService.getHomeDir() + dbPath + pathName + onlineReportsDir + or.getFilenameForDisk());
-                    Files.createDirectories(fullPath.getParent()); // in case it doesn't exist
-                    Files.copy(Paths.get(uploadedFile.getPath()), fullPath); // and copy
-                    DatabaseReportLinkDAO.link(databaseId, or.getId());
-                    // ---- end report uploading
-                    uploadedFile.setReportName(reportName);
-                    uploadedFile.setProcessingDuration(System.currentTimeMillis() - time);
+                    uploadReport(loggedInUser,reportName,uploadedFile, book);
+                     uploadedFile.setProcessingDuration(System.currentTimeMillis() - time);
                     if (opcPackage != null) opcPackage.revert();
                     return Collections.singletonList(uploadedFile);
                 }
@@ -698,6 +662,46 @@ public final class ImportService {
 
         if (opcPackage != null) opcPackage.revert();
         return toReturn;
+    }
+
+    public static void uploadReport(LoggedInUser loggedInUser, String reportName, UploadedFile uploadedFile, Workbook book)throws Exception{
+        uploadedFile.setDataModified(true); // ok so it's not technically data modified but the file has been processed correctly. The report menu will have been modified
+        int businessId = loggedInUser.getUser().getBusinessId();
+        int databaseId = loggedInUser.getDatabase().getId();
+        String pathName = loggedInUser.getBusinessDirectory();
+        // used to only overwrite if uploaded by this user, we;ll go back to replacing one for the same business
+        //OnlineReport or = OnlineReportDAO.findForNameAndUserId(reportName, loggedInUser.getUser().getId());
+        OnlineReport or = OnlineReportDAO.findForNameAndBusinessId(reportName, loggedInUser.getUser().getBusinessId());
+/* todo - category names here as with the backup restore why was this commented? Just never used?
+                    String category = null;
+                    if (fileName.contains(CATEGORYBREAK)) {
+                        category = fileName.substring(0, fileName.indexOf(CATEGORYBREAK));
+                        fileName = f.getName().substring(fileName.indexOf(CATEGORYBREAK) + CATEGORYBREAK.length());
+                    }
+                    */
+        if (or != null) {
+            // zap the old one first
+            try {
+                Files.deleteIfExists(Paths.get(SpreadsheetService.getHomeDir() + dbPath + pathName + onlineReportsDir + or.getFilenameForDisk()));
+            } catch (Exception e) {
+                System.out.println("problem deleting old report");
+                e.printStackTrace();
+            }
+            or.setFilename(uploadedFile.getFileName()); // it might have changed, I don't think much else under these circumstances
+            or.setUserId(loggedInUser.getUser().getId());
+        } else {
+            or = new OnlineReport(0, LocalDateTime.now(), businessId, loggedInUser.getUser().getId(), loggedInUser.getDatabase().getName(), reportName, uploadedFile.getFileName(), "", "");
+        }
+        OnlineReportDAO.store(or); // store before or.getFilenameForDisk() or the id will be wrong!
+        List<org.apache.poi.ss.usermodel.Name> names = (List<Name>)book.getAllNames();
+
+        Path fullPath = Paths.get(SpreadsheetService.getHomeDir() + dbPath + pathName + onlineReportsDir + or.getFilenameForDisk());
+        Files.createDirectories(fullPath.getParent()); // in case it doesn't exist
+        Files.copy(Paths.get(uploadedFile.getPath()), fullPath); // and copy
+        DatabaseReportLinkDAO.link(databaseId, or.getId());
+        // ---- end report uploading
+        uploadedFile.setReportName(reportName);
+
     }
 
 
