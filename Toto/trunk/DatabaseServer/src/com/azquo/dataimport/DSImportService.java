@@ -743,7 +743,7 @@ public class DSImportService {
                 }
                 String dataChild = getClause("parent of", clauses);
                 if (dataChild != null) {
-                    modifiedHeading.append(";classification " + removeId(dataChild));
+                    modifiedHeading.append(";parent of " + removeId(dataChild) + ";child of " + fieldNameSansId);
                     NameService.findOrCreateNameInParent(azquoMemoryDBConnection, fieldNameSansId, null, false);
                 }
                 String dataParent = getClause("datagroup", clauses);

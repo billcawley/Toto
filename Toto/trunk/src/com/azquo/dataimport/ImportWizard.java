@@ -63,8 +63,11 @@ public class ImportWizard {
     static Cell excelCell = wb.createSheet("new sheet").createRow(0).createCell(0);
     static final FormulaEvaluator formulaEvaluator = wb.getCreationHelper().createFormulaEvaluator();
 
+    public static final String KEYFIELDID = "key field id";
+    public static final String KEYFIELDNAME = "key field name";
 
-    public static final String[] TYPEOPTIONS = {"key field id","key field name", "date",  "us date", "time","datetime"};
+
+    public static final String[] TYPEOPTIONS = {KEYFIELDID, KEYFIELDNAME, "date",  "us date", "time","datetime"};
 
     private static int nthLastIndexOf(int nth, String ch, String string) {
         if (nth <= 0) return string.length();
@@ -73,7 +76,7 @@ public class ImportWizard {
 
     }
 
-    public static Map<String,WizardField> readTheFile(ModelMap model, WizardInfo wizardInfo, String testField, String testItem) {
+    public static Map<String,WizardField> getDataValuesFromFile(ModelMap model, WizardInfo wizardInfo, String testField, String testItem) {
         try{
 
             if (wizardInfo.getImportFileData()!=null){
@@ -597,7 +600,7 @@ public class ImportWizard {
         if (wizardField.getChild()!=null){
              toReturn.append(";parent of " + wizardInfo.getFields().get(wizardField.getChild()).getName());
         }
-        if (wizardField.getAnchor()!=null && !"key field name".equals(wizardField.getType())){
+        if (wizardField.getAnchor()!=null && !KEYFIELDNAME.equals(wizardField.getType())){
             toReturn.append(";attribute of " + wizardInfo.getFields().get(wizardField.getAnchor()).getName());
         }
 
@@ -697,11 +700,11 @@ public class ImportWizard {
         for (String field:wizardInfo.getFields().keySet()){
 
             WizardField wizardField = wizardInfo.getFields().get(field);
-            if ("key field id".equals(wizardField.getType())){
+            if (KEYFIELDID.equals(wizardField.getType())){
                 idField = field;
             }
 
-            if ("key field name".equals(wizardField.getType())){
+            if (KEYFIELDNAME.equals(wizardField.getType())){
                 wizardField.setAnchor(idField);
             }
             if ("date".equals(wizardField.getType())){
@@ -1091,20 +1094,17 @@ public class ImportWizard {
     }
 
     public static void makeSuggestion(ModelMap model, WizardInfo wizardInfo, int stage) {
-        model.put("suggestion", "no suggestion");
+        List<String> suggestions = new ArrayList<>();
+        model.put("suggestions", suggestions);
         wizardInfo.setLastDataField(null);
         wizardInfo.setSuggestionActions(new ArrayList<>());
-        if (!wizardInfo.hasSuggestions){
-            return;
-        }
-        StringBuffer suggestion = new StringBuffer();
-        List<String> suggestionActions= new ArrayList<>();
+         List<String> suggestionActions= new ArrayList<>();
         String suggestionReason="";
         String idField = null;
         String idFieldName = null;
         for (String field:wizardInfo.getFields().keySet()){
             WizardField wizardField = wizardInfo.getFields().get(field);
-            if ("key field id".equals(wizardField.getType())){
+            if (KEYFIELDID.equals(wizardField.getType())){
                 idField = field;
                 idFieldName = wizardField.getName();
             }
@@ -1131,7 +1131,7 @@ public class ImportWizard {
                                 //this is prbably a lookup for the field names
                                 String fullNameField = null;
                                 for (String shortName : fieldData) {
-                                    Map<String, WizardField> list = readTheFile(model, wizardInfo, field, shortName);
+                                    Map<String, WizardField> list = getDataValuesFromFile(model, wizardInfo, field, shortName);
                                     if (list!=null) {
                                         for (String indexField : list.keySet()) {
                                             String val = list.get(indexField).getValueFound();
@@ -1144,17 +1144,16 @@ public class ImportWizard {
                                     }
                                 }
                                 if (fullNameField!=null) {
-                                    suggestion.append("Map the following names: ");
-                                    for (String shortName : fieldData) {
-                                        Map<String, WizardField> list = readTheFile(model, wizardInfo, field, shortName);
+                                     for (String shortName : fieldData) {
+                                        Map<String, WizardField> list = getDataValuesFromFile(model, wizardInfo, field, shortName);
                                         String fullName = list.get(fullNameField).getValueFound();
                                         suggestionActions.add(findFieldFromName(wizardInfo, shortName) + ";name;" + fullName);
-                                        suggestion.append(shortName + "->" + fullName + ", ");
+                                        suggestions.add(shortName + "->" + fullName );
                                     }
                                     wizardInfo.setSuggestionActions(suggestionActions);
 
                                     model.put("suggestionReason", "The field names are appreviations, which all appear in the data for " + field + ".<br/> The suggested names are data from the associated field " + fullNameField);
-                                    model.put("suggestion", suggestion.toString().substring(0,suggestion.length()-1));
+                                    model.put("suggestions", suggestions);
                                     return;
                                 }
 
@@ -1165,23 +1164,20 @@ public class ImportWizard {
 
                 case 3:
                     //dates times, key fields
-                    suggestionReason = "data can be interpreted as ";
                     idField = wizardInfo.getFields().keySet().iterator().next();
 
                     if (idField.toLowerCase(Locale.ROOT).endsWith("id")) {
                         WizardField wizardField = wizardInfo.getFields().get(idField);
-                        suggestion.append(idField + " is the key field id, ");
-                        suggestionActions.add(idField + ";type;key field id");
-                        suggestionReason += idField + " is an ID - (name ends with 'id'),";
+                        suggestions.add(idField + " is the key field id (name ends with 'Id')");
+                        suggestionActions.add(idField + ";type;"+KEYFIELDID);
                     }else{
                         idField = null;
                     }
                     if (idField!=null) {
                         for (String field : wizardInfo.getFields().keySet()) {
                             if (field.toLowerCase(Locale.ROOT).endsWith("name")) {
-                                suggestion.append(field + " is the key field name, ");
-                                suggestionActions.add(field + ";type;key field name");
-                                suggestionReason += field + " is the key field name - (field name ends with 'name'),";
+                                suggestions.add(field + " is the key field name (name ends with 'name')");
+                                suggestionActions.add(field + ";type;" + KEYFIELDNAME);
                                 break;
                             }
                         }
@@ -1203,11 +1199,8 @@ public class ImportWizard {
                             }
                         }
                         if (found && wizardField.getType()==null) {
-                            suggestion.append(field + " is datetime, ");
+                            suggestions.add(field + " is datetime");
                             suggestionActions.add(field + ";type;datetime");
-                            if (!suggestionReason.contains("datetime,")) {
-                                suggestionReason += "datetime,";
-                            }
                         }
                         if(!found) {
                             found = true;
@@ -1223,11 +1216,8 @@ public class ImportWizard {
                                 }
                             }
                             if (found && wizardField.getType() == null) {
-                                suggestion.append(field + " is date, ");
+                                suggestions.add(field + " is date");
                                 suggestionActions.add(field + ";type;date");
-                                if (!suggestionReason.contains("date,")) {
-                                    suggestionReason += "date,";
-                                }
                             }
                         }
                         found = true;
@@ -1245,18 +1235,13 @@ public class ImportWizard {
                             }
                         }
                         if (found && wizardField.getType()==null) {
-                            suggestion.append(field + " is time, ");
+                            suggestions.add(field + " is time (data is an integral multiples of 15)");
                             suggestionActions.add(field + ";type;time");
-                            String timeString = "time(data is integral multiples of 15),";
-                            if (!suggestionReason.contains(timeString)) {
-                                suggestionReason += timeString;
-
-                            }
                         }
                     }
                     if (suggestionActions.size()>0){
                         wizardInfo.setSuggestionActions(suggestionActions);
-                        model.put("suggestion",suggestion);
+                        model.put("suggestions",suggestions);
                         model.put("suggestionReason", suggestionReason);
                         return;
 
@@ -1271,7 +1256,7 @@ public class ImportWizard {
                             if (wizardField.getParent() != null) {
                                 break;//only suggest if no data fields are already defined
                             }
-                            if ("key field name".equals(wizardField.getType())) {
+                            if (KEYFIELDNAME.equals(wizardField.getType())) {
                                 parent = wizardField.getName() + " data";
                             }
                             if (wizardField.getValuesFound().size() > maxCount) {
@@ -1291,9 +1276,8 @@ public class ImportWizard {
                         }
                         if (parent == null) parent = "Values";
                         if (possibleData.size() > 0) {
-                            suggestion.append("possible data fields are ");
                             for (String field : possibleData) {
-                                suggestion.append(wizardInfo.getFields().get(field).getName() + ",");
+                                suggestions.add(wizardInfo.getFields().get(field).getName());
                                 suggestionActions.add(field + ";parent;" + parent);
                             }
                             suggestionReason = "These are the fields with the most values (excepting time and date fields). <br/> You can accept the set, then change the dataset name at the top if you want something more specific";
@@ -1308,11 +1292,11 @@ public class ImportWizard {
                          if (idFieldName!=null){
                              parent = idFieldName.substring(0,idFieldName.length()-2).trim() + " Values";
                          }
-                        suggestion.append("possible data fields are: ");
+                        //suggestion.append("possible data fields are: ");
                         for (String field:wizardInfo.getFields().keySet()){
                             WizardField wizardField = wizardInfo.getFields().get(field);
-                            if (!field.toLowerCase(Locale.ROOT).endsWith("id") && !"key field name".equals(wizardField.getType()) && areNumbers(wizardField.getValuesFound())){
-                                suggestion.append(wizardInfo.getFields().get(field).getName() + ",");
+                            if (!field.toLowerCase(Locale.ROOT).endsWith("id") && !KEYFIELDNAME.equals(wizardField.getType()) && areNumbers(wizardField.getValuesFound())){
+                                suggestions.add(wizardInfo.getFields().get(field).getName());
                                 suggestionActions.add(field + ";parent;" + parent);
                                 if (idFieldName!=null){
                                     suggestionActions.add(field+";peers;{" + idFieldName + "}");
@@ -1323,8 +1307,7 @@ public class ImportWizard {
                         if(suggestionActions.size()==0){
                             if (idFieldName!=null) {
                                 String countName = idFieldName.substring(0, idField.length() - 2).trim() + " count";
-                                suggestion = new StringBuffer();
-                                suggestion.append("No data fields found.  Suggest adding a data field: " + countName);
+                                suggestions.add("No data fields found.  Suggest adding a data field: " + countName);
                                 suggestionActions.add(countName + ";parent;" + parent);
                                 suggestionActions.add("1;peers;{" + idFieldName +"}");
                                 suggestionReason = "It is easier to create reports if you have at least one data value, defined by the ID field";
@@ -1333,7 +1316,7 @@ public class ImportWizard {
                     }
                     if (suggestionActions.size()>0){
                         wizardInfo.setSuggestionActions(suggestionActions);
-                        model.put("suggestion",suggestion);
+                        model.put("suggestions",suggestions);
                         model.put("suggestionReason", suggestionReason);
                         wizardInfo.setLastDataField(parent);
                         model.put("dataparent", parent);
@@ -1373,14 +1356,16 @@ public class ImportWizard {
                             }
                             dataPath = dataPath.substring(0, dataPath.lastIndexOf(ImportService.JSONFIELDDIVIDER + ""));
                         }
+                        String peerList = "";
                         if (potentialPeers.size() > 0) {
                             for (String potentialPeer : potentialPeers) {
-                                suggestion.append(wizardInfo.getFields().get(potentialPeer).getName() + ",");
+                                suggestions.add(wizardInfo.getFields().get(potentialPeer).getName());
+                                peerList+="," + wizardInfo.getFields().get(potentialPeer).getName();
                             }
                             for (String field : wizardInfo.getFields().keySet()) {
                                 WizardField wizardField = wizardInfo.getFields().get(field);
                                 if (parent.equals(wizardField.getParent())) {
-                                    suggestionActions.add(field + ";peers;{" + suggestion.toString() + "}");
+                                    suggestionActions.add(field + ";peers;{" + peerList.substring(1) + "}");
                                 }
                             }
                             suggestionReason = "These are all within the same path as the data fields, and have multiple values";
@@ -1391,7 +1376,7 @@ public class ImportWizard {
                     }
                     if (suggestionActions.size()>0){
                         wizardInfo.setSuggestionActions(suggestionActions);
-                        model.put("suggestion","peers for " + parent + ": " + suggestion.toString());
+                        model.put("suggestions",suggestions);
                         model.put("suggestionReason", suggestionReason);
                         wizardInfo.setLastDataField(parent);
                         model.put("dataparent", parent);
@@ -1406,7 +1391,7 @@ public class ImportWizard {
                         List<String> fields = new ArrayList<>();
                         for (String field:wizardFields.keySet()){
                             WizardField wizardField = wizardInfo.getFields().get(field);
-                            if (wizardField.getParent()==null && !"key field name".equals(wizardField.getType()) && !wizardField.getIgnore()){
+                            if (wizardField.getParent()==null && !KEYFIELDNAME.equals(wizardField.getType()) && !wizardField.getIgnore()){
                                 fields.add(field);
                             }
                         }
@@ -1443,7 +1428,7 @@ public class ImportWizard {
                                 for (String field2:fields){
                                     if (wizardFields.get(field2).getDistinctCount()>=potentialParentCount*2){
                                         if (isParentChild(wizardInfo, field, field2)){
-                                            suggestion.append(wizardFields.get(field).getName()+" is parent of " + wizardFields.get(field2).getName()+", ");
+                                            suggestions.add(wizardFields.get(field).getName()+" is parent of " + wizardFields.get(field2).getName());
                                             suggestionActions.add(field+";child;" + field2);
                                             break;
                                         }
@@ -1454,7 +1439,7 @@ public class ImportWizard {
                         if (suggestionActions.size()>0){
                             suggestionReason = "the names in the children are associated generally with only one parent";
                             wizardInfo.setSuggestionActions(suggestionActions);
-                            model.put("suggestion",suggestion);
+                            model.put("suggestions",suggestions);
                             model.put("suggestionReason", suggestionReason);
 
                         }
@@ -1481,7 +1466,7 @@ public class ImportWizard {
                                 for (String field2 : fields) {
                                     if (!field2.equals(field) && wizardFields.get(field2).getDistinctCount() <= potentialKeyCount && wizardFields.get(field2).getDistinctCount() > potentialKeyCount * 0.5) {
                                         if (isAttribute(wizardInfo, field, field2)) {
-                                            suggestion.append(field2 + " is an attribute of " + field + ", ");
+                                            suggestions.add(field2 + " is an attribute of " + field);
                                             suggestionActions.add(field2 + ";anchor;" + field);
                                             attributeList.add(field2);
                                         }
@@ -1491,7 +1476,7 @@ public class ImportWizard {
                         }
                             if (suggestionActions.size()>0){
                             wizardInfo.setSuggestionActions(suggestionActions);
-                            model.put("suggestion",suggestion);
+                            model.put("suggestions",suggestions);
                             model.put("suggestionReason", "each value for the anchor is associated with a given attribute");
 
                         }

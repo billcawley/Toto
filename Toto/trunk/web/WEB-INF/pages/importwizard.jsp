@@ -5,7 +5,7 @@
 <%@ include file="../includes/admin_header2.jsp" %>
 <script>
 
-    function fileChanged(){
+    function fileChanged() {
         fileInput = document.getElementById("uploadFile");
         if (fileInput.files.length > 0) {
             const fileName = document.getElementById("filename");
@@ -13,12 +13,20 @@
             if (fileInput.files.length > 1) {
                 fileName.textContent = " Multiple files selected";
             } else {
-                fileName.textContent =  fileInput.files[0].name;
+                fileName.textContent = fileInput.files[0].name;
             }
         }
     }
 
-
+    function databaseChanged(sel) {
+        db = sel.options[sel.selectedIndex].text;
+        if (db == "New database") {
+            document.getElementById("newdb").style.display = "block";
+        } else {
+            document.getElementById("newdb").style.display = "none";
+            document.getElementById("newdatabase").value = "";
+        }
+    }
 
 
     var selectedItem = null;
@@ -36,9 +44,9 @@
 
     }
 
-    function dataChecked(){
-        if (document.getElementById("newparent").value==""){
-            document.getElementById("error").innerHTML ="You need to specify a name for your data"
+    function dataChecked() {
+        if (document.getElementById("newparent").value == "") {
+            document.getElementById("error").innerHTML = "You need to specify a name for your data"
         }
     }
 
@@ -57,192 +65,194 @@
         <table class="table">
             <tr>
                 <c:if test="${stage > 1}">
-                <td>
+                    <td>
 
-                    <table class="table">
-                        <tbody>
-                        <tr>
-                        <tr>
-                            <td>Heading</td>
-                            <td>Values found - select to find associated values</td>
-                            <td>No. Distinct Values</td>
-                            <td>Current value</td>
-                            <td>Suggested name</td>
-                            <td>
-                                <c:if test="${stage>2}">
-                                    Field type
-                                </c:if>
-                                <c:if test="${stage==5}">
-                                    Select peers
-                                </c:if>
-                                <c:if test="${stage==6}">
-                                    Mark fields that are PARENTS
-                                </c:if>
-
-                            </td>
-                        </tr>
-
-                        <c:forEach items="${fields.keySet()}" var="field" varStatus="loop">
-                            <c:set var="wizardField" value="${fields.get(field)}"/>
+                        <table class="table">
+                            <tbody>
                             <tr>
+                            <tr>
+                                <td>Heading</td>
+                                <td>Values found - select to find associated values</td>
+                                <td>No. Distinct Values</td>
+                                <td>Current value</td>
+                                <td>Suggested name</td>
                                 <td>
-                                    <c:choose>
-                                        <c:when test="${stage==2 && loop.index==fieldCount}">
-                                            <input name="newfieldname" type="text" value="${newfieldname}"/>
-                                        </c:when>
-                                        <c:otherwise>
-                                            <label class="label">${wizardField.importedName}</label>
-                                        </c:otherwise>
-                                    </c:choose>
-                                </td>
-                                <td style="width:50px;overflow:hidden">
-                                    <c:choose>
-                                        <c:when test="${wizardField.valuesFound.size() == 0}">
-                                        </c:when>
-                                        <c:when test="${wizardField.valuesFound.size() == 1}">
-                                            ${wizardField.valuesFound.get(0)}
-                                        </c:when>
-                                        <c:otherwise>
+                                    <c:if test="${stage>2}">
+                                        Field type
+                                    </c:if>
+                                    <c:if test="${stage==5}">
+                                        Select peers
+                                    </c:if>
+                                    <c:if test="${stage==6}">
+                                        Mark fields that are PARENTS
+                                    </c:if>
 
-                                            <select name="${field}" onfocus=selectionChange("${field}")
-                                                    onchange=selectionChange("${field}") id="${field}">
-                                                <c:forEach begin="0" end="100" items="${wizardField.valuesFound}" var="instance">
-                                                    <option onclick=clickget(value="${instance}")>${fn:substring(instance,0,30)}</option>
+                                </td>
+                            </tr>
+
+                            <c:forEach items="${fields.keySet()}" var="field" varStatus="loop">
+                                <c:set var="wizardField" value="${fields.get(field)}"/>
+                                <tr>
+                                    <td>
+                                        <c:choose>
+                                            <c:when test="${stage==2 && loop.index==fieldCount}">
+                                                <input name="newfieldname" type="text" value="${newfieldname}"/>
+                                            </c:when>
+                                            <c:otherwise>
+                                                <label class="label">${wizardField.importedName}</label>
+                                            </c:otherwise>
+                                        </c:choose>
+                                    </td>
+                                    <td style="width:50px;overflow:hidden">
+                                        <c:choose>
+                                            <c:when test="${wizardField.valuesFound.size() == 0}">
+                                            </c:when>
+                                            <c:when test="${wizardField.valuesFound.size() == 1}">
+                                                ${wizardField.valuesFound.get(0)}
+                                            </c:when>
+                                            <c:otherwise>
+
+                                                <select name="${field}" onfocus=selectionChange("${field}")
+                                                        onchange=selectionChange("${field}") id="${field}">
+                                                    <c:forEach begin="0" end="100" items="${wizardField.valuesFound}"
+                                                               var="instance">
+                                                        <option onclick=clickget(value="${instance}")>${fn:substring(instance,0,30)}</option>
+                                                    </c:forEach>
+                                                </select>
+                                            </c:otherwise>
+                                        </c:choose>
+                                    </td>
+                                    <td>${wizardField.distinctCount}</td>
+                                    <td style="width:50px;overflow:hidden">
+                                        <c:choose>
+                                            <c:when test="${field==headingChosen}">
+                                                <b>${wizardField.valueFound}</b>
+                                            </c:when>
+                                            <c:otherwise>
+                                                ${wizardField.valueFound}
+
+                                            </c:otherwise>
+                                        </c:choose>
+                                    </td>
+                                    <td>
+                                        <c:if test="${stage==2}">
+                                            <input type="text" value="${wizardField.name}" name="name_${field}"/>
+                                        </c:if>
+                                        <c:if test="${stage>2}">${wizardField.name}
+                                        </c:if>
+
+                                    </td>
+                                    <c:if test="${stage==2}">
+                                        <td>
+                                            <c:if test="${fieldCount>loop.index}">
+
+                                                <input type="checkbox" name="ignore_${field}" value="true" <c:if
+                                                        test="${wizardField.ignore}"> checked </c:if>>
+                                                <label for="ignore_${field}">
+                                                    <c:choose>
+
+                                                        <c:when test="${wizardField.added==true}">
+                                                            Delete
+                                                        </c:when>
+                                                        <c:otherwise>
+                                                            Do not upload
+                                                        </c:otherwise>
+
+                                                    </c:choose>
+                                                </label>
+                                            </c:if>
+                                        </td>
+                                    </c:if>
+                                    <c:if test="${stage==3}">
+                                        <td>
+                                            <select name="type_${field}">
+                                                <option value="null"></option>
+                                                <c:forEach items="${options}" var="type">
+                                                    <option value="${type}"
+                                                            <c:if test="${wizardField.type.equals(type)}"> selected </c:if>>${type}</option>
                                                 </c:forEach>
                                             </select>
-                                        </c:otherwise>
-                                    </c:choose>
-                                </td>
-                                <td>${wizardField.distinctCount}</td>
-                                <td style="width:50px;overflow:hidden">
-                                    <c:choose>
-                                        <c:when test="${field==headingChosen}">
-                                            <b>${wizardField.valueFound}</b>
-                                        </c:when>
-                                        <c:otherwise>
-                                            ${wizardField.valueFound}
-
-                                        </c:otherwise>
-                                    </c:choose>
-                                 </td>
-                                <td>
-                                    <c:if test="${stage==2}">
-                                        <input type="text" value="${wizardField.name}" name="name_${field}"/>
+                                        </td>
                                     </c:if>
-                                    <c:if test="${stage>2}">${wizardField.name}
+                                    <c:if test="${stage==4}">
+                                        <td>
+                                            <c:choose>
+                                                <c:when test="${\"date\".equals(wizardField.type)|| \"time\".equals(wizardField.type)|| \"key field id\".equals(wizardField.type)|| \"key field name\".equals(wizardField.type)}">${wizardField.type}</c:when>
+                                                <c:when test="${\"data\".equals(wizardField.type)&& (dataparent==null || !dataparent.equals(wizardField.parent))}">${wizardField.interpretation}</c:when>
+                                                <c:otherwise>
+                                                    <input type="checkbox" name="child_${field}" value="true"
+                                                           onchange="dataChecked()"
+                                                    <c:if test="${wizardField.parent!=null && wizardField.parent.equals(dataparent)}">
+                                                           checked </c:if>>
+                                                    <label for="child_${field}">Select Data</label>
+                                                </c:otherwise>
+                                            </c:choose>
+
+                                        </td>
+                                    </c:if>
+                                    <c:if test="${stage==5}">
+                                        <td>
+                                            <c:choose>
+                                                <c:when test="${not empty potentialPeers[field]}">
+                                                    <input type="checkbox" name="peer_${field}" value="true"
+                                                    <c:if test="${not empty peersChosen[field]}"> checked </c:if>>
+                                                    <label for="child_${field}">Select Peer</label>
+                                                </c:when>
+                                                <c:when test="${\"data\".equals(wizardField.type)}">${wizardField.interpretation}</c:when>
+
+                                            </c:choose>
+                                        </td>
+                                    </c:if>
+                                    <c:if test="${stage==6}">
+                                        <td>
+                                            <c:choose>
+                                                <c:when test="${not empty undefinedFields[field]}">
+                                                    <select name="child_${field}">
+                                                        <option value=""></option>
+                                                        <c:forEach items="${possibleChildFields}" var="child">
+                                                            <c:if test="${!child.equals(field)}">
+                                                                <option value="${child}"
+                                                                        <c:if test="${child.equals(wizardField.child)}"> selected </c:if>>${fields.get(child).name}</option>
+                                                            </c:if>
+                                                        </c:forEach>
+                                                    </select>
+                                                </c:when>
+                                                <c:otherwise>
+                                                    ${wizardField.interpretation}
+                                                </c:otherwise>
+                                            </c:choose>
+                                        </td>
+                                    </c:if>
+                                    <c:if test="${stage==7}">
+                                        <td>
+                                            <c:choose>
+                                                <c:when test="${not empty possibleAttributeFields[field]}">
+                                                    <select name="attribute_${field}">
+                                                        <option value=""></option>
+                                                        <c:forEach items="${possibleAnchorFields}" var="anchor">
+                                                            <option value="${anchor}"
+                                                                    <c:if test="${anchor.equals(wizardField.anchor)}"> selected </c:if>>${fields.get(anchor).name}</option>
+                                                        </c:forEach>
+                                                    </select>
+                                                </c:when>
+                                                <c:otherwise>
+                                                    ${wizardField.interpretation}
+                                                </c:otherwise>
+                                            </c:choose>
+                                        </td>
+                                    </c:if>
+                                    <c:if test="${stage==8}">
+                                        <td>
+                                                ${wizardField.interpretation}
+                                        </td>
                                     </c:if>
 
-                                </td>
-                                <c:if test="${stage==2}">
-                                    <td>
-                                        <c:if test="${fieldCount>loop.index}">
 
-                                            <input type="checkbox" name="ignore_${field}" value="true" <c:if
-                                                    test="${wizardField.ignore}"> checked </c:if>>
-                                            <label for="ignore_${field}">
-                                                <c:choose>
-
-                                                    <c:when test="${wizardField.added==true}">
-                                                        Delete
-                                                    </c:when>
-                                                    <c:otherwise>
-                                                        Do not upload
-                                                    </c:otherwise>
-
-                                                </c:choose>
-                                            </label>
-                                        </c:if>
-                                    </td>
-                                </c:if>
-                                <c:if test="${stage==3}">
-                                    <td>
-                                        <select name="type_${field}">
-                                            <option value="null"></option>
-                                            <c:forEach items="${options}" var="type">
-                                                <option value="${type}"
-                                                        <c:if test="${wizardField.type.equals(type)}"> selected </c:if>>${type}</option>
-                                            </c:forEach>
-                                        </select>
-                                    </td>
-                                </c:if>
-                                <c:if test="${stage==4}">
-                                    <td>
-                                        <c:choose>
-                                            <c:when test="${\"date\".equals(wizardField.type)|| \"time\".equals(wizardField.type)|| \"key field id\".equals(wizardField.type)|| \"key field name\".equals(wizardField.type)}">${wizardField.type}</c:when>
-                                            <c:when test="${\"data\".equals(wizardField.type)&& (dataparent==null || !dataparent.equals(wizardField.parent))}">${wizardField.interpretation}</c:when>
-                                            <c:otherwise>
-                                                <input type="checkbox" name="child_${field}" value="true" onchange="dataChecked()"
-                                                <c:if test="${wizardField.parent!=null && wizardField.parent.equals(dataparent)}">
-                                                       checked </c:if>>
-                                                <label for="child_${field}">Select Data</label>
-                                            </c:otherwise>
-                                        </c:choose>
-
-                                    </td>
-                                </c:if>
-                                <c:if test="${stage==5}">
-                                    <td>
-                                        <c:choose>
-                                            <c:when test="${not empty potentialPeers[field]}">
-                                                <input type="checkbox" name="peer_${field}" value="true"
-                                                <c:if test="${not empty peersChosen[field]}"> checked </c:if>>
-                                                <label for="child_${field}">Select Peer</label>
-                                            </c:when>
-                                            <c:when test="${\"data\".equals(wizardField.type)}">${wizardField.interpretation}</c:when>
-
-                                        </c:choose>
-                                    </td>
-                                </c:if>
-                                <c:if test="${stage==6}">
-                                    <td>
-                                        <c:choose>
-                                            <c:when test="${not empty undefinedFields[field]}">
-                                                <select name="child_${field}">
-                                                    <option value=""></option>
-                                                    <c:forEach items="${possibleChildFields}" var="child">
-                                                        <c:if test="${!child.equals(field)}">
-                                                            <option value="${child}"
-                                                                    <c:if test="${child.equals(wizardField.child)}"> selected </c:if>>${fields.get(child).name}</option>
-                                                        </c:if>
-                                                    </c:forEach>
-                                                </select>
-                                            </c:when>
-                                            <c:otherwise>
-                                                ${wizardField.interpretation}
-                                            </c:otherwise>
-                                        </c:choose>
-                                    </td>
-                                </c:if>
-                                <c:if test="${stage==7}">
-                                    <td>
-                                        <c:choose>
-                                            <c:when test="${not empty possibleAttributeFields[field]}">
-                                                <select name="attribute_${field}">
-                                                    <option value=""></option>
-                                                    <c:forEach items="${possibleAnchorFields}" var="anchor">
-                                                        <option value="${anchor}"
-                                                                <c:if test="${anchor.equals(wizardField.anchor)}"> selected </c:if>>${fields.get(anchor).name}</option>
-                                                    </c:forEach>
-                                                </select>
-                                            </c:when>
-                                            <c:otherwise>
-                                                ${wizardField.interpretation}
-                                            </c:otherwise>
-                                        </c:choose>
-                                    </td>
-                                </c:if>
-                                <c:if test="${stage==8}">
-                                    <td>
-                                            ${wizardField.interpretation}
-                                    </td>
-                                </c:if>
-
-
-                            </tr>
-                        </c:forEach>
-                        </tbody>
-                    </table>
-                </td>
+                                </tr>
+                            </c:forEach>
+                            </tbody>
+                        </table>
+                    </td>
                 </c:if>
                 <td>
                     <table>
@@ -257,18 +267,38 @@
                         </td>
                         <td>
                             </c:if>
-                            <label class="file-label">
-                                <c:if test="${stage==1}">Select File to upload &nbsp</c:if>
-                                <c:if test="${stage>1}">Reload saved work &nbsp</c:if>
-                                <input class="file-input is-small" type="file" name="uploadFile" onChange="fileChanged()"   id="uploadFile">
-                                <span class="file-cta is-small">
+                            <c:if test="${stage==0}">
+                                Select Database
+                                <select name="database" onchange=databaseChanged(this)>
+                                    <option value=""></option>
+                                    <c:forEach items="${databases}" var="database">
+                                        <c:if test="${!child.equals(field)}">
+                                            <option value="${database}"
+                                                    <c:if test="${database.equals(selecteddatabase)}"> selected </c:if>>${database}</option>
+                                        </c:if>
+                                    </c:forEach>
+                                </select>
+                            </c:if>
+                            <div id="newdb" style="display:none">
+                                Name for the new database <input type="text" name="newdatabase" id="newdatabase"/>
+                            </div>
+
+
+                            <c:if test="${stage > 0}">
+                                <label class="file-label">
+                                    <c:if test="${stage==1}">Select File to upload &nbsp</c:if>
+                                    <c:if test="${stage>1}">Reload saved work &nbsp</c:if>
+                                    <input class="file-input is-small" type="file" name="uploadFile"
+                                           onChange="fileChanged()" id="uploadFile">
+                                    <span class="file-cta is-small">
                                               <span class="file-icon is-small">
                                                 <i class="fas fa-upload"></i>
                                               </span>
                                          </span>
 
-                                <span id="filename" class="label"></span>
-                            </label>
+                                    <span id="filename" class="label"></span>
+                                </label>
+                            </c:if>
 
 
                         </td>
@@ -321,17 +351,26 @@
                     <c:if test="${stage==8}">
                         <label class="label">${progressmessage}</label>
                         <div class="centeralign">
-                            <button type="submit" name="btnsubmit" value="makedb" class="button">Create database</button>
-                            <button type="submit" name="btnsubmit" value="specials" class="button">Add special instructions </button>
+                            <button type="submit" name="btnsubmit" value="makedb" class="button">Create database
+                            </button>
+                            <button type="submit" name="btnsubmit" value="specials" class="button">Add special
+                                instructions
+                            </button>
                         </div>
                     </c:if>
-                    <c:if test="${stage>1}">
+                    <c:if test="${stage>1 && suggestions.size() > 0}">
                         <div class="content">
-                            <p><strong>Suggestion</strong></p>
+                            <p><strong>Suggestions</strong></p>
                             <label class="label is-small">You can override suggestions at any time</label>
                         </div>
                         <div class="content">
-                            <p>${suggestion}</p>
+                            <ul class="list">
+                            <c:forEach items="${suggestions}" var="suggestion">
+                                <li>
+                                    ${suggestion}
+                                </li>
+                            </c:forEach>
+                            </ul>
                         </div>
                         <c:if test="${suggestionReason!=null}">
                             <div class="content">
@@ -339,36 +378,16 @@
                                 <p>${suggestionReason}</p>
                             </div>
                         </c:if>
-                        <div>
-                            <c:if test="${suggestionReason!=null}">
-                                <button type="submit" name="btnsubmit" value="acceptsuggestion" class="button is-small">Accept Suggestion</button>
-
-                            </c:if>
-                            <button  type="submit" name="btnsubmit" value="togglesuggestion" class="button is-small">
-                                <c:choose><c:when test="${hasSuggestions}">
-                                    Turn off suggestions
-                                </c:when>
-                                    <c:otherwise>
-                                        Turn on suggestions
-                                    </c:otherwise>
-
-                                </c:choose>
-                            </button>
-
-                        </div>
-                    </c:if>
+                     </c:if>
                 </td>
             </tr>
         </table>
 
 
-
-
-
         <div class="centeralign">
             <c:if test="${stage>1}">
                 <button type="submit" name="btnsubmit" value="last" class="button">Last</button>
-                <button type="submit" name="btnsubmit" value="reload" class="button">Re-show </button>
+                <button type="submit" name="btnsubmit" value="reload" class="button">Re-show</button>
             </c:if>
             <c:if test="${stage<8}">
                 <button type="submit" name="btnsubmit" value="next" class="button">Next</button>

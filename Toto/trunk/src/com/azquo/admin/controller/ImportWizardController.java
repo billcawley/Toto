@@ -1,6 +1,9 @@
 package com.azquo.admin.controller;
 
 import com.azquo.admin.AdminService;
+import com.azquo.admin.database.Database;
+import com.azquo.admin.database.DatabaseServer;
+import com.azquo.admin.database.DatabaseServerDAO;
 import com.azquo.dataimport.*;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.LoginService;
@@ -59,8 +62,22 @@ import java.util.*;
                     }
                 }
                 AdminService.setBanner(model, loggedInUser);
+                List<Database> databaseList = AdminService.getDatabaseListForBusinessWithBasicSecurity(loggedInUser);
+                List<String> databases = new ArrayList<>();
+                if (databaseList!=null){
+                    for (Database db:databaseList){
+                        databases.add(db.getName());
+                    }
+                }
+                databases.add("New database");
+                model.put("databases", databases);
+                String selectedDatabase = "";
+                if (loggedInUser.getDatabase()!=null){
+                    selectedDatabase = loggedInUser.getDatabase().getName();
+                }
+                model.put("selecteddatabase",selectedDatabase);
 
-                fillStages(model,1, null);
+                fillStages(model,0, null);
                 return "importwizard";
             } else {
                 return "redirect:/api/Login";
@@ -83,10 +100,7 @@ import java.util.*;
             if (submit==null) submit="";
             if (loggedInUser == null || !loggedInUser.getUser().isAdministrator()) {
                 return "redirect:/api/Login";
-            } else {
-                  if (stage==null){
-                    stage=1;
-                 }
+            } else if (stage > 0){
                 int nextStage = stage;
                 if (submit.equals("next")){
                     nextStage = stage + 1;
@@ -99,7 +113,7 @@ import java.util.*;
                  if ("makedb".equals(submit)){
                     try {
                         ImportWizard.createDB(loggedInUser);
-                        return "redirect:/api/ManageReports";
+                        return "redirect:/api/ReportWizard";
                     }catch(Exception e){
                         String err = e.getMessage();
                         int ePos = err.indexOf("Exception:");
@@ -112,15 +126,7 @@ import java.util.*;
                 }
 
                 WizardInfo wizardInfo = loggedInUser.getWizardInfo();
-                if ("togglesuggestion".equals(submit)){
-                    if (wizardInfo.getHasSuggestions()){
-                        wizardInfo.setHasSuggestions(false);
-                    }else{
-                        wizardInfo.setHasSuggestions(true);
-                    }
-                    nextStage = stage;
 
-                }
                 boolean autoFilled = false;
                 if (submit.equals("acceptsuggestion")){
                     ImportWizard.acceptSuggestions(wizardInfo);
@@ -179,7 +185,7 @@ import java.util.*;
                                 wizardInfo.setLineCount(lineCount);
                                 loggedInUser.setWizardInfo(wizardInfo);
 
-                            }else if (fileName.toLowerCase(Locale.ROOT).contains(".json")) {
+                            }else if (fileName.toLowerCase(Locale.ROOT).contains(".json") || fileName.toLowerCase(Locale.ROOT).contains(".xml")) {
                                     try {
                                         String data = new String(Files.readAllBytes(Paths.get(moved.getAbsolutePath())), Charset.defaultCharset());
                                         JSONObject jsonObject = null;
@@ -242,6 +248,9 @@ import java.util.*;
                                 }
                             }
                             stage = nextStage;
+                            if (stage>wizardInfo.getMaxStageReached()){
+                                wizardInfo.setMaxStageReached(stage);
+                            }
                             model.put("error", err);
                             if (opcPackage != null) opcPackage.revert();
                             importedSavedVersion = true;
@@ -265,24 +274,10 @@ import java.util.*;
                      }
 
 
-                     Map<String, WizardField> list = ImportWizard.readTheFile(model, wizardInfo, fieldSelected, valueSelected);
-                     Map<String, WizardField> shownList = new LinkedHashMap<>();
-                     if (nextStage > 2) {//strip out ignore fields
-                         for (String heading : list.keySet()) {
-                             if (!list.get(heading).getIgnore()) {
-                                 shownList.put(heading, list.get(heading));
-                             }
-                         }
-                     } else {
-                         shownList = new LinkedHashMap<>(wizardInfo.getFields());
-                        shownList.put("new_field",new WizardField("new_field","new field",true));
-
-                     }
                      if (error.length() > 0) {
                          model.put("error", error.toString());
                      }
-                     model.put("fields", shownList);
-                 } catch (Exception e) {
+                  } catch (Exception e) {
                      String exceptionError = e.getMessage();
                      if (exceptionError == null) exceptionError = "null pointer exception";
                      e.printStackTrace();
@@ -292,13 +287,59 @@ import java.util.*;
                  if (fieldSelected!=null){
                      model.put("headingChosen",fieldSelected);
                  }
-                fillStages(model, nextStage, wizardInfo);
-                setStageOptions(model, loggedInUser.getWizardInfo(), nextStage, dataParent);
-                model.put("hasSuggestions",wizardInfo.getHasSuggestions());
-                ImportWizard.makeSuggestion(model, wizardInfo,nextStage);
+                if (stage > 0){
+                    fillStages(model, nextStage, wizardInfo);
+                    setStageOptions(model, loggedInUser.getWizardInfo(), nextStage, dataParent);
+                    if (stage > wizardInfo.getMaxStageReached()) {
+                        ImportWizard.makeSuggestion(model, wizardInfo, nextStage);
+                        //change of process - accept suggestion immediately
+                        ImportWizard.acceptSuggestions(wizardInfo);
+                        wizardInfo.setMaxStageReached(stage);
+                    }
+                    Map<String, WizardField> list = ImportWizard.getDataValuesFromFile(model, wizardInfo, fieldSelected, valueSelected);
+                    Map<String, WizardField> shownList = new LinkedHashMap<>();
+                    if (nextStage > 2) {//strip out ignore fields
+                        for (String heading : list.keySet()) {
+                            if (!list.get(heading).getIgnore()) {
+                                shownList.put(heading, list.get(heading));
+                            }
+                        }
+                    } else {
+                        shownList = new LinkedHashMap<>(wizardInfo.getFields());
+                        shownList.put("new_field",new WizardField("new_field","new field",true));
+
+                    }
+                    model.put("fields", shownList);
+                }
 
 
 
+
+                return "importwizard";
+            }else {
+                String database = null;
+                String newDatabase = request.getParameter("newdatabase");
+                final List<DatabaseServer> allServers = DatabaseServerDAO.findAll();
+                if (newDatabase != null && newDatabase.length() > 0 && allServers.size() == 1){
+                    try {
+                        AdminService.createDatabase(newDatabase, loggedInUser, allServers.get(0));
+                    }catch(Exception e){
+                        model.put("error", e.getMessage());
+                    }
+                    database = newDatabase;
+
+                }else {
+                    database = request.getParameter("database");
+                }
+                if (database!=null&& database.length()>0){
+                    try {
+                        LoginService.switchDatabase(loggedInUser, database);
+                    }catch(Exception e){
+                        model.put("error",e.getMessage());
+                    }
+
+                }
+                fillStages(model, 1, null);
                 return "importwizard";
             }
         }
@@ -309,38 +350,42 @@ import java.util.*;
         private void fillStages(ModelMap model, int stage, WizardInfo wizardInfo) {
             model.put("stage", stage);
             switch (stage) {
+                case 0:
+                    model.put("stageheading", "1/9 Choose a database");
+                    model.put("stageexplanation", "<b>You can select a new database or choose an existing database onto which to load your file</b>") ;
+                    break;
                 case 1:
-                    model.put("stageheading", "1 Load the file");
+                    model.put("stageheading", "2/9 Load the file");
                     model.put("stageexplanation", "<b>You are strongly advised to make a copy of your database before continuing</b>" +
                             "<br/>1 Use the button to upload a text or JSON file, and press 'next'.");
                     break;
                 case 2:
-                    model.put("stageheading", "2 Name the fields");
+                    model.put("stageheading", "3/9 Name the fields");
                     model.put("stageexplanation", "Enter understandable names against each field, check the fields you do not need, and press 'next'" +
                             "<br/>NOTE You can also select any value from the dropdown lists, and press 're-show' to see the context for that value.  " +
                             "<br/>To see all fields again, press 're-show' without selecting a value");
                     break;
                 case 3:
-                    model.put("stageheading", "3 Identify key fields - id and name - and date and time fields");
+                    model.put("stageheading", "4/9 Identify key fields - id and name - and date and time fields");
                     model.put("stageexplanation", "select from the list.  If there is a key field, and the name and id are the same, choose 'key field id'" );
                     break;
                 case 4:
-                    model.put("stageheading", "4 Identify sets of data fields");
+                    model.put("stageheading", "5/9 Identify sets of data fields");
                     model.put("stageexplanation", "Select any set of DATA that you want to treat as a group." +
                             "<br/>In this context, DATA consists of values you would like to plot - e.g sales numbers, instrument readings. ");
                     break;
                 case 5:
-                    model.put("stageheading", "5 For the data fields you have chosen, select which associated fields are REQUIRED to define the value");
+                    model.put("stageheading", "6/9 For the data fields you have chosen, select which associated fields are REQUIRED to define the value");
                     model.put("stageexplanation", "Choose only those fields that are necessary." +
                             "<br/> e.g  If an item of data needs a customer Id, then the Id is sufficient - do not choose any other attribute that can be inferred from the customer Id");
                     break;
                 case 6:
-                    model.put("stageheading", "6 Find the parent/child relationships");
+                    model.put("stageheading", "7/9 Find the parent/child relationships");
                     model.put("stageexplanation", "typical parent/child relationsips are Customer->order->order item, country->town->street " +
                             "<br/>if any of the remaining fields are parents, please choose the child element");
                     break;
                 case 7:
-                    model.put("stageheading", "7 Fill in the attributes");
+                    model.put("stageheading", "8/9 Fill in the attributes");
                     model.put("stageexplanation", "attributes are values that you would not usually use as selectors on tables, but might want to see as part of the data " +
                             "<br/>e.g `telephone no` or `address` might be attributes of `customer`");
                     break;
@@ -350,7 +395,7 @@ import java.util.*;
                         if (!wizardInfo.getFields().get(field).getIgnore() && wizardInfo.getFields().get(field).getInterpretation().length() == 0) {
                             undefinedFieldCount++;
                         }
-                    model.put("stageheading", "8 Ready to go?");
+                    model.put("stageheading", "9/9 Ready to go?");
                     String progressReport = "Are you ready to create the database and reports?" +
                             "<br/> You can press 'back' to adjust your choices, or press for special case conditions`";
                     if (undefinedFieldCount > 0) {
@@ -365,6 +410,9 @@ import java.util.*;
 
 
         private void setStageOptions(ModelMap model, WizardInfo wizardInfo, int stage, String dataParent){
+            if (stage==0){
+                return;
+            }
             Map<String, WizardField> shownFields = wizardInfo.getFields();
             if (stage == 2) {
                 for (String heading : shownFields.keySet()) {
@@ -399,7 +447,7 @@ import java.util.*;
                         WizardField wizardField = shownFields.get(heading);
                         if (dataParent!=null && dataParent.equals(wizardField.getParent())) {
                              wizardInfo.setLastDataField(heading);
-                            Map<String, WizardField> list = ImportWizard.readTheFile(model, wizardInfo, heading, null);//find all relevant fields
+                            Map<String, WizardField> list = ImportWizard.getDataValuesFromFile(model, wizardInfo, heading, null);//find all relevant fields
                             Map<String,String> potentialPeers = new HashMap<>();
                             for (String potentialName : list.keySet()) {
                                 String parent = list.get(potentialName).getParent();
@@ -423,7 +471,7 @@ import java.util.*;
             }
             if (stage == 6) {
 
-                Map<String, WizardField> list = ImportWizard.readTheFile(model, wizardInfo, wizardInfo.getLastDataField() ,null);//find all relevant fields
+                Map<String, WizardField> list = ImportWizard.getDataValuesFromFile(model, wizardInfo, wizardInfo.getLastDataField() ,null);//find all relevant fields
                  Set<String> peers = new HashSet<>();
                 Map<String,String> undefinedFields = new HashMap<>();
                 Set<String> possibleChildFields = new LinkedHashSet<>();
@@ -451,7 +499,7 @@ import java.util.*;
 
             if (stage == 7) {
 
-                Map<String, WizardField> list = ImportWizard.readTheFile(model, wizardInfo, wizardInfo.getLastDataField() ,null);//find all relevant fields
+                Map<String, WizardField> list = ImportWizard.getDataValuesFromFile(model, wizardInfo, wizardInfo.getLastDataField() ,null);//find all relevant fields
                 Set<String> peers = new HashSet<>();
                 Set<String> possibleAnchorFields = new LinkedHashSet<>();
                 Map<String,String> possibleAttributeFields = new HashMap<>();

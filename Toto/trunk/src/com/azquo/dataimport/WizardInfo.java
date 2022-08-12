@@ -13,7 +13,7 @@ public class WizardInfo {
     Map<String, WizardField> fields;
     String lastDataField;
     int lineCount;
-    boolean hasSuggestions;
+    int maxStageReached;
     List<String> suggestionActions;
 
     public WizardInfo(String importFileName, JSONObject importFileData){
@@ -22,7 +22,7 @@ public class WizardInfo {
         this.fields = new LinkedHashMap<>();
         this.lastDataField = null;
         this.lineCount = 0;
-        this.hasSuggestions = true;
+        this.maxStageReached = 0;
         this.suggestionActions = new ArrayList<>();
      }
 
@@ -44,9 +44,9 @@ public class WizardInfo {
 
     public void setLineCount(int lineCount){this.lineCount = lineCount; }
 
-    public boolean getHasSuggestions(){return hasSuggestions; }
+    public int getMaxStageReached(){return maxStageReached; }
 
-    public void setHasSuggestions(boolean hasSuggestions){this.hasSuggestions = hasSuggestions; }
+    public void setMaxStageReached(int maxStageReached){this.maxStageReached = maxStageReached; }
 
     public List<String> getSuggestionActions(){return suggestionActions; }
 
