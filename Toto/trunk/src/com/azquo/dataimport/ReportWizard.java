@@ -7,22 +7,17 @@ package com.azquo.dataimport;
 import com.azquo.StringLiterals;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
-import com.azquo.memorydb.core.Name;
-import com.azquo.memorydb.service.NameQueryParser;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
-import com.azquo.spreadsheet.controller.OnlineController;
 import com.azquo.spreadsheet.transport.UploadedFile;
 import com.azquo.spreadsheet.zk.BookUtils;
-import com.azquo.spreadsheet.zk.ReportRenderer;
 import org.apache.poi.openxml4j.opc.OPCPackage;
 import org.apache.poi.xddf.usermodel.chart.XDDFChartData;
 import org.apache.poi.xddf.usermodel.chart.XDDFDataSource;
 import org.apache.poi.xddf.usermodel.chart.XDDFDataSourcesFactory;
 import org.apache.poi.xddf.usermodel.chart.XDDFNumericalDataSource;
 import org.jetbrains.annotations.NotNull;
-import org.openxmlformats.schemas.drawingml.x2006.chart.CTChart;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -33,13 +28,6 @@ import java.util.*;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.*;
 import org.apache.poi.xssf.usermodel.*;
-import org.apache.poi.ss.SpreadsheetVersion;
-
-import org.openxmlformats.schemas.drawingml.x2006.chart.*;
-
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-
 import java.util.List;
 
 
