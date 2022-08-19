@@ -332,6 +332,9 @@ public class ManageUsersController {
                         }
                         model.put("users", AdminService.getUserListForBusinessWithBasicSecurity(loggedInUser));
                         AdminService.setBanner(model, loggedInUser);
+                        if (request.getParameter("newdesign") != null){
+                            return "manageusers";
+                        }
                             return "manageusers2";
                     } else {
                         model.put("error", error.toString());
@@ -359,6 +362,9 @@ public class ManageUsersController {
                 model.put("databases", AdminService.getDatabaseListForBusinessWithBasicSecurity(loggedInUser));
                 model.put("reports", AdminService.getReportList(loggedInUser, true));
                 AdminService.setBanner(model, loggedInUser);
+                if (request.getParameter("newdesign") != null){
+                    return "edituser";
+                }
                     return "edituser2";
             }
             final List<User> userListForBusiness = AdminService.getUserListForBusinessWithBasicSecurity(loggedInUser);
@@ -370,7 +376,10 @@ public class ManageUsersController {
                 model.put("showDownload", true);
             }
             AdminService.setBanner(model, loggedInUser);
-                return "manageusers2";
+            if (request.getParameter("newdesign") != null){
+                return "manageusers";
+            }
+            return "manageusers2";
         }
     }
 
@@ -522,7 +531,10 @@ public class ManageUsersController {
             }
             model.put("users", AdminService.getUserListForBusinessWithBasicSecurity(loggedInUser));
             AdminService.setBanner(model, loggedInUser);
-                return "manageusers2";
+            if (request.getParameter("newdesign") != null){
+                return "manageusers";
+            }
+            return "manageusers2";
         } else {
             return "redirect:/api/Login";
         }

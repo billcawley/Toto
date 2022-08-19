@@ -453,6 +453,9 @@ public class OnlineController {
                     model.addAttribute("reportid", reportId); // why not? should block on refreshes then
                     // edd pasting in here to get the banner colour working
                     AdminService.setBanner(model,loggedInUser);
+                    if (request.getParameter("newdesign") != null){
+                        return "zsloading";
+                    }
                         return "zsloading2";
                     // was provenance setting here,
                 }

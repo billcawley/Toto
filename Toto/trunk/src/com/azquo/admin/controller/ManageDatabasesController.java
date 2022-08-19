@@ -165,7 +165,7 @@ public class ManageDatabasesController {
             , @RequestParam(value = "deleteTemplateId", required = false) String deleteTemplateId
             , @RequestParam(value = "templateassign", required = false) String templateassign
             , @RequestParam(value = "withautos", required = false) String withautos
-            , @RequestParam(value = "userComment", required = false) String userComment
+            , @RequestParam(value = "newdesign", required = false) String newdesign
     ) {
         // I assume secure until we move to proper spring security
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
@@ -336,7 +336,12 @@ public class ManageDatabasesController {
             model.put("importTemplates", ImportTemplateDAO.findForBusinessId(loggedInUser.getUser().getBusinessId()));
             AdminService.setBanner(model, loggedInUser);
             model.put("reports", AdminService.getReportList(loggedInUser, true));
-
+            if ("databases".equalsIgnoreCase(newdesign)){
+                return "databases";
+            }
+            if ("imports".equalsIgnoreCase(newdesign)){
+                return "imports";
+            }
                 return "managedatabases2";
         } else {
             return "redirect:/api/Login";
@@ -352,6 +357,7 @@ public class ManageDatabasesController {
             , @RequestParam(value = "team", required = false) String team
             , @RequestParam(value = "userComment", required = false) String userComment
             , @RequestParam(value = "preprocessorTest", required = false) MultipartFile[] preprocessorTest
+            , @RequestParam(value = "newdesign", required = false) String newdesign
      ) {
 
         if (database != null) {
@@ -523,7 +529,12 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
             model.put("importTemplates", ImportTemplateDAO.findForBusinessId(loggedInUser.getUser().getBusinessId()));
             AdminService.setBanner(model, loggedInUser);
             model.put("reports", AdminService.getReportList(loggedInUser, true));
-
+            if ("databases".equalsIgnoreCase(newdesign)){
+                return "databases";
+            }
+            if ("imports".equalsIgnoreCase(newdesign)){
+                return "imports";
+            }
             return "managedatabases2";
         } else {
             return "redirect:/api/Login";

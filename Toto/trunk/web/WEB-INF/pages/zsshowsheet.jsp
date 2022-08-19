@@ -2,16 +2,15 @@
 <%@ taglib prefix="kkjsp" uri="http://www.keikai.io/jsp/kk" %>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
 <c:set var="title" scope="request" value="View Report" />
+<c:set var="compact" scope="request" value="compact" />
 <c:set var="requirezss" scope="request" value="true" />
 <%
     //prevent page cache in browser side
     response.setHeader("Pragma", "no-cache");
     response.setHeader("Cache-Control", "no-store, no-cache");
 %>
-<%@ include file="../includes/new_header.jsp" %>
-
 <script type="text/javascript">
-
+// this should be below the header??
     // new post ajax based on Keikai
 
     function postAjax(action) {
@@ -168,10 +167,9 @@
     setInterval(function(){ updateStatus(); }, 1000);*/
 
 </script>
-
-
+<%@ include file="../includes/new_header.jsp" %>
 <div class="az-content">
-    <div class="az-topbar">
+<!--    <div class="az-topbar">
         <button>
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
                  stroke="currentColor" aria-hidden="true">
@@ -241,14 +239,14 @@
                 Selections
             </button>
         </div>
-    </div>
+    </div> -->
     <main>
         <div class="az-report-view">
             <div class="az-report">
                 <kkjsp:spreadsheet id="myzss"
                                    bookProvider="com.azquo.spreadsheet.zk.BookProviderForJSP"
                                    apply="com.azquo.spreadsheet.zk.ZKComposer"
-                                   width="100%" height="100%"
+                                   height="100%"
                                    maxVisibleRows="500" maxVisibleColumns="200"
                                    showSheetbar="true" showToolbar="false" showFormulabar="true" showContextMenu="true"/>
 
