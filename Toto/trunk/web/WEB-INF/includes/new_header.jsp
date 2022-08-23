@@ -11,13 +11,22 @@
     <link rel="preload" href="/newdesign/css/2f78c51abf0b2164.css" as="style" />
     <link rel="stylesheet" href="/newdesign/css/2f78c51abf0b2164.css" data-n-g="" />
     <noscript data-n-css=""></noscript>
+
     <script defer="" nomodule="" src="/newdesign/chunks/polyfills-0d1b80a048d4787e.js"></script>
     <script src="/newdesign/chunks/webpack-4dc2921e155e6a75.js" defer=""></script>
     <script src="/newdesign/chunks/framework-4556c45dd113b893.js" defer=""></script>
     <script src="/newdesign/chunks/main-7feab3f544c289f7.js" defer=""></script>
-    <script src="/newdesign/chunks/pages/_app-6a6814ba84dfd6eb.js" defer=""></script>
-    <script src="/newdesign/azoqkzEsPz0JW8-xCH7sF/_buildManifest.js" defer=""></script>
-    <script src="/newdesign/azoqkzEsPz0JW8-xCH7sF/_ssgManifest.js" defer=""></script>
+    <script>
+        var importWarning = "${results}";
+        var importError = "${error}";
+    </script>
+
+<!--    <script src="/newdesign/chunks/pages/_app-6a6814ba84dfd6eb.js" defer=""></script>-->
+    <script>${newappjavascript}</script>
+
+
+        <script src="/newdesign/azoqkzEsPz0JW8-xCH7sF/_buildManifest.js" defer=""></script>
+        <script src="/newdesign/azoqkzEsPz0JW8-xCH7sF/_ssgManifest.js" defer=""></script>
 
     ${extraScripts}
     <c:if test="${requirezss}">

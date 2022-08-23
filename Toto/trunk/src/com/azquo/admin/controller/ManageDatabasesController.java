@@ -20,10 +20,12 @@ import com.csvreader.CsvWriter;
 import com.github.rcaller.rstuff.RCaller;
 import com.github.rcaller.rstuff.RCode;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.poi.poifs.crypt.Decryptor;
 import org.apache.poi.poifs.crypt.EncryptionInfo;
 import org.apache.poi.poifs.filesystem.POIFSFileSystem;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -37,7 +39,9 @@ import org.zkoss.poi.ss.usermodel.Name;
 import org.zkoss.poi.ss.usermodel.Sheet;
 import org.zkoss.poi.ss.usermodel.Workbook;
 import org.zkoss.poi.xssf.usermodel.XSSFWorkbook;
+import org.zkoss.zk.ui.Sessions;
 
+import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 import javax.xml.parsers.DocumentBuilder;
@@ -50,6 +54,7 @@ import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
@@ -77,6 +82,9 @@ import java.util.stream.Stream;
 @Controller
 @RequestMapping("/ManageDatabases")
 public class ManageDatabasesController {
+
+    @Autowired
+    ServletContext servletContext;
 
     //    private static final Logger logger = Logger.getLogger(ManageDatabasesController.class);
     private static DateTimeFormatter format = DateTimeFormatter.ofPattern("dd/MM/yy-HH:mm");
@@ -174,9 +182,9 @@ public class ManageDatabasesController {
             StringBuilder results = new StringBuilder();
             // EFC - I can't see a way around this one currently. I want to use @SuppressWarnings very sparingly
             List<UploadedFile> importResult = null;
-            try{
+            try {
                 importResult = (List<UploadedFile>) request.getSession().getAttribute(ManageDatabasesController.IMPORTRESULT);
-            }catch(Exception e){
+            } catch (Exception e) {
                 //if the error is a singleton, it causes a problem - ignore it at the moment.
             }
             if (importResult != null) {
@@ -271,7 +279,7 @@ public class ManageDatabasesController {
             }
             // another bit of utility functionality that perhaps should be moved from here in a bit : automated tests
             Path testDir = Paths.get(SpreadsheetService.getHomeDir() + "/systemtests");
-            if (testDir.toFile().isDirectory()){ // sso find directories in there
+            if (testDir.toFile().isDirectory()) { // sso find directories in there
                 try (Stream<Path> testDirList = Files.list(testDir)) {
                     Iterator<Path> testDirListIterator = testDirList.iterator();
                     // go through the main directory looking for directories that match a DB name
@@ -279,11 +287,11 @@ public class ManageDatabasesController {
                         Path specificTestDir = testDirListIterator.next();
                         if (specificTestDir.toFile().isDirectory()) {
                             Path scriptFile = specificTestDir.resolve("script.txt");
-                            if (scriptFile.toFile().exists()){
+                            if (scriptFile.toFile().exists()) {
                                 // todo - create test db
                                 List<String> testLines = Files.readAllLines(scriptFile, Charset.defaultCharset());
-                                for (String testLine : testLines){
-                                    if (testLine.toLowerCase().startsWith("load ")){ // then straight load that file into the database
+                                for (String testLine : testLines) {
+                                    if (testLine.toLowerCase().startsWith("load ")) { // then straight load that file into the database
                                         // this could be import template or report or data or more likely a zip file
 
                                     }
@@ -336,13 +344,59 @@ public class ManageDatabasesController {
             model.put("importTemplates", ImportTemplateDAO.findForBusinessId(loggedInUser.getUser().getBusinessId()));
             AdminService.setBanner(model, loggedInUser);
             model.put("reports", AdminService.getReportList(loggedInUser, true));
-            if ("databases".equalsIgnoreCase(newdesign)){
+            if ("databases".equalsIgnoreCase(newdesign)) {
                 return "databases";
             }
-            if ("imports".equalsIgnoreCase(newdesign)){
+            if ("imports".equalsIgnoreCase(newdesign)) {
+                StringBuilder jsImportsList = new StringBuilder();
+                for (UploadRecord.UploadRecordForDisplay uploadRecord : uploadRecordsForDisplayForBusiness) {
+                    jsImportsList.append("new f({\n" +
+                            "                        id: " + uploadRecord.id + ",\n" +
+                            "                        filename: \"" + uploadRecord.getFileName() + "\",\n" +
+                            "                        database: \"" + uploadRecord.getDatabaseName() + "\",\n" +
+                            "                        user: \"" + uploadRecord.getUserName() + "\",\n" +
+                            "                        date: " + uploadRecord.getDate().toEpochSecond(ZoneOffset.of("Z")) + ",\n" +
+                            "                        }),");
+                }
+                StringBuilder databasesList = new StringBuilder();
+//                new d({ id: 1, name: "Demo1dhdhrt", date: 1546563989 }),
+                for (Database d : databaseList) {
+                    databasesList.append("new d({ id: "+ d.getId() +", name: \"" + d.getName() + "\", date: 0 }),"); // date jammed as zero for the mo, does the JS use it?
+                }
+
+                /* need to make JS array like this of the uploads
+
+                new f({
+                        id: 1,
+                        filename: "co11111111111sts_amendment_SD23.xlsx",
+                        database: "Atos PIP",
+                        user: "Phil Stubbs",
+                        date: 1555860815,
+                        }),
+                */
+
+                try {
+                    InputStream resourceAsStream = servletContext.getResourceAsStream("/WEB-INF/includes/newappjavascript.js");
+                    model.put("newappjavascript", IOUtils.toString(resourceAsStream, StandardCharsets.UTF_8)
+                            .replace("###IMPORTSLIST###", jsImportsList.toString())
+                            .replace("###DATABASESLIST###", databasesList.toString())
+                            .replace("###REPORTSLIST###", "{}"));
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                if (model.get("error") != null){
+                    String escapedError = (String) model.get("error");
+                    model.put("error", escapedError.replace("\"", "\\\"").replace("\n","").replace("<br/>","\\n").replace("<b>","\\n").replace("</b>","\\n"));
+                }
+
+                if (model.get("results") != null){
+                    String escapedResults = (String) model.get("results");
+                    model.put("results", escapedResults.replace("\"", "\\\"").replace("\n","").replace("<br/>","\\n").replace("<b>","\\n").replace("</b>","\\n"));
+                }
+                model.put("pageUrl", "/imports");
                 return "imports";
             }
-                return "managedatabases2";
+            return "managedatabases2";
         } else {
             return "redirect:/api/Login";
         }
@@ -358,7 +412,7 @@ public class ManageDatabasesController {
             , @RequestParam(value = "userComment", required = false) String userComment
             , @RequestParam(value = "preprocessorTest", required = false) MultipartFile[] preprocessorTest
             , @RequestParam(value = "newdesign", required = false) String newdesign
-     ) {
+    ) {
 
         if (database != null) {
             request.getSession().setAttribute("lastSelected", database);
@@ -435,7 +489,7 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
                             }
                             //detect from workbook name
                             String lcName = uploadedFile.getFileName().toLowerCase();
-                            if (!lcName.contains("=") && (lcName.contains("import templates") || lcName.contains("workbook processor") ||lcName.contains("preprocessor") || lcName.contains("headings")|| lcName.contains("lookups"))) {
+                            if (!lcName.contains("=") && (lcName.contains("import templates") || lcName.contains("workbook processor") || lcName.contains("preprocessor") || lcName.contains("headings") || lcName.contains("lookups"))) {
                                 isImportTemplate = true;
                             }
                             boolean assignTemplateToDatabase = false;
@@ -478,7 +532,7 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
 
                             } else { // a straight upload, this is the only place that can deal with multiple files being selected for upload
                                 HttpSession session = request.getSession();
-                                return handleImport(loggedInUser, session, model, userComment, uploadFiles);
+                                return handleImport(loggedInUser, session, model, userComment, uploadFiles, newdesign);
                             }
                         }
                     }
@@ -529,10 +583,21 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
             model.put("importTemplates", ImportTemplateDAO.findForBusinessId(loggedInUser.getUser().getBusinessId()));
             AdminService.setBanner(model, loggedInUser);
             model.put("reports", AdminService.getReportList(loggedInUser, true));
-            if ("databases".equalsIgnoreCase(newdesign)){
+            if ("databases".equalsIgnoreCase(newdesign)) {
                 return "databases";
             }
-            if ("imports".equalsIgnoreCase(newdesign)){
+            if ("imports".equalsIgnoreCase(newdesign)) {
+
+                if (model.get("error") != null){
+                    String escapedError = (String) model.get("error");
+                    model.put("error", escapedError.replace("\"", "\\\"").replace("\n","").replace("<br/>","\\n").replace("<b>","\\n").replace("</b>","\\n"));
+                }
+
+                if (model.get("results") != null){
+                    String escapedResults = (String) model.get("results");
+                    model.put("results", escapedResults.replace("\"", "\\\"").replace("\n","").replace("<br/>","\\n").replace("<b>","\\n").replace("</b>","\\n"));
+                }
+                model.put("pageUrl", "/imports");
                 return "imports";
             }
             return "managedatabases2";
@@ -542,7 +607,7 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
     }
 
     // factored due to pending uploads, need to check the factoring after the prototype is done
-    private static String handleImport(LoggedInUser loggedInUser, HttpSession session, ModelMap model, String userComment, final MultipartFile[] uploadFiles) {
+    private static String handleImport(LoggedInUser loggedInUser, HttpSession session, ModelMap model, String userComment, final MultipartFile[] uploadFiles, String newDesign) {
         // need to add in code similar to report loading to give feedback on imports
         final List<UploadedFile> uploadedFiles = new ArrayList<>();
         UploadedFile uf = null;
@@ -586,8 +651,12 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
         }
 
         // edd pasting in here to get the banner colour working
-        AdminService.setBanner(model,loggedInUser);
+        AdminService.setBanner(model, loggedInUser);
         model.addAttribute("targetController", "ManageDatabases");
+        if (newDesign != null) {
+            return "importrunning";
+        }
+
         return "importrunning2";
     }
 

@@ -11,9 +11,9 @@
             var t = r(5893),
                 a =
                     (r(7294),
-                    function (e) {
-                        return (0, t.jsx)("div", { className: "az-section-body", children: e.children });
-                    });
+                        function (e) {
+                            return (0, t.jsx)("div", {className: "az-section-body", children: e.children});
+                        });
         },
         3059: function (e, n, r) {
             r.d(n, {
@@ -27,7 +27,7 @@
                     return (0, t.jsxs)("div", {
                         className: "az-section-filter",
                         children: [
-                            (0, t.jsx)("div", { children: (0, t.jsx)(a.Z, {}) }),
+                            (0, t.jsx)("div", {children: (0, t.jsx)(a.Z, {})}),
                             (0, t.jsx)("input", {
                                 type: "text",
                                 placeholder: "Filter",
@@ -48,16 +48,16 @@
             var t = r(5893),
                 a =
                     (r(7294),
-                    function (e) {
-                        return (0, t.jsx)("div", { className: "az-section-controls", children: e.children });
-                    }),
+                        function (e) {
+                            return (0, t.jsx)("div", {className: "az-section-controls", children: e.children});
+                        }),
                 i = function (e) {
                     return (0, t.jsx)(t.Fragment, {
                         children: (0, t.jsxs)("div", {
                             className: "az-section-heading",
                             children: [
-                                (0, t.jsx)("h3", { children: e.label }),
-                                !!e.children && (0, t.jsx)(a, { children: e.children }),
+                                (0, t.jsx)("h3", {children: e.label}),
+                                !!e.children && (0, t.jsx)(a, {children: e.children}),
                             ],
                         }),
                     });
@@ -126,14 +126,14 @@
                                     onClick: function () {
                                         return e.onChange("list");
                                     },
-                                    className: o()({ selected: "list" === e.view }),
+                                    className: o()({selected: "list" === e.view}),
                                     children: (0, t.jsx)(i, {}),
                                 }),
                                 (0, t.jsx)("button", {
                                     onClick: function () {
                                         return e.onChange("grid");
                                     },
-                                    className: o()({ selected: "grid" === e.view }),
+                                    className: o()({selected: "grid" === e.view}),
                                     children: (0, t.jsx)(s, {}),
                                 }),
                             ],
@@ -166,25 +166,25 @@
                             },
                             [c],
                         ),
-                        (0, t.jsxs)("div", {
-                            className: "az-table",
-                            children: [
-                                (0, t.jsxs)("table", {
-                                    children: [
-                                        (0, t.jsx)("thead", {
-                                            children: (0, t.jsx)("tr", {
-                                                children:
-                                                    null === (n = e.columns) || void 0 === n
-                                                        ? void 0
-                                                        : n.map(function (e) {
-                                                              return (0, t.jsx)("th", { children: e }, e);
-                                                          }),
+                            (0, t.jsxs)("div", {
+                                className: "az-table",
+                                children: [
+                                    (0, t.jsxs)("table", {
+                                        children: [
+                                            (0, t.jsx)("thead", {
+                                                children: (0, t.jsx)("tr", {
+                                                    children:
+                                                        null === (n = e.columns) || void 0 === n
+                                                            ? void 0
+                                                            : n.map(function (e) {
+                                                                return (0, t.jsx)("th", {children: e}, e);
+                                                            }),
+                                                }),
                                             }),
-                                        }),
-                                        (0, t.jsx)("tbody", { children: e.children.slice(d, u) }),
-                                    ],
-                                }),
-                                !!c &&
+                                            (0, t.jsx)("tbody", {children: e.children.slice(d, u)}),
+                                        ],
+                                    }),
+                                    !!c &&
                                     !(d < 2 && u === c) &&
                                     (0, t.jsxs)("nav", {
                                         children: [
@@ -192,11 +192,11 @@
                                                 children: (0, t.jsxs)("p", {
                                                     children: [
                                                         "Showing ",
-                                                        (0, t.jsx)("strong", { children: d + 1 }),
+                                                        (0, t.jsx)("strong", {children: d + 1}),
                                                         " to ",
-                                                        (0, t.jsx)("strong", { children: u }),
+                                                        (0, t.jsx)("strong", {children: u}),
                                                         " of ",
-                                                        (0, t.jsx)("strong", { children: c }),
+                                                        (0, t.jsx)("strong", {children: c}),
                                                         " ",
                                                         null !== (r = e.label) && void 0 !== r ? r : "results",
                                                     ],
@@ -224,8 +224,8 @@
                                             }),
                                         ],
                                     }),
-                            ],
-                        })
+                                ],
+                            })
                     );
                 };
         },
@@ -261,7 +261,7 @@
                 }),
                 s = r(8917),
                 l = function () {
-                    return (0, t.jsx)("img", { className: "az-spinner", src: s.lY });
+                    return (0, t.jsx)("img", {className: "az-spinner", src: s.lY});
                 },
                 o = function (e) {
                     var n,
@@ -270,50 +270,51 @@
                         o = r[1];
                     return e.isLoading
                         ? (0, t.jsx)(t.Fragment, {
-                              children: (0, t.jsxs)("div", {
-                                  className: "az-loading",
-                                  children: [
-                                      (0, t.jsxs)("div", {
-                                          className: "az-loading-info",
-                                          children: [
-                                              (0, t.jsx)(l, {}),
-                                              !!e.percentage &&
-                                                  (0, t.jsxs)("span", {
-                                                      children: [e.percentage <= 100 ? e.percentage : 100, "%"],
-                                                  }),
-                                          ],
-                                      }),
-                                      !!(null === (n = e.log) || void 0 === n ? void 0 : n.length) &&
-                                          (0, t.jsxs)("div", {
-                                              className: "az-logging-info",
-                                              children: [
-                                                  (0, t.jsx)("div", {
-                                                      children: (0, t.jsxs)("button", {
-                                                          onClick: function () {
-                                                              e.onShowLog && e.onShowLog(!s), o(!s);
-                                                          },
-                                                          children: [
-                                                              (0, t.jsx)(i, {}),
-                                                              " ",
-                                                              s ? "Hide" : "Show",
-                                                              " detail",
-                                                          ],
-                                                      }),
-                                                  }),
-                                                  s &&
-                                                      (0, t.jsx)("div", {
-                                                          children: (0, t.jsx)("ul", {
-                                                              children: e.log.map(function (e) {
-                                                                  return (0, t.jsx)("li", { children: e }, e);
-                                                              }),
-                                                          }),
-                                                      }),
-                                              ],
-                                          }),
-                                  ],
-                              }),
-                          })
-                        : (0, t.jsx)(t.Fragment, { children: e.children });
+                            children: (0, t.jsxs)("div", {
+                                className: "az-loading",
+                                children: [
+                                    (0, t.jsxs)("div", {
+                                        className: "az-loading-info",
+                                        children: [
+                                            (0, t.jsx)(l, {}),
+                                            !!e.percentage &&
+                                            (0, t.jsxs)("span", {
+//                                                      children: [e.percentage <= 100 ? e.percentage : 100, "%"],
+                                                children: "",
+                                            }),
+                                        ],
+                                    }),
+                                    !!(null === (n = e.log) || void 0 === n ? void 0 : n.length) &&
+                                    (0, t.jsxs)("div", {
+                                        className: "az-logging-info",
+                                        children: [
+                                            (0, t.jsx)("div", {
+                                                children: (0, t.jsxs)("button", {
+                                                    onClick: function () {
+                                                        e.onShowLog && e.onShowLog(!s), o(!s);
+                                                    },
+                                                    children: [
+                                                        (0, t.jsx)(i, {}),
+                                                        " ",
+                                                        s ? "Hide" : "Show",
+                                                        " detail",
+                                                    ],
+                                                }),
+                                            }),
+                                            s &&
+                                            (0, t.jsx)("div", {
+                                                children: (0, t.jsx)("ul", {
+                                                    children: e.log.map(function (e) {
+                                                        return (0, t.jsx)("li", {children: e}, e);
+                                                    }),
+                                                }),
+                                            }),
+                                        ],
+                                    }),
+                                ],
+                            }),
+                        })
+                        : (0, t.jsx)(t.Fragment, {children: e.children});
                 };
         },
         378: function (e, n, r) {
@@ -432,14 +433,14 @@
                                 : n.toLowerCase().includes(null === r || void 0 === r ? void 0 : r.toLowerCase());
                         });
                     return (0, t.jsxs)(j.h, {
-                        className: p()(["az-combobox", { error: e.error }]),
+                        className: p()(["az-combobox", {error: e.error}]),
                         as: "div",
                         value: l,
                         onChange: function (n) {
                             o(n), e.onChange(n);
                         },
                         children: [
-                            e.label && (0, t.jsx)(j.h.Label, { children: e.label }),
+                            e.label && (0, t.jsx)(j.h.Label, {children: e.label}),
                             (0, t.jsxs)("div", {
                                 children: [
                                     (0, t.jsx)(j.h.Input, {
@@ -450,40 +451,40 @@
                                             return null === e || void 0 === e ? void 0 : e.name;
                                         },
                                     }),
-                                    (0, t.jsx)(j.h.Button, { children: (0, t.jsx)(x, {}) }),
+                                    (0, t.jsx)(j.h.Button, {children: (0, t.jsx)(x, {})}),
                                     c.length > 0 &&
-                                        (0, t.jsx)(j.h.Options, {
-                                            children: c.map(function (e) {
-                                                return (0, t.jsx)(
-                                                    j.h.Option,
-                                                    {
-                                                        value: e,
-                                                        className: function (e) {
-                                                            var n = e.active;
-                                                            return p()({ active: n });
-                                                        },
-                                                        children: function (n) {
-                                                            var r = n.active,
-                                                                a = n.selected;
-                                                            return (0, t.jsxs)(t.Fragment, {
-                                                                children: [
-                                                                    (0, t.jsx)("span", {
-                                                                        className: p()("item-name", { selected: a }),
-                                                                        children: e.name,
-                                                                    }),
-                                                                    a &&
-                                                                        (0, t.jsx)("span", {
-                                                                            className: p()("item-icon", { active: r }),
-                                                                            children: (0, t.jsx)(v, {}),
-                                                                        }),
-                                                                ],
-                                                            });
-                                                        },
+                                    (0, t.jsx)(j.h.Options, {
+                                        children: c.map(function (e) {
+                                            return (0, t.jsx)(
+                                                j.h.Option,
+                                                {
+                                                    value: e,
+                                                    className: function (e) {
+                                                        var n = e.active;
+                                                        return p()({active: n});
                                                     },
-                                                    e.id,
-                                                );
-                                            }),
+                                                    children: function (n) {
+                                                        var r = n.active,
+                                                            a = n.selected;
+                                                        return (0, t.jsxs)(t.Fragment, {
+                                                            children: [
+                                                                (0, t.jsx)("span", {
+                                                                    className: p()("item-name", {selected: a}),
+                                                                    children: e.name,
+                                                                }),
+                                                                a &&
+                                                                (0, t.jsx)("span", {
+                                                                    className: p()("item-icon", {active: r}),
+                                                                    children: (0, t.jsx)(v, {}),
+                                                                }),
+                                                            ],
+                                                        });
+                                                    },
+                                                },
+                                                e.id,
+                                            );
                                         }),
+                                    }),
                                 ],
                             }),
                         ],
@@ -520,99 +521,126 @@
                             function () {
                                 return (
                                     i &&
-                                        ((M = setInterval(function () {
-                                            h(function (e) {
-                                                return e + 1;
-                                            });
-                                        }, 50)),
+                                    ((M = setInterval(function () {
+                                        h(function (e) {
+                                            return e + 1;
+                                        });
+                                    }, 50)),
                                         (E = setInterval(function () {
                                             v(function (e) {
                                                 return e.concat("This is an example log line no." + e.length);
                                             });
                                         }, 200))),
-                                    function () {
-                                        M && clearInterval(M), E && clearInterval(E);
-                                    }
+                                        function () {
+                                            M && clearInterval(M), E && clearInterval(E);
+                                        }
                                 );
                             },
                             [i],
                         ),
-                        (0, a.useEffect)(
-                            function () {
-                                u >= 100 &&
+                            (0, a.useEffect)(
+                                function () {
+                                    u >= 1000 &&
                                     (clearInterval(M),
-                                    clearInterval(E),
+                                        clearInterval(E),
                                     null === n || void 0 === n || n.push("/imports/new/1"));
-                            },
-                            [u],
-                        ),
-                        (0, a.useEffect)(
-                            function () {
-                                m && S && s(!0);
-                            },
-                            [m, S],
-                        ),
-                        (0, t.jsx)("div", {
-                            className: "az-fileupload",
-                            children: (0, t.jsx)("div", {
+                                },
+                                [u],
+                            ),
+                            (0, a.useEffect)(
+                                function () {
+                                    m && S && s(!0);
+                                },
+                                [m, S],
+                            ),
+                            (0, t.jsx)("div", {
+                                className: "az-fileupload",
                                 children: (0, t.jsx)("div", {
-                                    className: p()(["az-file-upload-control", { loading: i, logging: o }]),
-                                    children: (0, t.jsx)(w.g, {
-                                        isLoading: i,
-                                        log: x.reverse(),
-                                        onShowLog: c,
-                                        percentage: u,
-                                        children: (0, t.jsxs)("div", {
-                                            children: [
-                                                (0, t.jsx)("div", {
-                                                    className: "az-file-upload-database",
-                                                    children: (0, t.jsx)(g, {
-                                                        items: (0, z.Y)(b.UA, "name"),
-                                                        label: "Database",
-                                                        onChange: N,
-                                                    }),
-                                                }),
-                                                (0, t.jsxs)("div", {
-                                                    className: "az-form-seperator",
-                                                    children: [
-                                                        (0, t.jsx)("div", { children: (0, t.jsx)("div", {}) }),
-                                                        (0, t.jsx)("div", {
-                                                            children: (0, t.jsx)("span", { children: "and" }),
-                                                        }),
-                                                    ],
-                                                }),
-                                                (0, t.jsxs)("div", {
-                                                    className: "az-file-upload-file",
+                                    children: (0, t.jsx)("form", {
+                                        method: "POST",
+                                        action: "/api/ManageDatabases",
+                                        enctype: "multipart/form-data",
+                                        id : "uploadForm",
+                                        children: (0, t.jsx)("div", {
+                                            className: p()(["az-file-upload-control", {loading: i, logging: o}]),
+                                                children: (0, t.jsxs)("div", {
                                                     children: [
                                                         (0, t.jsx)("div", {
-                                                            children: (0, t.jsxs)("label", {
-                                                                htmlFor: "az-file-upload",
-                                                                children: [
-                                                                    (0, t.jsx)("span", {
-                                                                        children: S
-                                                                            ? S.replace(/^.*[\\\/]/, "")
-                                                                            : "Select file",
-                                                                    }),
-                                                                    (0, t.jsx)("input", {
-                                                                        id: "az-file-upload",
-                                                                        name: "file",
-                                                                        type: "file",
-                                                                        onChange: function (e) {
-                                                                            return L(e.target.value);
-                                                                        },
-                                                                    }),
-                                                                ],
+                                                            className: "az-file-upload-database",
+                                                            children: (0, t.jsx)(g, {
+                                                                items: (0, z.Y)(b.UA, "name"),
+                                                                label: "Database",
+                                                                name: "database",
+                                                                onChange: N,
                                                             }),
                                                         }),
-                                                        (0, t.jsx)("p", { children: "XLS, XLSX up to 100MB" }),
+                                                        (0, t.jsxs)("div", {
+                                                            className: "az-form-seperator",
+                                                            children: [
+                                                                (0, t.jsx)("div", {children: (0, t.jsx)("div", {})}),
+                                                                (0, t.jsx)("div", {
+                                                                    children: (0, t.jsx)("span", {children: "and"}),
+                                                                }),
+                                                            ],
+                                                        }),
+                                                        (0, t.jsxs)("div", {
+                                                            className: "az-file-upload-file",
+                                                            children: [
+                                                                (0, t.jsx)("div", {
+                                                                    children: (0, t.jsxs)("label", {
+                                                                        htmlFor: "az-file-upload",
+                                                                        children: [
+                                                                            (0, t.jsx)("span", {
+                                                                                id : "selector",
+                                                                                children: "Select file",
+                                                                            }),
+                                                                            (0, t.jsx)("input", {
+                                                                                id: "az-file-upload",
+                                                                                name: "uploadFile",
+                                                                                type: "file",
+                                                                                onChange: function (e) {
+                                                                                    document.getElementById("selector").innerHTML = e.target.value.replace(/^.*[\\\/]/, "")
+                                                                                },
+                                                                            }),
+                                                                        ],
+                                                                    }),
+                                                                }),
+                                                                (0, t.jsx)("p", {
+                                                                    children:
+                                                                        [(0, t.jsxs)("div", {
+                                                                                className: "az-section-buttons",
+                                                                                children: (0, t.jsx)("button", {
+                                                                                    value: "something",
+                                                                                    onClick: function (e) {
+                                                                                        L(document.getElementById("selector").innerHTML);
+                                                                                        document.getElementById("databaseHidden").value = document.getElementById("headlessui-combobox-input-:rg:").value;
+                                                                                        document.getElementById("uploadForm").submit()
+                                                                                    },
+                                                                                    children: "Upload",
+                                                                                }),
+                                                                            },
+                                                                        ),
+                                                                            (0, t.jsx)("input", {
+                                                                                id: "databaseHidden",
+                                                                                name: "database",
+                                                                                type: "hidden"
+                                                                            }),
+                                                                            (0, t.jsx)("input", {
+                                                                                name: "newdesign",
+                                                                                type: "hidden",
+                                                                                value: "true"
+                                                                            }),
+                                                                        ]
+                                                                })
+
+                                                            ],
+                                                        }),
                                                     ],
-                                                }),
-                                            ],
+                                            }),
                                         }),
                                     }),
                                 }),
-                            }),
-                        })
+                            })
                     );
                 },
                 k = function (e) {
@@ -626,42 +654,42 @@
                             },
                             [e.show],
                         ),
-                        (0, t.jsx)(h.u.Root, {
-                            show: r,
-                            as: a.Fragment,
-                            children: (0, t.jsxs)(f.V, {
-                                as: "div",
-                                className: "az-fileupload-modal",
-                                onClose: e.onClose,
-                                children: [
-                                    (0, t.jsx)(h.u.Child, {
-                                        as: a.Fragment,
-                                        enter: "ease-out duration-300",
-                                        enterFrom: "opacity-0",
-                                        enterTo: "opacity-100",
-                                        leave: "ease-in duration-200",
-                                        leaveFrom: "opacity-100",
-                                        leaveTo: "opacity-0",
-                                        children: (0, t.jsx)("div", { className: "az-fileupload-modal-background" }),
-                                    }),
-                                    (0, t.jsx)("div", {
-                                        className: "az-fileupload-modal-container",
-                                        children: (0, t.jsx)("div", {
-                                            children: (0, t.jsx)(h.u.Child, {
-                                                as: a.Fragment,
-                                                enter: "ease-out duration-300",
-                                                enterFrom: "opacity-0 translate-y-4 translate-y-0 scale-95",
-                                                enterTo: "opacity-100 translate-y-0 scale-100",
-                                                leave: "ease-in duration-200",
-                                                leaveFrom: "opacity-100 translate-y-0 scale-100",
-                                                leaveTo: "opacity-0 translate-y-4 translate-y-0 scale-95",
-                                                children: (0, t.jsx)(f.V.Panel, { children: (0, t.jsx)(N, {}) }),
+                            (0, t.jsx)(h.u.Root, {
+                                show: r,
+                                as: a.Fragment,
+                                children: (0, t.jsxs)(f.V, {
+                                    as: "div",
+                                    className: "az-fileupload-modal",
+                                    onClose: e.onClose,
+                                    children: [
+                                        (0, t.jsx)(h.u.Child, {
+                                            as: a.Fragment,
+                                            enter: "ease-out duration-300",
+                                            enterFrom: "opacity-0",
+                                            enterTo: "opacity-100",
+                                            leave: "ease-in duration-200",
+                                            leaveFrom: "opacity-100",
+                                            leaveTo: "opacity-0",
+                                            children: (0, t.jsx)("div", {className: "az-fileupload-modal-background"}),
+                                        }),
+                                        (0, t.jsx)("div", {
+                                            className: "az-fileupload-modal-container",
+                                            children: (0, t.jsx)("div", {
+                                                children: (0, t.jsx)(h.u.Child, {
+                                                    as: a.Fragment,
+                                                    enter: "ease-out duration-300",
+                                                    enterFrom: "opacity-0 translate-y-4 translate-y-0 scale-95",
+                                                    enterTo: "opacity-100 translate-y-0 scale-100",
+                                                    leave: "ease-in duration-200",
+                                                    leaveFrom: "opacity-100 translate-y-0 scale-100",
+                                                    leaveTo: "opacity-0 translate-y-4 translate-y-0 scale-95",
+                                                    children: (0, t.jsx)(f.V.Panel, {children: (0, t.jsx)(N, {})}),
+                                                }),
                                             }),
                                         }),
-                                    }),
-                                ],
-                            }),
-                        })
+                                    ],
+                                }),
+                            })
                     );
                 },
                 S = r(1799),
@@ -674,18 +702,18 @@
                         className: "az-import-card",
                         children: [
                             (0, t.jsx)(M(), {
-                                href: "/imports/".concat(e.id),
+                                href: "/api/DownloadFile?uploadRecordId=" + e.id,
                                 children: (0, t.jsxs)("a", {
                                     children: [
                                         (0, t.jsxs)("div", {
                                             className: "az-card-data",
                                             children: [
-                                                (0, t.jsx)("h3", { children: e.filename }),
-                                                (0, t.jsxs)("p", { children: [e.database, " by ", e.user] }),
-                                                (0, t.jsx)("p", { children: y()(e.date).format(d.vc) }),
+                                                (0, t.jsx)("h3", {children: e.filename}),
+                                                (0, t.jsxs)("p", {children: [e.database, " by ", e.user]}),
+                                                (0, t.jsx)("p", {children: y().unix(e.date).format(d.vc)}),
                                             ],
                                         }),
-                                        (0, t.jsx)("div", { className: "az-card-icon", children: (0, t.jsx)(l.Z, {}) }),
+                                        (0, t.jsx)("div", {className: "az-card-icon", children: (0, t.jsx)(l.Z, {})}),
                                     ],
                                 }),
                             }),
@@ -694,21 +722,21 @@
                                 children: [
                                     (0, t.jsx)("div", {
                                         children: (0, t.jsx)(M(), {
-                                            href: "/imports/".concat(e.id),
+                                            href: "/api/ImportResults?urid=" + e.id,
                                             children: (0, t.jsxs)("a", {
                                                 children: [
                                                     (0, t.jsx)(i, {}),
-                                                    (0, t.jsx)("span", { children: "Results" }),
+                                                    (0, t.jsx)("span", {children: "Results"}),
                                                 ],
                                             }),
                                         }),
                                     }),
                                     (0, t.jsx)("div", {
                                         children: (0, t.jsxs)("a", {
-                                            href: d.tf,
+                                            href: "/api/DownloadFile?uploadRecordId=" + e.id,
                                             children: [
                                                 (0, t.jsx)(o.Z, {}),
-                                                (0, t.jsx)("span", { children: "Download" }),
+                                                (0, t.jsx)("span", {children: "Download"}),
                                             ],
                                         }),
                                     }),
@@ -716,9 +744,13 @@
                                         className: "az-card-actions",
                                         children: (0, t.jsx)(u.e, {
                                             items: [
-                                                { label: "Comment", href: "#", icon: s },
-                                                { label: "sep1", seperator: !0 },
-                                                { label: "Delete", href: "#", icon: c.Z },
+                                                //{ label: "Comment", href: "#", icon: s },
+                                                {label: "sep1", seperator: !0},
+                                                {
+                                                    label: "Delete",
+                                                    href: "/api/ManageDatabases?deleteUploadRecordId=" + e.id,
+                                                    icon: c.Z
+                                                },
                                             ],
                                         }),
                                     }),
@@ -737,7 +769,7 @@
                 },
                 O = r(3274),
                 Z = function (e) {
-                    return (0, t.jsx)("div", { className: "az-section-buttons", children: e.children });
+                    return (0, t.jsx)("div", {className: "az-section-buttons", children: e.children});
                 },
                 B = r(3059),
                 I = r(67),
@@ -772,72 +804,107 @@
                                             children: [(0, t.jsx)(l.Z, {}), " New"],
                                         }),
                                     }),
-                                    (0, t.jsx)(B.Q, { onChange: h }),
-                                    (0, t.jsx)(D.K, { onChange: v, view: x }),
+                                    (0, t.jsx)(B.Q, {onChange: h}),
+                                    (0, t.jsx)(D.K, {onChange: v, view: x}),
                                 ],
                             }),
+                            importError ? (            (0, t.jsxs)("div", {
+                                    className: "az-alert az-alert-error",
+                                    children: (0, t.jsxs)("div", {
+                                        children: [
+                                            (0, t.jsxs)("div", {
+                                                children: (0, t.jsxs)("p", {
+                                                        children: importError
+                                                    }
+                                                )
+                                            })
+                                        ]
+                                    })
+                                })
+                            ) : importWarning ? (            (0, t.jsxs)("div", {
+                                    className: "az-alert az-alert-warning",
+                                    children: (0, t.jsxs)("div", {
+                                        children: [
+                                            (0, t.jsxs)("div", {
+                                                children: (0, t.jsxs)("p", {
+                                                        children: importWarning
+                                                    }
+                                                )
+                                            })
+                                        ]
+                                    })
+                                })
+                            ) : "",
                             (0, t.jsxs)(O.t, {
                                 children: [
                                     "list" === x &&
-                                        (0, t.jsx)(V.i, {
-                                            columns: ["File Name", "Database", "User", "Date", ""],
-                                            pageSize: e.pageSize,
-                                            label: "Imports",
-                                            children: (0, z.Y)(g, "date")
-                                                .reverse()
-                                                .map(function (e) {
-                                                    return (0, t.jsxs)(
-                                                        "tr",
-                                                        {
-                                                            children: [
-                                                                (0, t.jsx)("td", {
-                                                                    className: "full",
-                                                                    children: (0, t.jsx)("div", {
-                                                                        children: (0, t.jsx)(M(), {
-                                                                            href: "/imports/" + e.id,
-                                                                            children: (0, t.jsxs)("a", {
-                                                                                children: [
-                                                                                    (0, t.jsx)(l.Z, {}),
-                                                                                    (0, t.jsx)("p", {
-                                                                                        children: e.filename,
-                                                                                    }),
-                                                                                ],
-                                                                            }),
+                                    (0, t.jsx)(V.i, {
+                                        columns: ["File Name", "Database", "User", "Date", ""],
+                                        pageSize: e.pageSize,
+                                        label: "Imports",
+                                        children: (0, z.Y)(g, "date")
+                                            .reverse()
+                                            .map(function (e) {
+                                                return (0, t.jsxs)(
+                                                    "tr",
+                                                    {
+                                                        children: [
+                                                            (0, t.jsx)("td", {
+                                                                className: "full",
+                                                                children: (0, t.jsx)("div", {
+                                                                    children: (0, t.jsx)(M(), {
+                                                                        href: "/api/DownloadFile?uploadRecordId=".concat(e.id),
+                                                                        children: (0, t.jsxs)("a", {
+                                                                            children: [
+                                                                                (0, t.jsx)(l.Z, {}),
+                                                                                (0, t.jsx)("p", {
+                                                                                    children: e.filename,
+                                                                                }),
+                                                                            ],
                                                                         }),
                                                                     }),
                                                                 }),
-                                                                (0, t.jsx)("td", {
-                                                                    children: (0, t.jsx)("span", {
-                                                                        className: "az-badge",
-                                                                        children: e.database,
-                                                                    }),
+                                                            }),
+                                                            (0, t.jsx)("td", {
+                                                                children: (0, t.jsx)("span", {
+                                                                    className: "az-badge",
+                                                                    children: e.database,
                                                                 }),
-                                                                (0, t.jsx)("td", { children: e.user }),
-                                                                (0, t.jsx)("td", {
-                                                                    children: y().unix(e.date).format(d.vc),
+                                                            }),
+                                                            (0, t.jsx)("td", {children: e.user}),
+                                                            (0, t.jsx)("td", {
+                                                                children: y().unix(e.date).format(d.vc),
+                                                            }),
+                                                            (0, t.jsx)("td", {
+                                                                children: (0, t.jsx)(u.e, {
+                                                                    items: [
+                                                                        {
+                                                                            label: "Results",
+                                                                            href: "/api/ImportResults?urid=" + e.id,
+                                                                            icon: i
+                                                                        },
+                                                                        {
+                                                                            label: "Download",
+                                                                            href: "/api/DownloadFile?uploadRecordId=".concat(e.id),
+                                                                            icon: o.Z,
+                                                                        },
+                                                                        //{ label: "Comment", href: "#", icon: s },
+                                                                        {label: "sep1", seperator: !0},
+                                                                        {
+                                                                            label: "Delete",
+                                                                            href: "/api/ManageDatabases?deleteUploadRecordId=" + e.id,
+                                                                            icon: c.Z
+                                                                        },
+                                                                    ],
                                                                 }),
-                                                                (0, t.jsx)("td", {
-                                                                    children: (0, t.jsx)(u.e, {
-                                                                        items: [
-                                                                            { label: "Results", href: "#", icon: i },
-                                                                            {
-                                                                                label: "Download",
-                                                                                href: d.tf,
-                                                                                icon: o.Z,
-                                                                            },
-                                                                            { label: "Comment", href: "#", icon: s },
-                                                                            { label: "sep1", seperator: !0 },
-                                                                            { label: "Delete", href: "#", icon: c.Z },
-                                                                        ],
-                                                                    }),
-                                                                }),
-                                                            ],
-                                                        },
-                                                        e.id,
-                                                    );
-                                                }),
-                                        }),
-                                    "grid" === x && (0, t.jsx)(R, { imports: (0, z.Y)(g, "name") }),
+                                                            }),
+                                                        ],
+                                                    },
+                                                    e.id,
+                                                );
+                                            }),
+                                    }),
+                                    "grid" === x && (0, t.jsx)(R, {imports: (0, z.Y)(g, "name")}),
                                 ],
                             }),
                             (0, t.jsx)(k, {
@@ -858,14 +925,15 @@
             });
             var t = r(4134),
                 a = r(7294);
+
             function i(e) {
                 var n = (0, a.useContext)(t.ZP).setLayout;
                 (0, a.useEffect)(function () {
                     return (
                         n(e),
-                        function () {
-                            n({});
-                        }
+                            function () {
+                                n({});
+                            }
                     );
                 }, []);
             }

@@ -12,21 +12,21 @@
 
 <%@ include file="../includes/new_header.jsp" %>
 <script type="text/javascript">
-    var skipSetting = 0;
-    var skipMarker = 5;
+    // edd changed to call every second, no skip maker
+    var something = true;
 
-    // how to stop this hammering? I reckon add a second every time between checks if the data hasn't changed.
     function updateStatus() {
-        jQuery.post("/api/SpreadsheetStatus?action=sheetReady&reportid=${reportid}", function (data) {
-            var objDiv = document.getElementById("serverStatus");
-            if ("true" == data) { // the sheet should be ready
-                location.reload();
-                return;
-            }
-        });
-
-
-        if (window.skipMarker <= 0) {
+        if (something) {
+            jQuery.post("/api/SpreadsheetStatus?action=importResult", function (data) {
+                if (data.indexOf("true") == 0) { // the sheet should be ready, note indexof not startswith, support for the former better
+//                    location.replace("/api/${targetController}" + data.substring(4));// nothing added in most cases - EFC note this was to move people to the right tab
+                    location.replace("/api/${targetController}?newdesign=imports");// nothing added in most cases
+                    something = false;
+                    return;
+                } else { // possible headline info
+                    //document.getElementById("headline").innerHTML = "<h1>" + data + "</h1>" // that would have broken before also . . . hmmm
+                }
+            });
             jQuery.post("/api/SpreadsheetStatus?action=log", function (data) {
                 var objDiv = document.getElementById("serverStatus");
                 if (objDiv.innerHTML != data) { // it was updated
@@ -34,53 +34,19 @@
                     objDiv.style.backgroundColor = '#EEFFEE'; // highlight the change
                     objDiv.scrollTop = objDiv.scrollHeight;
                     // assume there could be more stuff!
-                    window.skipSetting = 0;
-                    window.skipMarker = 0;
-                    document.getElementById("chosen").innerHTML = extractChoices(data);
                 } else {
                     objDiv.style.backgroundColor = 'white';
-                    if (window.skipSetting == 0) {
-                        window.skipSetting = 1;
-                    } else {
-                        window.skipSetting *= 2;
-                    }
 //                alert("same data, new skip setting : " + window.skipSetting);
-                    window.skipMarker = window.skipSetting;
                 }
             });
-        } else {
-            window.skipMarker--;
         }
-    }
-
-    function extractChoices(data) {
-        var choices = new Map();
-        const dataLines = data.split("<br>");
-        var firstline = true;
-        for (var dataLine of dataLines) {
-            if (firstline) {
-                firstline = false;//first line may be chopped
-            } else {
-                var choice = dataLine.split(" : ");
-                if (choice.length > 1 && choice[0].indexOf(" finishing") < 0) {
-                    choices.set(choice[0].trim(), choice[1].trim());
-                }
-            }
-        }
-        var toReturn = "";
-        for (let ch of choices.keys()) {
-            toReturn += ch + " = " + choices.get(ch) + "<br/>";
-        }
-        return toReturn;
     }
 
     setInterval(function () {
         updateStatus();
     }, 1000);
 
-
 </script>
-
 <div class="az-content">
     <!--    <div class="az-topbar">
             <button>
@@ -155,10 +121,6 @@
         </div>-->
 
 
-    <!-- closed loading thing
-    -->
-
-
     <div class="az-fileupload-modal-container">
         <div>
             <div id="headlessui-dialog-panel-:r6c:" class="opacity-100 translate-y-0 scale-100">
@@ -170,8 +132,8 @@
                                                                   src="https://cherrett-digital.s3.amazonaws.com/spinner.gif"><!-- <span>82%</span> -- no % as we don't know it!-->
                                 </div>
                                 <div class="az-logging-info">
-                                    <div id="showdetail" style="display: block">
-                                        <button onclick="showHideDiv('showdetail');showHideDiv('hidedetail');showHideDiv('chosen');showHideDiv('serverStatus');">
+                                    <div id="showdetail"  style="display: block">
+                                        <button onclick="showHideDiv('showdetail');showHideDiv('hidedetail');showHideDiv('serverStatus')">
                                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                                                  stroke-width="2" stroke="currentColor" aria-hidden="true">
                                                 <path stroke-linecap="round" stroke-linejoin="round"
@@ -182,7 +144,7 @@
                                     </div>
 
                                     <div id="hidedetail" style="display: none">
-                                        <button onclick="showHideDiv('showdetail');showHideDiv('hidedetail');showHideDiv('chosen');showHideDiv('serverStatus');">
+                                        <button onclick="showHideDiv('showdetail');showHideDiv('hidedetail');showHideDiv('serverStatus')">
                                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                                                  stroke-width="2" stroke="currentColor" aria-hidden="true">
                                                 <path stroke-linecap="round" stroke-linejoin="round"
@@ -191,7 +153,6 @@
                                             Hide detail
                                         </button>
                                     </div>
-                                    <div id="chosen" style="height:45px; width:100%;font:10px monospace;overflow:auto;display: none"></div>
                                     <div id="serverStatus" style="height:145px; width:100%;font:10px monospace;overflow:auto;display: none"></div>
                                 </div>
                             </div>

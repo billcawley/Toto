@@ -18,7 +18,9 @@ import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.controller.LoginController;
 import com.azquo.spreadsheet.transport.UploadedFile;
 import com.azquo.spreadsheet.zk.ReportAnalysis;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.math.NumberUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -30,6 +32,7 @@ import org.zkoss.poi.openxml4j.opc.OPCPackage;
 import org.zkoss.poi.ss.usermodel.*;
 import org.zkoss.poi.xssf.usermodel.XSSFWorkbook;
 
+import javax.servlet.ServletContext;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -37,6 +40,8 @@ import javax.servlet.http.HttpSession;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -52,6 +57,9 @@ import java.util.*;
 @RequestMapping("/ManageReports")
 public class ManageReportsController {
 
+
+    @Autowired
+    ServletContext servletContext;
     //private static final Logger logger = Logger.getLogger(ManageReportsController.class);
 
     public static class DatabaseSelected {
@@ -365,7 +373,26 @@ public class ManageReportsController {
             model.put("developer", loggedInUser.getUser().isDeveloper());
             model.put("showexplanation", showExplanation);
             AdminService.setBanner(model, loggedInUser);
+
+
+
             if (request.getParameter("newdesign") != null){
+                try {
+                    StringBuilder reportsList = new StringBuilder();
+                    for (OnlineReport or : reportList){
+                        reportsList.append("new m({ id: " + or.getId() + ", name: \"" + or.getReportName() + "\", database: \"" + or.getDatabase() + "\", author: \"" + or.getAuthor() + "\", description: \"" + or.getExplanation() + "\" }),");
+                    }
+                    InputStream resourceAsStream = servletContext.getResourceAsStream("/WEB-INF/includes/newappjavascript.js");
+                    model.put("newappjavascript", IOUtils.toString(resourceAsStream, StandardCharsets.UTF_8)
+                            .replace("###IMPORTSLIST###", "{}")
+                            .replace("###DATABASESLIST###", "{}")
+                            .replace("###REPORTSLIST###", reportsList.toString()));
+
+
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                model.put("pageUrl", "/reports");
                 return "managereports";
             }
             return "managereports2";

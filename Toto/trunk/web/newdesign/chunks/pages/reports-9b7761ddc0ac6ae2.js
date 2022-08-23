@@ -319,7 +319,7 @@
                                                                 className: "full",
                                                                 children: (0, t.jsx)("div", {
                                                                     children: (0, t.jsx)(d(), {
-                                                                        href: "/reports/" + e.id,
+                                                                        href: "/api/Online?reportid=" + e.id + "&newdesign=true&database=".concat(e.database),
                                                                         children: (0, t.jsxs)("a", {
                                                                             children: [
                                                                                 (0, t.jsx)(i.Z, {}),
@@ -341,12 +341,12 @@
                                                                     items: [
                                                                         {
                                                                             label: "Open",
-                                                                            href: "/reports/".concat(e.id),
+                                                                            href: "/api/Online?reportid=" + e.id + "&newdesign=true&database=".concat(e.database),
                                                                             icon: s.Z,
                                                                         },
-                                                                        { label: "Download", href: m.tf, icon: c.Z },
+                                                                        { label: "Download", href: "/api/DownloadTemplate?reportId=" + e.id, icon: c.Z },
                                                                         { label: "sep1", seperator: !0 },
-                                                                        { label: "Delete", href: "#", icon: a.Z },
+                                                                        { label: "Delete", href: "/api/ManageReports?deleteId=" + e.id, icon: a.Z },
                                                                     ],
                                                                 }),
                                                             }),

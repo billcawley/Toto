@@ -1,11 +1,12 @@
 </div>
 </div>
+<!-- todo - switch page so menus are highlighted -->
 <script id="__NEXT_DATA__" type="application/json">
     {
         "props": { "pageProps": {} },
-        "page": "/reports",
+        "page": "${pageUrl}",
         "query": {},
-        "buildId": "azoqkzEsPz0JW8-xCH7sF",
+        "buildId": "dLAh7h5Al3MM_dp0etzAF",
         "nextExport": true,
         "autoExport": true,
         "isFallback": false,
