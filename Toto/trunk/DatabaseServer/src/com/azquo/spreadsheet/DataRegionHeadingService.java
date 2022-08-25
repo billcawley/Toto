@@ -718,7 +718,7 @@ public class DataRegionHeadingService {
     }
 
     // return headings as strings for display, I'm going to put blanks in here if null. Called after permuting/expanding
-    static List<List<String>> convertDataRegionHeadingsToStrings(List<List<DataRegionHeading>> source, String user) {
+    static List<List<String>> convertDataRegionHeadingsToStrings(List<List<DataRegionHeading>> source, String user, String language) {
         // first I need to check max offsets for each column - need to check on whether the 2d arrays are the same orientation for row or column headings or not todo
         List<Integer> maxColOffsets = new ArrayList<>();
         for (List<DataRegionHeading> row : source) {
@@ -741,6 +741,9 @@ public class DataRegionHeadingService {
         }
         // note, custom languages - the wrong way around!
         List<String> languages = new ArrayList<>();
+        if (language!=null){
+            languages.add(language);
+        }
         languages.add(StringLiterals.DEFAULT_DISPLAY_NAME);//for displaying headings always look for DEFAULT_DISPLAY_NAME first - otherwise may look up the chain for local names
         languages.add(user);
         List<List<String>> toReturn = new ArrayList<>(source.size());
@@ -754,9 +757,9 @@ public class DataRegionHeadingService {
                     if (heading.getOffsetHeadings() != null) {
                         for (DataRegionHeading offsetHeading : heading.getOffsetHeadings()) {
                             String offsetString = "";
-                            for (String language : languages) {
-                                if (offsetHeading.getName().getAttribute(language) != null) {
-                                    offsetString = offsetHeading.getName().getAttribute(language);
+                            for (String language1 : languages) {
+                                if (offsetHeading.getName().getAttribute(language1) != null) {
+                                    offsetString = offsetHeading.getName().getAttribute(language1);
                                     break;
                                 }
                                 // used to check default display name here but that's redundant, it's set above
@@ -766,9 +769,9 @@ public class DataRegionHeadingService {
                     }
                     Name name = heading.getName();
                     if (name != null) {
-                        for (String language : languages) {
-                            if (name.getAttribute(language) != null) {
-                                cellValue = name.getAttribute(language);
+                        for (String language1 : languages) {
+                            if (name.getAttribute(language1) != null) {
+                                cellValue = name.getAttribute(language1);
                                 break;
                             }
                             // used to check default display name here but that's redundant, it's set above

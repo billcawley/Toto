@@ -137,6 +137,7 @@ public class AzquoCellService {
             languages = new ArrayList<>();
 
             languages.addAll(new ArrayList<String>(Arrays.asList(regionOptions.rowLanguage.split(","))));
+            languages.add(StringLiterals.DEFAULT_DISPLAY_NAME);
         }
         final List<List<List<DataRegionHeading>>> rowHeadingLists = DataRegionHeadingService.createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBConnection, rowHeadingsSource, languages, contextSuffix, regionOptions.ignoreHeadingErrors);
         languages = defaultLanguages;
@@ -151,6 +152,7 @@ public class AzquoCellService {
         if (regionOptions.columnLanguage != null && regionOptions.columnLanguage.length() > 0) {
             languages = new ArrayList<>();
             languages.add(regionOptions.columnLanguage);
+            languages.add(StringLiterals.DEFAULT_DISPLAY_NAME);
         }
              String firstColumnHeading = colHeadingsSource.get(0).get(0);
              Pattern p = Pattern.compile("" + StringLiterals.QUOTE + "[^" + StringLiterals.QUOTE + "]*" + StringLiterals.QUOTE + " ="); //`name`=
