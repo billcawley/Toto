@@ -414,8 +414,11 @@ public class ManageDatabasesController {
             , @RequestParam(value = "newdesign", required = false) String newdesign
     ) {
 
-        if (database != null) {
+        if (database != null && database.length()> 0) {
             request.getSession().setAttribute("lastSelected", database);
+        }else{
+            //FOR TESTING ONLY!
+            database = "test";
         }
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
         // I assume secure until we move to proper spring security
@@ -623,6 +626,10 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
                 uf = new UploadedFile(filePath, Collections.singletonList(fileName), fileNameParams, false, false);
                 uploadFile.transferTo(moved);
                 uploadedFiles.add(uf);
+                if (!ImportService.hasImportTemplate(loggedInUser, uf)) {
+                    return ImportWizard.uploadTheFile(loggedInUser,uf);
+
+                }
             }
             new Thread(() -> {
                 List<UploadedFile> toSetInSession = new ArrayList<>();
