@@ -8,10 +8,16 @@ import com.azquo.StringLiterals;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.rmi.RMIClient;
+import com.azquo.spreadsheet.CommonReportUtils;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
+import com.azquo.spreadsheet.UserChoiceService;
 import com.azquo.spreadsheet.transport.UploadedFile;
 import com.azquo.spreadsheet.zk.BookUtils;
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.PropertyAccessor;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.poi.openxml4j.opc.OPCPackage;
 import org.apache.poi.xddf.usermodel.chart.XDDFChartData;
 import org.apache.poi.xddf.usermodel.chart.XDDFDataSource;
@@ -28,6 +34,9 @@ import java.util.*;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.*;
 import org.apache.poi.xssf.usermodel.*;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.util.List;
 
 
@@ -35,6 +44,7 @@ import java.util.List;
 
 public class ReportWizard {
 
+    final static short noColor = IndexedColors.WHITE.getIndex();
     final static short choiceColor = IndexedColors.YELLOW.getIndex();
     final static short deepBlue = IndexedColors.DARK_BLUE.getIndex();
     final static short lightBlue = IndexedColors.LIGHT_CORNFLOWER_BLUE.getIndex();
@@ -77,7 +87,7 @@ public class ReportWizard {
     public static String chooseSuitable(List<String> options, String currentChosen, String exclude){
         //looks for the nearest size based on log values.
         double optimum = Math.log(10);
-        if (exclude.equals(currentChosen)){
+        if (exclude.length()>0 && exclude.equals(currentChosen)){
             return "";
         }
         String possible = "";
@@ -123,7 +133,7 @@ public class ReportWizard {
 
     }
 
-    public static int createReport(@NotNull LoggedInUser loggedInUser, String dataItem, String rows, String columns, String templateReport, String reportName)throws Exception{
+    public static int createReport(@NotNull LoggedInUser loggedInUser, String dataItem, String function, String rows, String columns, String templateReport, String reportName)throws Exception{
         List<OnlineReport> templates = OnlineReportDAO.findTemplatesForBusinessId(loggedInUser.getBusiness().getId());
         OnlineReport templateFound = null;
         for (OnlineReport template:templates){
@@ -145,7 +155,14 @@ public class ReportWizard {
          //now customise
         int insertedLines =  bookPrepare(book,"row", rows, 0);
         insertedLines = bookPrepare(book,"column", columns,insertedLines);
-        setNamedRangeValue(book,"az_context1", dataItem, choiceColor);
+        if (!"sum".equals(function)){
+            dataItem = function + "(" + dataItem + ")";
+        }
+        setNamedRangeValue(book,"az_context1", dataItem, (short)0);
+        String options = "";
+        options += getLanguage(loggedInUser,"row", rows);
+        options += getLanguage(loggedInUser,"column", columns);
+        setNamedRangeValue(book,"az_options1", options, (short)0);
         setNamedRangeValue(book,"az_ReportName", reportName,(short)0);
         String tempPath =SpreadsheetService.getHomeDir() + "/temp/" + System.currentTimeMillis()+".xlsx"; // timestamp the upload to stop overwriting with a file with the same name is uploaded after
         File tempFile = new File(tempPath); // timestamp the upload to stop overwriting with a file with the same name is uploaded after
@@ -257,6 +274,35 @@ public class ReportWizard {
         }
     }
 
+    private static String getLanguage(LoggedInUser loggedInUser, String dimension, String value){
+        String setName = value.substring(0,value.indexOf(";")).toLowerCase(Locale.ROOT);
+        if (setName.contains(StringLiterals.MEMBEROF)){
+            setName=setName.substring(setName.lastIndexOf(StringLiterals.MEMBEROF)+2);
+        }
+        String language = null;
+        if (setName.endsWith(" key") || setName.endsWith(" id") || setName.endsWith(" code")){
+            try {
+                String rootName = setName.substring(0,setName.lastIndexOf(" "));
+
+                List<String> attributes = RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).getAttributeList(loggedInUser.getDataAccessToken());
+                for (String attribute:attributes) {
+                    if (attribute.toLowerCase(Locale.ROOT).equals(rootName + " name") || attribute.toLowerCase(Locale.ROOT).equals(rootName)) {
+                        language = attribute.toLowerCase(Locale.ROOT);
+                    }
+
+                }
+            }catch(Exception e){
+                return "";
+            }
+            if (language!=null)
+               return dimension + " language=" + language + ",";
+
+
+        }
+
+        return "";
+    }
+
 
         private static void setCellValue(org.apache.poi.ss.usermodel.Sheet sheet, int r, int c, String value, short color){
         Row row = sheet.getRow(r);
@@ -274,5 +320,77 @@ public class ReportWizard {
         }
 
     }
+    public static String handleRequest(HttpServletRequest request, LoggedInUser loggedInUser)throws Exception{
+        final ObjectMapper jacksonMapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        class Selection {
+            String selName;
+            List<String> selValues;
+
+            Selection(String selName, List<String> selValues) {
+                this.selName = selName;
+                this.selValues = selValues;
+            }
+        }
+
+        String dataChosen = request.getParameter("datachosen");
+        String functionChosen = removeSelected(request.getParameter("functionchosen"));
+        if (functionChosen==null || functionChosen.length()==0){
+            functionChosen = "sum";
+        }
+        String rowChosen = removeSelected(request.getParameter("rowchosen"));
+        String columnChosen = removeSelected(request.getParameter("columnchosen"));
+        List<Selection> selections = new ArrayList<>();
+        if (dataChosen.length() > 0) {
+
+            List<String> setOptions = ReportWizard.getPossibleHeadings(loggedInUser, dataChosen);
+
+            List<String> rowOptions = ReportWizard.createList(setOptions, rowChosen, "");
+            rowChosen = ReportWizard.chooseSuitable(setOptions, rowChosen, columnChosen);
+
+            if (dataChosen.toLowerCase(Locale.ROOT).contains("unit") && "sum".equals(functionChosen)){
+                functionChosen = "count";
+
+            }
+            List<String>functionOptions = getFunctionOptions(functionChosen);
+            Selection functions = new Selection("functions", functionOptions);
+            selections.add(functions);
+            Selection rows = new Selection("rows", rowOptions);
+            selections.add(rows);
+            List<String> columnOptions = ReportWizard.createList(setOptions, columnChosen, rowChosen);
+            Selection columns = new Selection("columns", columnOptions);
+            selections.add(columns);
+            Selection templates = new Selection("templates", ReportWizard.getTemplateList(loggedInUser));
+            selections.add(templates);
+        }
+
+        jacksonMapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
+        String done = jacksonMapper.writeValueAsString(selections);
+        return done;
+
+
+    }
+
+    private static List<String>getFunctionOptions(String chosen){
+        String[]   FUNCTIONOPTIONS = {"sum", "count", "average", "max","min"};
+        List<String> toReturn = new ArrayList<>();
+        for (String function:FUNCTIONOPTIONS){
+            if (function.equals(chosen)){
+                toReturn.add(function + " selected");
+
+            }else{
+                toReturn.add(function);
+            }
+        }
+        return toReturn;
+    }
+
+    private static String removeSelected(String value){
+        if (value.endsWith(" selected")){
+            return value.substring(0, value.length() - 9);
+        }
+        return value;
+    }
+
+
 
 }

@@ -49,6 +49,7 @@ public class RangeTestController {
             model.put("topDataSet", dropdownListForQuery);
             List<String> topNames = CommonReportUtils.getDropdownListForQuery(loggedInUser, "TOPNAMES - Data");
             model.put("topNames", topNames);
+            model.put("dbname", loggedInUser.getDatabase().getName());
 
             AdminService.setBanner(model, loggedInUser);
             return "rangetest";

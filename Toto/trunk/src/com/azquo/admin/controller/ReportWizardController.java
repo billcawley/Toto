@@ -1,30 +1,15 @@
 package com.azquo.admin.controller;
 
-import com.azquo.admin.AdminService;
 import com.azquo.admin.database.Database;
-import com.azquo.admin.database.DatabaseServer;
-import com.azquo.admin.database.DatabaseServerDAO;
 import com.azquo.dataimport.*;
 import com.azquo.spreadsheet.CommonReportUtils;
 import com.azquo.spreadsheet.LoggedInUser;
-import com.azquo.spreadsheet.LoginService;
-import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.controller.LoginController;
-import org.apache.poi.openxml4j.opc.OPCPackage;
-import org.json.JSONObject;
-import org.json.XML;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
-import java.io.File;
-import java.io.FileInputStream;
-import java.nio.charset.Charset;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -64,12 +49,13 @@ public class ReportWizardController {
             String submit = request.getParameter("submit");
             if ("submit".equals(submit)){
                 String data = request.getParameter("data");
+                String function = request.getParameter("functions");
                 String rows = request.getParameter("rows");
                 String columns = request.getParameter("columns");
                 String template = request.getParameter("templates");
                 String reportName = request.getParameter("reportName");
                 try{
-                    int reportId = ReportWizard.createReport(loggedInUser, data,rows,columns,template,reportName);
+                    int reportId = ReportWizard.createReport(loggedInUser, data,function, rows,columns,template,reportName);
                     model.put("reportid", reportId);
                     return "redirect:/api/Online";
                 }catch(Exception e){

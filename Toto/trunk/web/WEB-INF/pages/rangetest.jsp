@@ -187,7 +187,8 @@
     Database :
     <div class="select is-small">
         <select name="database" id="database"><c:forEach items="${databases}" var="database">
-            <option value="${database.name}">${database.name}</option>
+            <option value="${database.name}"<c:if test="${database.name == dbname}"> selected </c:if>>${database.name}
+                </option>
         </c:forEach></select>
     </div>
     <a href="#" class="button is-small" onclick="getData()">Run Query</a>&nbsp;

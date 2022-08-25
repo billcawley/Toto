@@ -114,7 +114,7 @@ public class CreateExcelForDownloadController {
                     Business businessById = null;
                     for (String field: wizardInfo.getFields().keySet()) {
                         WizardField wizardField = wizardInfo.getFields().get(field);
-                        if (!wizardField.getIgnore()) {
+                        if (wizardField.getSelect()) {
                             importSheet.getInternalSheet().getCell(row, col).setStringValue(wizardField.getImportedName());
                             importSheet.getInternalSheet().getCell(row, col + 1).setStringValue(wizardField.getName());
                             if (wizardField.getAdded()) {

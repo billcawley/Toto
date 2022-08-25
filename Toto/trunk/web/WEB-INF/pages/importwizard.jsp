@@ -2,406 +2,458 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
 <c:set var="title" scope="request" value="Import Wizard"/>
-<%@ include file="../includes/admin_header2.jsp" %>
+<%@ include file="../includes/new_header.jsp" %>
+
+
+
+<div class="az-content">
+    <div class="az-topbar">
+        <button>
+            <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke-width="2"
+                    stroke="currentColor"
+                    aria-hidden="true"
+            >
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h8m-8 6h16"></path>
+            </svg>
+        </button>
+        <div class="az-searchbar">
+            <form action="#">
+                <div>
+                    <div>
+                        <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke-width="2"
+                                stroke="currentColor"
+                                aria-hidden="true"
+                        >
+                            <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                            ></path>
+                        </svg>
+                    </div>
+                    <input placeholder="Search" type="text" value=""/>
+                </div>
+            </form>
+        </div>
+    </div>
+    <main>
+        <div class="az-import-wizard-view">
+            <div class="az-import-wizard">
+                <nav class="az-import-wizard-progress">
+                    <ol id="stages">
+                    </ol>
+                </nav>
+                <div class="az-import-wizard-main">
+                    <div class="az-section-heading">
+                        <h3>Relationships</h3>
+                        <div class="az-section-controls">
+                            <div class="az-section-filter">
+                                <div>
+                                    <svg
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            viewBox="0 0 20 20"
+                                            fill="currentColor"
+                                            aria-hidden="true"
+                                    >
+                                        <path
+                                                fill-rule="evenodd"
+                                                d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+                                                clip-rule="evenodd"
+                                        ></path>
+                                    </svg>
+                                </div>
+                                <input type="text" placeholder="Filter"/>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="az-section-body">
+                        <div class="az-alert az-alert-warning">
+                            <div>
+                                <div></div>
+                                <div></div>
+                                <div>
+                                    <svg
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            viewBox="0 0 20 20"
+                                            fill="currentColor"
+                                            aria-hidden="true"
+                                    >
+                                        <path
+                                                fill-rule="evenodd"
+                                                d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                                                clip-rule="evenodd"
+                                        ></path>
+                                    </svg>
+                                </div>
+                                <div></div>
+                                <div>
+                                    <div id="instructions">
+
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="suggestionDiv" class="az-alert az-alert-info">
+                            <div>
+                                <div>
+                                    <svg
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            viewBox="0 0 20 20"
+                                            fill="currentColor"
+                                            aria-hidden="true"
+                                    >
+                                        <path
+                                                fill-rule="evenodd"
+                                                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z"
+                                                clip-rule="evenodd"
+                                        ></path>
+                                    </svg>
+                                </div>
+                                <div></div>
+                                <div></div>
+                                <div></div>
+                                <div>
+                                    <div id="suggestions"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="dataparentline" class="az-alert" style="display:none">
+                            For this stage you need to specify a 'parent' name for the data you select
+                            <input   type="text" id="dataparent" aria-expanded="false" tabindex="0" aria-labelledby="headlessui-combobox-label-:r14:">
+
+
+                        </div>
+                        <div class="az-table" id="fieldtable">
+                        </div>
+                    </div>
+                    <div class="az-import-wizard-pagination">
+                        <div>
+                            <button class="az-wizard-button-back" onClick="loadLastStage()">Back
+                            </button
+                            >
+                            <button class="az-wizard-button-next" onClick="loadNextStage()">Next</button>
+                            <form method="post" id="import" action="/api/ImportWizard">
+                                <input type="hidden" name="submit" value="import"/>
+                                <button style="display:none" id="importnow" class="az-wizard-button-next" onClick="submit()">Import now!</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+<div id="templates" style="display:none">
+    <span id="az-tick">
+        <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="2"
+                stroke="currentColor"
+                aria-hidden="true"
+        >
+                                                                        <path
+                                                                                stroke-linecap="round"
+                                                                                stroke-linejoin="round"
+                                                                                d="M5 13l4 4L19 7"
+                                                                        ></path></svg>
+    </span>
+    <div id="stage-template">
+        <li>
+            <div class="STAGECLASS">
+                <div>
+                                                    <span></span
+                                                    ><span
+                ><span
+                ><span><span>STAGENUMBER</span></span></span
+                ><span
+                ><span>STAGENAME</span
+                ><span>STAGECOMMENT</span></span
+                ></span
+                >
+                </div>
+                <div class="step-seperator">
+                    <svg viewBox="0 0 12 82" fill="none" preserveAspectRatio="none">
+                        <path
+                                d="M0.5 0V31L10.5 41L0.5 51V82"
+                                stroke="currentcolor"
+                                vector-effect="non-scaling-stroke"
+                        ></path>
+                    </svg>
+                </div>
+            </div>
+        </li>
+
+    </div>
+</div>
+
+
 <script>
 
-    function fileChanged() {
-        fileInput = document.getElementById("uploadFile");
-        if (fileInput.files.length > 0) {
-            const fileName = document.getElementById("filename");
 
-            if (fileInput.files.length > 1) {
-                fileName.textContent = " Multiple files selected";
-            } else {
-                fileName.textContent = fileInput.files[0].name;
+    /*
+
+rowHeadingsSource: string[][],
+columnHeadingsSource: string[][],
+columnHeadings: string[][],
+rowHeadings: string[][],
+context: string[][],
+data: string[][],
+highlight: boolean[][],
+comments: string[][]
+options: string,
+lockresult: string
+     */
+
+    var stage = 1;
+    var nextStage = 1
+    var fields = [];
+    var hidden = [];
+    changed("", "");
+    var fieldcols = [];
+    var itemTemplate = "";
+
+
+    function loadNextStage() {
+        nextStage = stage + 1;
+        changed(null, null);
+    }
+
+    function loadLastStage() {
+        nextStage = stage - 1;
+        changed(null, null);
+    }
+
+
+    async function azquoSend(params) {
+        var host = sessionStorage.getItem("host");
+        try {
+            let data = await fetch('/api/Excel/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: params
+            });
+            //console.log(data)
+            return data;
+        } catch (e) {
+            console.log(e)
+        }
+    }
+
+    function getFieldInfoAsString() {
+        var fieldInfo = "";
+        var fieldTable = document.getElementById("fields");
+        if (fieldTable == null) {
+            return "";
+        }
+        for (i = 0; i < fieldTable.rows.length; i++) {
+
+            // GET THE CELLS COLLECTION OF THE CURRENT ROW.
+            var objCells = fieldTable.rows.item(i).cells;
+
+            // LOOP THROUGH EACH CELL OF THE CURENT ROW TO READ CELL VALUES.
+            var tab = "";
+            for (var j = 0; j < objCells.length; j++) {
+                var cell = objCells.item(j).lastChild;
+                if (cell.options != null) {
+                    fieldInfo += '\t' + cell.options[cell.selectedIndex].text;
+                } else if (cell.tagName == "INPUT") {
+                    if (cell.type == "checkbox") {
+                        fieldInfo += tab + cell.checked;
+                    } else {
+                        fieldInfo += tab + cell.value;
+                    }
+                } else {
+                    fieldInfo += tab + objCells.item(j).innerText;
+
+                }
+                tab = "\t";
             }
+            fieldInfo += "\n";     // ADD A BREAK (TAG).
         }
+        return fieldInfo;
     }
 
-    function databaseChanged(sel) {
-        db = sel.options[sel.selectedIndex].text;
-        if (db == "New database") {
-            document.getElementById("newdb").style.display = "block";
-        } else {
-            document.getElementById("newdb").style.display = "none";
-            document.getElementById("newdatabase").value = "";
-        }
-    }
-
-
-    var selectedItem = null;
-
-
-    function selectionChange(fieldName) {
-        if (selectedItem != null) {
-            document.getElementById(selectedItem).style.fontWeight = null;
-        }
-        selectedItem = fieldName;
-        document.getElementById(selectedItem).style.fontWeight = "bold";
-        var selectedValue = document.getElementById(fieldName).value;
-        document.getElementById("valueSelected").value = selectedValue;
-        document.getElementById("fieldSelected").value = fieldName;
+    function selectionChanged(sel) {
+        var chosenValue = sel.options[sel.selectedIndex].text;
+        var chosenField = sel.id.substring(0, sel.id.indexOf("-valuesFound"));
+        changed(chosenField, chosenValue);
 
     }
 
-    function dataChecked() {
-        if (document.getElementById("newparent").value == "") {
-            document.getElementById("error").innerHTML = "You need to specify a name for your data"
+    async function changed(chosenId, selection) {
+        /*
+        the message to Azquo tells it what values are currently selected.  The return will be a json array of fieldname,fieldvalues[]  (e.g changing the data value will set up rows, columns and templates)
+
+         */
+
+        document.getElementById("dataparentline").style.display="none";
+        document.getElementById("suggestions").innerHTML = "";
+        document.getElementById("suggestionDiv").style.display="none";
+        let params = "op=importwizard&datachosen=&sessionid=${pageContext.session.id}";
+        params += "&fields=" + encodeURIComponent(getFieldInfoAsString());
+        if (chosenId != null) {
+            params += "&chosenfield=" + encodeURIComponent(chosenId) + "&chosenvalue=" + encodeURIComponent(selection);
+        }
+        params += "&stage=" + stage + "&nextstage=" + nextStage;
+        if (stage==3 || stage == 4){
+            params += "&dataparent=" + document.getElementById("dataparent").value;
+        }
+
+        let data = await azquoSend(params);
+        let json = await data.json();
+        fields = [];
+        for (var h of hidden) {
+            document.getElementsByClassName(h).style = "display:block";
+        }
+        itemTemplate = document.getElementById("stage-template").innerHTML;
+
+
+        fillHTML(json, "stage");
+        itemTemplate = "<tr>";
+        var fieldcount = 0;
+        for (var i = 0; i < fieldcols.length; i++) {
+            itemTemplate += "<td>VALUE" + (i + 1) + "</td>";
+        }
+        itemTemplate += "</tr>";
+        fillHTML(json, "field");
+        stage = nextStage;
+        if (stage == 3 || stage == 4) {
+            document.getElementById("dataparentline").style.display = "block";
+
+        }
+        if (document.getElementById("suggestions").innerHTML >"") {
+            document.getElementById("suggestionDiv").style.display = "block";
+        }
+        if (stage==3 || stage==4){
+            document.getElementById("dataparentline").style.display = "block";
+
+        }
+        if (stage==6){
+            document.getElementById("importnow").style.display="block"
         }
     }
 
+    function isArray(what) {
+        return Object.prototype.toString.call(what) === '[object Array]';
+    }
+
+
+    function fillHTML(json, jsonItem) {
+
+        var itemsHTML = "";
+
+        for (var i = 0; i < json[jsonItem].length; i++) {
+            var oneItem = json[jsonItem][i];
+            var itemHTML = itemTemplate;
+            for (var itemFact in oneItem) {
+                if (oneItem[itemFact] > "") {
+                    if (itemFact == "imported name") {
+                        fields.push(oneItem[itemFact]);
+                    }
+                    console.log(itemFact + ":" + oneItem[itemFact]);
+                    if (!isArray(oneItem[itemFact])) {
+                        if (oneItem[itemFact] == "tick") {
+                            itemHTML = itemHTML.replace(itemFact.toUpperCase(), document.getElementById("az-tick").innerHTML);
+                        } else {
+                            var fieldpos = elementOf(fieldcols, itemFact);
+                            if (fieldpos > 0) {
+                                var replacement = oneItem[itemFact];
+                                if (itemFact == "textEntry") {
+                                    replacement = "<input type=\"text\" value=\"" + replacement + "\">";
+                                }
+
+                                itemHTML = itemHTML.replaceAll("VALUE" + fieldpos, replacement);
+                            } else {
+                                itemHTML = itemHTML.replaceAll(itemFact.toUpperCase(), oneItem[itemFact]);
+                            }
+                        }
+                        if (itemFact == "fields") {
+                            fieldcols = oneItem[itemFact].split(",");
+                        }
+                        if (itemFact == "fieldHeadings") {
+                            var headings = oneItem[itemFact].split(",");
+                            var headingHTML = "<table><thead><tr>";
+                            for (var heading of headings) {
+                                headingHTML += "<th>" + heading + "</th>"
+                            }
+                            document.getElementById("fieldtable").innerHTML = headingHTML + "</tr></thead><tbody id=\"fields\"></tbody></table>";
+                        }
+                        if (itemFact == "dataParent"){
+                            document.getElementById("dataparent").value = oneItem[itemFact];
+                        }
+                        rangeElement = document.getElementById(itemFact);
+                        if (rangeElement != null) {
+                            var itemVal = decodeURIComponent(oneItem[itemFact]);
+                            rangeElement.innerHTML = decodeURIComponent(itemVal);
+                        }
+
+                    } else {
+                        var onchange = "";
+                        var selectHTML = "";
+                        if (itemFact == "valuesFound") {
+                            onchange = " onchange=selectionChanged(this)"
+                        }
+                        if (oneItem[itemFact].length==1){
+                            selectHTML = oneItem[itemFact][0];
+                        }else {
+
+                            selectHTML = "<select id=\"" + oneItem.fieldName + "-" + itemFact + "\"" + onchange + ">";
+                            var selectCount = 0;
+                            for (var selectItem of oneItem[itemFact]) {
+                                if (selectCount++ > 100) break;
+                                var selectOption = selectItem;
+                                var selected = "";
+                                if (selectItem.endsWith(" selected")) {
+                                    selectOption = selectItem.substring(0, selectItem.length - 9);
+                                    selected = " selected";
+                                }
+                                selectHTML += "\n<option value = \"" + selectOption + "\"" + selected + ">" + selectOption + "<\option>";
+                            }
+                        }
+                        var fieldpos = elementOf(fieldcols, itemFact);
+                        if (fieldpos > 0) {
+                            itemHTML = itemHTML.replaceAll("VALUE" + fieldpos, selectHTML);
+                        } else {
+                            itemHTML = itemHTML.replaceAll(itemFact.toUpperCase(), selectHTML);
+                        }
+                    }
+                }
+            }
+            itemsHTML += itemHTML;
+        }
+        document.getElementById(jsonItem + "s").innerHTML = itemsHTML;
+
+    }
+
+    function elementOf(set, element) {
+        count = 1;
+        for (var testItem of set) {
+            if (testItem.trim() == element) {
+                return count;
+            }
+            count++;
+        }
+        return 0;
+    }
+
+    function submit() {
+        changed(null, null);//to store away any changes
+        document.getElementById("import").submit();
+    }
 
 </script>
 
 
-<div class="box">
-    <h1 class="title">Import Wizard</h1>
-    <div class="has-text-danger" id="error">${error}</div>
-    <form action="/api//ImportWizard" method="post" id="wform" enctype="multipart/form-data">
-        <input type="hidden" name="fieldSelected" id="fieldSelected" value=""/>
-        <input type="hidden" name="valueSelected" id="valueSelected" value=""/>
-        <input type="hidden" name="stage" id="stage" value="${stage}"/>
-        <!-- no business id -->
-        <table class="table">
-            <tr>
-                <c:if test="${stage > 1}">
-                    <td>
-
-                        <table class="table">
-                            <tbody>
-                            <tr>
-                            <tr>
-                                <td>Heading</td>
-                                <td>Values found - select to find associated values</td>
-                                <td>No. Distinct Values</td>
-                                <td>Current value</td>
-                                <td>Suggested name</td>
-                                <td>
-                                    <c:if test="${stage>2}">
-                                        Field type
-                                    </c:if>
-                                    <c:if test="${stage==5}">
-                                        Select peers
-                                    </c:if>
-                                    <c:if test="${stage==6}">
-                                        Mark fields that are PARENTS
-                                    </c:if>
-
-                                </td>
-                            </tr>
-
-                            <c:forEach items="${fields.keySet()}" var="field" varStatus="loop">
-                                <c:set var="wizardField" value="${fields.get(field)}"/>
-                                <tr>
-                                    <td>
-                                        <c:choose>
-                                            <c:when test="${stage==2 && loop.index==fieldCount}">
-                                                <input name="newfieldname" type="text" value="${newfieldname}"/>
-                                            </c:when>
-                                            <c:otherwise>
-                                                <label class="label">${wizardField.importedName}</label>
-                                            </c:otherwise>
-                                        </c:choose>
-                                    </td>
-                                    <td style="width:50px;overflow:hidden">
-                                        <c:choose>
-                                            <c:when test="${wizardField.valuesFound.size() == 0}">
-                                            </c:when>
-                                            <c:when test="${wizardField.valuesFound.size() == 1}">
-                                                ${wizardField.valuesFound.get(0)}
-                                            </c:when>
-                                            <c:otherwise>
-
-                                                <select name="${field}" onfocus=selectionChange("${field}")
-                                                        onchange=selectionChange("${field}") id="${field}">
-                                                    <c:forEach begin="0" end="100" items="${wizardField.valuesFound}"
-                                                               var="instance">
-                                                        <option onclick=clickget(value="${instance}")>${fn:substring(instance,0,30)}</option>
-                                                    </c:forEach>
-                                                </select>
-                                            </c:otherwise>
-                                        </c:choose>
-                                    </td>
-                                    <td>${wizardField.distinctCount}</td>
-                                    <td style="width:50px;overflow:hidden">
-                                        <c:choose>
-                                            <c:when test="${field==headingChosen}">
-                                                <b>${wizardField.valueFound}</b>
-                                            </c:when>
-                                            <c:otherwise>
-                                                ${wizardField.valueFound}
-
-                                            </c:otherwise>
-                                        </c:choose>
-                                    </td>
-                                    <td>
-                                        <c:if test="${stage==2}">
-                                            <input type="text" value="${wizardField.name}" name="name_${field}"/>
-                                        </c:if>
-                                        <c:if test="${stage>2}">${wizardField.name}
-                                        </c:if>
-
-                                    </td>
-                                    <c:if test="${stage==2}">
-                                        <td>
-                                            <c:if test="${fieldCount>loop.index}">
-
-                                                <input type="checkbox" name="ignore_${field}" value="true" <c:if
-                                                        test="${wizardField.ignore}"> checked </c:if>>
-                                                <label for="ignore_${field}">
-                                                    <c:choose>
-
-                                                        <c:when test="${wizardField.added==true}">
-                                                            Delete
-                                                        </c:when>
-                                                        <c:otherwise>
-                                                            Do not upload
-                                                        </c:otherwise>
-
-                                                    </c:choose>
-                                                </label>
-                                            </c:if>
-                                        </td>
-                                    </c:if>
-                                    <c:if test="${stage==3}">
-                                        <td>
-                                            <select name="type_${field}">
-                                                <option value="null"></option>
-                                                <c:forEach items="${options}" var="type">
-                                                    <option value="${type}"
-                                                            <c:if test="${wizardField.type.equals(type)}"> selected </c:if>>${type}</option>
-                                                </c:forEach>
-                                            </select>
-                                        </td>
-                                    </c:if>
-                                    <c:if test="${stage==4}">
-                                        <td>
-                                            <c:choose>
-                                                <c:when test="${\"date\".equals(wizardField.type)|| \"time\".equals(wizardField.type)|| \"key field id\".equals(wizardField.type)|| \"key field name\".equals(wizardField.type)}">${wizardField.type}</c:when>
-                                                <c:when test="${\"data\".equals(wizardField.type)&& (dataparent==null || !dataparent.equals(wizardField.parent))}">${wizardField.interpretation}</c:when>
-                                                <c:otherwise>
-                                                    <input type="checkbox" name="child_${field}" value="true"
-                                                           onchange="dataChecked()"
-                                                    <c:if test="${wizardField.parent!=null && wizardField.parent.equals(dataparent)}">
-                                                           checked </c:if>>
-                                                    <label for="child_${field}">Select Data</label>
-                                                </c:otherwise>
-                                            </c:choose>
-
-                                        </td>
-                                    </c:if>
-                                    <c:if test="${stage==5}">
-                                        <td>
-                                            <c:choose>
-                                                <c:when test="${not empty potentialPeers[field]}">
-                                                    <input type="checkbox" name="peer_${field}" value="true"
-                                                    <c:if test="${not empty peersChosen[field]}"> checked </c:if>>
-                                                    <label for="child_${field}">Select Peer</label>
-                                                </c:when>
-                                                <c:when test="${\"data\".equals(wizardField.type)}">${wizardField.interpretation}</c:when>
-
-                                            </c:choose>
-                                        </td>
-                                    </c:if>
-                                    <c:if test="${stage==6}">
-                                        <td>
-                                            <c:choose>
-                                                <c:when test="${not empty undefinedFields[field]}">
-                                                    <select name="child_${field}">
-                                                        <option value=""></option>
-                                                        <c:forEach items="${possibleChildFields}" var="child">
-                                                            <c:if test="${!child.equals(field)}">
-                                                                <option value="${child}"
-                                                                        <c:if test="${child.equals(wizardField.child)}"> selected </c:if>>${fields.get(child).name}</option>
-                                                            </c:if>
-                                                        </c:forEach>
-                                                    </select>
-                                                </c:when>
-                                                <c:otherwise>
-                                                    ${wizardField.interpretation}
-                                                </c:otherwise>
-                                            </c:choose>
-                                        </td>
-                                    </c:if>
-                                    <c:if test="${stage==7}">
-                                        <td>
-                                            <c:choose>
-                                                <c:when test="${not empty possibleAttributeFields[field]}">
-                                                    <select name="attribute_${field}">
-                                                        <option value=""></option>
-                                                        <c:forEach items="${possibleAnchorFields}" var="anchor">
-                                                            <option value="${anchor}"
-                                                                    <c:if test="${anchor.equals(wizardField.anchor)}"> selected </c:if>>${fields.get(anchor).name}</option>
-                                                        </c:forEach>
-                                                    </select>
-                                                </c:when>
-                                                <c:otherwise>
-                                                    ${wizardField.interpretation}
-                                                </c:otherwise>
-                                            </c:choose>
-                                        </td>
-                                    </c:if>
-                                    <c:if test="${stage==8}">
-                                        <td>
-                                                ${wizardField.interpretation}
-                                        </td>
-                                    </c:if>
-
-
-                                </tr>
-                            </c:forEach>
-                            </tbody>
-                        </table>
-                    </td>
-                </c:if>
-                <td>
-                    <table>
-                        <c:if test="${stage>1}">
-                        <td>
-                            <a href="/api//CreateExcelForDownload?action=DOWNLOADIMPORTWIZARD"
-                               class="button"
-                               title="Download work so far"><span class="fa fa-download"></span> </a>
-                        </td>
-                        <td>
-                            <label>Download work so far</label>
-                        </td>
-                        <td>
-                            </c:if>
-                            <c:if test="${stage==0}">
-                                Select Database
-                                <select name="database" onchange=databaseChanged(this)>
-                                    <option value=""></option>
-                                    <c:forEach items="${databases}" var="database">
-                                        <c:if test="${!child.equals(field)}">
-                                            <option value="${database}"
-                                                    <c:if test="${database.equals(selecteddatabase)}"> selected </c:if>>${database}</option>
-                                        </c:if>
-                                    </c:forEach>
-                                </select>
-                            </c:if>
-                            <div id="newdb" style="display:none">
-                                Name for the new database <input type="text" name="newdatabase" id="newdatabase"/>
-                            </div>
-
-
-                            <c:if test="${stage > 0}">
-                                <label class="file-label">
-                                    <c:if test="${stage==1}">Select File to upload &nbsp</c:if>
-                                    <c:if test="${stage>1}">Reload saved work &nbsp</c:if>
-                                    <input class="file-input is-small" type="file" name="uploadFile"
-                                           onChange="fileChanged()" id="uploadFile">
-                                    <span class="file-cta is-small">
-                                              <span class="file-icon is-small">
-                                                <i class="fas fa-upload"></i>
-                                              </span>
-                                         </span>
-
-                                    <span id="filename" class="label"></span>
-                                </label>
-                            </c:if>
-
-
-                        </td>
-                        </tr>
-                    </table>
-                    <div class="box">
-                        <c:if test="${stage==4}">
-                            <label class="label">New data type</label><input type="text" name="newparent" id="newparent"
-                                                                             value="${dataparent}"/>
-                            <c:choose>
-                                <c:when test="${existingparents.size()>0 && dataparent==null}">
-
-                                    <label class="label"> or revise existing type </label>
-                                    <select name="existingparent" onchange="submitDocument()">
-                                        <option></option>
-                                        <c:forEach items="${existingparents}" var="existingparent">
-                                            <option onclick=clickget(value="${existingparent}")>${existingparent}</option>
-                                        </c:forEach>
-
-                                    </select>
-                                </c:when>
-                            </c:choose>
-                        </c:if>
-                        <c:if test="${stage==5}">
-                            <label class="label">Data type: ${dataparent}</label>
-                            <input type="hidden" name="newparent" value="${dataparent}"/>
-                            <c:choose>
-                                <c:when test="${existingparents.size()>1}">
-
-                                    <label class="label"> or revise existing type </label>
-                                    <select name="existingparent" onchange="submitDocument()">
-                                        <c:forEach items="${existingparents}" var="existingparent">
-                                            <option onclick=clickget(value="${existingparent}")>${existingparent}</option>
-                                        </c:forEach>
-
-                                    </select>
-                                </c:when>
-                            </c:choose>
-                        </c:if>
-                    </div>
-
-                    <div class="box">
-                        <span id="stageheading" class="content"><b>Action ${stageheading}</b></span>
-                    </div>
-
-                    <div clas="box">
-                        <span id="stageexplanation" class="content is-small">${stageexplanation}</span>
-                    </div>
-
-                    <c:if test="${stage==8}">
-                        <label class="label">${progressmessage}</label>
-                        <div class="centeralign">
-                            <button type="submit" name="btnsubmit" value="makedb" class="button">Create database
-                            </button>
-                            <button type="submit" name="btnsubmit" value="specials" class="button">Add special
-                                instructions
-                            </button>
-                        </div>
-                    </c:if>
-                    <c:if test="${stage>1 && suggestions.size() > 0}">
-                        <div class="content">
-                            <p><strong>Suggestions</strong></p>
-                            <label class="label is-small">You can override suggestions at any time</label>
-                        </div>
-                        <div class="content">
-                            <ul class="list">
-                            <c:forEach items="${suggestions}" var="suggestion">
-                                <li>
-                                    ${suggestion}
-                                </li>
-                            </c:forEach>
-                            </ul>
-                        </div>
-                        <c:if test="${suggestionReason!=null}">
-                            <div class="content">
-                                <p><strong>Reason</strong></p>
-                                <p>${suggestionReason}</p>
-                            </div>
-                        </c:if>
-                     </c:if>
-                </td>
-            </tr>
-        </table>
-
-
-        <div class="centeralign">
-            <c:if test="${stage>1}">
-                <button type="submit" name="btnsubmit" value="last" class="button">Last</button>
-                <button type="submit" name="btnsubmit" value="reload" class="button">Re-show</button>
-            </c:if>
-            <c:if test="${stage<8}">
-                <button type="submit" name="btnsubmit" value="next" class="button">Next</button>
-            </c:if>
-        </div>
-    </form>
-    <script>
-        function submitDocument() {
-            document.getElementById("wform").submit();
-        }
-
-
-    </script>
-
-</div>
-
-<%@ include file="../includes/admin_footer.jsp" %>
+<%@ include file="../includes/new_footer.jsp" %>

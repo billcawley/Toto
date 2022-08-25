@@ -2,14 +2,15 @@ package com.azquo.dataimport;
 
 import java.util.List;
 
-public class WizardField {
+public class
+WizardField {
     private String importedName;
     private String name;
     private List<String> valuesFound;
     private String valueFound;
     private int distinctCount;
     private String interpretation;
-    private boolean ignore;
+    private boolean select;
     private String type;
     private String parent;
     private List<String> peers;
@@ -24,7 +25,7 @@ public class WizardField {
         this.distinctCount = 0;
         this.valueFound = null;
         this.interpretation = null;
-        this.ignore = false;
+        this.select = true;
         this.type = null;
         this.parent = null;
         this.peers = null;
@@ -60,9 +61,9 @@ public class WizardField {
 
     public void setInterpretation(String interpretation){this.interpretation = interpretation; }
 
-    public boolean getIgnore(){return ignore; }
+    public boolean getSelect(){return select; }
 
-    public void setIgnore(boolean ignore){this.ignore = ignore; }
+    public void setSelect(boolean select){this.select = select; }
 
     public String getType(){return  type; }
 

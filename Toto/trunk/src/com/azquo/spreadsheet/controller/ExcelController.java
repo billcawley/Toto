@@ -998,40 +998,12 @@ public class ExcelController {
                 }
                 return result;
             }
+            if (op.equals("importwizard")){
+                return ImportWizard.handleRequest(loggedInUser,request);
+
+            }
             if (op.equals("reportwizard")){
-                class Selection {
-                    String selName;
-                    List<String> selValues;
-
-                    Selection(String selName, List<String> selValues) {
-                        this.selName = selName;
-                        this.selValues = selValues;
-                    }
-                }
-
-                String dataChosen = request.getParameter("datachosen");
-                String rowChosen = removeSelected(request.getParameter("rowchosen"));
-                String columnChosen = removeSelected(request.getParameter("columnchosen"));
-                List<Selection> selections = new ArrayList<>();
-                if (dataChosen.length() > 0) {
-
-                    List<String> setOptions = ReportWizard.getPossibleHeadings(loggedInUser, dataChosen);
-
-                    List<String> rowOptions = ReportWizard.createList(setOptions, rowChosen, columnChosen);
-                    rowChosen = ReportWizard.chooseSuitable(setOptions, rowChosen, columnChosen);
-                    Selection rows = new Selection("rows", rowOptions);
-                    selections.add(rows);
-                    List<String> columnOptions = ReportWizard.createList(setOptions, columnChosen, rowChosen);
-                    Selection columns = new Selection("columns", columnOptions);
-                    selections.add(columns);
-                    Selection templates = new Selection("templates", ReportWizard.getTemplateList(loggedInUser));
-                    selections.add(templates);
-                }
-
-                jacksonMapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
-                String done = jacksonMapper.writeValueAsString(selections);
-                return done;
-
+                return ReportWizard.handleRequest(request,loggedInUser);
 
             }
         } catch (NullPointerException npe) {
@@ -1044,12 +1016,7 @@ public class ExcelController {
         return jsonError(result);
     }
 
-    private static String removeSelected(String value){
-        if (value.endsWith(" selected")){
-            return value.substring(0, value.length() - 9);
-        }
-        return value;
-    }
+
 
     private static List<List<String>> replaceUserChoicesInHeadings(LoggedInUser loggedInUser, List<List<String>> headings) {
         List<List<String>> toReturn = new ArrayList<>();
