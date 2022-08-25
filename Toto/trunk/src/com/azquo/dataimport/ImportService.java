@@ -2196,6 +2196,28 @@ public final class ImportService {
         return uploadedFile;
     }
 
+
+    public static boolean hasImportTemplate(LoggedInUser loggedInUser, UploadedFile uploadedFile){
+        try {
+            HashMap<String, ImportTemplateData> templateCache = new HashMap<>();
+            if (getImportTemplateForUploadedFile(loggedInUser, uploadedFile, templateCache) != null) {
+                for (String template:templateCache.keySet()){
+                    ImportTemplateData templateData = templateCache.get(template);
+                    for (String sheet:templateData.getSheets().keySet()){
+                        for (String fileName:uploadedFile.getFileNames()){
+                            if (fileName.toLowerCase(Locale.ROOT).startsWith((sheet.toLowerCase(Locale.ROOT)))){
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+        }catch(Exception e){
+
+        }
+        return false;
+    }
+
     public static ImportTemplateData getImportTemplateForUploadedFile(LoggedInUser loggedInUser, UploadedFile uploadedFile, HashMap<String, ImportTemplateData> templateCache) throws Exception {
         String importTemplateName = uploadedFile != null ? uploadedFile.getParameter(IMPORTTEMPLATE) : null;
         if (importTemplateName != null) { // priority to a manually specified import name
