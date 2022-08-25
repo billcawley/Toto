@@ -42,7 +42,7 @@ public interface RMIInterface extends Remote {
 
     UploadedFile readPreparedFile(DatabaseAccessToken databaseAccessToken, UploadedFile uploadedFile, String user) throws RemoteException;
 
-    void uploadWizardData(DatabaseAccessToken databaseAccessToken, Map<String,String>wizardDefs, Map<String,List<String>>data) throws RemoteException;
+    void uploadWizardData(DatabaseAccessToken databaseAccessToken, String fileName, Map<String,String>wizardDefs, Map<String,List<String>>data) throws RemoteException;
 
     void checkTemporaryCopyExists(DatabaseAccessToken databaseAccessToken) throws RemoteException;
 

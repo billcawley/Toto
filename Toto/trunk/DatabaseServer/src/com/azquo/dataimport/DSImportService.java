@@ -686,7 +686,7 @@ public class DSImportService {
                 || heading.startsWith(HeadingReader.SPLIT);
     }
 
-    public static void uploadWizardData(DatabaseAccessToken databaseAccessToken, Map<String, String> wizardDefs, Map<String, List<String>> data) throws Exception {
+    public static void uploadWizardData(DatabaseAccessToken databaseAccessToken, String fileName, Map<String, String> wizardDefs, Map<String, List<String>> data) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
         List<MutableImportHeading> headings = new ArrayList<>();
         String keyFieldId = null;
@@ -743,7 +743,7 @@ public class DSImportService {
                 }
                 String dataChild = getClause("parent of", clauses);
                 if (dataChild != null) {
-                    modifiedHeading.append(";parent of " + removeId(dataChild) + ";child of " + fieldNameSansId);
+                    modifiedHeading.append(";parent of " + removeId(dataChild) + ";child of " + fieldNameSansId +";default No " + fieldNameSansId);
                     NameService.findOrCreateNameInParent(azquoMemoryDBConnection, fieldNameSansId, null, false);
                 }
                 String dataParent = getClause("datagroup", clauses);
@@ -770,7 +770,13 @@ public class DSImportService {
                 }
                 List<String> languages = new ArrayList<>();
                 languages.add(StringLiterals.DEFAULT_DISPLAY_NAME);
-                final MutableImportHeading heading = HeadingReader.interpretHeading(azquoMemoryDBConnection, modifiedHeading.toString(), languages, null);
+                List<String> fileNames = new ArrayList<>();
+                if (fileName.contains(".")){
+                    fileNames.add(fileName.substring(0,fileName.indexOf(".")));
+;                }else{
+                    fileNames.add(fileName);//used to replace FILENAME in composition fields..
+                }
+                final MutableImportHeading heading = HeadingReader.interpretHeading(azquoMemoryDBConnection, modifiedHeading.toString(), languages, fileNames);
                 headings.add(heading);
             }
         }
