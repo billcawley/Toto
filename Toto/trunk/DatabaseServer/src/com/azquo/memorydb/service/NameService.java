@@ -526,10 +526,14 @@ public final class NameService {
         //top names must not include 'data' or 'date', but must include date children.
 
         Collection<Name> topNames = NameQueryParser.parseQuery(azquoMemoryDBConnection, StringLiterals.TOPNAMES);
-        Collection<Name> dates = NameQueryParser.parseQuery(azquoMemoryDBConnection,"date");
-        Name date = dates.iterator().next();
-        topNames.removeAll(dates);
-        topNames.addAll(date.getChildren());
+        try {
+            Collection<Name> dates = NameQueryParser.parseQuery(azquoMemoryDBConnection, "date");
+            Name date = dates.iterator().next();
+            topNames.removeAll(dates);
+            topNames.addAll(date.getChildren());
+        }catch(Exception e){
+
+        }
         Collection<Name> dataNameAsList = NameQueryParser.parseQuery(azquoMemoryDBConnection,"data");
         topNames.removeAll(dataNameAsList);
         List<SetInfo> setInfoList = new ArrayList();
