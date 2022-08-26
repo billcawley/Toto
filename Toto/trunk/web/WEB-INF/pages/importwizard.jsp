@@ -225,7 +225,6 @@ lockresult: string
     var itemTemplate = "";
 
 
-
     function loadNextStage() {
         nextStage = stage + 1;
         changed(null, null);
@@ -271,7 +270,7 @@ lockresult: string
                 var fieldVal = "";
                 var cell = objCells.item(j).lastChild;
                 var isOption = false;
-                if (cell!=null) {
+                if (cell != null) {
                     try {
                         if (cell.options != null) {
                             fieldVal = cell.options[cell.selectedIndex].text;
@@ -387,7 +386,7 @@ lockresult: string
                             itemHTML = itemHTML.replaceAll(itemFact.toUpperCase(), itemValue);
                         }
                     }
-                    if (itemFact == "fields" && itemValue>"") {
+                    if (itemFact == "fields" && itemValue > "") {
                         fieldcols = itemValue.split(",");
                     }
                     if (itemFact == "fieldHeadings" && itemValue > "") {
@@ -401,10 +400,12 @@ lockresult: string
                     if (itemFact == "dataParent" && itemValue > "") {
                         document.getElementById("dataparent").value = itemValue;
                     }
-                    rangeElement = document.getElementById(itemFact);
-                    if (rangeElement != null) {
-                        var itemVal = decodeURIComponent(itemValue);
-                        rangeElement.innerHTML = decodeURIComponent(itemVal);
+                    if (itemValue > "") {
+                        rangeElement = document.getElementById(itemFact);
+                        if (rangeElement != null) {
+                            var itemVal = decodeURIComponent(itemValue);
+                            rangeElement.innerHTML = decodeURIComponent(itemVal);
+                        }
                     }
 
                 } else {
@@ -413,7 +414,7 @@ lockresult: string
                     if (itemFact == "valuesFound") {
                         onchange = " onchange=selectionChanged(this)";
                     }
-                    if (nextStage== 4){
+                    if (nextStage == 4) {
                         onchange = "onchange=changed(null,null)";
                     }
                     if (itemValue.length == 1) {
@@ -443,8 +444,8 @@ lockresult: string
             }
             itemsHTML += itemHTML;
         }
-        if (stage==1 && jsonItem=="field"){
-            itemsHTML +="<tr><td><input id=\"newfield\" type=\"text\"></td><td>you can add fields here</td><td><input id=\"newname\" type=\"text\"></td></tr>";
+        if (nextStage == 1 && jsonItem == "field") {
+            itemsHTML += "<tr><td><input id=\"newfield\" type=\"text\"></td><td>you can add fields here</td><td><input id=\"newname\" type=\"text\"></td></tr>";
         }
 
         document.getElementById(jsonItem + "s").innerHTML = itemsHTML;
