@@ -17,7 +17,8 @@ public class ImportStage {
     String instructions;
     String suggestions;
     String typeName;
-    String dataParent;//only for stages 3 and 4
+    String dataParent;//only for stage 3
+    String title;
 
     ImportStage(int currentStage, int  stageNumber, String stageName){
         if (currentStage > stageNumber){
@@ -38,6 +39,7 @@ public class ImportStage {
         this.suggestions = "";
         this.typeName = "";
         this.dataParent = null;
+        this.title = "";
     }
 
     String getStageNumber(){return stageNumber; }
@@ -71,5 +73,9 @@ public class ImportStage {
     void setDataParent(String dataParent){this.dataParent = dataParent; }
 
     String getDataParent(){return dataParent; }
+
+    void setTitle(String title){this.title = title; }
+
+    String getTitle(){return title; }
 }
 

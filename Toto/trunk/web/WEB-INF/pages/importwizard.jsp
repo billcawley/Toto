@@ -5,7 +5,6 @@
 <%@ include file="../includes/new_header.jsp" %>
 
 
-
 <div class="az-content">
     <div class="az-topbar">
         <button>
@@ -53,7 +52,7 @@
                 </nav>
                 <div class="az-import-wizard-main">
                     <div class="az-section-heading">
-                        <h3>Relationships</h3>
+                        <h3 id="title"></h3>
                         <div class="az-section-controls">
                             <div class="az-section-filter">
                                 <div>
@@ -127,7 +126,8 @@
                         </div>
                         <div id="dataparentline" class="az-alert" style="display:none">
                             For this stage you need to specify a 'parent' name for the data you select
-                            <input   type="text" id="dataparent" aria-expanded="false" tabindex="0" aria-labelledby="headlessui-combobox-label-:r14:">
+                            <input type="text" id="dataparent" aria-expanded="false" tabindex="0"
+                                   aria-labelledby="headlessui-combobox-label-:r14:">
 
 
                         </div>
@@ -142,7 +142,9 @@
                             <button class="az-wizard-button-next" onClick="loadNextStage()">Next</button>
                             <form method="post" id="import" action="/api/ImportWizard">
                                 <input type="hidden" name="submit" value="import"/>
-                                <button style="display:none" id="importnow" class="az-wizard-button-next" onClick="submit()">Import now!</button>
+                                <button style="display:none" id="importnow" class="az-wizard-button-next"
+                                        onClick="submit()">Import now!
+                                </button>
                             </form>
                         </div>
                     </div>
@@ -223,6 +225,7 @@ lockresult: string
     var itemTemplate = "";
 
 
+
     function loadNextStage() {
         nextStage = stage + 1;
         changed(null, null);
@@ -265,19 +268,32 @@ lockresult: string
             // LOOP THROUGH EACH CELL OF THE CURENT ROW TO READ CELL VALUES.
             var tab = "";
             for (var j = 0; j < objCells.length; j++) {
+                var fieldVal = "";
                 var cell = objCells.item(j).lastChild;
-                if (cell.options != null) {
-                    fieldInfo += '\t' + cell.options[cell.selectedIndex].text;
-                } else if (cell.tagName == "INPUT") {
-                    if (cell.type == "checkbox") {
-                        fieldInfo += tab + cell.checked;
-                    } else {
-                        fieldInfo += tab + cell.value;
-                    }
-                } else {
-                    fieldInfo += tab + objCells.item(j).innerText;
+                var isOption = false;
+                if (cell!=null) {
+                    try {
+                        if (cell.options != null) {
+                            fieldVal = cell.options[cell.selectedIndex].text;
+                            isOption = true;
+                        }
+                    } catch (error) {
 
+                    }
+                    if (!isOption) {
+                        if (cell.tagName == "INPUT") {
+                            if (cell.type == "checkbox") {
+                                fieldVal = cell.checked;
+                            } else {
+                                fieldVal = cell.value;
+                            }
+                        } else {
+                            fieldVal += objCells.item(j).innerText;
+
+                        }
+                    }
                 }
+                fieldInfo += tab + fieldVal;
                 tab = "\t";
             }
             fieldInfo += "\n";     // ADD A BREAK (TAG).
@@ -298,28 +314,23 @@ lockresult: string
 
          */
 
-        document.getElementById("dataparentline").style.display="none";
+        document.getElementById("dataparentline").style.display = "none";
         document.getElementById("suggestions").innerHTML = "";
-        document.getElementById("suggestionDiv").style.display="none";
+        document.getElementById("suggestionDiv").style.display = "none";
         let params = "op=importwizard&datachosen=&sessionid=${pageContext.session.id}";
         params += "&fields=" + encodeURIComponent(getFieldInfoAsString());
         if (chosenId != null) {
             params += "&chosenfield=" + encodeURIComponent(chosenId) + "&chosenvalue=" + encodeURIComponent(selection);
         }
         params += "&stage=" + stage + "&nextstage=" + nextStage;
-        if (stage==3 || stage == 4){
+        if (stage == 3) {
             params += "&dataparent=" + document.getElementById("dataparent").value;
         }
 
         let data = await azquoSend(params);
         let json = await data.json();
         fields = [];
-        for (var h of hidden) {
-            document.getElementsByClassName(h).style = "display:block";
-        }
         itemTemplate = document.getElementById("stage-template").innerHTML;
-
-
         fillHTML(json, "stage");
         itemTemplate = "<tr>";
         var fieldcount = 0;
@@ -329,19 +340,15 @@ lockresult: string
         itemTemplate += "</tr>";
         fillHTML(json, "field");
         stage = nextStage;
-        if (stage == 3 || stage == 4) {
+        if (stage == 3) {
             document.getElementById("dataparentline").style.display = "block";
 
         }
-        if (document.getElementById("suggestions").innerHTML >"") {
+        if (document.getElementById("suggestions").innerHTML > "") {
             document.getElementById("suggestionDiv").style.display = "block";
         }
-        if (stage==3 || stage==4){
-            document.getElementById("dataparentline").style.display = "block";
-
-        }
-        if (stage==6){
-            document.getElementById("importnow").style.display="block"
+        if (stage == 4) {
+            document.getElementById("importnow").style.display = "block"
         }
     }
 
@@ -354,85 +361,92 @@ lockresult: string
 
         var itemsHTML = "";
 
-        for (var i = 0; i < json[jsonItem].length; i++) {
-            var oneItem = json[jsonItem][i];
+        for (var jsonArrayItem = 0; jsonArrayItem < json[jsonItem].length; jsonArrayItem++) {
+            var oneItem = json[jsonItem][jsonArrayItem];
             var itemHTML = itemTemplate;
             for (var itemFact in oneItem) {
-                if (oneItem[itemFact] > "") {
-                    if (itemFact == "imported name") {
-                        fields.push(oneItem[itemFact]);
-                    }
-                    console.log(itemFact + ":" + oneItem[itemFact]);
-                    if (!isArray(oneItem[itemFact])) {
-                        if (oneItem[itemFact] == "tick") {
-                            itemHTML = itemHTML.replace(itemFact.toUpperCase(), document.getElementById("az-tick").innerHTML);
-                        } else {
-                            var fieldpos = elementOf(fieldcols, itemFact);
-                            if (fieldpos > 0) {
-                                var replacement = oneItem[itemFact];
-                                if (itemFact == "textEntry") {
-                                    replacement = "<input type=\"text\" value=\"" + replacement + "\">";
-                                }
+                var itemValue = oneItem[itemFact];
 
-                                itemHTML = itemHTML.replaceAll("VALUE" + fieldpos, replacement);
-                            } else {
-                                itemHTML = itemHTML.replaceAll(itemFact.toUpperCase(), oneItem[itemFact]);
-                            }
-                        }
-                        if (itemFact == "fields") {
-                            fieldcols = oneItem[itemFact].split(",");
-                        }
-                        if (itemFact == "fieldHeadings") {
-                            var headings = oneItem[itemFact].split(",");
-                            var headingHTML = "<table><thead><tr>";
-                            for (var heading of headings) {
-                                headingHTML += "<th>" + heading + "</th>"
-                            }
-                            document.getElementById("fieldtable").innerHTML = headingHTML + "</tr></thead><tbody id=\"fields\"></tbody></table>";
-                        }
-                        if (itemFact == "dataParent"){
-                            document.getElementById("dataparent").value = oneItem[itemFact];
-                        }
-                        rangeElement = document.getElementById(itemFact);
-                        if (rangeElement != null) {
-                            var itemVal = decodeURIComponent(oneItem[itemFact]);
-                            rangeElement.innerHTML = decodeURIComponent(itemVal);
-                        }
-
+                if (itemFact == "imported name") {
+                    fields.push(itemValue);
+                }
+                console.log(itemFact + ":" + itemValue);
+                if (!isArray(itemValue)) {
+                    if (itemValue == "tick") {
+                        itemHTML = itemHTML.replace(itemFact.toUpperCase(), document.getElementById("az-tick").innerHTML);
                     } else {
-                        var onchange = "";
-                        var selectHTML = "";
-                        if (itemFact == "valuesFound") {
-                            onchange = " onchange=selectionChanged(this)"
-                        }
-                        if (oneItem[itemFact].length==1){
-                            selectHTML = oneItem[itemFact][0];
-                        }else {
-
-                            selectHTML = "<select id=\"" + oneItem.fieldName + "-" + itemFact + "\"" + onchange + ">";
-                            var selectCount = 0;
-                            for (var selectItem of oneItem[itemFact]) {
-                                if (selectCount++ > 100) break;
-                                var selectOption = selectItem;
-                                var selected = "";
-                                if (selectItem.endsWith(" selected")) {
-                                    selectOption = selectItem.substring(0, selectItem.length - 9);
-                                    selected = " selected";
-                                }
-                                selectHTML += "\n<option value = \"" + selectOption + "\"" + selected + ">" + selectOption + "<\option>";
-                            }
-                        }
                         var fieldpos = elementOf(fieldcols, itemFact);
                         if (fieldpos > 0) {
-                            itemHTML = itemHTML.replaceAll("VALUE" + fieldpos, selectHTML);
+                            var replacement = itemValue;
+                            if (itemFact == "textEntry") {
+                                replacement = "<input type=\"text\" value=\"" + replacement + "\">";
+                            }
+
+                            itemHTML = itemHTML.replaceAll("VALUE" + fieldpos, replacement);
                         } else {
-                            itemHTML = itemHTML.replaceAll(itemFact.toUpperCase(), selectHTML);
+                            itemHTML = itemHTML.replaceAll(itemFact.toUpperCase(), itemValue);
                         }
+                    }
+                    if (itemFact == "fields" && itemValue>"") {
+                        fieldcols = itemValue.split(",");
+                    }
+                    if (itemFact == "fieldHeadings" && itemValue > "") {
+                        var headings = itemValue.split(",");
+                        var headingHTML = "<table><thead><tr>";
+                        for (var heading of headings) {
+                            headingHTML += "<th>" + heading + "</th>"
+                        }
+                        document.getElementById("fieldtable").innerHTML = headingHTML + "</tr></thead><tbody id=\"fields\"></tbody></table>";
+                    }
+                    if (itemFact == "dataParent" && itemValue > "") {
+                        document.getElementById("dataparent").value = itemValue;
+                    }
+                    rangeElement = document.getElementById(itemFact);
+                    if (rangeElement != null) {
+                        var itemVal = decodeURIComponent(itemValue);
+                        rangeElement.innerHTML = decodeURIComponent(itemVal);
+                    }
+
+                } else {
+                    var onchange = "";
+                    var selectHTML = "";
+                    if (itemFact == "valuesFound") {
+                        onchange = " onchange=selectionChanged(this)";
+                    }
+                    if (nextStage== 4){
+                        onchange = "onchange=changed(null,null)";
+                    }
+                    if (itemValue.length == 1) {
+                        selectHTML = itemValue[0];
+                    } else {
+
+                        selectHTML = "<select id=\"" + oneItem.fieldName + "-" + itemFact + "\"" + onchange + ">";
+                        var selectCount = 0;
+                        for (var selectItem of itemValue) {
+                            if (selectCount++ > 100) break;
+                            var selectOption = selectItem;
+                            var selected = "";
+                            if (selectItem.endsWith(" selected")) {
+                                selectOption = selectItem.substring(0, selectItem.length - 9);
+                                selected = " selected";
+                            }
+                            selectHTML += "\n<option value = \"" + selectOption + "\"" + selected + ">" + selectOption + "<\option>";
+                        }
+                    }
+                    var fieldpos = elementOf(fieldcols, itemFact);
+                    if (fieldpos > 0) {
+                        itemHTML = itemHTML.replaceAll("VALUE" + fieldpos, selectHTML);
+                    } else {
+                        itemHTML = itemHTML.replaceAll(itemFact.toUpperCase(), selectHTML);
                     }
                 }
             }
             itemsHTML += itemHTML;
         }
+        if (stage==1 && jsonItem=="field"){
+            itemsHTML +="<tr><td><input id=\"newfield\" type=\"text\"></td><td>you can add fields here</td><td><input id=\"newname\" type=\"text\"></td></tr>";
+        }
+
         document.getElementById(jsonItem + "s").innerHTML = itemsHTML;
 
     }
@@ -446,6 +460,16 @@ lockresult: string
             count++;
         }
         return 0;
+    }
+
+    function checkChanged(fieldNo) {
+        let val = document.getElementById("check1-" + fieldNo).checked;
+        if (val) {
+            document.getElementById("check2-" + fieldNo).style.display = "none";
+            document.getElementById("check2-" + fieldNo).checked = false;
+        } else {
+            document.getElementById("check2-" + fieldNo).style.display = "block";
+        }
     }
 
     function submit() {

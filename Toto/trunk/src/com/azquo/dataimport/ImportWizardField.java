@@ -14,7 +14,9 @@ public class ImportWizardField {
     List<String> valuesFound;
     String textEntry;
     List<String> listEntry;
+    List<String>list2Entry;
     String checkEntry;
+    String check2Entry;
     String example;
 
     ImportWizardField(String importName){
@@ -23,7 +25,9 @@ public class ImportWizardField {
         this.valuesFound = null;
         this.textEntry = null;
         this.listEntry = null;
+        this.list2Entry = null;
         this.checkEntry = null;
+        this.check2Entry = null;
         this.example = null;
 
     }
@@ -46,9 +50,17 @@ public class ImportWizardField {
 
     List<String>getListEntry(){return listEntry; }
 
+    void setList2Entry(List<String>list2Entry){this.list2Entry = list2Entry; }
+
+    List<String>getList2Entry(){return list2Entry; }
+
     void setCheckEntry(String checkEntry){this.checkEntry = checkEntry; }
 
     String getCheckEntry(){return  checkEntry; };
+
+    void setCheck2Entry(String check2Entry){this.check2Entry = check2Entry; }
+
+    String getCheck2Entry(){return  check2Entry; };
 
     void setExample(String example){this.example = example; }
 

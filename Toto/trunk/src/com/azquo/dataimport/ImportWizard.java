@@ -45,8 +45,6 @@ import static org.apache.poi.ss.usermodel.CellType.STRING;
 public class ImportWizard {
 
 
-
-
     static class JSONtest {
         String target;
         String source;
@@ -58,7 +56,7 @@ public class ImportWizard {
         JSONtest(String field, String jsonField, String jsonPartner, String jsonValue, String testValue) {
             this.target = field;
             int lastFieldPos = jsonField.lastIndexOf(ImportService.JSONFIELDDIVIDER);
-            this.source = ImportService.JSONFIELDDIVIDER + jsonField.substring(0,lastFieldPos);
+            this.source = ImportService.JSONFIELDDIVIDER + jsonField.substring(0, lastFieldPos);
             this.jsonField = jsonField.substring(lastFieldPos + 1);
             this.jsonPartner = jsonPartner;
             this.jsonValue = jsonValue;
@@ -80,59 +78,69 @@ public class ImportWizard {
 
     public static final String KEYFIELDID = "key field id";
     public static final String KEYFIELDNAME = "key field name";
+    public static final int NAMESTAGE = 1;
+    public static final int TYPESTAGE = 2;
+    public static final int DATASTAGE = 3;
+    public static final int PARENTSTAGE = 4;
 
 
-    public static final String[] TYPEOPTIONS = {KEYFIELDID, KEYFIELDNAME, HeadingReader.DATELANG,  HeadingReader.USDATELANG, "time","datetime"};
+    public static final String[] TYPEOPTIONS = {KEYFIELDID, KEYFIELDNAME, HeadingReader.DATELANG, HeadingReader.USDATELANG, "time", "datetime"};
 
     private static int nthLastIndexOf(int nth, String ch, String string) {
         if (nth <= 0) return string.length();
-        if (string.lastIndexOf(ch)==-1) return -1;//start of string
+        if (string.lastIndexOf(ch) == -1) return -1;//start of string
         return nthLastIndexOf(--nth, ch, string.substring(0, string.lastIndexOf(ch)));
 
     }
 
-    public static Map<String,WizardField> getDataValuesFromFile(WizardInfo wizardInfo, String testField, String testItem) throws Exception{
+    public static Map<String, WizardField> getDataValuesFromFile(WizardInfo wizardInfo, String testField, String testItem) throws Exception {
 
-            if (wizardInfo.getImportFileData()!=null){
-                Map<String,WizardField> list = readJsonFile(wizardInfo,testField,testItem);
-                if (testItem==null){
-                    for (String field:wizardInfo.getFields().keySet()){
-                        WizardField wizardField = wizardInfo.getFields().get(field);
-                        if (wizardField.getAdded()){
-                            list.put(field,wizardField);
-                        }
-                    }
-                }
-                return list;
-
-            }else{
-                Map<String,WizardField> list = new LinkedHashMap<>();
-                boolean found = false;
-                for (String field:wizardInfo.getFields().keySet()){
+        if (wizardInfo.getImportFileData() != null) {
+            Map<String, WizardField> list = readJsonFile(wizardInfo, testField, testItem);
+            if (testItem == null) {
+                for (String field : wizardInfo.getFields().keySet()) {
                     WizardField wizardField = wizardInfo.getFields().get(field);
-                    if (wizardField.getSelect()){
-                        list.put(field,wizardField);
+                    if (wizardField.getAdded()) {
+                        list.put(field, wizardField);
                     }
                 }
-                if (testField!=null && testField.length() > 0){
-                    WizardField wizardField = wizardInfo.getFields().get(testField);
-                    for (int i=0;i<wizardInfo.getLineCount();i++){
-                        if (wizardField.getValuesFound().get(i).equals(testItem)){
-                            for (String field:wizardInfo.getFields().keySet()){
-                                WizardField wizardField1 = wizardInfo.getFields().get(field);
-                                wizardField1.setValueFound(wizardField1.getValuesFound().get(i));
-
-                            }
-                            break;
-                        }
-                    }
-                }
-                return list;
             }
+            return list;
+
+        } else {
+            Map<String, WizardField> list = new LinkedHashMap<>();
+            boolean found = false;
+            for (String field : wizardInfo.getFields().keySet()) {
+                WizardField wizardField = wizardInfo.getFields().get(field);
+                if (wizardField.getSelect()) {
+                    list.put(field, wizardField);
+                }
+            }
+            if (testField != null && testField.length() > 0) {
+                WizardField wizardField = wizardInfo.getFields().get(testField);
+                for (int i = 0; i < wizardInfo.getLineCount(); i++) {
+                    if (wizardField.getValuesFound().get(i).equals(testItem)) {
+                        for (String field : wizardInfo.getFields().keySet()) {
+                            WizardField wizardField1 = wizardInfo.getFields().get(field);
+                            wizardField1.setValueFound(wizardField1.getValuesFound().get(i));
+
+                        }
+                        break;
+                    }
+                }
+            }
+            return list;
+        }
 
     }
 
 
+    public static boolean isWizardSetup(LoggedInUser loggedInUser, UploadedFile uploadedFile) {
+        if (uploadedFile.getFileName().toLowerCase(Locale.ROOT).contains("azquo setup.")){
+            return true;
+        }
+      return false;
+    }
 
 
     public static Map<String,WizardField> readJsonFile(WizardInfo wizardInfo, String testField, String testItem)throws Exception  {
@@ -491,26 +499,44 @@ public class ImportWizard {
         }
         String[] fieldLines = fields.split("\n");
         switch (stage) {
-            case 1:
+            case NAMESTAGE:
+                List<String> toDelete = new ArrayList<>();
                 for (String line : fieldLines) {
                     String[] elements = line.split("\t");
-                    WizardField wizardField = wizardInfo.getFields().get(elements[0]);
-                    //imported name, values, name, selected
-                    String newName = elements[2];
-                    if (!wizardField.getName().equalsIgnoreCase(newName)) {
-                        if (usedName(wizardInfo, newName)) {
-                            return "duplicate name " + newName;
+                    if (elements[0].length() > 0) {
+                        WizardField wizardField = wizardInfo.getFields().get(elements[0]);
+                        if (wizardField == null) {
+                            wizardField = new WizardField(elements[0], elements[2], true);
+                            wizardInfo.getFields().put(elements[0], wizardField);
+                            try {
+                                calcXL(wizardInfo);
+                            } catch (Exception e) {
+
+                            }
+                        }
+                        //imported name, values, name, selected
+                        String newName = elements[2];
+                        if (!wizardField.getName().equalsIgnoreCase(newName)) {
+                            if (usedName(wizardInfo, newName)) {
+                                return "error: duplicate name " + newName;
+                            }
+                        }
+                        wizardField.setName(newName);
+                        if (elements.length > 3 && !elements[3].equals("true")) {
+                            if (wizardField.getAdded()) {
+                                toDelete.add(wizardField.getImportedName());
+                            }
+                            wizardField.setSelect(false);
+                        } else {
+                            wizardField.setSelect(true);
                         }
                     }
-                    wizardField.setName(newName);
-                    if (!elements[3].equals("true")) {
-                        wizardField.setSelect(false);
-                    } else {
-                        wizardField.setSelect(true);
-                    }
+                }
+                for (String field:toDelete){
+                    wizardInfo.getFields().remove(field);
                 }
                 break;
-            case 2:
+            case TYPESTAGE:
                 for (String line : fieldLines) {
                     String[] elements = line.split("\t");
                     WizardField wizardField = wizardInfo.getFields().get(findFieldFromName(wizardInfo, elements[0]));
@@ -523,7 +549,7 @@ public class ImportWizard {
                 }
                 break;
 
-            case 3:
+            case DATASTAGE:
                 if (dataParent == null) {
                     return null;
                 }
@@ -560,17 +586,12 @@ public class ImportWizard {
                     }
 
                 }
-                break;
-            case 4:
-                if (dataParent==null || dataParent.length()==0){
-                    return null;
-                }
                 peers = new ArrayList<>();
                 //peers
                 //fieldName, valuesFound, checkEntry"
                 for (String line:fieldLines){
                     String[]fieldInfo = line.split("\t");
-                    if ("true".equals(fieldInfo[2])){
+                    if ("true".equals(fieldInfo[3])){
                         peers.add(findFieldFromName(wizardInfo,fieldInfo[0]));
                      }
 
@@ -582,27 +603,29 @@ public class ImportWizard {
                     }
                 }
                  break;
-            case 5:
+            case PARENTSTAGE:
                 for (String line:fieldLines){
                     String[]fieldInfo = line.split("\t");
                     //parent child
                     WizardField wizardField = wizardInfo.getFields().get(findFieldFromName(wizardInfo, fieldInfo[0]));
-                    if (fieldInfo[1].length()>0 && !isKeyField(wizardField) && wizardField.getAnchor()==null && wizardField.getParent()==null){
-                        wizardField.setChild(findFieldFromName(wizardInfo,fieldInfo[1]));
-                    }else{
-                        wizardField.setChild(null);
+                    if (fieldInfo.length>1) {
+                        if (fieldInfo[1].length() > 0 && !isKeyField(wizardField) && wizardField.getParent() == null) {
+                            wizardField.setChild(findFieldFromName(wizardInfo, fieldInfo[1]));
+                            wizardField.setAnchor(null);
+                        } else {
+                            wizardField.setChild(null);
+                        }
                     }
-                }
-                break;
-            case 6:
-                for (String line:fieldLines){
-                    String[]fieldInfo = line.split("\t");
-                    //anchor attribute
-                    WizardField wizardField = wizardInfo.getFields().get(findFieldFromName(wizardInfo, fieldInfo[0]));
-                    if (fieldInfo[1].length()>0 && !isKeyField(wizardField) && wizardField.getChild()==null && wizardField.getParent()==null){
-                        wizardField.setAnchor(findFieldFromName(wizardInfo,fieldInfo[1]));
-                    }else{
-                        wizardField.setAnchor(null);
+                    if (fieldInfo.length>2) {
+
+                        //anchor attribute
+                        if (fieldInfo[2].length() > 0 && wizardField.getParent() == null) {
+                            wizardField.setAnchor(findFieldFromName(wizardInfo, fieldInfo[2]));
+                            wizardField.setChild(null);
+                        } else {
+                            wizardField.setAnchor(null);
+
+                        }
                     }
                 }
 
@@ -1143,7 +1166,7 @@ public class ImportWizard {
         try {
             boolean hasSuggestion = false;
              switch (stage) {
-                case 1:
+                 case NAMESTAGE:
 
                     //check names for short names
                     Set<String> shortNames = new HashSet<>();
@@ -1194,7 +1217,7 @@ public class ImportWizard {
                     }
                     return suggestionReason;
 
-                case 2:
+                 case TYPESTAGE:
                     //dates times, key fields
                     idField = wizardInfo.getFields().keySet().iterator().next();
 
@@ -1292,7 +1315,7 @@ public class ImportWizard {
                     if (hasSuggestion){
                         return "we gave fiied in some suggestions";
                     }
-                case 3:
+                 case DATASTAGE:
                     String parent = null;
                     if (wizardInfo.getImportFileData() != null) {
                         int maxCount = 0;
@@ -1365,8 +1388,6 @@ public class ImportWizard {
                             }
                         }
                     }
-                    return suggestionReason;
-                case 4:
                     parent = null;
                     if (wizardInfo.getImportFileData() != null) {
                         List<String> potentialPeers = new ArrayList<>();
@@ -1407,14 +1428,13 @@ public class ImportWizard {
                                     ;
                                 }
                             }
-                            suggestionReason = "there may be others...";
                         }
                     } else {
                         //TODO select peers on flat files which do not have an ID
                     }
                     return suggestionReason;
 
-                case 5:
+                 case PARENTSTAGE:
                     if (wizardInfo.getImportFileData() == null) {
                         Map<String, WizardField> wizardFields = wizardInfo.getFields();
                         List<String> fields = new ArrayList<>();
@@ -1426,14 +1446,16 @@ public class ImportWizard {
                         });
                         Set<String> attributeList = new HashSet<>();
                         for (String field : fields) {
-                            int potentialKeyCount = wizardFields.get(field).getDistinctCount();
+                            WizardField wizardField = wizardInfo.getFields().get(field);
+                            int potentialKeyCount = wizardField.getDistinctCount();
                             if (!HeadingReader.DATELANG.equals(wizardFields.get(field).getType()) && !attributeList.contains(field) && potentialKeyCount > 1) {
 
                                 for (String field2 : fields) {
                                     if (!field2.equals(field) && wizardFields.get(field2).getDistinctCount() <= potentialKeyCount && wizardFields.get(field2).getDistinctCount() > potentialKeyCount * 0.5) {
 
                                         if (isAttribute(wizardInfo, field, field2)) {
-                                              wizardFields.get(field2).setAnchor(field);
+                                            wizardFields.get(field2).setAnchor(field);
+                                            suggestionReason += "<li>" + wizardFields.get(field2).getName() + " is an attribute of " + wizardField.getName() + "</li>";
                                             attributeList.add(field2);
                                        }
                                     }
@@ -1477,7 +1499,6 @@ public class ImportWizard {
                         fields.sort((o1, o2) -> {
                             return wizardFields.get(o1).getDistinctCount() - wizardFields.get(o2).getDistinctCount();
                         });
-                        suggestionReason = "<ul>";
                         for (String field : fields) {
 
                             int potentialParentCount = wizardFields.get(field).getDistinctCount();
@@ -1496,26 +1517,10 @@ public class ImportWizard {
                              }
                         }
                     }
-                    suggestionReason += "</ul>";
                     if (suggestionReason.length()>0) {
-                        return "<p>We&#x27;ve automatically identified <strong>potential</strong> relationships. In this screen you can edit parent/children relationships, on the next, edit attributes</p> " + suggestionReason;
+                        return "<p>We&#x27;ve automatically identified <strong>potential</strong> relationships. Here can edit parent/children and attribute relationshipss</p><ul> " + suggestionReason + "</ul>";
                     }
                     return "";
-                case 6:
-
-                    for(String field:wizardInfo.getFields().keySet()) {
-                        WizardField wizardField = wizardInfo.getFields().get(field);
-                        if (wizardField.getAnchor()!=null) {
-                            if (suggestionReason.length() == 0) {
-                                suggestionReason = "<p>We&#x27;ve automatically <strong>identified</strong> potential attributes.</p><ul>";
-                            }
-                            suggestionReason += "<li>" + wizardField.getName() + " is an attribute of " + wizardField.getAnchor() + "</li>";
-                        }
-                    }
-                    if (suggestionReason.length() > 0) {
-                        suggestionReason += "</ul>";
-                    }
-                    return suggestionReason;
              }
 
 
@@ -1709,71 +1714,68 @@ public class ImportWizard {
 
     private static List<ImportStage> createStageList(int stage){
         List<ImportStage> toReturn = new ArrayList<>();
-        ImportStage importStage = new ImportStage(stage,1,"Properties");
+        ImportStage importStage = new ImportStage(stage,NAMESTAGE,"Properties");
         importStage.setStageComment("rename or exclude columns");
-        if (stage==1) {
+        if (stage==NAMESTAGE) {
             importStage.setFieldHeadings("Imported name,Samples,Suggested name,");
             importStage.setFields("fieldName,valuesFound,textEntry,checkEntry");
             importStage.setInstructions("Please review the <b>suggested</b> name for each field. You can also <b>exclude</b> columns from the import by unselecting the row.");
+            importStage.setTitle(importStage.getStageName());
         }
         toReturn.add(importStage);
         
-        importStage = new ImportStage(stage,2,"Properties");
+        importStage = new ImportStage(stage,TYPESTAGE,"Properties");
         importStage.setStageComment("identify key fields");
-        if (stage==2) {
+        if (stage==TYPESTAGE) {
             importStage.setFields("fieldName,valuesFound,listEntry");
             importStage.setFieldHeadings("Field Name, Sample, Field type");
             importStage.setInstructions("identify key field ids, names, and data/time fields");
+            importStage.setTitle(importStage.getStageName());
         }
         toReturn.add(importStage);
 
-        importStage = new ImportStage(stage,3,"Data");
+        importStage = new ImportStage(stage,DATASTAGE,"Data");
         importStage.setStageComment("which fields are values?");
-        if (stage==3) {
-            importStage.setFields("fieldName,valuesFound,checkEntry");
-            importStage.setFieldHeadings("Field Name,Samples,");
+        if (stage==DATASTAGE) {
+            importStage.setFields("fieldName,valuesFound,checkEntry,check2Entry");
+            importStage.setFieldHeadings("Field Name,Samples,Values,Peers");
             importStage.setTypeName("Data type");
-            importStage.setInstructions("Values are usually additive numbers, but need not be");
+            importStage.setInstructions("<p><strong>Values</strong> are usually additive numbers, but need not be</p> +" +
+                    "<p><strong>Peers</strong> are the fields necessary to define the values</br>" +
+                    "If there is a key field, it is probably the sole peer." +
+                    "</br> ...but budget information may have many peers (e.g. period, division, version)" );
+            importStage.setTitle(importStage.getStageName());
         }
         toReturn.add(importStage);
 
-        importStage = new ImportStage(stage,4,"Data");
-        importStage.setStageComment("identify the fields which are <b>required</b> to identify the values");
-        if (stage==4) {
-            importStage.setFields("fieldName, valuesFound, checkEntry");
-            importStage.setFields("fieldName,valuesFound,checkEntry");
-            importStage.setFieldHeadings("Field Name,Samples,");
-            importStage.setInstructions("tick only the NECESSARY fields.  </br>If there is a key field, it is probably the sole peer.</br> ...but budget information may have many peers (e.g. period, division, version)");
-        }
-        toReturn.add(importStage);
 
-        importStage = new ImportStage(stage,5,"Relationships");
+
+
+
+        importStage = new ImportStage(stage,PARENTSTAGE,"Relationships");
         importStage.setStageComment("identify parent-child relationships");
-        if (stage==5) {
-            importStage.setFields("fieldName,listEntry,example");
-            importStage.setFieldHeadings("PARENT,CHILD");
+        if (stage==PARENTSTAGE) {
+            importStage.setFields("fieldName,listEntry,list2Entry, example");
+            importStage.setFieldHeadings("PARENT,CHILD,ANCHOR");
             importStage.setInstructions("   <p>\n" +
-                    "                                            Please define <strong>parent-child</strong> relationships.\n" +
-                    "                                            Typical relationships include:\n" +
-                    "                                        </p>\n" +
-                    "                                        <ul>\n" +
-                    "                                            <li>Customer &gt; Order &gt; Order Item</li>\n" +
-                    "                                            <li>Country &gt; Town &gt; Street</li>\n" +
-                    "                                        </ul>");
+                    "Please define <strong>parent-child</strong> relationships.  These allow you to categorise data. " +
+                    "Typical relationships include:" +
+                    "</p>" +
+                    " <ul>" +
+                    " <li>Customer &gt; Order &gt; Order Item</li>" +
+                    " <li>Country &gt; Town &gt; Street</li>" +
+                    " </ul>"+
+                    "<p><strong>attributes</strong> are values you want to retain, but which refer only to one other name - the <strong>anchor</strong></p>" +
+                    "<ul>" +
+                    "<li>telephone number is an attribute of person</li>" +
+                    "<li>elevation is an attribute of location</li>" +
+                    "</ul>");
 
+            importStage.setTitle(importStage.getStageName());
 
 
         }
 
-        toReturn.add(importStage);
-
-        importStage = new ImportStage(stage, 6,"Relationships");
-        importStage.setStageComment("choose the 'anchor' for the remaining fields");
-        if (stage == 6) {
-            importStage.setFields("fieldName, listEntry,example");
-            importStage.setFieldHeadings("FIELD NAME, ATTRIBUTE");
-            importStage.setInstructions("attributes are values you want to retain, but which refer only to one other name (e.g. telephone numbers, date of birth)</br>UNLESS you want to categorise on that field (when the relationship is parent-child");
-        }
         toReturn.add(importStage);
 
         return toReturn;
@@ -1793,13 +1795,10 @@ public class ImportWizard {
        }
        List<String> possibleParents = new ArrayList<>();
        String keyFieldName = null;
-        if (stage==5){
+        if (stage==PARENTSTAGE){
 
            for (String field:wizardFields.keySet()){
                WizardField wizardField = wizardFields.get(field);
-               if (KEYFIELDID.equals(wizardField.getType())){
-                   keyFieldName = wizardField.getName();
-               }
                if (!KEYFIELDID.equals(wizardField.getType()) && !KEYFIELDNAME.equals(wizardField.getType()) && wizardField.getParent() ==null && wizardField.getAnchor()==null){
                    possibleParents.add(field);
                }
@@ -1822,10 +1821,10 @@ public class ImportWizard {
                 if (wizardField.getValueFound()==null && wizardField.getValuesFound()!=null&&wizardField.getValuesFound().size()>0){
                     getDataValuesFromFile(loggedInUser.getWizardInfo(),field,wizardField.getValuesFound().iterator().next());
                 }
-                if (stage==1 || wizardField.getSelect()) {
+                if (stage==NAMESTAGE || wizardField.getSelect()) {
                     ImportWizardField importWizardField = new ImportWizardField(wizardField.getImportedName());
                     switch (stage) {
-                        case 1:
+                        case NAMESTAGE:
                             importWizardField.setFieldName(wizardField.getImportedName());
                             importWizardField.setValuesFound(get100(wizardField.getValuesFound(), wizardField.getValueFound()));
                             importWizardField.setTextEntry(wizardField.getName());
@@ -1834,13 +1833,11 @@ public class ImportWizard {
                             if (!wizardField.getSelect()) {
                                 checkstatus = "";
                             }
-                            importWizardField.setCheckEntry(checkBoxHTML(count,wizardField.getSelect()));
+                            importWizardField.setCheckEntry(checkBoxHTML(1,count,wizardField.getSelect(), false));
                             break;
-                        case 2:
+                        case TYPESTAGE:
                             importWizardField.setFieldName(wizardField.getName());
                             importWizardField.setValuesFound(get100(wizardField.getValuesFound(), wizardField.getValueFound()));
-                            importWizardField.setTextEntry(null);
-                            importWizardField.setCheckEntry(null);
                             importWizardField.setListEntry(new ArrayList<>());
                             importWizardField.getListEntry().add("");
                             for (String type : TYPEOPTIONS) {
@@ -1850,139 +1847,97 @@ public class ImportWizard {
                                     importWizardField.getListEntry().add(type);
                                 }
                             }
-                            importWizardField.setCheckEntry(null);
                             break;
-                        case 3:
+                        case DATASTAGE:
                             importWizardField.setFieldName(wizardField.getName());
                             importWizardField.setValuesFound(get100(wizardField.getValuesFound(), wizardField.getValueFound()));
-                            importWizardField.setTextEntry(null);
                             if (isKeyField(wizardField)){
                                 importWizardField.setCheckEntry(".");
                             }else{
-                                importWizardField.setCheckEntry(checkBoxHTML(count,dataParent.equals(wizardField.getParent())));
+                                importWizardField.setCheckEntry(checkBoxHTML(1,count,dataParent.equals(wizardField.getParent()), true));
                             }
-                            importWizardField.setListEntry(null);
-                            break;
-                        case 4:
-                            importWizardField.setFieldName(wizardField.getName());
-                            importWizardField.setValuesFound(get100(wizardField.getValuesFound(), wizardField.getValueFound()));
-                            importWizardField.setTextEntry(null);
                             if (KEYFIELDNAME.equals(wizardField.getType())|| wizardField.getParent()!=null){
-                                importWizardField.setCheckEntry(".");
+                                importWizardField.setCheck2Entry(".");
                             }else{
-                                importWizardField.setCheckEntry(checkBoxHTML(count,peers.contains(field)));
+                                importWizardField.setCheck2Entry(checkBoxHTML(2,count,peers.contains(field), false));
                             }
-                            importWizardField.setListEntry(null);
-                             break;
-                        case 5:
-                            List<String> possibleChildren = new ArrayList<>();
-                            importWizardField.setExample("...");
+                            break;
 
+                        case PARENTSTAGE:
+                            List<String> possibleChildren = new ArrayList<>();
+                            List<String> possibleAnchors = new ArrayList<>();
+                            possibleChildren.add("");
+                            possibleAnchors.add("");
+                            importWizardField.setExample("");
                             importWizardField.setFieldName(wizardField.getName());
-                            importWizardField.setValuesFound(null);
-                            importWizardField.setTextEntry(null);
-                            importWizardField.setCheckEntry(null);
-                            WizardField childField = null;
-                            if (possibleParents.contains(field)){
-                                String currentChild = null;
-                                if (wizardField.getValueFound().length()==0){
-                                    for (String value:wizardField.getValuesFound()){
-                                        if (value.length() > 0){
+
+                            if (wizardField.getParent() != null){
+                                importWizardField.setExample("Value in " + wizardField.getParent());
+                                 importWizardField.setListEntry(possibleChildren);
+                                importWizardField.setList2Entry(possibleAnchors);
+                                break;
+                            }
+                            if (KEYFIELDID.equals(wizardField.getType())){
+                                importWizardField.setExample(KEYFIELDID);
+                                importWizardField.setListEntry(possibleChildren);
+                                importWizardField.setList2Entry(possibleAnchors);
+                                break;
+                            }
+
+                            String currentChild = null;
+                            String childValue = null;
+                            if (possibleParents.contains(field) && wizardField.getAnchor()==null) {
+                                //check we have some sample values
+                                 if (wizardField.getValueFound().length() == 0) {
+                                    for (String value : wizardField.getValuesFound()) {
+                                        if (value.length() > 0) {
                                             ImportWizard.getDataValuesFromFile(loggedInUser.getWizardInfo(), field, value);
+                                            break;
                                         }
                                     }
                                 }
-                                if (wizardField.getChild()!= null) {
-                                    childField = wizardFields.get(wizardField.getChild());
-                                    String childValue = childField.getValueFound();
-                                    if (KEYFIELDID.equals(childField.getType())){
-                                        for (String nameField:wizardFields.keySet()){
-                                            WizardField nameF = wizardFields.get(nameField);
-                                            if (KEYFIELDNAME.equals(nameF.getType())){
-                                                childValue += " (" + nameF.getValueFound() + ")";
-                                            }
-                                        }
-                                    }
+                                if (wizardField.getChild() != null) {
+                                    WizardField childField = wizardFields.get(wizardField.getChild());
+                                    childValue = getChildValue(wizardFields, childField);
                                     importWizardField.setExample("e.g. " + wizardField.getValueFound() + " is parent of " + childValue);
                                     currentChild = wizardFields.get(wizardField.getChild()).getName();
                                 }
-                                if (KEYFIELDID.equals(wizardField.getType())){
-                                    possibleChildren.add(KEYFIELDID);
-                                }else if (KEYFIELDNAME.equals((wizardField.getType()))){
-                                    possibleChildren.add(KEYFIELDNAME);
-                                }else{
-                                    possibleChildren.add("");
-                                    for (String ch : wizardFields.keySet()) {
-                                       WizardField child = wizardFields.get(ch);
-                                        if (!child.getName().equals(wizardField.getName()) && child.getParent()==null && child.getAnchor()==null) {
+                                for (String ch : wizardFields.keySet()) {
+                                    WizardField child = wizardFields.get(ch);
 
-                                            if (child.getName().equals(currentChild)) {
-                                                possibleChildren.add(child.getName() + " selected");
+                                    if (child.getName().equals(currentChild)) {
+                                        possibleChildren.add(child.getName() + " selected");
 
-                                            } else {
-                                               possibleChildren.add(child.getName());
-                                            }
-                                        }
-                                    }
-                                }
-
-                             }else{
-                                if(wizardField.getAnchor()!=null) {
-                                    possibleChildren.add("attribute of " + loggedInUser.getWizardInfo().getFields().get(wizardField.getAnchor()).getName());
-                                }else{
-                                    if (KEYFIELDID.equals(wizardField.getType())){
-                                        possibleChildren.add(KEYFIELDID);
-                                    }else{
-                                        possibleChildren.add("Value");
+                                    } else {
+                                        possibleChildren.add(child.getName());
                                     }
                                 }
                             }
-                            importWizardField.setListEntry(possibleChildren);
-                            break;
-                        case 6:
-                            importWizardField.setExample("...");
-                            possibleChildren = new ArrayList<>();
 
-                            importWizardField.setFieldName(wizardField.getName());
-                            importWizardField.setValuesFound(null);
-                            importWizardField.setTextEntry(null);
-                            importWizardField.setCheckEntry(null);
-                            if (wizardField.getAnchor()!=null || (wizardField.getChild()==null && wizardField.getParent()==null)){
-                                String currentAnchor = null;
-                                if (wizardField.getAnchor()!= null) {
+                            String currentAnchor = null;
+
+                            if (!KEYFIELDID.equals(wizardField) && wizardField.getChild() == null && wizardField.getParent() == null) {
+                                if (wizardField.getAnchor() != null) {
                                     WizardField anchorField = wizardFields.get(wizardField.getAnchor());
-                                    importWizardField.setExample("e.g. " + wizardField.getValueFound() + " is an attribute of " + anchorField.getValueFound());
+                                    String anchorValue = getChildValue(wizardFields, anchorField);
+                                    importWizardField.setExample("e.g. " + wizardField.getValueFound() + " is an attribute of " + anchorValue);
                                     currentAnchor = wizardFields.get(wizardField.getAnchor()).getName();
                                 }
-                                if (KEYFIELDID.equals(wizardField.getType())){
-                                    possibleChildren.add(KEYFIELDID);
-                                }else if (KEYFIELDNAME.equals((wizardField.getType())) && wizardField.getAnchor()==null){
-                                    possibleChildren.add(KEYFIELDNAME);
-                                }else{
-                                    possibleChildren.add("");
-                                    for (String an : wizardFields.keySet()) {
-                                        WizardField anchor = wizardFields.get(an);
-                                        if (!anchor.getName().equals(wizardField.getName()) && anchor.getParent()==null && anchor.getAnchor()==null) {
+                                for (String an : wizardFields.keySet()) {
+                                    WizardField anchor = wizardFields.get(an);
+                                    if (KEYFIELDID.equals(anchor.getType()) || anchor.getChild() != null) {
 
-                                            if (anchor.getName().equals(currentAnchor)) {
-                                                possibleChildren.add(anchor.getName() + " selected");
+                                        if (anchor.getName().equals(currentAnchor)) {
+                                            possibleAnchors.add(anchor.getName() + " selected");
 
-                                            } else {
-                                                possibleChildren.add(anchor.getName());
-                                            }
+                                        } else {
+                                            possibleAnchors.add(anchor.getName());
                                         }
                                     }
                                 }
-
-                            }else{
-                                if(wizardField.getChild()!=null) {
-                                    possibleChildren.add("parent of " + loggedInUser.getWizardInfo().getFields().get(wizardField.getChild()).getName());
-                                }else{
-                                    possibleChildren.add("Value");
-                                }
                             }
                             importWizardField.setListEntry(possibleChildren);
-
+                            importWizardField.setList2Entry(possibleAnchors);
                     }
                     toReturn.add(importWizardField);
                     count++;
@@ -1998,12 +1953,30 @@ public class ImportWizard {
 
     }
 
-    private static String checkBoxHTML(int fieldNo, boolean checked){
+    private static String getChildValue(Map<String, WizardField> wizardFields, WizardField childField){
+        String childValue = childField.getValueFound();
+        if (KEYFIELDID.equals(childField.getType())) {
+            for (String nameField : wizardFields.keySet()) {
+                WizardField nameF = wizardFields.get(nameField);
+                if (KEYFIELDNAME.equals(nameF.getType())) {
+                    childValue += " (" + nameF.getValueFound() + ")";
+                }
+            }
+        }
+        return childValue;
+
+    }
+
+    private static String checkBoxHTML(int checkColumn, int fieldNo, boolean checked, boolean hasOnChange){
         String checkstatus = "checked=true";
         if (!checked) {
             checkstatus = "";
         }
-        return "<input type=\"checkbox\" name=\"FIELD" + fieldNo + "-checked\" " + checkstatus + "\">";
+
+        if (hasOnChange){
+            checkstatus += " onChange=\"checkChanged(" + fieldNo + ")\"";
+        }
+        return "<input type=\"checkbox\" id=\"check"+ checkColumn + "-" + fieldNo +"\" " + checkstatus + "\">";
 
     }
 
@@ -2052,7 +2025,7 @@ public class ImportWizard {
 
                 wizardInfo.setMaxStageReached(stage);
             }
-             if (nextStage == 3 || nextStage == 4) {
+             if (nextStage == DATASTAGE) {
                 if (dataParent == null || dataParent.length() == 0) {
                     dataParent = "";
                     for (String field : wizardInfo.getFields().keySet()) {

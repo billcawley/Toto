@@ -626,7 +626,7 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
                 uf = new UploadedFile(filePath, Collections.singletonList(fileName), fileNameParams, false, false);
                 uploadFile.transferTo(moved);
                 uploadedFiles.add(uf);
-                if (!ImportService.hasImportTemplate(loggedInUser, uf)) {
+                if (ImportWizard.isWizardSetup(loggedInUser, uf)) {
                     return ImportWizard.uploadTheFile(loggedInUser,uf);
 
                 }
