@@ -304,6 +304,9 @@ public class OnlineController {
                             model.put("iframesrc", onlineReport.getFilename().substring(7));
                             model.put("reports", AdminService.getReportList(loggedInUser, true));
                             AdminService.setBanner(model, loggedInUser);
+                            if (request.getParameter("newdesign") != null){
+                                return "showiframenewdesign";
+                            }
                             return "showiframe";
                      }
 

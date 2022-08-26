@@ -3381,7 +3381,7 @@
                                                 className: "az-card-data",
                                                 children: [
                                                     (0, r.jsx)("h3", { children: e.name }),
-                                                    (0, r.jsx)("p", { children: e.database }),
+                                                    (0, r.jsx)("p", { children: e.description.length > 0 ? e.description : e.database }),
                                                 ],
                                             }),
                                             (0, r.jsx)("div", { className: "az-card-icon", children: (0, r.jsx)(i.Z, {}) }),
@@ -3555,6 +3555,8 @@
                     })(c),
                     v = [
                         ###REPORTSLIST###
+
+
                     ],
                     g = [
                         ###IMPORTSLIST###
@@ -3793,7 +3795,7 @@
                     c = n(5186),
                     d = n(9014),
                     f = [
-                        { label: "Overview", href: "/", icon: i },
+                        { label: "Overview", href: "/api/ManageReports/?newdesign=overview", icon: i },
                         { label: "Reports", href: "/api/ManageReports/?newdesign=true", icon: o.Z },
                         { label: "Imports", href: "/api/ManageDatabases/?newdesign=imports", icon: s.Z },
                         /*                    { label: "Databases", href: "/databases", icon: u.Z },

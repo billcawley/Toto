@@ -8,10 +8,7 @@ import com.azquo.admin.database.DatabaseDAO;
 import com.azquo.admin.database.DatabaseServer;
 import com.azquo.admin.database.DatabaseServerDAO;
 import com.azquo.admin.onlinereport.*;
-import com.azquo.dataimport.ImportService;
-import com.azquo.dataimport.ImportTemplateDAO;
-import com.azquo.dataimport.PendingUpload;
-import com.azquo.dataimport.PendingUploadDAO;
+import com.azquo.dataimport.*;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.SpreadsheetService;
@@ -43,6 +40,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.*;
 
 /**
@@ -106,6 +104,10 @@ public class ManageReportsController {
             , @RequestParam(value = "deleteId", required = false) String deleteId
 
     ) {
+        if (request.getParameter("newdesign") != null){
+            request.getSession().setAttribute("newdesign", true);
+
+        }
         if ("true".equalsIgnoreCase(request.getParameter("testmode"))){
             request.getSession().setAttribute("test", "true");
         }
@@ -376,24 +378,53 @@ public class ManageReportsController {
 
 
 
-            if (request.getParameter("newdesign") != null){
+            if (request.getSession().getAttribute("newdesign") != null){
                 try {
                     StringBuilder reportsList = new StringBuilder();
                     for (OnlineReport or : reportList){
-                        reportsList.append("new m({ id: " + or.getId() + ", name: \"" + or.getReportName() + "\", database: \"" + or.getDatabase() + "\", author: \"" + or.getAuthor() + "\", description: \"" + or.getExplanation() + "\" }),");
+                        reportsList.append("new m({ id: " + or.getId() + ", name: \"" + or.getReportName() + "\", database: \"" + or.getDatabase() + "\", author: \"" + or.getAuthor() + "\", description: \"" + or.getExplanation().replace("\n","").replace("\r","") + "\" }),\n");
                     }
                     InputStream resourceAsStream = servletContext.getResourceAsStream("/WEB-INF/includes/newappjavascript.js");
+
+                    StringBuilder importsList = null;
+                    StringBuilder databasesList = null;
+                    if("overview".equals(request.getParameter("newdesign"))){
+                        importsList = new StringBuilder();
+                        List<UploadRecord.UploadRecordForDisplay> uploadRecordsForDisplayForBusiness = AdminService.getUploadRecordsForDisplayForBusinessWithBasicSecurity(loggedInUser, null, false);
+                        for (UploadRecord.UploadRecordForDisplay uploadRecord : uploadRecordsForDisplayForBusiness) {
+                            importsList.append("new f({\n" +
+                                    "                        id: " + uploadRecord.id + ",\n" +
+                                    "                        filename: \"" + uploadRecord.getFileName() + "\",\n" +
+                                    "                        database: \"" + uploadRecord.getDatabaseName() + "\",\n" +
+                                    "                        user: \"" + uploadRecord.getUserName() + "\",\n" +
+                                    "                        date: " + uploadRecord.getDate().toEpochSecond(ZoneOffset.of("Z")) + ",\n" +
+                                    "                        }),");
+                        }
+                        List<Database> databaseList = AdminService.getDatabaseListForBusinessWithBasicSecurity(loggedInUser);
+                        databasesList = new StringBuilder();
+//                new d({ id: 1, name: "Demo1dhdhrt", date: 1546563989 }),
+                        for (Database d : databaseList) {
+                            databasesList.append("new d({ id: "+ d.getId() +", name: \"" + d.getName() + "\", date: 0 }),"); // date jammed as zero for the mo, does the JS use it?
+                        }
+
+                    }
+
                     model.put("newappjavascript", IOUtils.toString(resourceAsStream, StandardCharsets.UTF_8)
-                            .replace("###IMPORTSLIST###", "{}")
-                            .replace("###DATABASESLIST###", "{}")
+                            .replace("###IMPORTSLIST###", importsList == null ?  "{}" : importsList.toString())
+                            .replace("###DATABASESLIST###", databasesList == null ?  "{}" : databasesList.toString())
                             .replace("###REPORTSLIST###", reportsList.toString()));
 
 
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
-                model.put("pageUrl", "/reports");
-                return "managereports";
+                if ("overview".equals(request.getParameter("newdesign"))){
+                    model.put("pageUrl", "/");
+                    return "overview";
+                } else {
+                    model.put("pageUrl", "/reports");
+                    return "managereports";
+                }
             }
             return "managereports2";
         } else {

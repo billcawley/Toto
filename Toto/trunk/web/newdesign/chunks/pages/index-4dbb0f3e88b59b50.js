@@ -87,7 +87,7 @@
                                                                 className: "full",
                                                                 children: (0, s.jsx)("div", {
                                                                     children: (0, s.jsx)(u(), {
-                                                                        href: "/reports/" + e.id,
+                                                                        href: "/api/Online?reportid=" + e.id,
                                                                         children: (0, s.jsxs)("a", {
                                                                             children: [
                                                                                 (0, s.jsx)(t.Z, {}),
@@ -109,12 +109,12 @@
                                                                     items: [
                                                                         {
                                                                             label: "Open",
-                                                                            href: "/reports/".concat(e.id),
+                                                                            href: "/api/Online?reportid=".concat(e.id),
                                                                             icon: i.Z,
                                                                         },
-                                                                        { label: "Download", href: b.tf, icon: a.Z },
+                                                                        { label: "Download", href: "/api/DownloadTemplate?reportid=".concat(e.id), icon: a.Z },
                                                                         { label: "sep1", seperator: !0 },
-                                                                        { label: "Delete", href: "#", icon: l.Z },
+                                                                        { label: "Delete", href: "/api/Online?deleteId=".concat(e.id), icon: l.Z },
                                                                     ],
                                                                 }),
                                                             }),
