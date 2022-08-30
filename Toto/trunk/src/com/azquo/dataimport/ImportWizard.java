@@ -42,7 +42,12 @@ import java.util.*;
 import static org.apache.poi.ss.usermodel.CellType.NUMERIC;
 import static org.apache.poi.ss.usermodel.CellType.STRING;
 
+
+
 public class ImportWizard {
+    // EFC note - needed to add this to make it compile 
+    static final String DATELANG = "date";
+    static final String USDATELANG = "us date";
 
 
     static class JSONtest {
@@ -84,7 +89,7 @@ public class ImportWizard {
     public static final int PARENTSTAGE = 4;
 
 
-    public static final String[] TYPEOPTIONS = {KEYFIELDID, KEYFIELDNAME, HeadingReader.DATELANG, HeadingReader.USDATELANG, "time", "datetime"};
+    public static final String[] TYPEOPTIONS = {KEYFIELDID, KEYFIELDNAME, DATELANG, USDATELANG, "time", "datetime"};
 
     private static int nthLastIndexOf(int nth, String ch, String string) {
         if (nth <= 0) return string.length();
@@ -222,7 +227,7 @@ public class ImportWizard {
 
     private static void adjustValuesFound(WizardField wizardField, List<String>values){
 
-        if (HeadingReader.DATELANG.equals(wizardField.getType()) || HeadingReader.USDATELANG.equals(wizardField.getType()) ){
+        if (DATELANG.equals(wizardField.getType()) || USDATELANG.equals(wizardField.getType()) ){
             wizardField.setValuesFound(adjustDates(values, wizardField.getType()));
         }else{
             if ("time".equals(wizardField.getType())){
@@ -241,7 +246,7 @@ public class ImportWizard {
                 value = value.substring(0, 10);
             }
             try {
-                if (dateType.equals(HeadingReader.DATELANG)){
+                if (dateType.equals(DATELANG)){
                     DateUtils.isADate(value);
                 }else{
                     DateUtils.isUSDate(value);
@@ -687,7 +692,7 @@ public class ImportWizard {
             toReturn.append(";datagroup " + wizardField.getParent());
         }
 
-        if (HeadingReader.DATELANG.equals(wizardField.getType())){
+        if (DATELANG.equals(wizardField.getType())){
             toReturn.append(";datatype date");
         }
 
@@ -804,7 +809,7 @@ public class ImportWizard {
 
 
             }
-            if (HeadingReader.DATELANG.equals(wizardField.getType())||HeadingReader.USDATELANG.equals(wizardField.getType())){
+            if (DATELANG.equals(wizardField.getType())||USDATELANG.equals(wizardField.getType())){
                 flatfileData.put(field,adjustDates(flatfileData.get(field), wizardField.getType()));
             }
             if ("time".equals(wizardField.getType())){
@@ -1123,7 +1128,7 @@ public class ImportWizard {
                         compositionPattern = compositionPattern.substring(1, compositionPattern.length() - 1);
                     }
                     // for Excel date is a number - on the way out standardise to our typically used date format
-                    if (HeadingReader.DATELANG.equals(xlField.getType()) || HeadingReader.USDATELANG.equals(xlField.getType())){
+                    if (DATELANG.equals(xlField.getType()) || USDATELANG.equals(xlField.getType())){
                         try{
                             compositionPattern = DateUtils.toDate(compositionPattern);
                         } catch (Exception e){
@@ -1283,9 +1288,9 @@ public class ImportWizard {
                             }
                             if (found && wizardField.getType() == null) {
                                 if (usDate){
-                                    wizardField.setType(HeadingReader.USDATELANG);
+                                    wizardField.setType(USDATELANG);
                                 }else{
-                                    wizardField.setType(HeadingReader.DATELANG);
+                                    wizardField.setType(DATELANG);
                                 }
                                 hasSuggestion = true;
                             }
@@ -1448,7 +1453,7 @@ public class ImportWizard {
                         for (String field : fields) {
                             WizardField wizardField = wizardInfo.getFields().get(field);
                             int potentialKeyCount = wizardField.getDistinctCount();
-                            if (!HeadingReader.DATELANG.equals(wizardFields.get(field).getType()) && !attributeList.contains(field) && potentialKeyCount > 1) {
+                            if (!DATELANG.equals(wizardFields.get(field).getType()) && !attributeList.contains(field) && potentialKeyCount > 1) {
 
                                 for (String field2 : fields) {
                                     if (!field2.equals(field) && wizardFields.get(field2).getDistinctCount() <= potentialKeyCount && wizardFields.get(field2).getDistinctCount() > potentialKeyCount * 0.5) {
@@ -1479,7 +1484,7 @@ public class ImportWizard {
                         Set<String> attributeList = new HashSet<>();
                         for (String field : fields) {
                             int potentialKeyCount = wizardFields.get(field).getDistinctCount();
-                            if (HeadingReader.DATELANG.equals(wizardFields.get(field).getType()) || (potentialKeyCount > wizardInfo.lineCount * 0.94 && potentialKeyCount < wizardInfo.lineCount)) {
+                            if (DATELANG.equals(wizardFields.get(field).getType()) || (potentialKeyCount > wizardInfo.lineCount * 0.94 && potentialKeyCount < wizardInfo.lineCount)) {
                                 attributeList.add(field);
                             } else {
                                 if (!attributeList.contains(field) && potentialKeyCount > 1) {
@@ -1558,7 +1563,7 @@ public class ImportWizard {
         List<String> maybeParent = wizardInfo.getFields().get(field).getValuesFound();
         List<String> maybeChild = wizardInfo.getFields().get(field2).getValuesFound();
         String childType = wizardInfo.getFields().get(field2).getType();
-        if (HeadingReader.DATELANG.equals(childType) || HeadingReader.USDATELANG.equals(childType)){
+        if (DATELANG.equals(childType) || USDATELANG.equals(childType)){
             return false;
         }
         Map<String, Set<String>> mapping = new HashMap<>();
