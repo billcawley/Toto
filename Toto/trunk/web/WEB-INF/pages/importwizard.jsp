@@ -393,7 +393,7 @@ lockresult: string
                         var headings = itemValue.split(",");
                         var headingHTML = "<table><thead><tr>";
                         for (var heading of headings) {
-                            headingHTML += "<th>" + heading + "</th>"
+                            headingHTML += "<th style=\"min-width:150px\">" + heading + "</th>"
                         }
                         document.getElementById("fieldtable").innerHTML = headingHTML + "</tr></thead><tbody id=\"fields\"></tbody></table>";
                     }
