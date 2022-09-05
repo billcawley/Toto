@@ -261,6 +261,14 @@ public class StandardDAO {
             jdbcTemplate.update("ALTER TABLE `master_db`.`business` ADD `corner_logo` VARCHAR(255) NULL DEFAULT NULL ;", new HashMap<>());
         }
 
+        if (jdbcTemplate.queryForObject("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS\n" +
+                "    WHERE\n" +
+                "      (table_name = \"business\")\n" +
+                "      AND (table_schema = \"master_db\")\n" +
+                "      AND (column_name = \"new_design\")", new HashMap<>(), Integer.class) == 0){
+            jdbcTemplate.update("ALTER TABLE `master_db`.`business` ADD `new_design` boolean DEFAULT false ;", new HashMap<>());
+        }
+
 
 
         StandardDAO.jdbcTemplate = jdbcTemplate; // I realise that this is "naughty", see comments at the top.

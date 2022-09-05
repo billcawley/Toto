@@ -6,6 +6,7 @@ import com.azquo.admin.BackupService;
 import com.azquo.admin.business.Business;
 import com.azquo.admin.business.BusinessDAO;
 import com.azquo.admin.database.*;
+import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.dataimport.*;
 import com.azquo.spreadsheet.transport.HeadingWithInterimLookup;
 import com.azquo.spreadsheet.transport.UploadedFile;
@@ -374,13 +375,18 @@ public class ManageDatabasesController {
                         date: 1555860815,
                         }),
                 */
+                List<OnlineReport> reportList = AdminService.getReportList(loggedInUser, true);
+                StringBuilder reportsList = new StringBuilder();
+                for (OnlineReport or : reportList){
+                    reportsList.append("new m({ id: " + or.getId() + ", name: \"" + or.getReportName() + "\", database: \"" + or.getDatabase() + "\", author: \"" + or.getAuthor() + "\", description: \"" + or.getExplanation().replace("\n","").replace("\r","") + "\" }),\n");
+                }
 
                 try {
                     InputStream resourceAsStream = servletContext.getResourceAsStream("/WEB-INF/includes/newappjavascript.js");
                     model.put("newappjavascript", IOUtils.toString(resourceAsStream, StandardCharsets.UTF_8)
                             .replace("###IMPORTSLIST###", jsImportsList.toString())
                             .replace("###DATABASESLIST###", databasesList.toString())
-                            .replace("###REPORTSLIST###", "{}"));
+                            .replace("###REPORTSLIST###", reportsList.toString()));
                 } catch (IOException e) {
                     e.printStackTrace();
                 }

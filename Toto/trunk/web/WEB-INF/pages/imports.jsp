@@ -4,6 +4,27 @@
 <c:set var="extraScripts" scope="request" value="<script src=\"/newdesign/chunks/385-0c9862a9f5582a25.js\" defer=\"\"></script><script src=\"/newdesign/chunks/pages/importstohack.js\" defer=\"\"></script><script src=\"/newdesign/chunks/pages/imports/%5Bid%5D-81a2ba0ddd08557c.js\" defer=\"\"></script>" />
 <%@ include file="../includes/new_header.jsp" %>
 <div class="az-content">
+    <div class="az-topbar">
+        <button>
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
+                 stroke="currentColor" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h8m-8 6h16"></path>
+            </svg>
+        </button>
+        <div class="az-searchbar">
+            <form action="#">
+                <div>
+                    <div>
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
+                             stroke="currentColor" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                    </div>
+                    <input placeholder="Search" type="text" value=""></div>
+            </form>
+        </div>
+    </div>
     <main>
         <div class="az-imports-view">
             <div class="az-section-heading">

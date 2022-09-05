@@ -3719,7 +3719,7 @@
                     s = n(1575),
                     u = n(1722),
                     l = "Do MMMM 'YY, h:mm a",
-                    c = "https://cherrett-digital.s3.eu-west-2.amazonaws.com/assets/images/logo_dark_bg.png",
+                    c = "/images/gbcornerlogo.png",
                     d = "https://cherrett-digital.s3.amazonaws.com/example-selections.xlsx",
                     f = "https://view.officeapps.live.com/op/embed.aspx?src=" + d,
                     h = "https://cherrett-digital.s3.amazonaws.com/spinner.gif";
@@ -4239,7 +4239,8 @@
                             {
                                 href: e.href,
                                 children: (0, i.jsxs)("a", {
-                                    className: n ? "group active" : "group",
+//                                    className: n ? "group active" : "group",
+                                    className: "group",
                                     target: e.target,
                                     rel: "noopener noreferrer",
                                     children: [(0, i.jsx)(e.icon, {}), " ", (0, i.jsx)("span", { children: e.label })],
@@ -5140,7 +5141,7 @@
                                     r(!!o);
                                 },
                                 [o],
-                            )/*,
+                            ),
                         (0, i.jsxs)("div", {
                             className: "az-searchbar",
                             children: [
@@ -5171,7 +5172,7 @@
                                     },
                                 }),
                             ],
-                        })*/
+                        })
                         );
                     },
                     X = function (e) {
@@ -5191,7 +5192,7 @@
                                         return d(!1);
                                     },
                                     open: l,
-                                })/*,
+                                }),
                             (0, i.jsxs)("div", {
                                 className: "az-topbar",
                                 children: [
@@ -5222,7 +5223,7 @@
                                             ],
                                         }),
                                 ],
-                            })*/,
+                            }),
                             ],
                         });
                     },

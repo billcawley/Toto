@@ -1,5 +1,8 @@
-<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %><%@ taglib uri="http://java.sun.com/jsp/jstl/functions" prefix="fn" %>
-<!DOCTYPE html>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %><%@ taglib uri="http://java.sun.com/jsp/jstl/functions" prefix="fn" %><%
+    //prevent page cache in browser side
+    response.setHeader("Pragma", "no-cache");
+    response.setHeader("Cache-Control", "no-store, no-cache");
+%><!DOCTYPE html>
 <html>
 <head>
     <meta charset="utf-8" />
@@ -58,10 +61,10 @@
         <div class="az-sidebar ${compact}">
             <div>
                 <a class="az-sidebar-logo" href="https://data.azquo.com/"><img
-                        src="/newdesign/logo_dark_bg.png"></a>
+                        src="/images/gbcornerlogo.png"></a>
                 <nav>
                     <div class="az-sidebar-primary">
-                        <a class="group" rel="noopener noreferrer" href="/"
+                        <a class="group" rel="noopener noreferrer" href="/api/ManageReports/?newdesign=overview"
                         ><svg
                                 xmlns="http://www.w3.org/2000/svg"
                                 fill="none"
@@ -77,8 +80,9 @@
                             ></path>
                         </svg>
                             <span>Overview</span></a>
-                            <a class="group <c:if test="${title=='Manage Reports'}">active</c:if>" rel="noopener noreferrer" href="/api/ManageReports?newdesign=true"
-                    ><svg
+<!--                        <a class="group <c:if test="${title=='Manage Reports'}">active</c:if>" rel="noopener noreferrer" href="/api/ManageReports?newdesign=true">-->
+                            <a class="group" rel="noopener noreferrer" href="/api/ManageReports?newdesign=true">
+                                <svg
                             xmlns="http://www.w3.org/2000/svg"
                             fill="none"
                             viewBox="0 0 24 24"
@@ -93,7 +97,7 @@
                         ></path>
                     </svg>
                         <span>Reports</span></a
-                    ><a class="group <c:if test="${title=='Imports'}">active</c:if>" rel="noopener noreferrer" href="/api/ManageDatabases?newdesign=imports"
+                    ><a class="group" rel="noopener noreferrer" href="/api/ManageDatabases?newdesign=imports"
                     ><svg
                             xmlns="http://www.w3.org/2000/svg"
                             fill="none"

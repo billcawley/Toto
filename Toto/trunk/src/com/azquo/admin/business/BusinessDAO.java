@@ -33,6 +33,7 @@ public final class BusinessDAO {
     private static final String LOGO = "logo";
     private static final String CORNERLOGO = "corner_logo";
     private static final String SERVERNAME = "server_name";
+    private static final String NEWDESIGN = "new_design";
 
     public static Map<String, Object> getColumnNameValueMap(final Business business) {
         final Map<String, Object> toReturn = new HashMap<>();
@@ -44,7 +45,14 @@ public final class BusinessDAO {
             e.printStackTrace();
         }
         toReturn.put(BANNERCOLOR, business.getBannerColor());
+        toReturn.put(RIBBONCOLOR, business.getRibbonColor());
+        toReturn.put(RIBBONLINKCOLOR, business.getRibbonLinkColor());
+        toReturn.put(SIDEMENUCOLOR, business.getSideMenuColor());
+        toReturn.put(SIDEMENULINKCOLOR, business.getSideMenuLinkColor());
         toReturn.put(LOGO, business.getLogo());
+        toReturn.put(CORNERLOGO, business.getCornerLogo());
+        toReturn.put(SERVERNAME, business.getServerName());
+        toReturn.put(NEWDESIGN, business.isNewDesign());
         return toReturn;
     }
 
@@ -64,6 +72,7 @@ public final class BusinessDAO {
                         , rs.getString(LOGO)
                         , rs.getString(CORNERLOGO)
                         , rs.getString(SERVERNAME)
+                        , rs.getBoolean(NEWDESIGN)
                 );
             } catch (Exception e) {
                 e.printStackTrace();

@@ -26,6 +26,7 @@ public final class Business extends StandardEntity {
     private String cornerLogo;
     // as in charterhouse.gingerblack.com or whatever. Change branding on the login page
     private String serverName;
+    private boolean newDesign;
 
     public Business(int id
             , String businessName
@@ -37,7 +38,8 @@ public final class Business extends StandardEntity {
             , String sideMenuLinkColor
             , String logo
             , String cornerLogo
-            , String serverName) {
+            , String serverName
+    , boolean newDesign) {
         this.id = id;
         this.businessName = businessName;
         this.businessDetails = businessDetails;
@@ -49,6 +51,7 @@ public final class Business extends StandardEntity {
         this.logo = logo;
         this.cornerLogo = cornerLogo;
         this.serverName = serverName;
+        this.newDesign = newDesign;
     }
 
     public String getBusinessName() {
@@ -133,6 +136,14 @@ public final class Business extends StandardEntity {
 
     public void setCornerLogo(String cornerLogo) {
         this.cornerLogo = cornerLogo;
+    }
+
+    public boolean isNewDesign() {
+        return newDesign;
+    }
+
+    public void setNewDesign(boolean newDesign) {
+        this.newDesign = newDesign;
     }
 
     @Override

@@ -104,10 +104,6 @@ public class ManageReportsController {
             , @RequestParam(value = "deleteId", required = false) String deleteId
 
     ) {
-        if (request.getParameter("newdesign") != null){
-            request.getSession().setAttribute("newdesign", true);
-
-        }
         if ("true".equalsIgnoreCase(request.getParameter("testmode"))){
             request.getSession().setAttribute("test", "true");
         }
@@ -116,6 +112,10 @@ public class ManageReportsController {
         }
 
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
+        if (request.getParameter("newdesign") != null || (loggedInUser != null && loggedInUser.getBusiness().isNewDesign())){
+            request.getSession().setAttribute("newdesign", true);
+        }
+
         // I assume secure until we move to proper spring security
         if (loggedInUser != null && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
             if (createNewReport!=null){
@@ -386,10 +386,7 @@ public class ManageReportsController {
                     }
                     InputStream resourceAsStream = servletContext.getResourceAsStream("/WEB-INF/includes/newappjavascript.js");
 
-                    StringBuilder importsList = null;
-                    StringBuilder databasesList = null;
-                    if("overview".equals(request.getParameter("newdesign"))){
-                        importsList = new StringBuilder();
+                    StringBuilder importsList = new StringBuilder();
                         List<UploadRecord.UploadRecordForDisplay> uploadRecordsForDisplayForBusiness = AdminService.getUploadRecordsForDisplayForBusinessWithBasicSecurity(loggedInUser, null, false);
                         for (UploadRecord.UploadRecordForDisplay uploadRecord : uploadRecordsForDisplayForBusiness) {
                             importsList.append("new f({\n" +
@@ -401,17 +398,15 @@ public class ManageReportsController {
                                     "                        }),");
                         }
                         List<Database> databaseList = AdminService.getDatabaseListForBusinessWithBasicSecurity(loggedInUser);
-                        databasesList = new StringBuilder();
+                    StringBuilder databasesList = new StringBuilder();
 //                new d({ id: 1, name: "Demo1dhdhrt", date: 1546563989 }),
                         for (Database d : databaseList) {
                             databasesList.append("new d({ id: "+ d.getId() +", name: \"" + d.getName() + "\", date: 0 }),"); // date jammed as zero for the mo, does the JS use it?
                         }
 
-                    }
-
                     model.put("newappjavascript", IOUtils.toString(resourceAsStream, StandardCharsets.UTF_8)
-                            .replace("###IMPORTSLIST###", importsList == null ?  "{}" : importsList.toString())
-                            .replace("###DATABASESLIST###", databasesList == null ?  "{}" : databasesList.toString())
+                            .replace("###IMPORTSLIST###", importsList.toString())
+                            .replace("###DATABASESLIST###", databasesList.toString())
                             .replace("###REPORTSLIST###", reportsList.toString()));
 
 

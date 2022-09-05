@@ -169,61 +169,27 @@
 </script>
 <%@ include file="../includes/new_header.jsp" %>
 <div class="az-content">
-<!--    <div class="az-topbar">
-        <button>
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
-                 stroke="currentColor" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h8m-8 6h16"></path>
-            </svg>
-        </button>
+    <div class="az-topbar">
         <div class="az-searchbar">
-            <form action="#">
-                <div>
-                    <div>
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
-                             stroke="currentColor" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round"
-                                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                        </svg>
-                    </div>
-                    <input placeholder="Search" type="text" value=""></div>
-            </form>
         </div>
         <div class="az-topbar-menu">
             <div class="az-dropdown">
                 <div>
-                    <button id="headlessui-menu-button-:r0:" type="button" aria-haspopup="true" aria-expanded="false">
-                        <span>File</span>
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
-                             stroke="currentColor" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"></path>
-                        </svg>
+                    <button id="headlessui-menu-button-:r0:" type="button" aria-haspopup="true" aria-expanded="false" onclick="window.open('/api/Jstree?op=new&database=${databaseName}')">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                        <span>Inspect</span>
                     </button>
                 </div>
             </div>
             <div class="az-dropdown">
                 <div>
-                    <button id="headlessui-menu-button-:r1:" type="button" aria-haspopup="true" aria-expanded="false">
-                        <span>Database</span>
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
-                             stroke="currentColor" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"></path>
-                        </svg>
+                    <button id="headlessui-menu-button-:r1:" type="button" aria-haspopup="true" aria-expanded="false"  onclick="window.location.assign(window.location.href+='&opcode=template')">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                        <span>View Template</span>
                     </button>
                 </div>
             </div>
-            <div class="az-dropdown">
-                <div>
-                    <button id="headlessui-menu-button-:r2:" type="button" aria-haspopup="true" aria-expanded="false">
-                        <span>Template</span>
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
-                             stroke="currentColor" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"></path>
-                        </svg>
-                    </button>
-                </div>
-            </div>
-            <button class="az-button" type="button">
+            <button class="az-button" type="button" onclick="postAjax('XLS'); return false;" >
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
                      stroke="currentColor" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round"
@@ -231,15 +197,15 @@
                 </svg>
                 Download
             </button>
-            <button class="az-button" type="button">
+<!--            <button class="az-button" type="button">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
                      stroke="currentColor" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M8 9l4-4 4 4m0 6l-4 4-4-4"></path>
                 </svg>
                 Selections
-            </button>
+            </button>-->
         </div>
-    </div> -->
+    </div>
     <main>
         <div class="az-report-view">
             <div class="az-report">

@@ -87,7 +87,7 @@
                                                                 className: "full",
                                                                 children: (0, s.jsx)("div", {
                                                                     children: (0, s.jsx)(u(), {
-                                                                        href: "/api/Online?reportid=" + e.id,
+                                                                        href: "/api/Online?reportid=" + e.id + "&newdesign=true=&database=".concat(e.database),
                                                                         children: (0, s.jsxs)("a", {
                                                                             children: [
                                                                                 (0, s.jsx)(t.Z, {}),
@@ -109,7 +109,7 @@
                                                                     items: [
                                                                         {
                                                                             label: "Open",
-                                                                            href: "/api/Online?reportid=".concat(e.id),
+                                                                            href: "/api/Online?reportid=" + e.id + "&newdesign=true=&database=".concat(e.database),
                                                                             icon: i.Z,
                                                                         },
                                                                         { label: "Download", href: "/api/DownloadTemplate?reportid=".concat(e.id), icon: a.Z },
