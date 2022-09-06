@@ -3798,9 +3798,9 @@
                         { label: "Overview", href: "/api/ManageReports/?newdesign=overview", icon: i },
                         { label: "Reports", href: "/api/ManageReports/?newdesign=true", icon: o.Z },
                         { label: "Imports", href: "/api/ManageDatabases/?newdesign=imports", icon: s.Z },
-                        /*                    { label: "Databases", href: "/databases", icon: u.Z },
-                    { label: "Users", href: "/users", icon: l.Z },
-                    { label: "Schedules", href: "/schedules", icon: c.Z },*/
+                                            { label: "Databases", href: "/api/ManageDatabases/?newdesign=databases", icon: u.Z },
+                    { label: "Users", href: "/api/ManageUsers", icon: l.Z },
+                    { label: "Schedules", href: "/api/ManageReportSchedules", icon: c.Z },
                     ],
                     h = [
                         //{ label: "Settings", href: "/settings", icon: a },

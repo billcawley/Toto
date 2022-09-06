@@ -114,8 +114,8 @@
                     </svg>
                         <span>Imports</span>
 
-                    </a><!--
-                        <a class="group <c:if test="${title=='Manage Databases'}">active</c:if>" rel="noopener noreferrer" href="/api/ManageDatabases?newdesign=databases"
+                    </a>
+                        <a class="group" rel="noopener noreferrer" href="/api/ManageDatabases?newdesign=databases"
                     ><svg
                             xmlns="http://www.w3.org/2000/svg"
                             fill="none"
@@ -131,7 +131,7 @@
                         ></path>
                     </svg>
                         <span>Databases</span></a
-                    ><a class="group <c:if test="${title=='Manage Users'}">active</c:if>" rel="noopener noreferrer" href="/api/ManageUsers?newdesign=true"
+                    ><a class="group " rel="noopener noreferrer" href="/api/ManageUsers"
                     ><svg
                             xmlns="http://www.w3.org/2000/svg"
                             fill="none"
@@ -147,7 +147,7 @@
                         ></path>
                     </svg>
                         <span>Users</span></a
-                    ><a class="group" rel="noopener noreferrer" href="/api/ManageReportSchedules?newdesign=true"
+                    ><a class="group" rel="noopener noreferrer" href="/api/ManageReportSchedules"
                     ><svg
                             xmlns="http://www.w3.org/2000/svg"
                             fill="none"
@@ -163,7 +163,7 @@
                         ></path>
                     </svg>
                         <span>Schedules</span></a
-                    >
+                    ><!--
                     </div>
                     <div class="az-sidebar-secondary">
                         <a class="group" rel="noopener noreferrer" href="/settings/"

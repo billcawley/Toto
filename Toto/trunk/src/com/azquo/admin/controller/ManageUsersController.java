@@ -332,7 +332,7 @@ public class ManageUsersController {
                         }
                         model.put("users", AdminService.getUserListForBusinessWithBasicSecurity(loggedInUser));
                         AdminService.setBanner(model, loggedInUser);
-                        if (request.getParameter("newdesign") != null){
+                        if (request.getSession().getAttribute("newdesign") != null){
                             return "manageusers";
                         }
                             return "manageusers2";
@@ -362,7 +362,7 @@ public class ManageUsersController {
                 model.put("databases", AdminService.getDatabaseListForBusinessWithBasicSecurity(loggedInUser));
                 model.put("reports", AdminService.getReportList(loggedInUser, true));
                 AdminService.setBanner(model, loggedInUser);
-                if (request.getParameter("newdesign") != null){
+                if (request.getSession().getAttribute("newdesign") != null){
                     return "edituser";
                 }
                     return "edituser2";
@@ -376,7 +376,7 @@ public class ManageUsersController {
                 model.put("showDownload", true);
             }
             AdminService.setBanner(model, loggedInUser);
-            if (request.getParameter("newdesign") != null){
+            if (request.getSession().getAttribute("newdesign") != null){
                 return "manageusers";
             }
             return "manageusers2";
@@ -531,7 +531,7 @@ public class ManageUsersController {
             }
             model.put("users", AdminService.getUserListForBusinessWithBasicSecurity(loggedInUser));
             AdminService.setBanner(model, loggedInUser);
-            if (request.getParameter("newdesign") != null){
+            if (request.getSession().getAttribute("newdesign") != null){
                 return "manageusers";
             }
             return "manageusers2";

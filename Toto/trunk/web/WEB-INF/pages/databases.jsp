@@ -65,15 +65,18 @@
                                                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
                                                 </svg>
                                                     <a href="/api/DownloadBackup?id=${database.id}">Download</a></div></span>
+                                                <c:if test="${database.loaded}"><span role="none">
+                                                <div id role="menuitem" tabindex="-1">
+                                                    <a href="/api/ManageDatabases?unloadId=${database.id}&newdesign=databases">Unload</a></div></span></c:if>
                                                 <span role="none"><hr role="none"></span><span role="none">
                                                 <div id="headlessui-menu-item-:ru:" role="menuitem" tabindex="-1">
                                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true">
                                                         <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
-                                                        </path></svg><a href="/api/ManageDatabases?deleteId=${database.id}#1"
+                                                        </path></svg><a href="/api/ManageDatabases?deleteId=${database.id}&newdesign=databases"
                                                                         onclick="return confirm('Are you sure you want to Delete ${database.name}?')">Delete</a></div></span>
                                                 <span role="none">
                                                 <div role="menuitem" tabindex="-1">
-                                                    <a href="/api/ManageDatabases?emptyId=${database.id}#1"
+                                                    <a href="/api/ManageDatabases?emptyId=${database.id}&newdesign=databases"
                                                        onclick="return confirm('Are you sure you want to Empty ${database.name}?')">
                                                     Empty</a></div></span>
 

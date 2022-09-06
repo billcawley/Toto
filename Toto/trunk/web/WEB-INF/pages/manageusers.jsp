@@ -9,7 +9,7 @@
                 <h3>Users</h3>
             </div>
             <div class="az-section-body">
-                <a href="/api/ManageUsers?downloadRecentActivity=true">Download Recent Activity Summary</a>
+                <!--                 <div class="az-alert az-alert-warning">${error}</div> -->
                 <div>${error}</div>
                 <div class="az-table">
                     <table>
@@ -21,9 +21,9 @@
                             <!--<td>Business Id</td>-->
 
                             <th>Status</th>
-                            <th>Start Menu</th>
+<!--                            <th>Start Menu</th>
                             <th>Database</th>
-                            <th>Selections</th>
+                            <th>Selections</th>-->
                             <th>Recent Activity</th>
                             <th></th>
                             <th></th>
@@ -40,9 +40,9 @@
                                 <!--<td>${user.businessId}</td>-->
 
                                 <td>${user.status}</td>
-                                <td>${user.reportName}</td>
+<!--                                <td>${user.reportName}</td>
                                 <td>${user.databaseName}</td>
-                                <td>${user.selections}</td>
+                                <td>${user.selections}</td>-->
                                 <td><a href="/api/ManageUsers?recentId=${user.id}&newdesign=true">${user.recentActivity}</a></td>
                                 <td><a href="/api/ManageUsers?deleteId=${user.id}&newdesign=true" title="Delete ${user.name}"
                                        onclick="return confirm('Are you sure?')">Delete</a></td>
@@ -55,27 +55,21 @@
 
                     <form action="/api/ManageUsers" method="post" enctype="multipart/form-data">
                         <input type="hidden" name="newdesign" value="true"/>
-                        <table class="az-table">
-                            <tr>
-                                <td>
-                                    <a href="/api/ManageUsers?editId=0&newdesign=true">Add New User</a>&nbsp;
-                                </td>
-                                <td>
-                                    <a href="/api/CreateExcelForDownload?action=DOWNLOADUSERS">Download Users as
-                                        Excel</a> &nbsp;
-                                </td>
-                                <td>
-                                    Select File
+                        <nav>
+                            <div>
+                            <button onclick="location.href='/api/ManageUsers?downloadRecentActivity=true'">Download Recent Activity Summary</button>
+                                    <button onclick="location.href='/api/ManageUsers?editId=0&newdesign=true'">Add New User</button>
+                                    <button onclick="location.href='/api/CreateExcelForDownload?action=DOWNLOADUSERS'">Download Users as
+                                        Excel</button> &nbsp;
+                            </div>
+                            <div>
                                             <input type="file" name="uploadFile"
                                                    id="uploadFile"
                                                    multiple>
 
-                                </td>
-                                <td>
-                                    <input type="submit" name="Upload" value="Upload User List"/>&nbsp;
-                                </td>
-                            </tr>
-                        </table>
+                                    <button onclick="this.form.submit()">Upload User List</button> &nbsp;
+                            </div>
+                        </nav>
                     </form>
                 </div>
             </div>

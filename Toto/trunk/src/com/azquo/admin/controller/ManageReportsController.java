@@ -114,6 +114,8 @@ public class ManageReportsController {
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
         if (request.getParameter("newdesign") != null || (loggedInUser != null && loggedInUser.getBusiness().isNewDesign())){
             request.getSession().setAttribute("newdesign", true);
+        } else {
+            request.getSession().removeAttribute("newdesign");
         }
 
         // I assume secure until we move to proper spring security
