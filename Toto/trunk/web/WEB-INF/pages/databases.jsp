@@ -38,7 +38,7 @@
                                     <p>${database.lastProvenance}</p>
                                 </details></td>
                                 <td>
-                                    <a href="/api/ManageDatabases?toggleAutobackup=${database.id}&ab=${database.autobackup}#1">${database.autobackup}</a><c:if
+                                    <a href="/api/ManageDatabases?toggleAutobackup=${database.id}&ab=${database.autobackup}&newdesign=databases">${database.autobackup}</a><c:if
                                         test="${database.autobackup}">&nbsp;|&nbsp;<a href="/api/ManageDatabaseBackups?databaseId=${database.id}">view</a></c:if>
                                 </td>
                                 <td>

@@ -121,7 +121,11 @@ public class ManageDatabaseBackupsController {
             }
             model.put("developer", loggedInUser.getUser().isDeveloper());
             AdminService.setBanner(model, loggedInUser);
-                return "managedatabasebackups2";
+            if (request.getSession().getAttribute("newdesign") != null){
+                return "managedatabasebackups";
+            }
+
+            return "managedatabasebackups2";
         } else {
             return "redirect:/api/Login";
         }

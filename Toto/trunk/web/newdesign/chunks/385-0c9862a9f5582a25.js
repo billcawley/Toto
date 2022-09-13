@@ -587,7 +587,7 @@
                                                             className: "az-file-upload-file",
                                                             children: [
                                                                 (0, t.jsx)("div", {
-                                                                    children: (0, t.jsxs)("label", {
+                                                                    children: [(0, t.jsxs)("label", {
                                                                         htmlFor: "az-file-upload",
                                                                         children: [
                                                                             (0, t.jsx)("span", {
@@ -603,7 +603,16 @@
                                                                                 },
                                                                             }),
                                                                         ],
+
                                                                     }),
+                                                                        (0, t.jsx)("span", {
+                                                                            children: "      Setup File  ",
+                                                                        }),
+                                                                        (0, t.jsx)("input", {
+                                                                            name: "setupFile",
+                                                                            type: "checkbox",
+                                                                        }),
+                                                                    ]
                                                                 }),
                                                                 (0, t.jsx)("p", {
                                                                     children:
@@ -618,8 +627,11 @@
                                                                                     },
                                                                                     children: "Upload",
                                                                                 }),
+
                                                                             },
                                                                         ),
+
+
                                                                             (0, t.jsx)("input", {
                                                                                 id: "databaseHidden",
                                                                                 name: "database",

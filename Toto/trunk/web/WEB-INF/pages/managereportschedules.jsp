@@ -1,6 +1,6 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
-<c:set var="title" scope="request" value="Manage Users"/>
+<c:set var="title" scope="request" value="Manage Report Schedules"/>
 <%@ include file="../includes/new_header.jsp" %>
 <div class="az-content">
     <main>
