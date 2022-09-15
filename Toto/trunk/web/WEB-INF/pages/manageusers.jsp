@@ -57,9 +57,9 @@
                         <input type="hidden" name="newdesign" value="true"/>
                         <nav>
                             <div>
-                            <button onclick="location.href='/api/ManageUsers?downloadRecentActivity=true'">Download Recent Activity Summary</button>
-                                    <button onclick="location.href='/api/ManageUsers?editId=0&newdesign=true'">Add New User</button>
-                                    <button onclick="location.href='/api/CreateExcelForDownload?action=DOWNLOADUSERS'">Download Users as
+                            <button onclick="location.href='/api/ManageUsers?downloadRecentActivity=true'" type="button">Download Recent Activity Summary</button>
+                                    <button onclick="location.href='/api/ManageUsers?editId=0&newdesign=true'" type="button">Add New User</button>
+                                    <button onclick="location.href='/api/CreateExcelForDownload?action=DOWNLOADUSERS'" type="button">Download Users as
                                         Excel</button> &nbsp;
                             </div>
                             <div>

@@ -95,10 +95,10 @@
                         <nav>
                             <div>
                             <button onclick="this.form.submit()">Save Changes</button>
-                            <button onclick="location.href='/api/ManageReportSchedules?new=true'">Add new
+                            <button onclick="location.href='/api/ManageReportSchedules?new=true'" type="button">Add new
                                 schedule</button>&nbsp;
                             </div><div>
-                                            <input class="file-input is-small" type="file" name="uploadFile"
+                                            <input type="file" name="uploadFile"
                                                    id="uploadFile"
                                                    multiple>
 

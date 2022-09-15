@@ -3800,7 +3800,8 @@
                         { label: "Imports", href: "/api/ManageDatabases/?newdesign=imports", icon: s.Z },
                                             { label: "Databases", href: "/api/ManageDatabases/?newdesign=databases", icon: u.Z },
                     { label: "Users", href: "/api/ManageUsers", icon: l.Z },
-                    { label: "Schedules", href: "/api/ManageReportSchedules", icon: c.Z },
+                        { label: "Schedules", href: "/api/ManageReportSchedules", icon: c.Z },
+                        { label: "Backup/Maintenance", href: "/api/ManageDatabases/?newdesign=maintenance", icon: a },
                     ],
                     h = [
                         //{ label: "Settings", href: "/settings", icon: a },

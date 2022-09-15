@@ -348,6 +348,9 @@ public class ManageDatabasesController {
             if ("databases".equalsIgnoreCase(newdesign)) {
                 return "databases";
             }
+            if ("maintenance".equalsIgnoreCase(newdesign)) {
+                return "maintenance";
+            }
             if ("imports".equalsIgnoreCase(newdesign)) {
                 StringBuilder jsImportsList = new StringBuilder();
                 for (UploadRecord.UploadRecordForDisplay uploadRecord : uploadRecordsForDisplayForBusiness) {
@@ -594,6 +597,9 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
             model.put("reports", AdminService.getReportList(loggedInUser, true));
             if ("databases".equalsIgnoreCase(newdesign)) {
                 return "databases";
+            }
+            if ("maintenance".equalsIgnoreCase(newdesign)) {
+                return "maintenance";
             }
             if ("imports".equalsIgnoreCase(newdesign)) {
 
