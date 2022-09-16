@@ -285,9 +285,10 @@ public class DSImportService {
                     Map<List<String>, HeadingWithInterimLookup> headingsByLookupCopy = new HashMap<>(uploadedFile.getHeadingsByFileHeadingsWithInterimLookup());
                     int currentFileCol = 0;
                     for (List<String> headingsForAColumn : headingsFromTheFile) {// generally headingsForAColumn will just just have one element
-                        if (headingsByLookupCopy.get(headingsForAColumn) != null) {
+                        List<String>headingFound = headingFound(headingsForAColumn, headingsByLookupCopy);
+                        if (headingFound!=null) {
                             lastColumnToActuallyRead = currentFileCol;
-                            HeadingWithInterimLookup removed = headingsByLookupCopy.remove(headingsForAColumn);// take the used one out - after running through the file we need to add the remainder on to the end
+                            HeadingWithInterimLookup removed = headingsByLookupCopy.remove(headingFound);// take the used one out - after running through the file we need to add the remainder on to the end
                             headings.add(removed.getHeading());
                             if (removed.getInterimLookup() != null) {
                                 interimCompositeLookup.put(removed.getInterimLookup().toUpperCase(), headings.size() - 1);
@@ -322,7 +323,7 @@ public class DSImportService {
                             if (toCheckAgainstTopHeadings.contains(";")) {
                                 toCheckAgainstTopHeadings = toCheckAgainstTopHeadings.substring(0, toCheckAgainstTopHeadings.indexOf(";"));
                                 if (topHeadingsValues.containsKey(toCheckAgainstTopHeadings) && !"FOUND".equals(topHeadingsValues.get(toCheckAgainstTopHeadings))) {
-                                    headingToAdd = leftOver.getHeading() + ";" + HeadingReader.COMPOSITION + " " + topHeadingsValues.remove(toCheckAgainstTopHeadings);
+                                    headingToAdd = leftOver.getHeading() + ";" + StringLiterals.COMPOSITION + " " + topHeadingsValues.remove(toCheckAgainstTopHeadings);
                                 }
                             }
                         }
@@ -334,11 +335,11 @@ public class DSImportService {
                             so it is required and not composition or top heading and it doesn't have a default value
                             *then* we exception. Note that this isn't talking about the value on a line it's asking if the heading itself exists
                             so a problem in here is a heading config problem I think rather than a data problem */
-                                if (!headingToAdd.toLowerCase().contains(HeadingReader.DEFAULT)
-                                        && !leftOver.getHeading().toLowerCase().contains(HeadingReader.COMPOSITION)
-                                        && !leftOver.getHeading().toLowerCase().contains(HeadingReader.COMPOSITIONXL)
-                                        && !leftOver.getHeading().toLowerCase().contains(HeadingReader.AZEQUALS)
-                                        && !leftOver.getHeading().toLowerCase().contains(HeadingReader.LOOKUP)
+                                if (!headingToAdd.toLowerCase().contains(StringLiterals.DEFAULT)
+                                        && !leftOver.getHeading().toLowerCase().contains(StringLiterals.COMPOSITION)
+                                        && !leftOver.getHeading().toLowerCase().contains(StringLiterals.COMPOSITIONXL)
+                                        && !leftOver.getHeading().toLowerCase().contains(StringLiterals.AZEQUALS)
+                                        && !leftOver.getHeading().toLowerCase().contains(StringLiterals.LOOKUP)
                                         && uploadedFile.getParameter(clauses[0].trim().toLowerCase()) == null
                                 ) {
                                     throw new Exception("headings missing required heading: " + leftOver.getHeading());
@@ -403,7 +404,7 @@ public class DSImportService {
             for (String headingName : topHeadingsValues.keySet()) {
                 if (!topHeadingsValues.get(headingName).equals("FOUND")) {
                     //THE ROUTINE THAT CONVERTS '.;' TO ';attribute' DOES NOT RECOGNISE 'default' but does recognise 'composition'
-                    headings.add(headingName + ";" + HeadingReader.COMPOSITION + " " + topHeadingsValues.get(headingName));
+                    headings.add(headingName + ";" + StringLiterals.COMPOSITION + " " + topHeadingsValues.get(headingName));
                 }
             }
 
@@ -476,26 +477,26 @@ public class DSImportService {
                 Line heading and data essentially are shorthand, this expands them and creates supporting names for the pivot if necessary.
                 As the boolean shows, pivot stuff
                 */
-                    if (heading.contains(HeadingReader.LINEHEADING) && heading.indexOf(";") > 0) {
+                    if (heading.contains(StringLiterals.LINEHEADING) && heading.indexOf(";") > 0) {
                         pivot = true;
                         String headName = heading.substring(0, heading.indexOf(";"));
                         Name headset = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All headings", null, false);
                         // create the set the line heading name will go in
                         // note - headings in different import files will be considered the same if they have the same name
                         NameService.findOrCreateNameInParent(azquoMemoryDBConnection, headName.replace("_", " "), headset, true);
-                        heading = heading.replace(HeadingReader.LINEHEADING, "parent of LINENO;child of " + headName.replace("_", " ") + ";language " + headName);
+                        heading = heading.replace(StringLiterals.LINEHEADING, "parent of LINENO;child of " + headName.replace("_", " ") + ";language " + headName);
                     }
 
                     // using file name instead of import interpreter name, not sure of the best plan there
 
-                    if (heading.contains(HeadingReader.LINEDATA) && heading.indexOf(";") > 0) {
+                    if (heading.contains(StringLiterals.LINEDATA) && heading.indexOf(";") > 0) {
                         pivot = true;
                         String headName = heading.substring(0, heading.indexOf(";"));
                         Name allDataSet = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All data", null, false);
                         Name thisDataSet = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, uploadedFile.getFileName() + " data", allDataSet, false);
                         // create the set the line data name will go in
                         NameService.findOrCreateNameInParent(azquoMemoryDBConnection, headName.replace("_", " "), thisDataSet, false);
-                        heading = heading.replace(HeadingReader.LINEDATA, "peers {LINENO}").replace("_", " ");
+                        heading = heading.replace(StringLiterals.LINEDATA, "peers {LINENO}").replace("_", " ");
                     }
                 }
                 headings.set(i, heading);
@@ -516,6 +517,14 @@ public class DSImportService {
                     , immutableImportHeadings
                     , batchSize
                     , lastColumnToActuallyRead, compositeIndexResolver);
+            if (uploadedFile.getError()!=null && uploadedFile.getError().contains("UTF")){
+                uploadedFile.setError(null);
+                uploadedFile.getParameters().put(FILEENCODING,"ISO_8859_1");
+                    //try again!
+                return readPreparedFile(azquoMemoryDBConnection, uploadedFile);
+            }
+
+
         }
         return uploadedFile; // it will (should!) have been modified
     }
@@ -578,6 +587,33 @@ public class DSImportService {
         }
         return toReturn;
     }
+
+    public static List<String> headingFound(List<String> toFind, Map<List<String>,HeadingWithInterimLookup> library){
+        if (library.get(toFind)!=null){
+            //classic case
+            return toFind;
+        }
+        //new behaviour - the first line of template headings can contain 'standardised' headings separated by ||
+        if (toFind.size()==1){
+            String standardisedToFind = standardise(toFind.get(0));
+            for (List<String> headingList:library.keySet()){
+                if (headingList.size()==1){
+                    String[] headings = headingList.get(0).split("\\|\\|");
+                    for (String heading:headings){
+                        if (heading.equals(standardisedToFind)){
+                            return headingList;
+                        }
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    private static String standardise(String value) {
+         return value.replace("\\\\n", " ").replace("\n", " ").replace(" ", "").replace("_", " ").toLowerCase(Locale.ROOT);
+    }
+
 
     // the idea is that a heading could be followed by successive clauses on cells below and this might be easier to read
     private static boolean buildHeadingsFromVerticallyListedClauses(AzquoMemoryDBConnection azquoMemoryDBConnection, List<String> headings, Iterator<String[]> lineIterator) {
@@ -655,137 +691,68 @@ public class DSImportService {
 
     public static boolean findReservedWord(String heading) {
         heading = heading.toLowerCase();
-        return heading.startsWith(HeadingReader.CHILDOF)
-                || heading.startsWith(HeadingReader.PARENTOF)
-                || heading.startsWith(HeadingReader.ATTRIBUTE)
-                || heading.startsWith(HeadingReader.LANGUAGE)
-                || heading.startsWith(HeadingReader.DATATYPE)
-                || heading.startsWith(HeadingReader.PEERS)
-                || heading.startsWith(HeadingReader.LOCAL)
-                || heading.startsWith(HeadingReader.COMPOSITION)
-                || heading.startsWith(HeadingReader.COMPOSITIONXL)
-                || heading.startsWith(HeadingReader.AZEQUALS)
-                || heading.startsWith(HeadingReader.IGNORE)
-                || heading.startsWith(HeadingReader.DEFAULT)
-                || heading.startsWith(HeadingReader.NONZERO)
-                || heading.startsWith(HeadingReader.REMOVESPACES)
-                || heading.startsWith(HeadingReader.DATELANG)
-                || heading.startsWith(HeadingReader.ONLY)
-                || heading.startsWith(HeadingReader.EXCLUSIVE)
-                || heading.startsWith(HeadingReader.CLEAR)
-                || heading.startsWith(HeadingReader.CLEARDATA)
-                || heading.startsWith(HeadingReader.COMMENT)
-                || heading.startsWith(HeadingReader.EXISTING)
-                || heading.startsWith(HeadingReader.OPTIONAL)
-                || heading.startsWith(HeadingReader.LINEHEADING)
-                || heading.startsWith(HeadingReader.LINEDATA)
-                || heading.startsWith(HeadingReader.DICTIONARY)
-                || heading.startsWith(HeadingReader.CLASSIFICATION)
-                || heading.startsWith(HeadingReader.REPLACE)
-                || heading.startsWith(HeadingReader.SEQUENTIALATTRIBUTE)
-                || heading.startsWith(HeadingReader.SPLIT);
+        return heading.startsWith(StringLiterals.CHILDOF)
+                || heading.startsWith(StringLiterals.PARENTOF)
+                || heading.startsWith(StringLiterals.ATTRIBUTE)
+                || heading.startsWith(StringLiterals.LANGUAGE)
+                || heading.startsWith(StringLiterals.DATATYPE)
+                || heading.startsWith(StringLiterals.PEERS)
+                || heading.startsWith(StringLiterals.LOCAL)
+                || heading.startsWith(StringLiterals.COMPOSITION)
+                || heading.startsWith(StringLiterals.COMPOSITIONXL)
+                || heading.startsWith(StringLiterals.AZEQUALS)
+                || heading.startsWith(StringLiterals.IGNORE)
+                || heading.startsWith(StringLiterals.DEFAULT)
+                || heading.startsWith(StringLiterals.NONZERO)
+                || heading.startsWith(StringLiterals.REMOVESPACES)
+                || heading.startsWith(StringLiterals.DATELANG)
+                || heading.startsWith(StringLiterals.ONLY)
+                || heading.startsWith(StringLiterals.EXCLUSIVE)
+                || heading.startsWith(StringLiterals.CLEAR)
+                || heading.startsWith(StringLiterals.CLEARDATA)
+                || heading.startsWith(StringLiterals.COMMENT)
+                || heading.startsWith(StringLiterals.EXISTING)
+                || heading.startsWith(StringLiterals.OPTIONAL)
+                || heading.startsWith(StringLiterals.LINEHEADING)
+                || heading.startsWith(StringLiterals.LINEDATA)
+                || heading.startsWith(StringLiterals.DICTIONARY)
+                || heading.startsWith(StringLiterals.CLASSIFICATION)
+                || heading.startsWith(StringLiterals.REPLACE)
+                || heading.startsWith(StringLiterals.SEQUENTIALATTRIBUTE)
+                || heading.startsWith(StringLiterals.SPLIT);
     }
 
-    public static void uploadWizardData(DatabaseAccessToken databaseAccessToken, String fileName, Map<String, String> wizardDefs, Map<String, List<String>> data) throws Exception {
+    public static void uploadWizardData(DatabaseAccessToken databaseAccessToken, String fileName, Map<String,String> modifiedHeadings, Map<String,List<String>> data) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
+        //checkDates
+        //checkTimes
+
+        List<String> fileNames = new ArrayList<>();
+        fileNames.add(fileName);
+        List<String> languages = new ArrayList<>();
+        languages.add(StringLiterals.DEFAULT_DISPLAY_NAME);
         List<MutableImportHeading> headings = new ArrayList<>();
-        String keyFieldId = null;
-        String keyField = null;
-        for (String field : wizardDefs.keySet()) {
-            String wizardDef = wizardDefs.get(field);
-            String[] clauses = wizardDef.split(";");
-            if (clauses.length > 1) {
-                if (clauses[1].equals("key field id")) {
-                    keyFieldId = clauses[0];
+        for (String field : modifiedHeadings.keySet()) {
+            String def = modifiedHeadings.get(field);
+            if (data.get(field)!=null) {
+                if (def.contains(";datatype date") || def.contains(";datatype US date")) {
+                    checkDates(azquoMemoryDBConnection, data.get(field));
+                }
+                if (def.contains(";datatype time")) {
+                    checkTimes(azquoMemoryDBConnection, data.get(field));
                 }
             }
-        }
-
-        for (String field : wizardDefs.keySet()) {
-            //this conversion is complicated by the fact that we do not want the 'id' fields to be names, but do want them to continue as attributes( 'product id' is attribute of 'product')
-            String wizardDef = wizardDefs.get(field);
-            String[] clauses = wizardDef.split(";");
-            StringBuffer modifiedHeading = new StringBuffer();
-            if (clauses.length > 1) {
-                String fieldName = clauses[0];
-                String fieldNameSansId = removeId(fieldName);
-                String dataAnchor = getClause("attribute of", clauses);
-
-                if (dataAnchor != null) {
-                    dataAnchor = removeId(dataAnchor);
-                    modifiedHeading = new StringBuffer();
-                    if (dataAnchor.toLowerCase(Locale.ROOT).endsWith("id") && fieldName.toLowerCase(Locale.ROOT).endsWith("name")){
-                        fieldName = "name";
-                    }
-                    modifiedHeading.append(dataAnchor + ";attribute " + fieldName);
-                } else {
-                    modifiedHeading.append(fieldNameSansId);
-                }
-                if (clauses[1].equals(HeadingReader.DATELANG) || clauses[1].equals(HeadingReader.USDATELANG)) {
-                    modifiedHeading.append(";datatype " + clauses[1]);
-                    checkDates(azquoMemoryDBConnection,data.get(field));
-
-                }
-                if(clauses[1].equals("time")){
-                    checkTimes(azquoMemoryDBConnection,data.get(field));
-                }
-                if (clauses[1].equals("key field name")) {
-                    if (keyFieldId != null) {
-                        modifiedHeading = new StringBuffer();
-                        modifiedHeading.append(removeId(keyFieldId) + ";attribute name");
-                    } else {
-                        modifiedHeading.append(";child of " + fieldNameSansId);
-                        NameService.findOrCreateNameInParent(azquoMemoryDBConnection, fieldName, null, false);
-                    }
-                }
-                if (clauses[1].equals("key field id") || fieldName.toLowerCase(Locale.ROOT).endsWith("id")) {
-                     modifiedHeading.append(";language " +fieldName + ";child of " + fieldNameSansId);
-                }
-                String dataChild = getClause("parent of", clauses);
-                if (dataChild != null) {
-                    modifiedHeading.append(";parent of " + removeId(dataChild) + ";child of " + fieldNameSansId +";default No " + fieldNameSansId);
-                    NameService.findOrCreateNameInParent(azquoMemoryDBConnection, fieldNameSansId, null, false);
-                }
-                String dataParent = getClause("datagroup", clauses);
-                if (dataParent != null) {
-                    Name dataName = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Data", null, false);
-                    Name parentName = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, dataParent, dataName, false);
-                    NameService.findOrCreateNameInParent(azquoMemoryDBConnection, fieldName, parentName, false);
-                }
-
-                String peersString = getClause("peers", clauses);
-                if (peersString != null) {
-                    if (peersString.toLowerCase(Locale.ROOT).endsWith("id}")){
-                        peersString = peersString.substring(0,peersString.length()-3).trim()+"}";
-                    }
-                    modifiedHeading.append(";peers " + peersString);
-                }
-                String peerFor = getClause("peer for", clauses);
-                if (peerFor != null) {
-                     String clause = ";child of " + fieldNameSansId;
-                    if (!modifiedHeading.toString().contains(clause)){
-                        modifiedHeading.append(";child of " + fieldNameSansId);
-                    }
-                    NameService.findOrCreateNameInParent(azquoMemoryDBConnection, fieldNameSansId, null, false);
-                }
-                List<String> languages = new ArrayList<>();
-                languages.add(StringLiterals.DEFAULT_DISPLAY_NAME);
-                List<String> fileNames = new ArrayList<>();
-                if (fileName.contains(".")){
-                    fileNames.add(fileName.substring(0,fileName.indexOf(".")));
-;                }else{
-                    fileNames.add(fileName);//used to replace FILENAME in composition fields..
-                }
-                final MutableImportHeading heading = HeadingReader.interpretHeading(azquoMemoryDBConnection, modifiedHeading.toString(), languages, fileNames);
-                headings.add(heading);
-            }
+            String modifiedHeading = modifiedHeadings.get(field);
+            //delete the first clause in modified heading - it is the original data heading, now not relevant.
+            final MutableImportHeading heading = HeadingReader.interpretHeading(azquoMemoryDBConnection, modifiedHeading.substring(modifiedHeading.indexOf(";") +1), languages, fileNames);
+            headings.add(heading);
         }
         HeadingReader.resolvePeersAttributesAndParentOf(azquoMemoryDBConnection, headings);
         Map<String, ImmutableImportHeading> fieldLinks = new HashMap<>();
         List<ImmutableImportHeading> immutableImportHeadings = headings.stream().map(ImmutableImportHeading::new).collect(Collectors.toList());
         int fieldno = 0;
         List<String> fieldList = new ArrayList<>();
-        for (String field : wizardDefs.keySet()) {
+        for (String field : modifiedHeadings.keySet()) {
             fieldList.add(field);
             fieldLinks.put(field, immutableImportHeadings.get(fieldno++));
         }
@@ -798,9 +765,13 @@ public class DSImportService {
         final AtomicInteger noLinesRejected = new AtomicInteger(); // track no lines rejected
         for (int lineNo = 0; lineNo < data.get(fieldList.get(0)).size(); lineNo++) {
             List<ImportCellWithHeading> importCellsWithHeading = new ArrayList<>();
-            for (String field : wizardDefs.keySet()) {
+            for (String field : modifiedHeadings.keySet()) {
                 ImmutableImportHeading heading = fieldLinks.get(field);
-                importCellsWithHeading.add(new ImportCellWithHeading(heading, data.get(field).get(lineNo)));
+                String value = "";
+                if (data.get(field)!=null && data.get(field).size()> lineNo){
+                    value = data.get(field).get(lineNo);
+                }
+                importCellsWithHeading.add(new ImportCellWithHeading(heading, value));
                 linesBatched.add(new LineDataWithLineNumber(importCellsWithHeading, lineNo));
                 // Start processing this batch. As the file is read the active threads will rack up to the maximum number allowed rather than starting at max. Store the futures to confirm all are done after all lines are read.
                 // batch size is derived by getLineIteratorAndBatchSize
@@ -839,14 +810,6 @@ public class DSImportService {
         // connection.addToUserLogNoException("Imported " + (linesImported - noLinesRejected.get()) + " lines", true); // does the user log require more details??
     }
 
-    private static String removeId(String fieldName){
-        if (fieldName.toLowerCase(Locale.ROOT).endsWith("id")){
-            return fieldName.substring(0,fieldName.length()-2).trim();
-        }else{
-            return fieldName;
-        }
-    }
-
     private static void checkDates(AzquoMemoryDBConnection azquoMemoryDBConnection, List<String> vals)throws Exception {
         String[] strDays = new String[]{
                 "Sunday",
@@ -857,6 +820,7 @@ public class DSImportService {
                 "Friday",
                 "Saturday"
         };
+
 
 
         String minDate = "zzz";
