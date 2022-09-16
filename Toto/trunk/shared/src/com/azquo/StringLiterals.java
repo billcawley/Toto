@@ -138,5 +138,88 @@ public class StringLiterals {
     public static final String AZIMPORTDATA = "az_importdata";
 
     public static final String TOPNAMES = "TOPNAMES";
+ /*
+    These are heading clauses. Heading definitions can be in the data file but Azquo is setup to support data "as it comes".
+    Hence when dealing with a new set of data the key is to set up sets and headings so that the system can load the data.
+    Setting up the sets and headings could be seen as similar to setting up the tables in an SQL database.
+
+    Note : the clauses here tend to reverse the subject/object used in the code. If an object in the code has children we'll say object.children, not object.parentOf.
+    This isn't a big problem and the way the clauses are set up probably makes sense in their context, I just want to note that as they are parsed naming may reverse - parentOf to children etc.
+
+    How these are used is described in more detail in MutableImportHeading and the clause interpreter.
+     */
+
+
+    public static final String CHILDOF = "child of "; // trailing space I suppose one could otherwise get a false "child ofweryhwrs" match which can't happen with the others
+    // parent of another heading (as opposed to name), would like the clause to be more explicit, as in differentiate between a name in the database and a column. This distinction still bugs me . . .
+    public static final String PARENTOF = "parent of ";
+    public static final String ATTRIBUTE = "attribute";
+    public static final String LANGUAGE = "language";
+    public static final String DATATYPE = "datatype";
+    public static final String PEERS = "peers";
+    //public static final String LOCAL = "local";
+    /*
+    COMPOSITION  <phrase with column heading names enclosed in ``>
+    e.g   COMPOSITION  `Name`, `address` Tel No: `Telephone No`
+
+Attributes of the names in other cells can be referenced also
+    */
+
+    public static final String COMPOSITION = "composition";
+    public static final String COMPOSITIONXL = "compositionxl";
+    public static final String AZEQUALS = "az=";
+    // shorthand for parent of/child of/exclusive, see comments below where it's used
+    public static final String CLASSIFICATION = "classification";
+    public static final String DEFAULT = "default";
+    // if there's no file heading then make composite and default ignore any data found on that line - we assume it's irrelevant or junk
+    public static final String NOFILEHEADING = "nofileheading";
+    public static final String OVERRIDE = "override";
+    public static final String NONZERO = "nonzero";
+    public static final String REMOVESPACES = "removespaces";
+    public static final String REQUIRED = "required";
+    public static final String DATELANG = "date";
+    public static final String USDATELANG = "us date";
+    public static final String ONLY = "only";
+    public static final String IGNORE = "ignore";
+    public static final String EXCLUSIVE = "exclusive";
+    public static final String CLEAR = "clear";
+    public static final String CLEARDATA = "cleardata"; // like the file parameter but for a column
+    public static final String COMMENT = "comment";
+    public static final String EXISTING = "existing"; // only works in in context of child of - reject the line if not existing
+    public static final String OPTIONAL = "optional"; // only works in in context of child of - carry on with blank if not existing
+    // essentially using either of these keywords switches to pivot mode (like an Excel pivot) where a name is created
+    // from the line number and in a set called the name of the file, uploading successive files with the same name would of course cause problems for this system, data should be cleared before re uploading
+    public static final String LINEHEADING = "lineheading";//lineheading and linedata are shortcuts for data destined for a pivot table, they are replaced before parsing starts properly
+    public static final String LINEDATA = "linedata";
+    public static final String SPLIT = "split";
+    public static final String REPLACE = "replace";
+    public static final String PROVISIONAL = "provisional";//used with 'parent of' to indicate that the parent child relationship should only be created if none exists already (originally for Ed Broking Premium imports)
+
+    public static final String STRINGSTR = "string";
+
+    public static final String NUMBERSTR = "number";
+
+    public static final int EXCLUSIVETOCHILDOF = -1;
+    public static final int NOTEXCLUSIVE = -2;
+
+    /*DICTIONARY finds a name based on the string value of the cell.  The system will search all names for the attribute given by the 'dictionary' term.  For instance if the phrase is 'dictionary complaint terms'
+    the system will look through all the attributes 'complaint terms' to see if any match the value of this cell.
+    the 'terms' consist of words or phrases separated by '+','-' or ','.   ',' means  'or'  '+' means 'and' and '-' means 'and not'
+    e.g      'car, bus, van + accident - sunday,saturday' would find any phrase containing 'car' or 'bus' or 'van' AND 'accident' but NOT containing 'saturday' or 'sunday'
+    DICTIONARY can be used in conjunction with the set 'SYNONYMS`.  The elements of 'Synonyms` are names with an attribute 'synonyms'.  The attribute gives a comma-separated list of synonyms.
+    e.g  if an element of 'Synonyms' is 'car'    then 'car' may have an attribute 'synonyms' consisting of 'motor, auto, vehicle'  which DICTIONARY  would consider to mean the same as 'car'
+    EFC - initially I wanted to move this to reports but it's actually fairly manageable. Less of a concern than lookups. Check tryToResolveNames in BatchImporter
+     */
+    public static final String DICTIONARY = "dictionary";
+    /*
+    see checkLookup in BatchImporter, this can be quite involved
+     */
+    public static final String LOOKUP = "lookup";
+    // required to load Ed B GXB tracking. Essentially call an attribute something01 and if it's sequential and the attribute is imported multiple times it goes in as something01, something02, something03 etc rather than overwriting
+    public static final String SEQUENTIALATTRIBUTE = "sequentialattribute";
+
+
+
+
 
 }

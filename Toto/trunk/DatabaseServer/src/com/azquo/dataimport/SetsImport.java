@@ -25,8 +25,8 @@ class SetsImport {
         try (BufferedReader br = Files.newBufferedReader(Paths.get(uploadedFile.getPath()))) {
             // the filename can override the attribute for name creation/search. Seems a bit hacky but can make sense if the set up is a series of workbooks.
             List<String> languages;
-            if (uploadedFile.getParameter(HeadingReader.LANGUAGE) != null) {
-                languages = Collections.singletonList(uploadedFile.getParameter(HeadingReader.LANGUAGE));
+            if (uploadedFile.getParameter(StringLiterals.LANGUAGE) != null) {
+                languages = Collections.singletonList(uploadedFile.getParameter(StringLiterals.LANGUAGE));
             } else {
                 // todo - zap this back to normal. When I do then zap the filename parameter and return lines
                 if (uploadedFile.getFileName().length() > 4 && uploadedFile.getFileName().charAt(4) == '-') { // see if you can derive a language from the file name

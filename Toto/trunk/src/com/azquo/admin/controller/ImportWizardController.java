@@ -120,9 +120,9 @@ public class ImportWizardController {
                 uploadFile.transferTo(moved);
                 if (fileName.toLowerCase(Locale.ROOT).contains(".xls")) {
                     Map<String, WizardField> wizardFields = new LinkedHashMap<>();
-                    int lineCount = ImportWizard.readBook(moved, wizardFields, false);
                     wizardInfo = new WizardInfo(fileName, null);
-                    wizardInfo.setFields(wizardFields);
+                    int lineCount = ImportWizard.readBook(moved, wizardFields, false, wizardInfo.getLookups());
+                     wizardInfo.setFields(wizardFields);
                     wizardInfo.setLineCount(lineCount);
                     loggedInUser.setWizardInfo(wizardInfo);
 
@@ -149,10 +149,10 @@ public class ImportWizardController {
                 } else {
                     Map<String, String> fileNameParameters = new HashMap<>();
                     ImportService.addFileNameParametersToMap(moved.getName(), fileNameParameters);
+                    wizardInfo = new WizardInfo(fileName, null);
 
                     Map<String, WizardField> wizardFields = ImportWizard.readCSVFile(moved.getAbsolutePath(), fileNameParameters.get("fileencoding"));
-                    wizardInfo = new WizardInfo(fileName, null);
-                    wizardInfo.setFields(wizardFields);
+                      wizardInfo.setFields(wizardFields);
                     for (String field : wizardFields.keySet()) {
                         WizardField wizardField = wizardFields.get(field);
                         wizardInfo.setLineCount(wizardField.getValuesFound().size());
@@ -161,6 +161,7 @@ public class ImportWizardController {
 
                     loggedInUser.setWizardInfo(wizardInfo);
                 }
+
 
             } catch (Exception e) {
                 model.put("error", e.getMessage());

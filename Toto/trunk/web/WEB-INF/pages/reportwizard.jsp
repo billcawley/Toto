@@ -60,6 +60,10 @@ lockresult: string
             + "&sessionid=${pageContext.session.id}";
         let data = await azquoSend(params);
         let json = await data.json();
+        if (json.error >"" ){
+            document.getElementById("instructions").innerText = json.error;
+            return;
+        }
         var rowValueChosen = "";
         var columnValueChosen = "";
         for (var i = 0; i < json.length; i++) {

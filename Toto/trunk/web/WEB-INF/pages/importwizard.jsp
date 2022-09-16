@@ -4,8 +4,18 @@
 <c:set var="title" scope="request" value="Import Wizard"/>
 <%@ include file="../includes/new_header.jsp" %>
 
+<div class="az-content" id="sampleData">
+    <div id="dataTable"></div>
+    <div class="az-import-wizard-pagination">
+        <div>
+            <button  id="hideDataButton" class="az-wizard-button-back"
+                     onClick="hideData()">Revert
+            </button>
+        </div>
+    </div>
 
-<div class="az-content">
+</div>
+<div class="az-content" id="setup">
     <div class="az-topbar">
         <button>
             <svg
@@ -139,7 +149,10 @@
                             <button class="az-wizard-button-back" onClick="loadLastStage()">Back
                             </button
                             >
-                            <button class="az-wizard-button-next" onClick="loadNextStage()">Next</button>
+                            <button class="az-wizard-button-next" id="nextButton" onClick="loadNextStage()">Next</button>
+                            <button  id="showdataButton" class="az-wizard-button-back"
+                                     onClick="showData()">Show Sample Output
+                            </button>
                             <form method="post" id="import" action="/api/ImportWizard">
                                 <input type="hidden" name="submit" value="import"/>
                                 <button style="display:none" id="importnow" class="az-wizard-button-next"
@@ -223,6 +236,7 @@ lockresult: string
     changed("", "");
     var fieldcols = [];
     var itemTemplate = "";
+    var json=null;
 
 
     function loadNextStage() {
@@ -327,9 +341,13 @@ lockresult: string
         }
 
         let data = await azquoSend(params);
-        let json = await data.json();
+        json = await data.json();
         fields = [];
         itemTemplate = document.getElementById("stage-template").innerHTML;
+        if (json.stage.length==1){
+            stage = 0;//MATCHSTAGE
+            nextStage = 0;
+        }
         fillHTML(json, "stage");
         itemTemplate = "<tr>";
         var fieldcount = 0;
@@ -346,8 +364,12 @@ lockresult: string
         if (document.getElementById("suggestions").innerHTML > "") {
             document.getElementById("suggestionDiv").style.display = "block";
         }
-        if (stage == 4) {
-            document.getElementById("importnow").style.display = "block"
+        if (stage==0){
+            document.getElementById("nextButton").style.display="none";
+        }
+        if (stage == 4 || stage==0) {
+            document.getElementById("importnow").style.display = "block";
+            document.getElementById("showdataButton").style.display="block";
         }
     }
 
@@ -413,10 +435,15 @@ lockresult: string
                     var selectHTML = "";
                     if (itemFact == "valuesFound") {
                         onchange = " onchange=selectionChanged(this)";
+                    }else{
+                        if (nextStage==0){//MATCHSTAGE
+                            onchange = "onchange=changed(null,null)";
+                        }
                     }
                     if (nextStage == 4) {
                         onchange = "onchange=changed(null,null)";
                     }
+
                     if (itemValue.length == 1) {
                         selectHTML = itemValue[0];
                     } else {
@@ -428,10 +455,9 @@ lockresult: string
                             var selectOption = selectItem;
                             var selected = "";
                             if (selectItem.endsWith(" selected")) {
-                                selectOption = selectItem.substring(0, selectItem.length - 9);
                                 selected = " selected";
                             }
-                            selectHTML += "\n<option value = \"" + selectOption + "\"" + selected + ">" + selectOption + "<\option>";
+                            selectHTML += "\n<option value = \"" + selectOption + "\"" + selected + ">" + selectOption + "</option>";
                         }
                     }
                     var fieldpos = elementOf(fieldcols, itemFact);
@@ -476,6 +502,37 @@ lockresult: string
     function submit() {
         changed(null, null);//to store away any changes
         document.getElementById("import").submit();
+    }
+
+    function showData() {
+        var dataHTML = "";
+        var selectList = json.field;
+        for (var line = 0; line < 100; line++) {
+            var lineHTML = "<tr>";
+            for (var oneField of selectList) {
+
+                if (line == 0) {
+                    lineHTML += "<td>" + oneField.fieldName + "</td>";
+                } else {
+                    var lineValue = "";
+                    if (line < oneField.valuesFound.length) {
+                        lineValue = oneField.valuesFound[line - 1];
+                    }
+                    lineHTML += "<td>" + lineValue + "</td>"
+                }
+            }
+            dataHTML += lineHTML + "</tr>";
+        }
+        document.getElementById("dataTable").innerHTML = "<table>" + dataHTML + "</table>";
+        document.getElementById("sampleData").style.display="block";
+        document.getElementById("setup").style.display="none";
+    }
+
+    function hideData(){
+        document.getElementById("dataTable").innerHTML = "";
+        document.getElementById("sampleData").style.display="none";
+        document.getElementById("setup").style.display="block";
+
     }
 
 </script>

@@ -14,6 +14,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+
 /**
  * Created by edward on 10/09/16.
  * <p>
@@ -28,83 +29,8 @@ class HeadingReader {
     // to define context headings use this divider
     private static final String headingDivider = "|";
 
-    /*
-    These are heading clauses. Heading definitions can be in the data file but Azquo is setup to support data "as it comes".
-    Hence when dealing with a new set of data the key is to set up sets and headings so that the system can load the data.
-    Setting up the sets and headings could be seen as similar to setting up the tables in an SQL database.
-
-    Note : the clauses here tend to reverse the subject/object used in the code. If an object in the code has children we'll say object.children, not object.parentOf.
-    This isn't a big problem and the way the clauses are set up probably makes sense in their context, I just want to note that as they are parsed naming may reverse - parentOf to children etc.
-
-    How these are used is described in more detail in MutableImportHeading and the clause interpreter.
-     */
-
-    static final String CHILDOF = "child of "; // trailing space I suppose one could otherwise get a false "child ofweryhwrs" match which can't happen with the others
-    // parent of another heading (as opposed to name), would like the clause to be more explicit, as in differentiate between a name in the database and a column. This distinction still bugs me . . .
-    static final String PARENTOF = "parent of ";
-    static final String ATTRIBUTE = "attribute";
-    static final String LANGUAGE = "language";
-    static final String DATATYPE = "datatype";
-    static final String PEERS = "peers";
-    static final String LOCAL = "local";
-    /*
-    COMPOSITION  <phrase with column heading names enclosed in ``>
-    e.g   COMPOSITION  `Name`, `address` Tel No: `Telephone No`
-
-Attributes of the names in other cells can be referenced also
-    */
-
-    static final String COMPOSITION = "composition";
-    static final String COMPOSITIONXL = "compositionxl";
-    static final String AZEQUALS = "az=";
-    // shorthand for parent of/child of/exclusive, see comments below where it's used
-    static final String CLASSIFICATION = "classification";
-    static final String DEFAULT = "default";
-    // if there's no file heading then make composite and default ignore any data found on that line - we assume it's irrelevant or junk
-    static final String NOFILEHEADING = "nofileheading";
-    private static final String OVERRIDE = "override";
-    static final String NONZERO = "nonzero";
-    static final String REMOVESPACES = "removespaces";
-    private static final String REQUIRED = "required";
-    static final String DATELANG = "date";
-    static final String USDATELANG = "us date";
-    private static final String STRING = "string";
-    private static final String NUMBER = "number";
-    static final String ONLY = "only";
-    static final String IGNORE = "ignore";
-    static final String EXCLUSIVE = "exclusive";
-    static final String CLEAR = "clear";
-    static final String CLEARDATA = "cleardata"; // like the file parameter but for a column
-    static final String COMMENT = "comment";
-    static final String EXISTING = "existing"; // only works in in context of child of - reject the line if not existing
-    static final String OPTIONAL = "optional"; // only works in in context of child of - carry on with blank if not existing
-    // essentially using either of these keywords switches to pivot mode (like an Excel pivot) where a name is created
-    // from the line number and in a set called the name of the file, uploading successive files with the same name would of course cause problems for this system, data should be cleared before re uploading
-    static final String LINEHEADING = "lineheading";//lineheading and linedata are shortcuts for data destined for a pivot table, they are replaced before parsing starts properly
-    static final String LINEDATA = "linedata";
-    static final String SPLIT = "split";
-    public static final String REPLACE = "replace";
-    private static final String PROVISIONAL = "provisional";//used with 'parent of' to indicate that the parent child relationship should only be created if none exists already (originally for Ed Broking Premium imports)
-    public static final int EXCLUSIVETOCHILDOF = -1;
-    public static final int NOTEXCLUSIVE = -2;
-
-    /*DICTIONARY finds a name based on the string value of the cell.  The system will search all names for the attribute given by the 'dictionary' term.  For instance if the phrase is 'dictionary complaint terms'
-    the system will look through all the attributes 'complaint terms' to see if any match the value of this cell.
-    the 'terms' consist of words or phrases separated by '+','-' or ','.   ',' means  'or'  '+' means 'and' and '-' means 'and not'
-    e.g      'car, bus, van + accident - sunday,saturday' would find any phrase containing 'car' or 'bus' or 'van' AND 'accident' but NOT containing 'saturday' or 'sunday'
-    DICTIONARY can be used in conjunction with the set 'SYNONYMS`.  The elements of 'Synonyms` are names with an attribute 'synonyms'.  The attribute gives a comma-separated list of synonyms.
-    e.g  if an element of 'Synonyms' is 'car'    then 'car' may have an attribute 'synonyms' consisting of 'motor, auto, vehicle'  which DICTIONARY  would consider to mean the same as 'car'
-    EFC - initially I wanted to move this to reports but it's actually fairly manageable. Less of a concern than lookups. Check tryToResolveNames in BatchImporter
-     */
-    static final String DICTIONARY = "dictionary";
-    /*
-    see checkLookup in BatchImporter, this can be quite involved
-     */
-    public static final String LOOKUP = "lookup";
-    // required to load Ed B GXB tracking. Essentially call an attribute something01 and if it's sequential and the attribute is imported multiple times it goes in as something01, something02, something03 etc rather than overwriting
-    public static final String SEQUENTIALATTRIBUTE = "sequentialattribute";
-
     private static final int FINDATTRIBUTECOLUMN = -2;
+
 
     static Map<String, AtomicInteger> clauseCounts = new ConcurrentHashMap<>();
     // don't update the stats every time, only if not done recently
@@ -172,7 +98,7 @@ Attributes of the names in other cells can be referenced also
          */
 
         for (MutableImportHeading heading : headings) {
-            if (heading.attribute != null && (heading.attribute.equalsIgnoreCase(USDATELANG) || heading.attribute.equalsIgnoreCase(DATELANG))) {
+            if (heading.attribute != null && (heading.attribute.equalsIgnoreCase(StringLiterals.USDATELANG) || heading.attribute.equalsIgnoreCase(StringLiterals.DATELANG))) {
                 boolean hasAttributeSubject = false;
                 for (MutableImportHeading heading2 : headings) {
                     if (heading2.heading != null && heading2.heading.equalsIgnoreCase(heading.heading) && (heading2.isAttributeSubject || heading2.attribute == null)) {
@@ -250,8 +176,8 @@ Attributes of the names in other cells can be referenced also
             String clause = clauseIt.next().trim();
             // classification just being shorthand. According to this code it needs to be the first of the clauses
             // should classification go inside interpretClause?
-            if (clause.toLowerCase().startsWith(CLASSIFICATION)) {
-                interpretClause(azquoMemoryDBConnection, heading, "parent of " + clause.substring(CLASSIFICATION.length()), fileNames);
+            if (clause.toLowerCase().startsWith(StringLiterals.CLASSIFICATION)) {
+                interpretClause(azquoMemoryDBConnection, heading, "parent of " + clause.substring(StringLiterals.CLASSIFICATION.length()), fileNames);
                 interpretClause(azquoMemoryDBConnection, heading, "child of " + heading.heading, fileNames);
                 interpretClause(azquoMemoryDBConnection, heading, "exclusive", fileNames);
             } else {
@@ -261,9 +187,9 @@ Attributes of the names in other cells can be referenced also
             }
         }
         // exclusive error checks
-        if (heading.exclusiveIndex == EXCLUSIVETOCHILDOF && heading.parentNames.isEmpty()) { // then exclusive what is the name exclusive of?
+        if (heading.exclusiveIndex == StringLiterals.EXCLUSIVETOCHILDOF && heading.parentNames.isEmpty()) { // then exclusive what is the name exclusive of?
             throw new Exception("blank exclusive and no \"child of\" clause in " + heading.heading + " in headings"); // other clauses cannot be blank!
-        } else if (heading.exclusiveIndex > NOTEXCLUSIVE && heading.parentOfClause == null) { // exclusive means nothing without parent of
+        } else if (heading.exclusiveIndex > StringLiterals.NOTEXCLUSIVE && heading.parentOfClause == null) { // exclusive means nothing without parent of
             throw new Exception("exclusive and no \"parent of\" clause in " + heading.heading + " in headings");
         } else { // other problematic combos
             if (heading.dictionaryMap != null && heading.localParentIndex != -1) {
@@ -279,41 +205,41 @@ Attributes of the names in other cells can be referenced also
     private static void interpretClause(final AzquoMemoryDBConnection azquoMemoryDBConnection, final MutableImportHeading heading, final String clause, List<String> fileNames) throws Exception {
         String firstWord = clause.toLowerCase(); // default, what it could legitimately be in the case of blank clauses (local, exclusive, non zero)
         // I have to add special cases for parent of and child of as they have spaces in them. A bit boring
-        if (firstWord.startsWith(PARENTOF)) { // a blank won't match here as its trailing space would be trimmed but no matter, blank not allowed anyway
-            firstWord = PARENTOF;
-        } else if (firstWord.startsWith(CHILDOF)) {
-            firstWord = CHILDOF;
-        } else if (firstWord.startsWith(AZEQUALS)) {
-            firstWord = AZEQUALS;
+        if (firstWord.startsWith(StringLiterals.PARENTOF)) { // a blank won't match here as its trailing space would be trimmed but no matter, blank not allowed anyway
+            firstWord = StringLiterals.PARENTOF;
+        } else if (firstWord.startsWith(StringLiterals.CHILDOF)) {
+            firstWord = StringLiterals.CHILDOF;
+        } else if (firstWord.startsWith(StringLiterals.AZEQUALS)) {
+            firstWord = StringLiterals.AZEQUALS;
         } else if (firstWord.contains(" ")) {
             firstWord = firstWord.substring(0, firstWord.indexOf(" "));
         }
         clauseCounts.computeIfAbsent("heading - " + firstWord, t -> new AtomicInteger()).incrementAndGet();
         if (clause.length() == firstWord.length()
-                && !firstWord.equals(COMPOSITION)
-                && !firstWord.equals(COMPOSITIONXL)
-                && !firstWord.equals(AZEQUALS)
-                && !firstWord.equals(LOCAL)
-                && !firstWord.equals(REQUIRED)
-                && !firstWord.equals(NONZERO)
-                && !firstWord.equals(REMOVESPACES)
-                && !firstWord.equals(EXCLUSIVE)
-                && !firstWord.equals(CLEAR)
-                && !firstWord.equals(CLEARDATA)
-                && !firstWord.equals(REPLACE)
-                && !firstWord.equals(EXISTING)
-                && !firstWord.equals(OPTIONAL)
-                && !firstWord.equals(NOFILEHEADING)
-                && !firstWord.equals(SEQUENTIALATTRIBUTE)
-                && !firstWord.equals(PROVISIONAL)) { // empty clause, exception unless one which allows blank
+                && !firstWord.equals(StringLiterals.COMPOSITION)
+                && !firstWord.equals(StringLiterals.COMPOSITIONXL)
+                && !firstWord.equals(StringLiterals.AZEQUALS)
+                && !firstWord.equals(StringLiterals.LOCAL)
+                && !firstWord.equals(StringLiterals.REQUIRED)
+                && !firstWord.equals(StringLiterals.NONZERO)
+                && !firstWord.equals(StringLiterals.REMOVESPACES)
+                && !firstWord.equals(StringLiterals.EXCLUSIVE)
+                && !firstWord.equals(StringLiterals.CLEAR)
+                && !firstWord.equals(StringLiterals.CLEARDATA)
+                && !firstWord.equals(StringLiterals.REPLACE)
+                && !firstWord.equals(StringLiterals.EXISTING)
+                && !firstWord.equals(StringLiterals.OPTIONAL)
+                && !firstWord.equals(StringLiterals.NOFILEHEADING)
+                && !firstWord.equals(StringLiterals.SEQUENTIALATTRIBUTE)
+                && !firstWord.equals(StringLiterals.PROVISIONAL)) { // empty clause, exception unless one which allows blank
             throw new Exception(clause + " empty in " + heading.heading + " in headings"); // other clauses cannot be blank!
         }
         String result = clause.substring(firstWord.length()).trim();
         switch (firstWord) {
-            case PARENTOF: // NOT parent of an existing name in the DB, parent of other data in the line
+            case StringLiterals.PARENTOF: // NOT parent of an existing name in the DB, parent of other data in the line
                 heading.parentOfClause = result.replace(StringLiterals.QUOTE + "", "");// parent of names in the specified column
                 break;
-            case CHILDOF: // e.g. child of all orders, unlike above this references data in the DB
+            case StringLiterals.CHILDOF: // e.g. child of all orders, unlike above this references data in the DB
                 String childOfString = result.replace(StringLiterals.QUOTE + "", "");
                 // used to store the child of string here and interpret it later, I see no reason not to do it here.
                 String[] parents = childOfString.split(",");//TODO this does not take into account names with commas inside
@@ -321,13 +247,13 @@ Attributes of the names in other cells can be referenced also
                     heading.parentNames.add(NameService.findOrCreateNameInParent(azquoMemoryDBConnection, parent, null, false));
                 }
                 break;
-            case LANGUAGE: // language being attribute
-                if (result.equalsIgnoreCase(DATELANG) || result.equalsIgnoreCase(USDATELANG)) {
-                    if (result.equalsIgnoreCase(DATELANG)) {
+            case StringLiterals.LANGUAGE: // language being attribute
+                if (result.equalsIgnoreCase(StringLiterals.DATELANG) || result.equalsIgnoreCase(StringLiterals.USDATELANG)) {
+                    if (result.equalsIgnoreCase(StringLiterals.DATELANG)) {
                         heading.datatype = StringLiterals.UKDATE;
                     } else {
                         heading.datatype = StringLiterals.USDATE;
-                        result = DATELANG;
+                        result = StringLiterals.DATELANG;
                     }
                     //Bill had commented these three lines, Edd uncommenting 13/07/2018 as it broke DG import
                     /*
@@ -342,19 +268,19 @@ Attributes of the names in other cells can be referenced also
                     heading.attribute = result;
                 }
                 break;
-            case DATATYPE:// was just for dates but now supports number and string which is helpful to compositexl
-                if (result.equalsIgnoreCase(DATELANG)) {
+            case StringLiterals.DATATYPE:// was just for dates but now supports number and string which is helpful to compositexl
+                if (result.equalsIgnoreCase(StringLiterals.DATELANG)) {
                     heading.datatype = StringLiterals.UKDATE;
-                } else if (result.equalsIgnoreCase(USDATELANG)) {
+                } else if (result.equalsIgnoreCase(StringLiterals.USDATELANG)) {
                     heading.datatype = StringLiterals.USDATE;
-                } else if (result.equalsIgnoreCase(STRING)) {
+                } else if (result.equalsIgnoreCase(StringLiterals.STRINGSTR)) {
                     heading.datatype = StringLiterals.STRING;
-                } else if (result.equalsIgnoreCase(NUMBER)) {
+                } else if (result.equalsIgnoreCase(StringLiterals.NUMBERSTR)) {
                     heading.datatype = StringLiterals.NUMBER;
                 }
 
                 break;
-            case ATTRIBUTE: // same as language really but .Name is special - it means default display name. Watch out for this.
+            case StringLiterals.ATTRIBUTE: // same as language really but .Name is special - it means default display name. Watch out for this.
                 if (result.startsWith("`") && result.endsWith(("`"))) {// indicating that the attribute NAME is to be taken from another column of the import.
                     heading.attributeColumn = FINDATTRIBUTECOLUMN;
                 }
@@ -363,14 +289,14 @@ Attributes of the names in other cells can be referenced also
                     heading.attribute = StringLiterals.DEFAULT_DISPLAY_NAME;
                 }
                 break;
-            case ONLY:
+            case StringLiterals.ONLY:
                 heading.only = result;
                 break;
-            case AZEQUALS:
-            case COMPOSITIONXL:// use excel formulae
+            case StringLiterals.AZEQUALS:
+            case StringLiterals.COMPOSITIONXL:// use excel formulae
                 heading.compositionXL = true;
-            case DEFAULT: // default = composition in now but we'll leave the syntax support in
-            case COMPOSITION:// combine more than one column
+            case StringLiterals.DEFAULT: // default = composition in now but we'll leave the syntax support in
+            case StringLiterals.COMPOSITION:// combine more than one column
                 // EFC 03/04/20 relevant for straight defaults (e.g. saying 25% for the whole column) though it does look a little hacky
                 if (result.endsWith("%") && !heading.compositionXL) { // don't do the hack on XL mode
                     try {
@@ -382,7 +308,7 @@ Attributes of the names in other cells can be referenced also
                 heading.compositionPattern = result.replace("FILENAME", fileNames.get(fileNames.size() - 1))
                         .replace("PARENTFILENAME", fileNames.size() > 1 ? fileNames.get(fileNames.size() - 2) : fileNames.get(fileNames.size() - 1));
                 break;
-            case IGNORE:
+            case StringLiterals.IGNORE:
                 heading.ignoreList = new ArrayList<>();
                 String[] ignores = result.split(",");
                 for (String ignore : ignores) {
@@ -395,15 +321,15 @@ Attributes of the names in other cells can be referenced also
                     }
                 }
                 break;
-            case SPLIT:// character to use to split the line values of this column, so that if referring to a name instead it's a list of names
+            case StringLiterals.SPLIT:// character to use to split the line values of this column, so that if referring to a name instead it's a list of names
                 heading.splitChar = result.trim();
                 break;
-            case COMMENT: // ignore
+            case StringLiterals.COMMENT: // ignore
                 break;
-            case OVERRIDE: // forces this value on the column regardless of what's there, doesn't resolve like composite
+            case StringLiterals.OVERRIDE: // forces this value on the column regardless of what's there, doesn't resolve like composite
                 heading.override = result;
                 break;
-            case PEERS: // in new logic this is the only place that peers are defined in Azquo - previously they were against the Name object
+            case StringLiterals.PEERS: // in new logic this is the only place that peers are defined in Azquo - previously they were against the Name object
                 heading.name = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, heading.heading, null, false);
                 String peersString = result;
                 if (peersString.startsWith("{")) { // array, typically when creating in the first place, the spreadsheet call will insert after any existing. Like children not robust to commas
@@ -415,41 +341,41 @@ Attributes of the names in other cells can be referenced also
                     }
                 }
                 break;
-            case NOFILEHEADING:  // if there's no file heading then make composite and default ignore any data found on that line - we assume it's irrelevant or junk
+            case StringLiterals.NOFILEHEADING:  // if there's no file heading then make composite and default ignore any data found on that line - we assume it's irrelevant or junk
                 heading.noFileHeading = true;
                 break;
-            case LOCAL:  // local names in child of, can work with parent of but then it's the subject that it affects. Note - one flag for both may need to be changed, we've hit limits in some LSB work where we want one direction but not the other
+            case StringLiterals.LOCAL:  // local names in child of, can work with parent of but then it's the subject that it affects. Note - one flag for both may need to be changed, we've hit limits in some LSB work where we want one direction but not the other
                 heading.isLocal = true;
                 break;
-            case NONZERO: // Ignore zero values. This and local will just ignore values after e.g. "nonzero something" I see no harm in this
+            case StringLiterals.NONZERO: // Ignore zero values. This and local will just ignore values after e.g. "nonzero something" I see no harm in this
                 heading.blankZeroes = true;
                 break;
-            case REMOVESPACES: // remove spaces from the cell
+            case StringLiterals.REMOVESPACES: // remove spaces from the cell
                 heading.removeSpaces = true;
                 break;
-            case REQUIRED:
+            case StringLiterals.REQUIRED:
                 heading.required = true;
                 break;
-            case EXCLUSIVE:// documented properly in the batch importer
+            case StringLiterals.EXCLUSIVE:// documented properly in the batch importer
                 heading.exclusiveClause = result.trim();
                 break;
-            case EXISTING: // currently simply a boolean that can work with childof
+            case StringLiterals.EXISTING: // currently simply a boolean that can work with childof
                 heading.existing = true;
                 break;
-            case OPTIONAL: // currently simply a boolean that can work with childof
+            case StringLiterals.OPTIONAL: // currently simply a boolean that can work with childof
                 heading.optional = true;
                 break;
-            case CLEAR:
+            case StringLiterals.CLEAR:
                 if (heading.parentNames != null) {
                     for (Name name : heading.parentNames) {
                         name.setChildrenWillBePersisted(Collections.emptyList(), azquoMemoryDBConnection);
                     }
                 }
                 break;
-            case CLEARDATA:
+            case StringLiterals.CLEARDATA:
                 heading.cleardata = true;
                 break;
-            case DICTIONARY:
+            case StringLiterals.DICTIONARY:
                 if (heading.parentNames == null || heading.parentNames.size() == 0) {
                     throw new Exception("dictionary terms must specify the parent first, heading " + heading.heading);
                 }
@@ -502,19 +428,19 @@ Attributes of the names in other cells can be referenced also
                         }
                     }
                 }
-                heading.exclusiveIndex = NOTEXCLUSIVE;
+                heading.exclusiveIndex = StringLiterals.NOTEXCLUSIVE;
                 break;
-            case LOOKUP:
+            case StringLiterals.LOOKUP:
                 heading.lookupString = result;
                 //leave handleLookup until all headings have been read.
                 break;
-            case REPLACE:
+            case StringLiterals.REPLACE:
                 heading.replace = true;
                 break;
-            case PROVISIONAL:
+            case StringLiterals.PROVISIONAL:
                 heading.provisional = true;
                 break;
-            case SEQUENTIALATTRIBUTE:
+            case StringLiterals.SEQUENTIALATTRIBUTE:
                 heading.sequentialAttribute = true;
                 break;
             default:
@@ -571,7 +497,7 @@ Attributes of the names in other cells can be referenced also
                 // Resolve Attributes. Having an attribute means the content of this column relates to a name in another column,
                 // need to find that column's index. Fairly simple stuff, it's using findMutableHeadingIndex to find the subject of attributes and parents
                 // as in other places dates are treated as a special case
-                if (mutableImportHeading.attribute != null && !mutableImportHeading.attribute.equalsIgnoreCase(DATELANG) && !mutableImportHeading.attribute.equalsIgnoreCase(USDATELANG)) {
+                if (mutableImportHeading.attribute != null && !mutableImportHeading.attribute.equalsIgnoreCase(StringLiterals.DATELANG) && !mutableImportHeading.attribute.equalsIgnoreCase(StringLiterals.USDATELANG)) {
                     // so if it's Customer,Address1 we need to find customer.
                     mutableImportHeading.indexForAttribute = findMutableHeadingIndex(mutableImportHeading.heading, headings);
                     if (mutableImportHeading.indexForAttribute < 0) {
@@ -603,7 +529,7 @@ Attributes of the names in other cells can be referenced also
                 }
                 if (mutableImportHeading.exclusiveClause != null) {
                     if (mutableImportHeading.exclusiveClause.length() == 0) {
-                        mutableImportHeading.exclusiveIndex = EXCLUSIVETOCHILDOF;
+                        mutableImportHeading.exclusiveIndex = StringLiterals.EXCLUSIVETOCHILDOF;
                     } else {
                         mutableImportHeading.exclusiveIndex = findMutableHeadingIndex(mutableImportHeading.exclusiveClause, headings);
                         if (mutableImportHeading.exclusiveIndex < 0) {

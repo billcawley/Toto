@@ -1,5 +1,6 @@
 package com.azquo.dataimport;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class
@@ -15,8 +16,13 @@ WizardField {
     private String parent;
     private List<String> peers;
     private String child;
+    private String specialInstructions;
     private String anchor;
     private boolean added;
+    //only used when reading the template
+    private List<String>templateClauses;
+    //only used when setting up unmatched imports
+    private String matchedFieldName;
 
     public WizardField(String importedName, String name, boolean added){
         this.importedName = importedName;
@@ -30,8 +36,11 @@ WizardField {
         this.parent = null;
         this.peers = null;
         this.child = null;
+        this.specialInstructions = "";
         this.anchor = null;
         this.added = added;
+        this.templateClauses = new ArrayList<>();
+        this.matchedFieldName = null;
     }
 
 
@@ -81,6 +90,10 @@ WizardField {
 
     public void setChild(String child){this.child = child; }
 
+    public String getSpecialInstructions(){return specialInstructions; }
+
+    public void setSpecialInstructions(String specialInstructions){this.specialInstructions = specialInstructions; }
+
     public String getAnchor(){return anchor; }
 
     public void setAnchor(String anchor){this.anchor = anchor; }
@@ -88,4 +101,12 @@ WizardField {
     public boolean getAdded(){return added; }
 
     public void setAdded(boolean added){this.added = added; }
+
+    public List<String>getTemplateClauses(){return templateClauses; }
+
+    public void setTemplateClauses(List<String>templateClauses){this.templateClauses = templateClauses; }
+
+    public String getMatchedFieldName(){return matchedFieldName; }
+
+    public void setMatchedFieldName(String matchedFieldName){this.matchedFieldName = matchedFieldName; }
 }

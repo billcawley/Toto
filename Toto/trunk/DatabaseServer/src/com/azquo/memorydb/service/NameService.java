@@ -507,6 +507,7 @@ public final class NameService {
 
         SetInfo(String setName) {
             this.setName = setName;
+            this.setName = setName;
             this.maxElements = 0;
         }
     }
@@ -519,11 +520,19 @@ public final class NameService {
         if (dataNames==null){
             return null;
         }
-        Name dataName = dataNames.iterator().next();
+        Iterator it = dataNames.iterator();
+        Name dataName = null;
+        while (it.hasNext()){
+            dataName = (Name)it.next();
+            if (dataName.getValues().size()>0){
+                break;
+            }
+         }
         if (dataName.getValues().size()==0){
             return null;
         }
-        //top names must not include 'data' or 'date', but must include date children.
+
+            //top names must not include 'data' or 'date', but must include date children.
 
         Collection<Name> topNames = NameQueryParser.parseQuery(azquoMemoryDBConnection, StringLiterals.TOPNAMES);
         try {

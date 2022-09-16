@@ -441,12 +441,12 @@ public class BatchImporter implements Callable<Void> {
     private void sortExclusive(ImportCellWithHeading cellWithHeading, List<ImportCellWithHeading> cells) throws Exception {
         ImportCellWithHeading childCell = cells.get(cellWithHeading.getImmutableImportHeading().indexForChild);
         // note! Exclusive can't work if this cellWithHeading column is multiple names
-        if (cellWithHeading.getLineNames().size() == 1 && cellWithHeading.getImmutableImportHeading().exclusiveIndex != HeadingReader.NOTEXCLUSIVE) {
+        if (cellWithHeading.getLineNames().size() == 1 && cellWithHeading.getImmutableImportHeading().exclusiveIndex != StringLiterals.NOTEXCLUSIVE) {
             //the 'parent' is the current cell name, not its parent, it is the parent that will stay on the child regardless
             Name parent = cellWithHeading.getLineNames().iterator().next();
             // if blank exclusive means check for parents to zap in the name this column is child of
             Name exclusiveName = null;
-            if (cellWithHeading.getImmutableImportHeading().exclusiveIndex == HeadingReader.EXCLUSIVETOCHILDOF) {
+            if (cellWithHeading.getImmutableImportHeading().exclusiveIndex == StringLiterals.EXCLUSIVETOCHILDOF) {
                 // blank exclusive clause, use "child of" clause - currently this only looks at the first name in that list to be exclusive of, more than one makes little sense
                 Collection<Name> parents = cellWithHeading.getImmutableImportHeading().parentNames;
                 if (parents!=null && parents.size() > 0){

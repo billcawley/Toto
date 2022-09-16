@@ -1,5 +1,6 @@
 package com.azquo.dataimport;
 
+import com.azquo.StringLiterals;
 import com.azquo.memorydb.core.Name;
 
 import java.util.*;
@@ -89,7 +90,7 @@ class MutableImportHeading {
     Properly documented in BatchImporter
     */
     String exclusiveClause = null;
-    int exclusiveIndex = HeadingReader.NOTEXCLUSIVE;
+    int exclusiveIndex = StringLiterals.NOTEXCLUSIVE;
     // in context of child of - only load the line if this name is in the set already
     boolean existing = false;
     // in context of child of - only set the value if the element and set exists

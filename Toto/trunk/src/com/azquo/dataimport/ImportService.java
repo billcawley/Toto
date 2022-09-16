@@ -3219,7 +3219,7 @@ fr.close();
 
     }
 
-    private static void setCellValue(Sheet sheet, int row, int col, String cellVal) {
+    public static void setCellValue(Sheet sheet, int row, int col, String cellVal) {
         Cell targetCell = makeCell(sheet,row, col);
         if (cellVal != null && cellVal.length() == 0) {
             cellVal = null;

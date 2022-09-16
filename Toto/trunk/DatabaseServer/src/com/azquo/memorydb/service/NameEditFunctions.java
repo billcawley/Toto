@@ -31,6 +31,10 @@ class NameEditFunctions {
             cleanRoot(azquoMemoryDBConnection);
             return Collections.emptyList();
         }
+        if (setFormula.startsWith("create")) {
+            return create(azquoMemoryDBConnection, setFormula.substring(7));
+        }
+
         if (setFormula.startsWith("circularreferencecheck")) {
             return circularReferenceCheck(azquoMemoryDBConnection);
         }
@@ -466,5 +470,19 @@ class NameEditFunctions {
             new Thread(azquoMemoryDBConnection::persist).start();
     }
 
+    private static List<Name> create(AzquoMemoryDBConnection azquoMemoryDBConnection, String newStructure){
+        String[] names = newStructure.split(StringLiterals.MEMBEROF);
+        Name parent = null;
+        try {
+            for (String name : names) {
+                parent = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, name, parent, false);
+            }
+        }catch(Exception e){
+            //TODO ??
+        }
+        List<Name> toReturn= new ArrayList<>();
+        toReturn.add(parent);
+        return toReturn;
+    }
 
 }

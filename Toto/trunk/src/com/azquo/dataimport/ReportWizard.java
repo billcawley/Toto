@@ -341,7 +341,9 @@ public class ReportWizard {
         if (dataChosen.length() > 0) {
 
             List<String> setOptions = ReportWizard.getPossibleHeadings(loggedInUser, dataChosen);
-
+            if (setOptions==null){
+                throw new Exception("No data!");
+            }
             List<String> rowOptions = ReportWizard.createList(setOptions, rowChosen, "");
             rowChosen = ReportWizard.chooseSuitable(setOptions, rowChosen, columnChosen);
 

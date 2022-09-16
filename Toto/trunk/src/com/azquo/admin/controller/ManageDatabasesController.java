@@ -513,7 +513,7 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
                             if (!isImportTemplate) {
                                 model.put("error", "That does not appear to be an import template.");
                             } else {
-                                model.put("error", formatUploadedFiles(Collections.singletonList(ImportService.uploadImportTemplate(uploadedFile, loggedInUser, userComment)), -1, false, null));
+                                model.put("results", formatUploadedFiles(Collections.singletonList(ImportService.uploadImportTemplate(uploadedFile, loggedInUser, userComment)), -1, false, null));
                             }
                         } catch (Exception e) {
                             model.put("error", e.getMessage());
@@ -544,7 +544,8 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
 
                             } else { // a straight upload, this is the only place that can deal with multiple files being selected for upload
                                 HttpSession session = request.getSession();
-                                return handleImport(loggedInUser, session, model, userComment, uploadFiles, newdesign);
+                                boolean isSetup = ("on".equals(request.getParameter("setupFile")));
+                                return handleImport(loggedInUser, session, model, userComment, uploadFiles, newdesign, isSetup);
                             }
                         }
                     }
@@ -622,7 +623,7 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
     }
 
     // factored due to pending uploads, need to check the factoring after the prototype is done
-    private static String handleImport(LoggedInUser loggedInUser, HttpSession session, ModelMap model, String userComment, final MultipartFile[] uploadFiles, String newDesign) {
+    private static String handleImport(LoggedInUser loggedInUser, HttpSession session, ModelMap model, String userComment, final MultipartFile[] uploadFiles, String newDesign, boolean isSetup) {
         // need to add in code similar to report loading to give feedback on imports
         final List<UploadedFile> uploadedFiles = new ArrayList<>();
         UploadedFile uf = null;
@@ -638,7 +639,7 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
                 uf = new UploadedFile(filePath, Collections.singletonList(fileName), fileNameParams, false, false);
                 uploadFile.transferTo(moved);
                 uploadedFiles.add(uf);
-                if (ImportWizard.isWizardSetup(loggedInUser, uf)) {
+                if (isSetup) {
                     return ImportWizard.uploadTheFile(loggedInUser,uf);
 
                 }

@@ -47,7 +47,6 @@ public class CreateExcelForDownloadController {
 
     public static final String USERSFILENAME = "AzquoUsers";
 
-    public static final String WIZARDFILENAME = "AzquoImportWizard";
 
     public static final String REPORTSCHEDULESFILENAME = "AzquoReportSchedules.xlsx";
 
@@ -94,42 +93,6 @@ public class CreateExcelForDownloadController {
                 }
                 response.setContentType("application/vnd.ms-excel"); // Set up mime type
                 response.addHeader("Content-Disposition", "attachment; filename=" + USERSFILENAME + ".xlsx");
-                OutputStream out = response.getOutputStream();
-                Exporter exporter = Exporters.getExporter();
-                exporter.export(book, out);
-            }else if ("DOWNLOADIMPORTWIZARD".equals(request.getParameter("action"))) {
-                Book book = Importers.getImporter().imports(servletContext.getResourceAsStream("/WEB-INF/" + WIZARDFILENAME + ".xlsx"), "Report name");
-                // modify book to add the users and permissions
-                Sheet importSheet = book.getSheet("Import"); // literals not best practice, could it be factored between this and the xlsx file?
-                if (importSheet != null) {
-                    int row = 0;
-                    int col = 0;
-                    WizardInfo wizardInfo = loggedInUser.getWizardInfo();
-                    SName headingRegion = book.getInternalBook().getNameByName("az_Headings");
-                    SName business = book.getInternalBook().getNameByName("az_Business");
-                    if (headingRegion != null) {
-                        row = headingRegion.getRefersToCellRegion().getRow() + 1;
-                        col = headingRegion.getRefersToCellRegion().getColumn();
-                    }
-                    Business businessById = null;
-                    for (String field: wizardInfo.getFields().keySet()) {
-                        WizardField wizardField = wizardInfo.getFields().get(field);
-                        if (wizardField.getSelect()) {
-                            importSheet.getInternalSheet().getCell(row, col).setStringValue(wizardField.getImportedName());
-                            importSheet.getInternalSheet().getCell(row, col + 1).setStringValue(wizardField.getName());
-                            if (wizardField.getAdded()) {
-                                importSheet.getInternalSheet().getCell(row, col + 2).setStringValue("added");
-                            }
-                            importSheet.getInternalSheet().getCell(row, col + 3).setStringValue(wizardField.getInterpretation());
-                            row++;
-                        }
-                    }
-                    if (business != null && businessById != null) {
-                        book.getSheetAt(0).getInternalSheet().getCell(business.getRefersToCellRegion().getRow(), business.getRefersToCellRegion().getColumn()).setStringValue(businessById.getBusinessName());
-                    }
-                }
-                response.setContentType("application/vnd.ms-excel"); // Set up mime type
-                response.addHeader("Content-Disposition", "attachment; filename=" + WIZARDFILENAME + ".xlsx");
                 OutputStream out = response.getOutputStream();
                 Exporter exporter = Exporters.getExporter();
                 exporter.export(book, out);
