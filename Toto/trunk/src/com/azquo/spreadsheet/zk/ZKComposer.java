@@ -54,6 +54,12 @@ public class ZKComposer extends SelectorComposer<Component> {
 
     public void doAfterCompose(Component comp) throws Exception {
         super.doAfterCompose(comp);
+        try{
+            int reportId = (Integer)myzss.getBook().getInternalBook().getAttribute(OnlineController.REPORT_ID);
+        }catch(Exception e){
+            Clients.clearBusy(myzss);
+            return;
+        }
         zkContextMenu = new ZKContextMenu(myzss);
         filterPopup = new Window();
         filterPopup.setMode(Window.Mode.OVERLAPPED);

@@ -189,7 +189,7 @@ java.lang.IllegalStateException: is ERROR, not the one of [STRING, BLANK]
         return found;
     }
 
-    static void setValue(SCell sCell, String sValue) {
+    public static void setValue(SCell sCell, String sValue) {
         //when setting Excel cell values we need to check  - in order - for times, dates and numbers in general
         sCell.setStringValue(sValue);
         if (sCell.getCellStyle().getDataFormat().equals("@")) {

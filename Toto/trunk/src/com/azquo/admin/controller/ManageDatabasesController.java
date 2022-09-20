@@ -8,6 +8,7 @@ import com.azquo.admin.business.BusinessDAO;
 import com.azquo.admin.database.*;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.dataimport.*;
+import com.azquo.spreadsheet.controller.OnlineController;
 import com.azquo.spreadsheet.transport.HeadingWithInterimLookup;
 import com.azquo.spreadsheet.transport.UploadedFile;
 import com.azquo.spreadsheet.LoggedInUser;
@@ -20,6 +21,9 @@ import com.azquo.spreadsheet.zk.ReportRenderer;
 import com.csvreader.CsvWriter;
 import com.github.rcaller.rstuff.RCaller;
 import com.github.rcaller.rstuff.RCode;
+import io.keikai.api.Books;
+import io.keikai.api.Importers;
+import io.keikai.api.Ranges;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.math.NumberUtils;
@@ -60,6 +64,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
+import io.keikai.api.model.Book;
+
 
 /**
  * Copyright (C) 2016 Azquo Ltd.
@@ -545,6 +551,9 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
                             } else { // a straight upload, this is the only place that can deal with multiple files being selected for upload
                                 HttpSession session = request.getSession();
                                 boolean isSetup = ("on".equals(request.getParameter("setupFile")));
+                                Book book = Books.createBook("new book");
+                                Ranges.range(book).createSheet("Sheet1");
+                                request.setAttribute(OnlineController.BOOK, book); // set up a blank book in case this hits the ImportWizard...
                                 return handleImport(loggedInUser, session, model, userComment, uploadFiles, newdesign, isSetup);
                             }
                         }
