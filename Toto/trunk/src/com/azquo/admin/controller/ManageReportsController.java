@@ -379,42 +379,8 @@ public class ManageReportsController {
             AdminService.setBanner(model, loggedInUser);
 
 
-
             if (request.getSession().getAttribute("newdesign") != null){
-                try {
-                    StringBuilder reportsList = new StringBuilder();
-                    for (OnlineReport or : reportList){
-                        reportsList.append("new m({ id: " + or.getId() + ", name: \"" + or.getReportName() + "\", database: \"" + or.getDatabase() + "\", author: \"" + or.getAuthor() + "\", description: \"" + or.getExplanation().replace("\n","").replace("\r","") + "\" }),\n");
-                    }
-                    InputStream resourceAsStream = servletContext.getResourceAsStream("/WEB-INF/includes/newappjavascript.js");
-
-                    StringBuilder importsList = new StringBuilder();
-                        List<UploadRecord.UploadRecordForDisplay> uploadRecordsForDisplayForBusiness = AdminService.getUploadRecordsForDisplayForBusinessWithBasicSecurity(loggedInUser, null, false);
-                        for (UploadRecord.UploadRecordForDisplay uploadRecord : uploadRecordsForDisplayForBusiness) {
-                            importsList.append("new f({\n" +
-                                    "                        id: " + uploadRecord.id + ",\n" +
-                                    "                        filename: \"" + uploadRecord.getFileName() + "\",\n" +
-                                    "                        database: \"" + uploadRecord.getDatabaseName() + "\",\n" +
-                                    "                        user: \"" + uploadRecord.getUserName() + "\",\n" +
-                                    "                        date: " + uploadRecord.getDate().toEpochSecond(ZoneOffset.of("Z")) + ",\n" +
-                                    "                        }),");
-                        }
-                        List<Database> databaseList = AdminService.getDatabaseListForBusinessWithBasicSecurity(loggedInUser);
-                    StringBuilder databasesList = new StringBuilder();
-//                new d({ id: 1, name: "Demo1dhdhrt", date: 1546563989 }),
-                        for (Database d : databaseList) {
-                            databasesList.append("new d({ id: "+ d.getId() +", name: \"" + d.getName() + "\", date: 0 }),"); // date jammed as zero for the mo, does the JS use it?
-                        }
-
-                    model.put("newappjavascript", IOUtils.toString(resourceAsStream, StandardCharsets.UTF_8)
-                            .replace("###IMPORTSLIST###", importsList.toString())
-                            .replace("###DATABASESLIST###", databasesList.toString())
-                            .replace("###REPORTSLIST###", reportsList.toString()));
-
-
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+                prepareNewJavascript(reportList,servletContext, loggedInUser,model);
                 if ("overview".equals(request.getParameter("newdesign"))){
                     model.put("pageUrl", "/");
                     return "overview";
@@ -427,6 +393,44 @@ public class ManageReportsController {
         } else {
             return "redirect:/api/Login";
         }
+    }
+
+    private static void prepareNewJavascript(List<OnlineReport> reportList, ServletContext servletContext, LoggedInUser loggedInUser, ModelMap model){
+        try {
+            StringBuilder reportsList = new StringBuilder();
+            for (OnlineReport or : reportList){
+                reportsList.append("new m({ id: " + or.getId() + ", name: \"" + or.getUntaggedReportName() + "\", database: \"" + or.getDatabase() + "\", author: \"" + or.getAuthor() + "\", description: \"" + or.getExplanation().replace("\n","").replace("\r","") + "\" }),\n");
+            }
+            InputStream resourceAsStream = servletContext.getResourceAsStream("/WEB-INF/includes/newappjavascript.js");
+
+            StringBuilder importsList = new StringBuilder();
+            List<UploadRecord.UploadRecordForDisplay> uploadRecordsForDisplayForBusiness = AdminService.getUploadRecordsForDisplayForBusinessWithBasicSecurity(loggedInUser, null, false);
+            for (UploadRecord.UploadRecordForDisplay uploadRecord : uploadRecordsForDisplayForBusiness) {
+                importsList.append("new f({\n" +
+                        "                        id: " + uploadRecord.id + ",\n" +
+                        "                        filename: \"" + uploadRecord.getFileName() + "\",\n" +
+                        "                        database: \"" + uploadRecord.getDatabaseName() + "\",\n" +
+                        "                        user: \"" + uploadRecord.getUserName() + "\",\n" +
+                        "                        date: " + uploadRecord.getDate().toEpochSecond(ZoneOffset.of("Z")) + ",\n" +
+                        "                        }),");
+            }
+            List<Database> databaseList = AdminService.getDatabaseListForBusinessWithBasicSecurity(loggedInUser);
+            StringBuilder databasesList = new StringBuilder();
+//                new d({ id: 1, name: "Demo1dhdhrt", date: 1546563989 }),
+            for (Database d : databaseList) {
+                databasesList.append("new d({ id: "+ d.getId() +", name: \"" + d.getName() + "\", date: 0 }),"); // date jammed as zero for the mo, does the JS use it?
+            }
+
+            model.put("newappjavascript", IOUtils.toString(resourceAsStream, StandardCharsets.UTF_8)
+                    .replace("###IMPORTSLIST###", importsList.toString())
+                    .replace("###DATABASESLIST###", databasesList.toString())
+                    .replace("###REPORTSLIST###", reportsList.toString()));
+
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
     }
 
     private String fixQuotes(String orig){
@@ -529,8 +533,14 @@ public class ManageReportsController {
                     }
                 }
             }
-            model.put("reports", AdminService.getReportList(loggedInUser, true));
+            List<OnlineReport> reportList = AdminService.getReportList(loggedInUser, true);
+            model.put("reports", reportList);
             AdminService.setBanner(model, loggedInUser);
+            if (request.getSession().getAttribute("newdesign" )!= null){
+                prepareNewJavascript(reportList,servletContext, loggedInUser,model);
+                model.put("pageUrl", "/reports");
+                return "managereports";
+            }
             return "managereports2";
         } else {
             return "redirect:/api/Login";

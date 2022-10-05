@@ -162,7 +162,7 @@
     <div class="az-fileupload-modal-container">
         <div>
             <div id="headlessui-dialog-panel-:r6c:" class="opacity-100 translate-y-0 scale-100">
-                <div class="az-fileupload">
+                <div>
                     <div>
                         <div class="az-file-upload-control loading"> <!-- add logging? -->
                             <div class="az-loading">

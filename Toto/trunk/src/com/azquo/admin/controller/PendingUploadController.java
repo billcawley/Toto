@@ -90,7 +90,11 @@ public class PendingUploadController {
         if (loggedInUser == null) {
             return "redirect:/api/Login";
         } else if (NumberUtils.isDigits(id)) {
+            if (request.getSession().getAttribute("newdesign") != null){
+                model.put("cancelUrl", "ManageDatabases?newdesign=pendinguploads");
+            } else {
                 model.put("cancelUrl", "ManageDatabases#3");
+            }
             model.put("admin", loggedInUser.getUser().isAdministrator());
             AdminService.setBanner(model, loggedInUser);
             final PendingUpload pu = PendingUploadDAO.findById(Integer.parseInt(id));
@@ -175,7 +179,10 @@ public class PendingUploadController {
                 ImportTemplate preProcess = null;
                 if (fileSplit.length < 3) {
                     model.put("error", "Filename in unknown format.");
-                        return "pendingupload2";
+                    if (session.getAttribute("newdesign") != null){
+                        return "pendingupload";
+                    }
+                    return "pendingupload2";
                 } else {
                     //need to think about option to find a pre processor with the first and second words, if so the second word is the version
                     String possiblePreprocessorName = fileSplit[0] + " " + fileSplit[1] + " preprocessor.xlsx";
@@ -208,7 +215,10 @@ public class PendingUploadController {
                     } else {
                         model.put("databases", AdminService.getDatabaseListForBusinessWithBasicSecurity(loggedInUser));
                     }
-                        return "pendingupload2";
+                    if (session.getAttribute("newdesign") != null){
+                        return "pendingupload";
+                    }
+                    return "pendingupload2";
                 } else {
                     model.put("database", database.getName());
                 }
@@ -224,7 +234,10 @@ public class PendingUploadController {
                 final HashMap<String, String> params = new HashMap<>();
                 if (importTemplateForUploadedFile == null) {
                     model.put("error", "Import template not found for " + database.getName() + ", please upload one for it.");
-                        return "pendingupload2";
+                    if (session.getAttribute("newdesign") != null){
+                        return "pendingupload";
+                    }
+                    return "pendingupload2";
                 } else {
                     boolean found = false;
                     for (String sheetName : importTemplateForUploadedFile.getSheets().keySet()) {
@@ -248,7 +261,10 @@ public class PendingUploadController {
                     }
                     if (!found) {
                         model.put("error", "Import version " + importVersion + " not found.");
-                            return "pendingupload2";
+                        if (session.getAttribute("newdesign") != null){
+                            return "pendingupload";
+                        }
+                        return "pendingupload2";
                     }
                     model.put(ImportService.IMPORTVERSION, importVersion);
                     if (preProcess != null){
@@ -369,7 +385,10 @@ public class PendingUploadController {
                         model.put("setparams", true);
                         model.put("maintext", paramAdjustTable.toString());
                         //model.put("params", paramsMap);
-                            return "pendingupload2";
+                        if (session.getAttribute("newdesign") != null){
+                            return "pendingupload";
+                        }
+                        return "pendingupload2";
                     }
                 }
 
@@ -625,7 +644,10 @@ public class PendingUploadController {
                     maintext.append("<table>");
                     // need to jam in the import result, need better feedback than before
                     model.put("maintext", maintext.toString());
-                        return "pendingupload2";
+                    if (session.getAttribute("newdesign") != null){
+                        return "pendingupload";
+                    }
+                    return "pendingupload2";
                 }
                 // so we can go on this pending upload
                 // new thread and then defer to import running as we do stuff
@@ -741,6 +763,9 @@ public class PendingUploadController {
                     }
                         return "importrunning2";
                 } else {
+                    if (session.getAttribute("newdesign") != null){
+                        return "validationready";
+                    }
                         return "validationready2";
                 }
             }

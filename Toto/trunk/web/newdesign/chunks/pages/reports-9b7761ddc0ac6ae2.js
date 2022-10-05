@@ -340,8 +340,8 @@
                                                                 children: (0, t.jsx)(l.e, {
                                                                     items: [
                                                                         {
-                                                                            label: "Open",
-                                                                            href: "/api/Online?reportid=" + e.id + "&newdesign=true&database=".concat(e.database),
+                                                                            label: "Edit",
+                                                                            href: "/api/ManageReports?editId=" + e.id + "&newdesign=true",
                                                                             icon: s.Z,
                                                                         },
                                                                         { label: "Download", href: "/api/DownloadTemplate?reportId=" + e.id, icon: c.Z },

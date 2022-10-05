@@ -387,7 +387,7 @@ public class ManageDatabasesController {
                 List<OnlineReport> reportList = AdminService.getReportList(loggedInUser, true);
                 StringBuilder reportsList = new StringBuilder();
                 for (OnlineReport or : reportList){
-                    reportsList.append("new m({ id: " + or.getId() + ", name: \"" + or.getReportName() + "\", database: \"" + or.getDatabase() + "\", author: \"" + or.getAuthor() + "\", description: \"" + or.getExplanation().replace("\n","").replace("\r","") + "\" }),\n");
+                    reportsList.append("new m({ id: " + or.getId() + ", name: \"" + or.getUntaggedReportName() + "\", database: \"" + or.getDatabase() + "\", author: \"" + or.getAuthor() + "\", description: \"" + or.getExplanation().replace("\n","").replace("\r","") + "\" }),\n");
                 }
 
                 try {
@@ -410,6 +410,13 @@ public class ManageDatabasesController {
                 }
                 model.put("pageUrl", "/imports");
                 return "imports";
+            }
+            // todo - if newdesign = pending uploads. And then later we must refactor this into different controllers
+            if ("pendinguploads".equalsIgnoreCase(newdesign)) {
+                return "pendinguploads";
+            }
+            if ("importtemplates".equalsIgnoreCase(newdesign)) {
+                return "importtemplates";
             }
             return "managedatabases2";
         } else {
@@ -611,6 +618,13 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
             if ("maintenance".equalsIgnoreCase(newdesign)) {
                 return "maintenance";
             }
+            if ("pendinguploads".equalsIgnoreCase(newdesign)) {
+                return "pendinguploads";
+            }
+            if ("importtemplates".equalsIgnoreCase(newdesign)) {
+                return "importtemplates";
+            }
+
             if ("imports".equalsIgnoreCase(newdesign)) {
 
                 if (model.get("error") != null){
@@ -682,7 +696,7 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
         // edd pasting in here to get the banner colour working
         AdminService.setBanner(model, loggedInUser);
         model.addAttribute("targetController", "ManageDatabases");
-        if (newDesign != null) {
+        if (newDesign != null || session.getAttribute("newdesign") != null) {
             return "importrunning";
         }
 

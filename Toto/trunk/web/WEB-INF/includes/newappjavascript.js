@@ -3393,11 +3393,11 @@
                                     children: [
                                         (0, r.jsx)("div", {
                                             children: (0, r.jsx)(c(), {
-                                                href: "/api/Online?reportid=" + e.id + "&newdesign=true&database=".concat(e.database),
+                                                href: "/api/ManageReports?editId=" + e.id + "&newdesign=true",
                                                 children: (0, r.jsxs)("a", {
                                                     children: [
                                                         (0, r.jsx)(a.Z, {}),
-                                                        (0, r.jsx)("span", { children: "Open" }),
+                                                        (0, r.jsx)("span", { children: "Edit" }),
                                                     ],
                                                 }),
                                             }),
@@ -3802,6 +3802,8 @@
                     { label: "Users", href: "/api/ManageUsers", icon: l.Z },
                         { label: "Schedules", href: "/api/ManageReportSchedules", icon: c.Z },
                         { label: "Backup/Maintenance", href: "/api/ManageDatabases/?newdesign=maintenance", icon: a },
+                        { label: "Pending Uploads", href: "/api/ManageDatabases/?newdesign=pendinguploads", icon: s.Z },
+                        { label: "Import Templates", href: "/api/ManageDatabases/?newdesign=importtemplates", icon: a },
                     ],
                     h = [
                         //{ label: "Settings", href: "/settings", icon: a },

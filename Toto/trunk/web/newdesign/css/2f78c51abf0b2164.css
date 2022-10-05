@@ -4271,14 +4271,12 @@ ul {
 .az-loading .az-logging-info {
     display: flex;
     width: 100%;
-    flex: 1 1 0%;
     flex-direction: column;
 }
 
 .az-loading .az-logging-info > div {
     display: flex;
     width: 100%;
-    flex: 1 1 0%;
     align-items: flex-end;
 }
 
