@@ -3,7 +3,7 @@
     {
         7321: function (e, n, t) {
             (window.__NEXT_P = window.__NEXT_P || []).push([
-                "/reports/[id]",
+                "/api/Online?reportid=" + e.id,
                 function () {
                     return t(9122);
                 },

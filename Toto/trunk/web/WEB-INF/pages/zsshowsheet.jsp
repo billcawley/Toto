@@ -13,6 +13,9 @@
 // this should be below the header??
     // new post ajax based on Keikai
 
+
+var autoReloadExternalOn = 0;
+
     function postAjax(action) {
         //use window.fetch() API
         fetch("/api/ZKSpreadsheetCommand", {
@@ -166,13 +169,36 @@
     ma
     setInterval(function(){ updateStatus(); }, 1000);*/
 
+function toggleAutoReloadExternal(){
+    if (autoReloadExternalOn == 0){
+        autoReloadExternalOn = 1;
+        document.getElementById("updateButtonText").innerHTML = "Auto Update External Data : ON";
+    } else {
+        autoReloadExternalOn = 0;
+        document.getElementById("updateButtonText").innerHTML = "Auto Update External Data : OFF";
+    }
+}
+
+setInterval(function () {
+    if (autoReloadExternalOn == 1){
+        postAjax('ActuallyRELOADEXTERNAL');
+    }
+}, 30000);
+
 </script>
 <%@ include file="../includes/new_header.jsp" %>
 <div class="az-content">
     <div class="az-topbar">
-        <div class="az-searchbar">
+        <div class="az-searchbar"  style="font-size : 1.5rem; margin: auto">${reportName}
         </div>
         <div class="az-topbar-menu">
+            <c:if test="${reloadExternal == true}">
+                <div class="az-dropdown">
+                <button type="button" aria-haspopup="true" aria-expanded="false" onclick="toggleAutoReloadExternal()">
+                    <span id="updateButtonText">Auto Update External Data : OFF</span>
+                </button>
+                </div>
+            </c:if>
             <div class="az-dropdown">
                 <div>
                     <button id="headlessui-menu-button-:r0:" type="button" aria-haspopup="true" aria-expanded="false" onclick="window.open('/api/Jstree?op=new&database=${databaseName}')">
@@ -204,6 +230,8 @@
                 </svg>
                 Selections
             </button>-->
+
+
         </div>
     </div>
     <main>

@@ -322,14 +322,16 @@ public class ZKSpreadsheetCommandController {
                         }
                     }
                 }
+
+                // efc 06/10/22 - Shaun doesn't want the processing box shown
                 if ("RELOADEXTERNAL".equals(action)) {
-                    Clients.showBusy(ss,"Processing ...");
+                    //Clients.showBusy(ss,"Processing ...");
                     Clients.evalJavaScript("postAjax('ActuallyRELOADEXTERNAL');");
                 }
 
                 if ("ActuallyRELOADEXTERNAL".equals(action)) {
                     ReportRenderer.loadExternalData(ss.getBook(), loggedInUser);
-                    Clients.clearBusy(ss);
+                    //Clients.clearBusy(ss);
                 }
 
 

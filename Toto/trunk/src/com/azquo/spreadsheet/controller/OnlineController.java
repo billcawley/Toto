@@ -106,6 +106,7 @@ public class OnlineController {
     public static final String BOOK_PATH = "BOOK_PATH";
     private static final String SAVE_FLAG = "SAVE_FLAG";
     private static final String EXECUTE_FLAG = "EXECUTE_FLAG";
+    public static final String EXTERNALDATA = "EXTERNALDATA";
     public static final String LOGGED_IN_USER = "LOGGED_IN_USER";
     public static final String REPORT_ID = "REPORT_ID";
     public static final String READ_ONLY = "READ_ONLY";
@@ -339,7 +340,7 @@ public class OnlineController {
                         model.put("showTemplate", loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster() || loggedInUser.getUser().isDeveloper());
                         model.put("showInspect", loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper());
                         model.put("execute", session.getAttribute(reportId + EXECUTE_FLAG));
-                        if (session.getAttribute("test") != null){
+                        if (book.getInternalBook().getAttribute(EXTERNALDATA) != null){
                             model.put("reloadExternal", "true");
                         }
                         session.removeAttribute(reportId + SAVE_FLAG);// get rid of it from the session
@@ -355,6 +356,7 @@ public class OnlineController {
                         // if this NPEs then it's probably to do with sessions crossing . . .
                         Map<String, String> images = SpreadsheetService.getImageList(loggedInUser);
                         model.put("imagestorename", loggedInUser.getImageStoreName());
+                        model.put("reportName", onlineReport.getReportName());
 
                         model.put("images", images);
                         model.addAttribute("pdfMerges", pdfMerges);

@@ -4872,7 +4872,7 @@
                             R.h.Option,
                             {
                                 as: "div",
-                                value: (0, E.Z)((0, r.Z)({}, e), { url: e.path + "/" + e.id }),
+                                value: (0, E.Z)((0, r.Z)({}, e), { url: e.path + "?newdesign=true&database=" + e.database + "&reportid=" + e.id }),
                                 className: function (e) {
                                     var t = e.active;
                                     return g()([{ active: !!t }]);
@@ -4897,7 +4897,7 @@
                             o = [
                                 {
                                     type: "Reports",
-                                    path: "/reports",
+                                    path: "/api/Online",
                                     data: P.Gm.filter(function (t) {
                                         var n, r;
                                         return null === (n = t.name) || void 0 === n

@@ -1029,6 +1029,7 @@ public class ReportRenderer {
             }
             if (sheet!=null) {
                 getExternalData(loggedInUser, externalDataRequest, sheet, cellRegion);
+                book.getInternalBook().setAttribute(OnlineController.EXTERNALDATA, "true");
             }
 
         }
@@ -1125,6 +1126,7 @@ public class ReportRenderer {
        }else{
            try {
                data = ExternalConnector.getData(loggedInUser, externalDataRequest.getConnectorId(), CommonReportUtils.replaceUserChoicesInQuery(loggedInUser, externalDataRequest.getReadSQL()), null, null);
+               data.get(0).set(0,"EDD" + System.currentTimeMillis());
            }catch(Exception e){
                List<String> error = new ArrayList<>();
                error.add(e.getMessage());
@@ -1138,6 +1140,7 @@ public class ReportRenderer {
                }
            }
        }
+       Ranges.range(sheet).notifyChange(); // tell zk to update
    }
 
 

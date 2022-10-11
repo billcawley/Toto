@@ -108,7 +108,7 @@ public class DBCron {
         }
     }
 
-    private static void runCronFile(Path path){
+    private static void runCronFile(Path path) {
         try {
             List<String> config = Files.readAllLines(path, Charset.defaultCharset());
             String type = config.get(0);
@@ -116,21 +116,21 @@ public class DBCron {
             String baseUrl = config.get(2);
             String userEmail = config.get(3);
             String restAPIKey = config.get(4);
-            if (type.startsWith("agilecontacts")){
+            if (type.startsWith("agilecontacts")) {
                 int since = Integer.parseInt(type.substring(type.indexOf("-") + 1));
                 ExtractContacts.extractContacts(baseUrl, userEmail, restAPIKey, destination, since);
             }
-            if (type.startsWith("agiledeals")){
+            if (type.startsWith("agiledeals")) {
                 ExtractContacts.extractDeals(baseUrl, userEmail, restAPIKey, destination);
             }
-            if (type.startsWith("appointeddcustomers")){
-                ExtractAppointedd.extract(baseUrl,"/v1/customers", restAPIKey, destination);
+            if (type.startsWith("appointeddcustomers")) {
+                ExtractAppointedd.extract(baseUrl, "/v1/customers", restAPIKey, destination);
             }
-            if (type.startsWith("appointeddresources")){
-                ExtractAppointedd.extract(baseUrl,"/v1/resources", restAPIKey, destination);
+            if (type.startsWith("appointeddresources")) {
+                ExtractAppointedd.extract(baseUrl, "/v1/resources", restAPIKey, destination);
             }
-            if (type.startsWith("appointeddbookings")){
-                ExtractAppointedd.extract(baseUrl,"/v1/bookings", restAPIKey, destination);
+            if (type.startsWith("appointeddbookings")) {
+                ExtractAppointedd.extract(baseUrl, "/v1/bookings", restAPIKey, destination);
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -451,16 +451,7 @@ public class DBCron {
 
     }
 
-    // r154 - claims from tracking db
-    // claims transmission
-    // E4 always UTR?
-    // E5 update further columns, UTR again
-    // more on the specify?
-    // e4 sumbitted to class
-    // e5 = messqage from class
-    // e6 = message back from the underwriters
-    // utr, e5 error description, e6 desc texts
-    // e5 all data error
+    // EFC note 5th october 2022 - new tracking db as Ed Broking have finally movedd to GXB
     @Scheduled(cron = "0 */5 * * * *")// 5 minutes?
     public void extractEdBrokingTrackingData() throws Exception {
         synchronized (this) {
@@ -472,116 +463,55 @@ public class DBCron {
                 if (!Files.exists(tracking)) {
                     Files.createDirectories(tracking);
                 }
-                int maxKey = 2_200_000;
+                int maxKey = 0;
                 List<Map<String, String>> rows;
-                if (transNo != null) {
-                    rows = TrackingParser.findForTransactionNo(transNo);
-                } else {
-                    try (Stream<Path> list1 = Files.list(tracking)) {
-                        Optional<Path> lastFilePath = list1    // here we get the stream with full directory listing
-                                .filter(f -> !Files.isDirectory(f))  // exclude subdirectories and non xml files from listing
-                                .max(Comparator.comparingLong(f -> f.toFile().lastModified()));  // finally get the last file using simple comparator by lastModified field
-                        if (lastFilePath.isPresent()) {
-                            String fileName = lastFilePath.get().getFileName().toString();
-                            int trackingIndex = fileName.indexOf("tracking");
-                            if (trackingIndex > 0 && NumberUtils.isDigits(fileName.substring(0, trackingIndex))) {
-                                maxKey = Integer.parseInt(fileName.substring(0, trackingIndex));
-                            }
+                try (Stream<Path> list1 = Files.list(tracking)) {
+                    Optional<Path> lastFilePath = list1    // here we get the stream with full directory listing
+                            .filter(f -> !Files.isDirectory(f))  // exclude subdirectories and non xml files from listing
+                            .max(Comparator.comparingLong(f -> f.toFile().lastModified()));  // finally get the last file using simple comparator by lastModified field
+                    if (lastFilePath.isPresent()) {
+                        String fileName = lastFilePath.get().getFileName().toString();
+                        int trackingIndex = fileName.indexOf("tracking");
+                        if (trackingIndex > 0 && NumberUtils.isDigits(fileName.substring(0, trackingIndex))) {
+                            maxKey = Integer.parseInt(fileName.substring(0, trackingIndex));
                         }
                     }
-                    rows = TrackingParser.findGreaterThan(maxKey);
                 }
+                rows = TrackingParser.findGreaterThan(maxKey);
 
                 if (!rows.isEmpty()) {
                     System.out.println("running tracking db update");
-                    // I don't think I can use the other XMl code, too different
-                    DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-                    final DocumentBuilder builder = factory.newDocumentBuilder();
-                    List<Map<String, StringBuilder>> premiumsFilesValues = new ArrayList<>();
+//                    List<Map<String, StringBuilder>> premiumsFilesValues = new ArrayList<>();
                     List<Map<String, StringBuilder>> claimsFilesValues = new ArrayList<>();
                     Collection<String> cheadings = new HashSet<>();
-                    Collection<String> pheadings = new HashSet<>();
+//                    Collection<String> pheadings = new HashSet<>();
                     for (Map<String, String> row : rows) {
                         Map<String, StringBuilder> thisFileValues = new HashMap<>();
                         for (String col : row.keySet()) {
-                            if (col.equals(TrackingParser.TRACKMESSKEY)) {
+                            if (col.equals(TrackingParser.MESSAGEID)) {
                                 int trackMessKey = Integer.parseInt(row.get(col));
                                 if (trackMessKey > maxKey) {
                                     maxKey = trackMessKey;
                                 }
                             }
-                            if (col.equals(TrackingParser.TMXMLDATA)) {
-                                Document xml = builder.parse(new InputSource(new StringReader(row.get(col))));
-                                xml.normalizeDocument();
-                                Element documentElement = xml.getDocumentElement();
-                                for (int index = 0; index < documentElement.getChildNodes().getLength(); index++) {
-                                    Node node = documentElement.getChildNodes().item(index);
-                                    if (node.hasChildNodes()) {
-                                        if (node.getChildNodes().getLength() > 1) {
-                                            for (int index1 = 0; index1 < node.getChildNodes().getLength(); index1++) {
-                                                Node node1 = node.getChildNodes().item(index1);
-                                                if (!node1.getNodeName().equalsIgnoreCase("#text") && node1.getFirstChild() != null) {
-                                                    // I know this is getting convoluted to get three levels down. If it goes one more I'll need a generic solution
-                                                    if (node1.getChildNodes().getLength() > 1) {
-                                                        for (int index2 = 0; index2 < node1.getChildNodes().getLength(); index2++) {
-                                                            Node node2 = node1.getChildNodes().item(index2);
-                                                            if (!node2.getNodeName().equalsIgnoreCase("#text") && node2.getFirstChild() != null) {
-                                                                if (thisFileValues.get(node.getNodeName() + "-" + node1.getNodeName() + "-" + node2.getNodeName()) == null) {
-                                                                    thisFileValues.put(node.getNodeName() + "-" + node1.getNodeName() + "-" + node2.getNodeName(), new StringBuilder(node2.getFirstChild().getNodeValue()));
-                                                                } else {
-                                                                    thisFileValues.get(node.getNodeName() + "-" + node1.getNodeName() + "-" + node2.getNodeName()).append("\n").append(node2.getFirstChild().getNodeValue());
-                                                                }
-                                                            }
-
-                                                        }
-                                                    } else {
-                                                        if (thisFileValues.get(node.getNodeName() + "-" + node1.getNodeName()) == null) {
-                                                            thisFileValues.put(node.getNodeName() + "-" + node1.getNodeName(), new StringBuilder(node1.getFirstChild().getNodeValue()));
-                                                        } else {
-                                                            thisFileValues.get(node.getNodeName() + "-" + node1.getNodeName()).append("\n").append(node1.getFirstChild().getNodeValue());
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        } else {
-                                            if (thisFileValues.get(node.getNodeName()) == null) {
-                                                thisFileValues.put(node.getNodeName(), new StringBuilder(node.getFirstChild().getNodeValue()));
-                                            } else {
-                                                thisFileValues.get(node.getNodeName()).append("\n").append(node.getFirstChild().getNodeValue());
-                                            }
-                                        }
-                                    }
-                                }
-                            } else {
-                                if (row.get(col) != null) {
-                                    thisFileValues.put(col, new StringBuilder(row.get(col)));
-                                }
+                            if (row.get(col) != null) {
+                                thisFileValues.put(col, new StringBuilder(row.get(col)));
                             }
                         }
-                        if (thisFileValues.get(TrackingParser.TMVARCAT3) != null) {
-                            if ("Claims Tracking".equals(thisFileValues.get(TrackingParser.TMVARCAT3).toString())) {
-                                claimsFilesValues.add(thisFileValues);
-                                cheadings.addAll(thisFileValues.keySet());
-                            }
-                            if ("Premium".equals(thisFileValues.get(TrackingParser.TMVARCAT3).toString())
-                                    || "Bureau Submission".equals(thisFileValues.get(TrackingParser.TMVARCAT3).toString())
-                                    || "Client Submission".equals(thisFileValues.get(TrackingParser.TMVARCAT3).toString())) {
-                                premiumsFilesValues.add(thisFileValues);
-                                pheadings.addAll(thisFileValues.keySet());
-                            }
-                        }
+                        claimsFilesValues.add(thisFileValues);
+                        cheadings.addAll(thisFileValues.keySet());
+                    }
                     /*else {
                     }*/
 //                    System.out.println("key " + tp.getFirst());
 //                    System.out.println("xml " + tp.getSecond());
 
-                    }
                     // crude initial version - try to load into any database with an import template attached that has a claims tracking sheet
                     if (!claimsFilesValues.isEmpty()) {
-                        String csvFileName = (transNo != null ? transNo : maxKey) + "tracking (importversion=ClaimsTracking).tsv";
+                        String csvFileName = maxKey + "tracking (preprocessor=GXB Claims tracking preprocessor;importVersion=GXBClaimsTracking).tsv";
                         BufferedWriter bufferedWriter = Files.newBufferedWriter(tracking.resolve(csvFileName), StandardCharsets.UTF_8);
                         cheadings = new ArrayList<>(cheadings);
-                        pheadings = new ArrayList<>(pheadings);
+                        //pheadings = new ArrayList<>(pheadings);
                         for (String heading : cheadings) {
                             bufferedWriter.write(heading + "\t");
                         }
@@ -590,7 +520,7 @@ public class DBCron {
                             for (String heading : cheadings) {
                                 StringBuilder value = row.get(heading);
                                 // using isconvertedfromworksheet will then preserve these characters in the system, I think we might need them
-                                bufferedWriter.write((value != null ? value.toString().replace("\n", "\\\\n").replace("\t", "\\\\t").trim() : "") + "\t");
+                                bufferedWriter.write((value != null ? value.toString().replace("\n", "\\\\n").replace("\r", "").replace("\t", "\\\\t").trim() : "") + "\t");
                             }
                             bufferedWriter.newLine();
                         }
@@ -606,7 +536,10 @@ public class DBCron {
                                     LoggedInUser loggedInUser = new LoggedInUser(new User(0, LocalDateTime.now(), business.getId(), "tracking", "", User.STATUS_ADMINISTRATOR, "", "", "", 0, 0, "", "")
                                             , DatabaseServerDAO.findById(database.getDatabaseServerId()), database, null, business);
                                     ImportTemplateData importTemplateForUploadedFile = ImportService.getImportTemplateForUploadedFile(loggedInUser, null, templateCache);
-                                    if (importTemplateForUploadedFile != null && importTemplateForUploadedFile.getSheets().get("ClaimsTracking") != null) { // then here we go . . .
+
+                                    ImportTemplate preProcess = ImportTemplateDAO.findForNameAndBusinessId("GXB Claims tracking preprocessor.xlsx", loggedInUser.getUser().getBusinessId());
+
+                                    if (preProcess != null && importTemplateForUploadedFile != null && importTemplateForUploadedFile.getSheets().get("GXBClaimsTracking") != null) { // then here we go . . .
                                         try {
                                             final Map<String, String> fileNameParams = new HashMap<>();
                                             String fileName = tracking.resolve(csvFileName).getFileName().toString();
@@ -623,7 +556,7 @@ public class DBCron {
                             }
                         }
                     }
-                    if (!premiumsFilesValues.isEmpty()) {
+/*                    if (!premiumsFilesValues.isEmpty()) {
                         String csvFileName = (transNo != null ? transNo : maxKey) + "tracking (importversion=PremiumTracking).tsv";
                         BufferedWriter bufferedWriter = Files.newBufferedWriter(tracking.resolve(csvFileName), StandardCharsets.UTF_8);
                         for (String heading : pheadings) {
@@ -638,7 +571,7 @@ public class DBCron {
                             bufferedWriter.newLine();
                         }
                         bufferedWriter.close();
-                    }
+                    }*/
                 }
             }
         }
