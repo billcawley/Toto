@@ -1047,7 +1047,29 @@ public class ReportRenderer {
     }
 
 
+  private static void expandRange(CellRegion cellRegion, Sheet sheet, int rows){
+        if (cellRegion.getRowCount()>=rows) {
+            return;
+        }
+        int rowsToAdd = rows - cellRegion.getRowCount();
+        int insertRow = cellRegion.getLastRow() - 1;
+        int maxCol = sheet.getLastColumn(insertRow - 1);
+        Range copySource = Ranges.range(sheet, insertRow - 1, 0, insertRow - 1, maxCol);
+         Range insertRange = Ranges.range(sheet, insertRow, 0, insertRow + rowsToAdd - 1, maxCol); // insert at the 3rd row - should be rows to add - 1 as it starts at one without adding anything
+        CellOperationUtil.insertRow(insertRange);
+        CellOperationUtil.paste(copySource, insertRange);
+        int originalHeight = sheet.getInternalSheet().getRow(insertRow - 1).getHeight();
+        if (originalHeight != sheet.getInternalSheet().getRow(insertRow).getHeight()) { // height may not match on insert
+              insertRange.setRowHeight(originalHeight); // hopefully set the lot in one go??
+        }
+        boolean hidden = sheet.getInternalSheet().getRow(insertRow - 1).isHidden();
+        if (hidden) {
+              for (int row = insertRange.getRow(); row <= insertRange.getLastRow(); row++) {
+                  sheet.getInternalSheet().getRow(row).setHidden(true);
+              }
+        }
 
+  }
 
 
 
@@ -1056,19 +1078,20 @@ public class ReportRenderer {
          if (data==null || data.size()==0){
             return;
         }
-        int startRow = 0;
+         int startRow = 0;
         int startCol = 0;
         int rowCount = 0;
         int colCount = 0;
         int startDataRow = 0;
         if (cellRegion !=null){
+            expandRange(cellRegion, sheet,data.size()-1);
             startRow = cellRegion.getRow();
             startCol = cellRegion.getColumn();
-            rowCount = cellRegion.getRowCount();
+            rowCount = data.size() - 1;
             colCount = cellRegion.getCellCount();
             startDataRow = 1;
         }
-        if(rowCount==0 || rowCount > data.size()){
+        if(rowCount==0){
             rowCount = data.size();
         }
         if (colCount == 0 || colCount > data.get(0).size()){
