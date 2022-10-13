@@ -1140,7 +1140,14 @@ public class ReportRenderer {
                }
            }
        }
-       Ranges.range(sheet).notifyChange(); // tell zk to update
+       if (data.size()==0){
+           return;
+       }
+       Range changeRange = Ranges.range(sheet, 0, 0, data.size()-1, data.get(0).size()-1);
+       if (cellRegion!=null){
+           changeRange = Ranges.range(sheet,cellRegion.getRow(), cellRegion.getColumn(), cellRegion.getRow() + data.size() - 1, cellRegion.getColumn() + data.get(0).size() - 1);
+       }
+       changeRange.notifyChange(); // tell zk to update
    }
 
 
