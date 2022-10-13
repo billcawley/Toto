@@ -1060,11 +1060,13 @@ public class ReportRenderer {
         int startCol = 0;
         int rowCount = 0;
         int colCount = 0;
+        int startDataRow = 0;
         if (cellRegion !=null){
             startRow = cellRegion.getRow();
             startCol = cellRegion.getColumn();
             rowCount = cellRegion.getRowCount();
             colCount = cellRegion.getCellCount();
+            startDataRow = 1;
         }
         if(rowCount==0 || rowCount > data.size()){
             rowCount = data.size();
@@ -1072,7 +1074,7 @@ public class ReportRenderer {
         if (colCount == 0 || colCount > data.get(0).size()){
             colCount =data.get(0).size();
         }
-        for (int rowNo = 0; rowNo < rowCount; rowNo++){
+        for (int rowNo = startDataRow; rowNo < rowCount; rowNo++){
             List<String> dataline = data.get(rowNo);
             for (int colNo = 0;colNo < colCount; colNo++){;
                 BookUtils.setValue(sheet.getInternalSheet().getCell(rowNo + startRow, colNo + startCol),dataline.get(colNo));
