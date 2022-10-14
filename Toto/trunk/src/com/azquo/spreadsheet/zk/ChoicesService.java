@@ -170,7 +170,7 @@ public class ChoicesService {
                     List<List<String>> data = ExternalConnector.getData(loggedInUser, externalDataRequest.getConnectorId(), CommonReportUtils.replaceUserChoicesInQuery(loggedInUser, externalDataRequest.getReadSQL()), null, null);
                     if (data != null) {
                         List<String> toReturn = new ArrayList<>();
-                        data.remove(data.get(0));//remove the field name
+                        data.get(0).set(0,StringLiterals.ALL);//set the field name to 'ALL'
                         for (List<String> dataline : data) {
                             toReturn.add(dataline.get(0));
                         }
