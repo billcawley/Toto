@@ -71,24 +71,34 @@ public class BookUtils {
                         cell.clearFormulaResultCache();
                     }
                     // I assume non null cell has a non null string value, this may not be true. Also will I get another type of exception?
-                    try {
-                        // boolean required as sometimes there could be a leftover string value
-                        row.add(cell.getStringValue());
-                    } catch (Exception e) {
-                        if (!cell.getType().equals(SCell.CellType.BLANK)) {
-                            try {
-                                String numberGuess = cell.getNumberValue() + "";
-                                if (numberGuess.endsWith(".0")) {
-                                    numberGuess = numberGuess.substring(0, numberGuess.length() - 2);
-                                }
-                                if (numberGuess.equals("0")) numberGuess = "";
-                                if (cell.getCellStyle().getDataFormat().contains("mm")) {
-                                    Date javaDate = DateUtil.getJavaDate((double) cell.getNumberValue());
-                                    row.add(new SimpleDateFormat("yyyy-MM-dd").format(javaDate));
-                                } else {
-                                    row.add(numberGuess);
-                                }
-                            } catch (Exception e2) {
+                    row.add(getValueAsString(cell));
+                } else {
+                    row.add("");
+                }
+            }
+        }
+
+    }
+
+    public static String getValueAsString(SCell cell){
+        try {
+            // boolean required as sometimes there could be a leftover string value
+            return cell.getStringValue();
+        } catch (Exception e) {
+            if (!cell.getType().equals(SCell.CellType.BLANK)) {
+                try {
+                    String numberGuess = cell.getNumberValue() + "";
+                    if (numberGuess.endsWith(".0")) {
+                        numberGuess = numberGuess.substring(0, numberGuess.length() - 2);
+                    }
+                    if (numberGuess.equals("0")) numberGuess = "";
+                    if (cell.getCellStyle().getDataFormat().contains("mm")) {
+                        Date javaDate = DateUtil.getJavaDate((double) cell.getNumberValue());
+                        return new SimpleDateFormat("yyyy-MM-dd").format(javaDate);
+                    } else {
+                        return numberGuess+"";
+                    }
+                } catch (Exception e2) {
                                 /*
                                 todo, sort this
 java.lang.IllegalStateException: is ERROR, not the one of [STRING, BLANK]
@@ -98,21 +108,10 @@ java.lang.IllegalStateException: is ERROR, not the one of [STRING, BLANK]
         at com.azquo.spreadsheet.zk.BookUtils.nameToStringLists(BookUtils.java:32)
 
                                  */
-                                try {
-                                    row.add(cell.getStringValue());
-                                } catch (Exception e3) {
-                                    row.add("");
-                                }
-                            }
-                        } else {
-                            row.add("");
-                        }
-                    }
-                } else {
-                    row.add("");
                 }
             }
         }
+        return "";
 
     }
 
@@ -192,7 +191,7 @@ java.lang.IllegalStateException: is ERROR, not the one of [STRING, BLANK]
     public static void setValue(SCell sCell, String sValue) {
         //when setting Excel cell values we need to check  - in order - for times, dates and numbers in general
         sCell.setStringValue(sValue);
-        if (sCell.getCellStyle().getDataFormat().equals("@")) {
+        if (sValue==null || sCell.getCellStyle().getDataFormat().equals("@")) {
             //if the cell is formatted as text, then don't try numbers
             return;
         }
