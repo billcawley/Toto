@@ -1049,7 +1049,7 @@ public class ReportRenderer {
 
 
   private static void expandRange(CellRegion cellRegion, Sheet sheet, int rows){
-        if (cellRegion.getRowCount()>=rows || cellRegion.getRowCount() > 2) {
+        if (cellRegion.getRowCount()>=rows || cellRegion.getRowCount() < 3) {
             return;
         }
         int rowsToAdd = rows - cellRegion.getRowCount();
