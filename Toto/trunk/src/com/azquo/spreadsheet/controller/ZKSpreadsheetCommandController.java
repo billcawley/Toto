@@ -4,6 +4,7 @@ import com.azquo.StringLiterals;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.dataimport.ImportService;
+import com.azquo.dataimport.ImportWizard;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
@@ -249,6 +250,11 @@ public class ZKSpreadsheetCommandController {
                         ReportService.save(ss,loggedInUser);
                         Clients.clearBusy(ss);
                     }
+                }
+                if ("reset".equals(action)){
+
+                    ImportWizard.preparePreprocessor(loggedInUser,ss.getBook());
+                    Ranges.range(ss.getSelectedSheet()).notifyChange(); // try to update the lot - sometimes it seems it does not!
                 }
                 if ("RestoreSavedValues".equals(action) || saveMessage.startsWith("Success")) {
                     final Book book = ss.getBook();

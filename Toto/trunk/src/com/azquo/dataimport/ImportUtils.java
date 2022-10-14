@@ -12,6 +12,7 @@ import org.apache.commons.lang.math.NumberUtils;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.FormulaEvaluator;
 import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.util.AreaReference;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -29,7 +30,7 @@ public class ImportUtils {
     static final String DATELANG = "date";
     static final String USDATELANG = "us date";
     public static final String[] TYPEOPTIONS = {ImportWizard.KEYFIELDID, ImportWizard.KEYFIELDNAME, DATELANG, USDATELANG, "time", "datetime"};
-    static final String[] idSuffixes = {"id", "code", "key"};
+    static final String[] idSuffixes = {"id","code","key","number","ref"};
 
 
     public static boolean isValidAnchor(WizardInfo wizardInfo, String fieldName) {
@@ -54,13 +55,23 @@ public class ImportUtils {
     }
 
 
-    public static String findFieldFromName(WizardInfo wizardInfo, String fieldName) {
-        for (String field : wizardInfo.getFields().keySet()) {
+
+
+    public static String findFieldFromName(WizardInfo wizardInfo, String fieldName){
+        return findFieldFromName(wizardInfo,fieldName, false);
+    }
+
+    public static String findFieldFromName(WizardInfo wizardInfo, String fieldName, boolean isMatchFields) {
+        Map<String,WizardField>fields = wizardInfo.getFields();
+        if (isMatchFields){
+            fields = wizardInfo.getMatchFields();
+        }
+        for (String field : fields.keySet()) {
             String fieldN = wizardInfo.getFields().get(field).getName();
             if (fieldN.equalsIgnoreCase(fieldName.trim())) {
                 return field;
             }
-            if (removeId(fieldN).equalsIgnoreCase(fieldName)){
+            if (fieldN.equalsIgnoreCase(fieldName)) {
                 return field;
             }
 
@@ -96,7 +107,9 @@ public class ImportUtils {
 
     }
 
+
     public static Map<String, WizardField> getDataValuesFromFile(WizardInfo wizardInfo, String testField, String testItem) throws Exception {
+
 
         if (wizardInfo.getImportFileData() != null) {
             Map<String, WizardField> list = readJsonFile(wizardInfo, testField, testItem);
@@ -113,18 +126,16 @@ public class ImportUtils {
         } else {
             Map<String, WizardField> list = new LinkedHashMap<>();
             boolean found = false;
-            for (String field : wizardInfo.getFields().keySet()) {
-                WizardField wizardField = wizardInfo.getFields().get(field);
-                if (wizardField.getSelect()) {
-                    list.put(field, wizardField);
-                }
+            Map<String,WizardField>fields = wizardInfo.getFields();
+            if (wizardInfo.getMatchFields()!=null){
+                fields = wizardInfo.getMatchFields();
             }
             if (testField != null && testField.length() > 0) {
-                WizardField wizardField = wizardInfo.getFields().get(testField);
+                WizardField wizardField = fields.get(testField);
                 for (int i = 0; i < wizardField.getValuesFound().size(); i++) {
                     if (wizardField.getValuesFound().get(i).equals(testItem)) {
-                        for (String field : wizardInfo.getFields().keySet()) {
-                            WizardField wizardField1 = wizardInfo.getFields().get(field);
+                        for (String field : fields.keySet()) {
+                            WizardField wizardField1 = fields.get(field);
                             if (wizardField1.getValuesFound()!=null && wizardField1.getValuesFound().size()>i){
                                 wizardField1.setValueFound(wizardField1.getValuesFound().get(i));
                             }
@@ -164,11 +175,15 @@ public class ImportUtils {
 
                     String suggestedName = field;
                     try {
-                        suggestedName = humanifyName(field.substring(field.lastIndexOf(ImportService.JSONFIELDDIVIDER) + 1));
+                        suggestedName = humaniseName(field.substring(field.lastIndexOf(ImportService.JSONFIELDDIVIDER) + 1));
+                        String nameWithoutId = removeId(suggestedName);
+                        if (reverseNames.get(nameWithoutId)==null){
+                            suggestedName = nameWithoutId;
+                        }
                         if (reverseNames.get(suggestedName) != null) { //if suggested names may be duplicates, grab a bit more string
                             String original = reverseNames.get(suggestedName);
                             String originalSuggestion = original.substring(nthLastIndexOf(2, ImportService.JSONFIELDDIVIDER, original) + 1);
-                            originalSuggestion = humanifyName(originalSuggestion);
+                            originalSuggestion = humaniseName(originalSuggestion);
                             reverseNames.remove(suggestedName);
                             reverseNames.put(originalSuggestion, original);
                             wizardInfo.getFields().get(original).setName(originalSuggestion);
@@ -308,16 +323,18 @@ public class ImportUtils {
             if (value.length() > 10) {
                 value = value.substring(0, 10);
             }
-            try {
-                if (dateType.equals(DATELANG)) {
-                    DateUtils.isADate(value);
-                } else {
-                    DateUtils.isUSDate(value);
+            if (value.length()>0) {
+                try {
+                    if (dateType.equals(DATELANG)) {
+                        DateUtils.isADate(value);
+                    } else {
+                        DateUtils.isUSDate(value);
+                    }
+                } catch (Exception e) {
+                    value = "invalid date: " + value;
                 }
-                toReturn.add(value);
-            } catch (Exception e) {
-                toReturn.add("invalid date: " + value);
             }
+            toReturn.add(value);
         }
         return toReturn;
     }
@@ -357,7 +374,7 @@ public class ImportUtils {
     }
 
 
-    public static String humanifyName(String name) {
+    public static String humaniseName(String name) {
         name = name.replace("_", " ").replace(ImportService.JSONFIELDDIVIDER + "", " ");
         name = name.substring(0, 1).toUpperCase() + name.substring(1);
         return name;
@@ -608,8 +625,11 @@ public class ImportUtils {
     }
 
 
-    public static void calcXL(WizardInfo wizardInfo) throws Exception {
+    public static void calcXL(WizardInfo wizardInfo, int lineCount) throws Exception {
 
+        if (lineCount==0){
+            lineCount = wizardInfo.getLineCount();
+        }
         for (String maybeXL : wizardInfo.getFields().keySet()) {
             WizardField xlField = wizardInfo.getFields().get(maybeXL);
             if (xlField.getSpecialInstructions() != null) {
@@ -627,7 +647,7 @@ public class ImportUtils {
                         }
                         xlField.setValuesFound(new ArrayList<>());
                         String excelFormula = null;
-                        for (int i = 0; i < wizardInfo.getLineCount(); i++) {
+                        for (int i = 0; i < lineCount; i++) {
                             String compositionPattern = special.substring(1).trim();
                             StringBuilder modifiedPattern = new StringBuilder();
                             Pattern p = Pattern.compile("" + StringLiterals.QUOTE + "[^" + StringLiterals.QUOTE + "]*" + StringLiterals.QUOTE); //`name`.`attribute`
@@ -646,13 +666,14 @@ public class ImportUtils {
                                     throw new Exception("cannot find the field " + fieldName);
                                 }
                                 WizardField wizardField = wizardInfo.getFields().get(field);
-                                String value = "";
-                                if (i>=wizardField.getValuesFound().size()) {
-                                    modifiedPattern = new StringBuilder();
-                                    lastEnd = compositionPattern.length();
-                                    break;
+                                String valFound = "\"\"";
+                                if (wizardField.getValuesFound()!=null && i <  wizardField.getValuesFound().size()) {
+                                    valFound = wizardField.getValuesFound().get(i);
+                                    if (!NumberUtils.isNumber(valFound)) {
+                                        valFound = "\"" + valFound + "\"";
+                                    }
                                 }
-                                modifiedPattern.append(wizardField.getValuesFound().get(i));
+                                modifiedPattern.append(valFound);
                             }
                             modifiedPattern.append(compositionPattern.substring(lastEnd));
 
@@ -661,7 +682,7 @@ public class ImportUtils {
                             formulaEvaluator.clearAllCachedResultValues();
                             String result = formulaEvaluator.evaluate(excelCell).formatAsString();
                             if (result.startsWith("\"") && result.endsWith("\"")) {
-                                result = result.substring(1, result.length() - 1);
+                                result = result.substring(1, result.length() - 1).trim();
                             }
                             // for Excel date is a number - on the way out ImportUtils.standardise to our typically used date format
                             if (ImportUtils.DATELANG.equals(xlField.getType()) || ImportUtils.USDATELANG.equals(xlField.getType())) {
@@ -682,7 +703,7 @@ public class ImportUtils {
     }
 
     public static String getTemplateName(LoggedInUser loggedInUser){
-        String fileName = loggedInUser.getWizardInfo().getImportFileName();
+        String fileName = loggedInUser.getWizardInfo().getImportFile().getFileName();
         int blankPos = fileName.indexOf(" ");
         if (blankPos < 0){
             blankPos = fileName.indexOf(".");
@@ -710,7 +731,7 @@ public class ImportUtils {
             colString += (char) (col / 26 + 64);
             colString += (char) (col % 26 + 65);
         }
-        return colString + (row + 1);
+        return "$"+colString + "$" + (row + 1);
     }
 
     public static void setKeikaiCell(Sheet sheet, int row, int col, String value){
@@ -719,6 +740,12 @@ public class ImportUtils {
 
     }
 
+    public static void poiSetSingleCellRange(Workbook book, String rangeName, String value){
+        org.apache.poi.ss.usermodel.Name region = BookUtils.getName(book, rangeName);
+        AreaReference areaRef = new AreaReference(region.getRefersToFormula(), null);
+        book.getSheet(region.getSheetName()).getRow(areaRef.getFirstCell().getRow()).getCell(areaRef.getFirstCell().getCol()).setCellValue(value);
+
+    }
 
 
 

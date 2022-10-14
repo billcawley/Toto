@@ -3,8 +3,8 @@
 <%@ taglib prefix="kkjsp" uri="http://www.keikai.io/jsp/kk" %>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
 <c:set var="title" scope="request" value="Import Wizard"/>
-<c:set var="compact" scope="request" value="compact" />
-<c:set var="requirezss" scope="request" value="true" />
+<c:set var="compact" scope="request" value="compact"/>
+<c:set var="requirezss" scope="request" value="true"/>
 <%
     //prevent page cache in browser side
     response.setHeader("Pragma", "no-cache");
@@ -42,7 +42,10 @@
             method: 'POST',
             credentials: 'include',
             // 'myzss' is the id specified on kkjsp tag
-            body: JSON.stringify(kkjsp.prepare('myzss', {action: "nameIdForChosenTree", nameIdForChosenTree: String(nameId)})) // preparing Keikai's request data, it wants strings
+            body: JSON.stringify(kkjsp.prepare('myzss', {
+                action: "nameIdForChosenTree",
+                nameIdForChosenTree: String(nameId)
+            })) // preparing Keikai's request data, it wants strings
         })
             .then(function (response) {
                 return response.json();
@@ -71,35 +74,35 @@
         }
     }
 
-    function inspectDatabase(){
+    function inspectDatabase() {
         // can be passed database
         $.inspectOverlay("Inspect Azquo").tab("/api/Jstree?op=new", "DB :  ${databaseName}");
         return false;
         // window.open("/api/Jstree?op=new", "_blank", "toolbar=no, status=no,scrollbars=yes, resizable=yes, top=150, left=200, width=600, height=600")
     }
 
-    function auditDatabase(){
+    function auditDatabase() {
         // can be passed database
         window.open("/api/AuditDatabase", "_blank", "toolbar=no, status=no,scrollbars=yes, resizable=yes, top=100, left=100, width=1600, height=1000")
     }
 
 
     // a more advanced choice option as opposed to the dropdown
-    function chosenTree(query){
+    function chosenTree(query) {
         // can be passed database
-        $.inspectOverlay("Inspect").tab("/api/Jstree?op=new&query=" +  encodeURIComponent(query), "${databaseName}");
+        $.inspectOverlay("Inspect").tab("/api/Jstree?op=new&query=" + encodeURIComponent(query), "${databaseName}");
         return false;
         // window.open("/api/Jstree?op=new", "_blank", "toolbar=no, status=no,scrollbars=yes, resizable=yes, top=150, left=200, width=600, height=600")
     }
 
 
-    function uploadFile(){
+    function uploadFile() {
         var el = $('<div class="overlay"><iframe src="/api/Online?opcode=upload" width="100%" height="100%" frameborder="0" scrolling="auto"></iframe></div>').hide().appendTo('body');
 
         el.dialog({
-            modal	: 'true',
-            width	: 'auto',
-            title	: 'Upload File',
+            modal: 'true',
+            width: 'auto',
+            title: 'Upload File',
             close: refreshReport
         });
 
@@ -108,14 +111,14 @@
     }
 
     // could inline?
-    function refreshReport(){
+    function refreshReport() {
         location.reload();
     }
 
 
-    function mouseIn(elementChosen, e){
-        if (e==null) return false;
-        var IE = document.all?true:false;
+    function mouseIn(elementChosen, e) {
+        if (e == null) return false;
+        var IE = document.all ? true : false;
         if (IE) { // grab the x-y pos.s if browser is IE
             var mouseX = e.clientX + document.body.scrollLeft
             var mouseY = e.clientY + document.body.scrollTop
@@ -124,15 +127,16 @@
             mouseY = e.pageY
         }
 
-        var el=elementChosen;
-        for (var lx=0, ly=0;
+        var el = elementChosen;
+        for (var lx = 0, ly = 0;
              el != null;
-             lx += el.offsetLeft-el.scrollLeft, ly += el.offsetTop-el.scrollTop, el = el.offsetParent);
-        if (mouseX >= lx && mouseY >= ly && mouseX <= lx + elementChosen.offsetWidth && mouseY <= ly + elementChosen.offsetHeight){
+             lx += el.offsetLeft - el.scrollLeft, ly += el.offsetTop - el.scrollTop, el = el.offsetParent) ;
+        if (mouseX >= lx && mouseY >= ly && mouseX <= lx + elementChosen.offsetWidth && mouseY <= ly + elementChosen.offsetHeight) {
             return true;
         }
         return false;
     }
+
     /*
 
     var skipSetting = 0;
@@ -170,27 +174,13 @@
 </script>
 <%@ include file="../includes/new_header.jsp" %>
 
-    <div class="az-report-view" id="preprocessor" style="display:none">
-        <div class="az-report">
-            <kkjsp:spreadsheet id="myzss"
-                               bookProvider="com.azquo.spreadsheet.zk.BookProviderForJSP"
-                               apply="com.azquo.spreadsheet.zk.ZKComposer"
-                               height="100%"
-                               maxVisibleRows="500" maxVisibleColumns="200"
-                               showSheetbar="true" showToolbar="false" showFormulabar="true" showContextMenu="true"/>
-
-        </div>
-    </div>
-
-
-
 
 <div class="az-content" id="sampleData">
     <div id="dataTable"></div>
     <div class="az-import-wizard-pagination">
         <div>
-            <button  id="hideDataButton" class="az-wizard-button-back"
-                     onClick="showSetup()">Revert
+            <button id="hideDataButton" class="az-wizard-button-back"
+                    onClick="showSetup()">Revert
             </button>
         </div>
     </div>
@@ -286,7 +276,6 @@
                                 <div></div>
                                 <div>
                                     <div id="instructions">
-
                                     </div>
                                 </div>
                             </div>
@@ -315,24 +304,18 @@
                                 </div>
                             </div>
                         </div>
-                        <div id="dataparentline" class="az-alert" style="display:none">
-                            For this stage you need to specify a 'parent' name for the data you select
-                            <input type="text" id="dataparent" aria-expanded="false" tabindex="0"
-                                   aria-labelledby="headlessui-combobox-label-:r14:">
-
-
-                        </div>
                         <div class="az-table" id="fieldtable">
                         </div>
                     </div>
-                    <div class="az-import-wizard-pagination">
+                    <div class="az-import-wizard-pagination" style="position:fixed;bottom:0px">
                         <div>
                             <button class="az-wizard-button-back" onClick="loadLastStage()">Back
                             </button
                             >
-                            <button class="az-wizard-button-next" id="nextButton" onClick="loadNextStage()">Next</button>
-                            <button  id="showdataButton" class="az-wizard-button-back"
-                                     onClick="showData()">Show Sample Output
+                            <button class="az-wizard-button-next" id="nextButton" onClick="loadNextStage()">Next
+                            </button>
+                            <button id="showdataButton" class="az-wizard-button-back"
+                                    onClick="showData()">Show Sample Output
                             </button>
                             <form method="post" id="import" action="/api/ImportWizard">
                                 <input type="hidden" name="submit" value="import"/>
@@ -392,6 +375,25 @@
     </div>
 </div>
 
+<div id="preprocessor">
+    <div class="az-report">
+        <kkjsp:spreadsheet id="myzss"
+                           bookProvider="com.azquo.spreadsheet.zk.BookProviderForJSP"
+                           height="95%"
+                           maxVisibleRows="100" maxVisibleColumns="100"
+                           showSheetbar="true" showToolbar="false" showFormulabar="true" showContextMenu="true"/>
+
+    </div>
+    <div id="spreadsheetButtons" class="az-import-wizard-pagination" style="position:fixed;bottom:0px">
+        <div>
+            <button class="az-wizard-button-back"
+                    onClick="savePreprocessorChanges()">Standard view
+            </button>
+        </div>
+    </div>
+
+</div>
+
 
 <script>
 
@@ -414,19 +416,21 @@ lockresult: string
     var nextStage = 1
     var fields = [];
     var hidden = [];
-    changed("", "");
     var fieldcols = [];
     var itemTemplate = "";
-    var json=null;
+    var json = null;
+    var spreadsheetShown = false;
+    changed(null,null);
 
 
     function loadNextStage() {
-        if(stage==0){//MATCHSTAGE
-            nextStage = 7;//EXCELSTAGE
-        }else{
+        if (stage == 0) {//
+            changed();
+            showSpreadsheet();
+        } else {
             nextStage = stage + 1;
+            changed(null, null);
         }
-        changed(null, null);
     }
 
     function loadLastStage() {
@@ -507,31 +511,47 @@ lockresult: string
     }
 
     async function changed(chosenId, selection) {
-         /*
-        the message to Azquo tells it what values are currently selected.  The return will be a json array of fieldname,fieldvalues[]  (e.g changing the data value will set up rows, columns and templates)
+        /*
+       the message to Azquo tells it what values are currently selected.  The return will be a json array of fieldname,fieldvalues[]  (e.g changing the data value will set up rows, columns and templates)
 
-         */
+        */
         showSetup();
+        try {
+            postAjax("submit");
+        }catch(e){
 
-         let params = "op=importwizard&datachosen=&sessionid=${pageContext.session.id}";
+        }
+
+        let params = "op=importwizard&datachosen=&sessionid=${pageContext.session.id}";
         params += "&fields=" + encodeURIComponent(getFieldInfoAsString());
         if (chosenId != null) {
             params += "&chosenfield=" + encodeURIComponent(chosenId) + "&chosenvalue=" + encodeURIComponent(selection);
         }
         params += "&stage=" + stage + "&nextstage=" + nextStage;
-        if (stage == 3) {
-            params += "&dataparent=" + document.getElementById("dataparent").value;
+        var templateCell = document.getElementById("template-templatename");
+        if (templateCell!=null){
+            params +="&template=" + templateCell.options[templateCell.selectedIndex].text
         }
-
         let data = await azquoSend(params);
         json = await data.json();
-        if (nextStage==7){
+        if(json.error > ""){
+            var errorDiv = document.getElementById("suggestions");
+            errorDiv.innerText = json.error;
+            document.getElementById("suggestionDiv").style.display = "block";
+            return;
+        }
+        try{
+            postAjax("reset");//fill in the new formulae...
+        }catch(e){
+
+        }
+        if (nextStage == 7) {
             showSpreadsheet();
             return;
         }
         fields = [];
         itemTemplate = document.getElementById("stage-template").innerHTML;
-        if (json.stage.length==1){
+        if (json.stage.length == 1) {
             stage = 0;//MATCHSTAGE
             nextStage = 0;
         }
@@ -544,16 +564,22 @@ lockresult: string
         itemTemplate += "</tr>";
         fillHTML(json, "field");
         stage = nextStage;
-        if (stage == 3) {
-            document.getElementById("dataparentline").style.display = "block";
-
+        if (stage==0){
+            //document.getElementById("template").style.display = "block";
+            document.getElementById("nextButton").innerHTML = "Spreadsheet View";
+        }
+        if (stage==0 || stage==4){
+            document.getElementById("importnow").style.display = "block";
         }
         if (document.getElementById("suggestions").innerHTML > "") {
             document.getElementById("suggestionDiv").style.display = "block";
         }
-        if (stage == 4 || stage==0) {
-            document.getElementById("importnow").style.display = "block";
-            document.getElementById("showdataButton").style.display="block";
+        if (stage == 4) {
+            document.getElementById("showdataButton").style.display = "none";
+
+        }else{
+            document.getElementById("showdataButton").style.display = "block";
+
         }
     }
 
@@ -571,85 +597,58 @@ lockresult: string
             var itemHTML = itemTemplate;
             for (var itemFact in oneItem) {
                 var itemValue = oneItem[itemFact];
+                if (itemValue != null) {
 
-                if (itemFact == "imported name") {
-                    fields.push(itemValue);
-                }
-                console.log(itemFact + ":" + itemValue);
-                if (!isArray(itemValue)) {
-                    if (itemValue == "tick") {
-                        itemHTML = itemHTML.replace(itemFact.toUpperCase(), document.getElementById("az-tick").innerHTML);
-                    } else {
-                        var fieldpos = elementOf(fieldcols, itemFact);
-                        if (fieldpos > 0) {
-                            var replacement = itemValue;
-                            if (itemFact == "textEntry") {
-                                replacement = "<input type=\"text\" value=\"" + replacement + "\">";
-                            }
 
-                            itemHTML = itemHTML.replaceAll("VALUE" + fieldpos, replacement);
+                    if (itemFact == "imported name") {
+                        fields.push(itemValue);
+                    }
+                    //console.log(itemFact + ":" + itemValue);
+                    if (!isArray(itemValue)) {
+                        if (itemValue == "tick") {
+                            itemHTML = itemHTML.replace(itemFact.toUpperCase(), document.getElementById("az-tick").innerHTML);
                         } else {
-                            itemHTML = itemHTML.replaceAll(itemFact.toUpperCase(), itemValue);
-                        }
-                    }
-                    if (itemFact == "fields" && itemValue > "") {
-                        fieldcols = itemValue.split(",");
-                    }
-                    if (itemFact == "fieldHeadings" && itemValue > "") {
-                        var headings = itemValue.split(",");
-                        var headingHTML = "<table><thead><tr>";
-                        for (var heading of headings) {
-                            headingHTML += "<th style=\"min-width:150px\">" + heading + "</th>"
-                        }
-                        document.getElementById("fieldtable").innerHTML = headingHTML + "</tr></thead><tbody id=\"fields\"></tbody></table>";
-                    }
-                    if (itemFact == "dataParent" && itemValue > "") {
-                        document.getElementById("dataparent").value = itemValue;
-                    }
-                    if (itemValue > "") {
-                        rangeElement = document.getElementById(itemFact);
-                        if (rangeElement != null) {
-                            var itemVal = decodeURIComponent(itemValue);
-                            rangeElement.innerHTML = decodeURIComponent(itemVal);
-                        }
-                    }
+                            var fieldpos = elementOf(fieldcols, itemFact);
+                            if (fieldpos > 0) {
+                                var replacement = itemValue;
+                                if (itemFact == "textEntry") {
+                                    var onchange = "";
+                                    if (nextStage == 5) {
+                                        onchange = ' onChange="changed(null,null)"';
+                                    }
+                                    replacement = '<input type="text" value=\'' + replacement + '\'' + onchange + '>';
+                                }
 
-                } else {
-                    var onchange = "";
-                    var selectHTML = "";
-                    if (itemFact == "valuesFound") {
-                        onchange = " onchange=selectionChanged(this)";
-                    }else{
-                        if (nextStage==0){//MATCHSTAGE
-                            onchange = "onchange=changed(null,null)";
-                        }
-                    }
-                    if (nextStage == 4) {
-                        onchange = "onchange=changed(null,null)";
-                    }
-
-                    if (itemValue.length == 1) {
-                        selectHTML = itemValue[0];
-                    } else {
-
-                        selectHTML = "<select id=\"" + oneItem.fieldName + "-" + itemFact + "\"" + onchange + ">";
-                        var selectCount = 0;
-                        for (var selectItem of itemValue) {
-                            if (selectCount++ > 100) break;
-                            var selectOption = selectItem;
-                            var selected = "";
-                            if (selectItem.endsWith(" selected")) {
-                                selected = " selected";
-                                selectOption = selectItem.substring(0,selectItem.indexOf(" selected"));
+                                itemHTML = itemHTML.replaceAll("VALUE" + fieldpos, replacement);
+                            } else {
+                                itemHTML = itemHTML.replaceAll(itemFact.toUpperCase(), itemValue);
                             }
-                            selectHTML += "\n<option value = \"" + selectOption + "\"" + selected + ">" + selectOption + "</option>";
                         }
-                    }
-                    var fieldpos = elementOf(fieldcols, itemFact);
-                    if (fieldpos > 0) {
-                        itemHTML = itemHTML.replaceAll("VALUE" + fieldpos, selectHTML);
+                        if (itemFact == "fields" && itemValue > "") {
+                            fieldcols = itemValue.split(",");
+                        }
+                        if (itemFact == "fieldHeadings" && itemValue > "") {
+                            var headings = itemValue.split(",");
+                            var headingHTML = "<table><thead><tr>";
+                            for (var heading of headings) {
+                                if (heading.toUpperCase().trim() != "MATCHED NAME"){
+                                    headingHTML += "<th style=\"min-width:150px\">" + heading + "</th>"
+                                }else{
+                                    headingHTML += setChoice("<th style=\"min-width:150px\">" + heading + " - template: TEMPLATENAME</th>", "template", "templatename", json.template);
+                                }
+                            }
+                            document.getElementById("fieldtable").innerHTML = headingHTML + "</tr></thead><tbody id=\"fields\"></tbody></table>";
+                        }
+                        if (itemValue > "") {
+                            rangeElement = document.getElementById(itemFact);
+                            if (rangeElement != null) {
+                                var itemVal = decodeURIComponent(itemValue);
+                                rangeElement.innerHTML = decodeURIComponent(itemVal);
+                            }
+                        }
+
                     } else {
-                        itemHTML = itemHTML.replaceAll(itemFact.toUpperCase(), selectHTML);
+                        itemHTML = setChoice(itemHTML, oneItem.fieldName, itemFact, itemValue);
                     }
                 }
             }
@@ -660,6 +659,47 @@ lockresult: string
         }
 
         document.getElementById(jsonItem + "s").innerHTML = itemsHTML;
+
+    }
+
+    function setChoice(itemHTML, fieldName,itemFact,itemValue){
+        var onchange = "";
+        var selectHTML = "";
+        if (itemFact == "valuesFound") {
+            onchange = " onchange=selectionChanged(this)";
+        } else {
+            if (nextStage == 0) {//MATCHSTAGE
+                onchange = "onchange=changed(null,null)";
+            }
+        }
+        if (nextStage == 4) {
+            onchange = "onchange=changed(null,null)";
+        }
+
+        if (itemValue.length == 1) {
+            selectHTML = itemValue[0];
+        } else {
+
+            selectHTML = "<select id=\"" + fieldName + "-" + itemFact + "\"" + onchange + ">";
+            var selectCount = 0;
+            for (var selectItem of itemValue) {
+                if (selectCount++ > 100) break;
+                var selectOption = selectItem;
+                var selected = "";
+                if (selectItem.endsWith(" selected")) {
+                    selected = " selected";
+                    selectOption = selectItem.substring(0, selectItem.indexOf(" selected"));
+                }
+                selectHTML += "\n<option value = \"" + selectOption + "\"" + selected + ">" + selectOption + "</option>";
+            }
+        }
+        var fieldpos = elementOf(fieldcols, itemFact);
+        if (fieldpos > 0) {
+            itemHTML = itemHTML.replaceAll("VALUE" + fieldpos, selectHTML);
+        } else {
+            itemHTML = itemHTML.replaceAll(itemFact.toUpperCase(), selectHTML);
+        }
+        return itemHTML;
 
     }
 
@@ -689,6 +729,12 @@ lockresult: string
         document.getElementById("import").submit();
     }
 
+    function showSpreadsheetData(){
+        nextStage = 7;
+        changed(null,null);//generate the data
+        showData();
+    }
+
     function showData() {
         var dataHTML = "";
         var selectList = json.field;
@@ -700,10 +746,10 @@ lockresult: string
                     lineHTML += "<td>" + oneField.fieldName + "</td>";
                 } else {
                     var lineValue = "";
-                    if (line < oneField.valuesFound.length) {
+                    if (oneField.valuesFound!=null && line < oneField.valuesFound.length) {
                         lineValue = oneField.valuesFound[line - 1];
                     }
-                    if (lineValue.endsWith(" selected")){
+                    if (lineValue.endsWith(" selected")) {
                         lineValue = lineValue.substring(0, lineValue.indexOf(" selected"));
                     }
                     lineHTML += "<td>" + lineValue + "</td>"
@@ -712,24 +758,32 @@ lockresult: string
             dataHTML += lineHTML + "</tr>";
         }
         document.getElementById("dataTable").innerHTML = "<table>" + dataHTML + "</table>";
-        document.getElementById("sampleData").style.display="block";
-        document.getElementById("setup").style.display="none";
+        document.getElementById("setup").style.display = "none";
+        document.getElementById("sampleData").style.display = "block";
     }
 
-    function showSpreadsheet(){
-        document.getElementById("preprocessor").style.display="block";
-        document.getElementById("setup").style.display="none";
+
+
+    function showSpreadsheet() {
+        document.getElementById("preprocessor").style.height = "";
+        document.getElementById("setup").style.display = "none";
+        spreadsheetShown = true;
+        document.getElementById("spreadsheetButtons").style.display = "block";
 
     }
 
-    function showSetup(){
+    async function savePreprocessorChanges(){
+        await changed("spreadsheet calculate",null);
+    }
+
+    function showSetup() {
         document.getElementById("dataTable").innerHTML = "";
-        document.getElementById("sampleData").style.display="none";
-        document.getElementById("setup").style.display="block";
-        document.getElementById("preprocessor").style.display = "none";
-        document.getElementById("dataparentline").style.display = "none";
+        document.getElementById("sampleData").style.display = "none";
+        document.getElementById("setup").style.display = "block";
+        document.getElementById("preprocessor").style.height = "1px";
         document.getElementById("suggestions").innerHTML = "";
         document.getElementById("suggestionDiv").style.display = "none";
+        document.getElementById("spreadsheetButtons").style.display = "none";
 
     }
 
@@ -737,3 +791,4 @@ lockresult: string
 
 
 <%@ include file="../includes/new_footer.jsp" %>
+h

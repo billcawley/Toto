@@ -13,6 +13,7 @@ public class ImportSuggestion
         wizardInfo.setLastDataField(null);
         String suggestionReason = "";
         String keyField = null;
+        String keyFieldRoot = null;
         String keyFieldName = null;
         int keyFieldCount = 0;
         boolean usDate = false;
@@ -21,7 +22,11 @@ public class ImportSuggestion
             if (ImportWizard.KEYFIELDID.equals(wizardField.getType())) {
                 keyField = field;
                 keyFieldName = wizardField.getName();
-                keyFieldCount = wizardField.getValuesFound().size();
+                if(wizardField.getValuesFound() !=null){
+                    keyFieldCount = wizardField.getValuesFound().size();
+                }else{
+                    keyFieldCount = wizardInfo.getLineCount();
+                }
             }
         }
 
@@ -84,6 +89,7 @@ public class ImportSuggestion
                     keyField = wizardInfo.getFields().keySet().iterator().next();
 
                     if (ImportUtils.isIdField(wizardInfo,keyField)) {
+                        keyFieldRoot = keyField.toLowerCase(Locale.ROOT);
                         WizardField wizardField = wizardInfo.getFields().get(keyField);
                         wizardField.setType(ImportWizard.KEYFIELDID);
                         hasSuggestion = true;
@@ -93,7 +99,7 @@ public class ImportSuggestion
                     }
                     if (keyField != null) {
                         for (String field : wizardInfo.getFields().keySet()) {
-                            if (field.toLowerCase(Locale.ROOT).endsWith("name")) {
+                            if (field.toLowerCase(Locale.ROOT).endsWith("name") && field.toLowerCase(Locale.ROOT).startsWith(keyFieldRoot)) {
                                 wizardInfo.getFields().get(field).setType(ImportWizard.KEYFIELDNAME);
                                 hasSuggestion = true;
                                 break;
@@ -111,48 +117,30 @@ public class ImportSuggestion
                         boolean found = false;
                         for (int i = 0; i < valCOunt; i++) {
                             String val = wizardField.getValuesFound().get(i);
+                            if (val.length() > 10) {
+                                val = val.substring(0, 10);
+                            }
                             if (val.length() > 0) {
                                 found = true;
-                                java.time.LocalDate date = DateUtils.isDateTime(val);
+                                java.time.LocalDate date = DateUtils.isADate(val);
                                 if (date == null) {
-                                    found = false;
-                                    break;
+                                    date = DateUtils.isUSDate(val);
+                                    if (date == null) {
+                                        found = false;
+                                        break;
+                                    } else {
+                                        usDate = true;
+                                    }
                                 }
                             }
                         }
                         if (found && wizardField.getType() == null) {
-                            wizardField.setType("datetime");
+                            if (usDate) {
+                                wizardField.setType(ImportUtils.USDATELANG);
+                            } else {
+                                wizardField.setType(ImportUtils.DATELANG);
+                            }
                             hasSuggestion = true;
-                        }
-                        if (!found) {
-                            found = false;
-                            for (int i = 0; i < valCOunt; i++) {
-                                String val = wizardField.getValuesFound().get(i);
-                                if (val.length() > 10) {
-                                    val = val.substring(0, 10);
-                                }
-                                if (val.length() > 0) {
-                                    found = true;
-                                    java.time.LocalDate date = DateUtils.isADate(val);
-                                    if (date == null) {
-                                        date = DateUtils.isUSDate(val);
-                                        if (date == null) {
-                                            found = false;
-                                            break;
-                                        } else {
-                                            usDate = true;
-                                        }
-                                    }
-                                }
-                            }
-                            if (found && wizardField.getType() == null) {
-                                if (usDate) {
-                                    wizardField.setType(ImportUtils.USDATELANG);
-                                } else {
-                                    wizardField.setType(ImportUtils.DATELANG);
-                                }
-                                hasSuggestion = true;
-                            }
                         }
                         found = false;
                         for (int i = 0; i < valCOunt; i++) {
@@ -178,9 +166,13 @@ public class ImportSuggestion
                             wizardField.setType("time");
                             hasSuggestion = true;
                         }
+                        if (wizardField.getType()==null && wizardField.getImportedName().toLowerCase(Locale.ROOT).endsWith("date")){
+                            wizardField.setType(ImportUtils.DATELANG);
+                            hasSuggestion = true;
+                        }
                     }
                     if (hasSuggestion) {
-                        return "we gave fiied in some suggestions";
+                        return "we gave filled in some suggestions";
                     }
                 case ImportWizard.DATASTAGE:
                     String parent = null;
@@ -220,7 +212,7 @@ public class ImportSuggestion
                         //flat file suggestions
                         parent = "Values";
                         if (keyFieldName != null) {
-                            parent = keyFieldName.substring(0, keyFieldName.lastIndexOf(" ")) + " Values";
+                            parent = keyFieldName + " Values";
                         }
                         //suggestion.append("possible data fields are: ");
                         for (String field : wizardInfo.getFields().keySet()) {
@@ -238,12 +230,12 @@ public class ImportSuggestion
                         }
                         if (suggestionReason.length() == 0) {
                             if (keyFieldName != null) {
-                                String countName = keyFieldName.substring(0, keyField.length() - 2).trim() + " count";
+                                String countName = keyField + " count";
                                 suggestionReason = "No data fields found.  Suggest adding a data field: " + countName;
                                 WizardField wizardField = new WizardField(ImportUtils.standardise(countName), countName, true);
                                 wizardField.setSpecialInstructions("=1");
                                 try {
-                                    ImportUtils.calcXL(wizardInfo);
+                                    ImportUtils.calcXL(wizardInfo, 100);
                                 }catch(Exception e){
 
                                 }
@@ -254,7 +246,7 @@ public class ImportSuggestion
                                 wizardField.setPeers(peers);
                                 wizardInfo.getFields().put("1", wizardField);
                                 try {
-                                    ImportUtils.calcXL(wizardInfo);
+                                    ImportUtils.calcXL(wizardInfo, 100);
                                 } catch (Exception e) {
 
                                 }

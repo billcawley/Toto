@@ -170,7 +170,7 @@ public class ReportWizard {
         book.write(outputStream);
         UploadedFile uploadedFile = new UploadedFile(tempPath, Collections.singletonList(reportName+".xlsx"),false);
 
-        ImportService.uploadReport(loggedInUser,reportName,uploadedFile, book);
+        ImportService.uploadReport(loggedInUser,reportName,uploadedFile);
         OnlineReport or = OnlineReportDAO.findForNameAndBusinessId(reportName, loggedInUser.getBusiness().getId());
         if (or!=null){
             return or.getId();

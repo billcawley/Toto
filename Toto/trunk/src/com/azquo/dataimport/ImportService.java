@@ -3,6 +3,7 @@ package com.azquo.dataimport;
 import com.agilecrm.api.APIManager;
 import com.azquo.*;
 import com.azquo.admin.business.BusinessDAO;
+import com.azquo.spreadsheet.CommonReportUtils;
 import com.azquo.spreadsheet.ExcelService;
 import com.azquo.spreadsheet.transport.HeadingWithInterimLookup;
 import com.azquo.spreadsheet.zk.ChoicesService;
@@ -73,6 +74,7 @@ import javax.ws.rs.core.MultivaluedMap;
 import javax.xml.parsers.*;
 import java.io.*;
 import java.nio.charset.Charset;
+import java.nio.charset.CharsetDecoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.text.SimpleDateFormat;
@@ -81,6 +83,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static org.apache.poi.ss.usermodel.CellType.*;
@@ -400,6 +403,13 @@ public final class ImportService {
                 return Collections.singletonList(uploadImportTemplate(uploadedFile, loggedInUser, userComment));
 
             }else{
+                //many SQL queries are encoded in ISO_8859_1
+                String fileEncoding = checkFileEncoding(uploadedFile.getPath());
+                if (fileEncoding!=null){
+                    Map<String,String> parameters = uploadedFile.getParameters();
+                    parameters.put(FILEENCODING, fileEncoding);
+                    uploadedFile.setParameters(parameters);
+                }
                 processedUploadedFiles.add(readPreparedFile(loggedInUser, uploadedFile, false, pendingUploadConfig, templateCache));
             }
         }
@@ -541,7 +551,7 @@ public final class ImportService {
             }
             if (reportName != null) {
                 if ((loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
-                    uploadReport(loggedInUser,reportName,uploadedFile, book);
+                    uploadReport(loggedInUser,reportName,uploadedFile);
                      uploadedFile.setProcessingDuration(System.currentTimeMillis() - time);
                     if (opcPackage != null) opcPackage.revert();
                     return Collections.singletonList(uploadedFile);
@@ -664,7 +674,7 @@ public final class ImportService {
         return toReturn;
     }
 
-    public static void uploadReport(LoggedInUser loggedInUser, String reportName, UploadedFile uploadedFile, Workbook book)throws Exception{
+    public static void uploadReport(LoggedInUser loggedInUser, String reportName, UploadedFile uploadedFile)throws Exception{
         uploadedFile.setDataModified(true); // ok so it's not technically data modified but the file has been processed correctly. The report menu will have been modified
         int businessId = loggedInUser.getUser().getBusinessId();
         int databaseId = loggedInUser.getDatabase().getId();
@@ -693,7 +703,7 @@ public final class ImportService {
             or = new OnlineReport(0, LocalDateTime.now(), businessId, loggedInUser.getUser().getId(), loggedInUser.getDatabase().getName(), reportName, uploadedFile.getFileName(), "", "");
         }
         OnlineReportDAO.store(or); // store before or.getFilenameForDisk() or the id will be wrong!
-        List<org.apache.poi.ss.usermodel.Name> names = (List<Name>)book.getAllNames();
+       // List<org.apache.poi.ss.usermodel.Name> names = (List<Name>)book.getAllNames();
 
         Path fullPath = Paths.get(SpreadsheetService.getHomeDir() + dbPath + pathName + onlineReportsDir + or.getFilenameForDisk());
         Files.createDirectories(fullPath.getParent()); // in case it doesn't exist
@@ -1145,62 +1155,12 @@ public final class ImportService {
         if (uploadedFile!=null && !templateName.toLowerCase().startsWith("sets") && !importTemplateUsedAlready) {
             ImportTemplateData importTemplateData = getImportTemplateForUploadedFile(loggedInUser, uploadedFile, templateCache);
             if (importTemplateData != null) {
-                if (importVersion == null) {
-                    // so, if there is no import version set can we derive it from the name?
-                    List<List<String>> fivl = sheetInfo(importTemplateData, "Filename Import Version Lookup");
-                    if (fivl != null) {
-                        boolean scanning = false;
-                        rows:
-                        for (List<String> row : fivl) {
-                            String firstCellValue = null;
-                            for (String cellValue : row) {
-                                if (!cellValue.isEmpty()) {
-                                    if (importVersion != null) {
-                                        //pick up the preprocessor from the cell to the right of the import version
-                                        preProcessor = cellValue;
-                                        break rows;
-                                    }
-                                    if (firstCellValue == null) {
-                                        firstCellValue = cellValue;
-                                    } else {
-                                        if (scanning) {
-                                            //amended by WFC to look for particular sheets in a book (book!sheet) and 'contains' - using '*' as wildcard
-                                            if (firstCellValue.contains("!")) {
-                                                int bookEnd = firstCellValue.indexOf("!");
-                                                String bookName = firstCellValue.substring(0, bookEnd).replace("'", "");
-                                                String sheetName = firstCellValue.substring(bookEnd + 1).replace("'", "");
-                                                if (uploadedFile.getFileNames().size() == 2 && nameCompare(uploadedFile.getFileNames().get(1), sheetName) && nameCompare(uploadedFile.getFileNames().get(0), bookName)) {
-                                                    importVersion = cellValue;
+                templateName = findRelevantTemplate(loggedInUser,uploadedFile, importTemplateData, templateName);
+                Map<String,String>templateParameters = new HashMap<>();
+                if (uploadedFile.getParameters() == null || uploadedFile.getParameters().size()==0) {
 
-                                                }
-                                            } else {
-                                                for (int i = uploadedFile.getFileNames().size() - 1; i >= 0; i--) {
-                                                    if (nameCompare(uploadedFile.getFileNames().get(i), firstCellValue)) {
-                                                        importVersion = cellValue;
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                } else {
-                                    if (importVersion != null) {
-                                        break rows;
-                                    }
-                                }
-                            }
-                            // EFC hacked in, this code needs to be rewritten
-                            if (importVersion != null) {
-                                break;
-                            }
-                            if ("startswith".equalsIgnoreCase(firstCellValue)) {
-                                scanning = true;
-                            }
-                        }
-                    }
-                }
-                // ok let's check here for the old style of import template as used by Ben Jones
-                Map<String, String> templateParameters = new HashMap<>(); // things like pre processor, file encoding etc
-                if (preProcessor != null) {
+                    templateParameters = getTemplateParameters(importTemplateData.getSheets().get(templateName)); // things like pre processor, file encoding etc
+                }else{
                     templateParameters.put(PREPROCESSOR, preProcessor);
                 }
 
@@ -1454,7 +1414,7 @@ public final class ImportService {
         // new thing - pre processor on the report server
         //override is the parameter is sent by the user
         preProcessor = uploadedFile.getParameter(PREPROCESSOR);
-        if (preProcessor == null) {
+        if (preProcessor == null && uploadedFile.getParameter(IMPORTVERSION)==null) {
             preProcessor = uploadedFile.getTemplateParameter(PREPROCESSOR);
         }
         if (preProcessor != null && !uploadedFile.getPath().endsWith("converted")) {
@@ -1694,6 +1654,47 @@ public final class ImportService {
         return null;
     }
 
+    private static String findRelevantTemplate(LoggedInUser loggedInUser, UploadedFile uploadedFile, ImportTemplateData importTemplateData, String currentTemplateName){
+        for (String sheet:importTemplateData.getSheets().keySet()) {
+            Map<String,String>templateParameters = getTemplateParameters(importTemplateData.getSheets().get(sheet));
+            String regexAsString = templateParameters.get(ImportWizard.IMPORTFILENAMEREGEX);
+            if (regexAsString != null) {
+                Pattern p = Pattern.compile(regexAsString);
+                Matcher m = p.matcher(uploadedFile.getFileName().toLowerCase(Locale.ROOT));
+                if (m.find()) {
+                    setupImportAndDataNames(loggedInUser, sheet, uploadedFile, importTemplateData.getSheets().get(sheet));
+                    return sheet;
+                }
+            }
+        }
+
+
+        return currentTemplateName;
+
+    }
+
+    private static void setupImportAndDataNames(LoggedInUser loggedInUser, String templateName, UploadedFile uploadedFile, List<List<String>>templateSheetData){
+        //the report wizard needs a structure of data values, and an import structure is created to be able to show reports of the latest data uploaded
+        for (int col=0;col < templateSheetData.get(0).size();col++){
+            for (int row=1;row<templateSheetData.size();row++){
+                if (col< templateSheetData.get(row).size()){
+                    String cell = templateSheetData.get(row).get(col);
+                    if (cell==null || cell.length()==0) {
+                        break;
+                    }
+                    if (cell.toLowerCase(Locale.ROOT).startsWith("peers")) {
+                        CommonReportUtils.getDropdownListForQuery(loggedInUser, "edit:create Data" + StringLiterals.MEMBEROF + templateName + " Values" + StringLiterals.MEMBEROF + templateSheetData.get(1).get(col));
+                        break;
+                    }
+
+                }else{
+                    break;
+                }
+            }
+        }
+        CommonReportUtils.getDropdownListForQuery(loggedInUser,"edit:create Imports" + StringLiterals.MEMBEROF +  templateName + " Imports->Import from " + uploadedFile.getFileName());
+
+    }
 
     private static boolean nameCompare(String target, String source) {
         if (source.startsWith("*")) {
@@ -1707,6 +1708,26 @@ public final class ImportService {
         }
         return false;
 
+    }
+
+    private static Map<String,String>getTemplateParameters(List<List<String>>templateData){
+        Map<String,String> toReturn = new HashMap<>();
+        if (templateData == null){
+            return toReturn;
+        }
+        boolean hasParameters = false;
+        for (List<String> row:templateData){
+            if (hasParameters){
+                if (row.get(0)==null || row.get(0).length()==0 || row.size() < 2){
+                    return toReturn;
+                }
+                toReturn.put(row.get(0).toLowerCase(Locale.ROOT), row.get(1));
+            }
+            if (row!=null && row.size() > 0 && row.get(0).equalsIgnoreCase("parameters")){
+                hasParameters  = true;
+            }
+        }
+        return toReturn;
     }
 
     enum ImportSheetScanMode {OFF, TOPHEADINGS, CUSTOMHEADINGS, STANDARDHEADINGS, PARAMETERS}
@@ -1784,11 +1805,14 @@ public final class ImportService {
                         firstCellValue = cellValue;
                         if ("PARAMETERS".equalsIgnoreCase(firstCellValue)) { // string literal move?
                             mode = ImportSheetScanMode.PARAMETERS;
+                            firstCellValue = null;
                         }
+
                     } else { // after the first cell when not headings
                         // yes extra cells will ovrride subsequent key pair values. Since this would be an incorrect sheet I'm not currently bothered by this
-                        if (mode == ImportSheetScanMode.PARAMETERS) { // gathering parameters
-                            templateParameters.put(firstCellValue.toLowerCase(), cellValue);
+                        if (mode == ImportSheetScanMode.PARAMETERS && firstCellValue!=null &&  cellIndex==1) {
+                            // gathering parameters
+                           templateParameters.put(firstCellValue.toLowerCase(), cellValue);
                         }
                     }
                 }
@@ -2502,6 +2526,10 @@ fr.close();
             int inputRowNo = inputAreaRef.getLastCell().getRow();
             org.apache.poi.ss.usermodel.Name outputLineRegion = BookUtils.getName(ppBook, "az_output");
             AreaReference outputAreaRef = new AreaReference(outputLineRegion.getRefersToFormula(), null);
+            if (outputAreaRef.getFirstCell().getCol()==-1){
+                int lastOutputCell = ppBook.getSheetAt(0).getRow(outputAreaRef.getFirstCell().getRow()).getLastCellNum();
+                outputLineRegion.setRefersToFormula("'" + ppBook.getSheetAt(0).getSheetName() + "'!" + BookUtils.rangeToText(outputAreaRef.getFirstCell().getRow(), 0) + ":" + BookUtils.rangeToText(outputAreaRef.getLastCell().getRow(), lastOutputCell));
+            }
             org.apache.poi.ss.usermodel.Name ignoreRegion = BookUtils.getName(ppBook, "az_ignore");
             org.apache.poi.ss.usermodel.Name fileNameRegion = BookUtils.getName(ppBook, "az_filename");
             AreaReference fileNameAreaRef = null;
@@ -2551,6 +2579,7 @@ fr.close();
             BufferedWriter fileWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(outFile), StandardCharsets.UTF_8));
             CsvMapper csvMapper = new CsvMapper();
             csvMapper.enable(CsvParser.Feature.WRAP_AS_ARRAY);
+            String fileEncoding = uploadedFile.getParameter(FILEENCODING);
             char delimiter = ',';
 //        System.out.println("get lines with values and column, col index : " + columnIndex);
 //        System.out.println("get lines with values and column, values to check : " + valuesToCheck);
@@ -2566,6 +2595,19 @@ fr.close();
                     if (firstLine.contains("\t")) {
                         delimiter = '\t';
                     }
+                }catch(Exception e) {
+                    try (BufferedReader br = Files.newBufferedReader(Paths.get(uploadedFile.getPath()), StandardCharsets.ISO_8859_1)) {
+                        fileEncoding = "ISO_8859_1";
+                        // grab the first line to check on delimiters
+                        String firstLine = br.readLine();
+                        if (firstLine.contains("|")) {
+                            delimiter = '|';
+                        }
+                        if (firstLine.contains("\t")) {
+                            delimiter = '\t';
+                        }
+
+                    }
                 }
             }
             CsvSchema schema = csvMapper.schemaFor(String[].class)
@@ -2573,6 +2615,8 @@ fr.close();
                     .withLineSeparator("\n");
             if (delimiter == '\t') {
                 schema = schema.withoutQuoteChar();
+            }else if(delimiter == ','){
+                schema = schema.withQuoteChar('"');
             }
             int topRow = 0;
             org.apache.poi.ss.usermodel.Name topRowRegion = BookUtils.getName(ppBook, "az_toprow");
@@ -2585,9 +2629,9 @@ fr.close();
             }
 
             MappingIterator<String[]> lineIterator = null;
-            if (uploadedFile.getParameter(FILEENCODING) != null) {
+            if (fileEncoding != null) {
                 // so override file encoding.
-                lineIterator = csvMapper.readerFor(String[].class).with(schema).readValues(new InputStreamReader(new FileInputStream(filePath), uploadedFile.getParameter(FILEENCODING)));
+                lineIterator = csvMapper.readerFor(String[].class).with(schema).readValues(new InputStreamReader(new FileInputStream(filePath), fileEncoding));
                 uploadedFile.clearParameter(FILEENCODING);//the converted file is in UTF-8
             } else {
                 lineIterator = (csvMapper.readerFor(String[].class).with(schema).readValues(new File(filePath)));
@@ -3099,7 +3143,7 @@ fr.close();
         for (int col = 0; col < maxpos; col++) {
             if (line[col].length() > 0 && findFirst(headingsMap, headingFrom(line[col], headingsLookups)) >= 0) {
                 found++;
-                if (found > 10) {//arbitrary at this stage.  Checking later
+                if (found > 10 || found==headingsMap.size()) {//arbitrary at this stage.  Checking later
                     return true;
                 }
             }
@@ -3289,7 +3333,7 @@ fr.close();
 
     private static String normalise(String value) {
         //not sure how the system read the cr as \\n
-        return value.replace("\\\\n", " ").replace("\n", " ").replace("  ", " ").replace("_"," ");
+        return value.replace("\\\\n", " ").replace("\n", " ").replace("\r", " ").replace("  ", " ").replace("_","");
     }
 
     // todo factor. Makes sense in here
@@ -3696,6 +3740,30 @@ fr.close();
 
     }
 
+    public static String checkFileEncoding(String path)throws  IOException{
+        try {
+            checkFileEncoding1(path,null);
+            return null;
+        }catch(IOException e){
+            try {
+                String fileEncoding = "ISO_8859_1";
+                checkFileEncoding1(path, fileEncoding);
+                return fileEncoding;
+            }catch(IOException e2){
+                throw new IOException("cannot understand the file encoding");
+            }
+        }
+    }
 
+    public static void checkFileEncoding1(String path, String fileEncoding) throws IOException {
+        int k=100;
+        Charset charset = StandardCharsets.UTF_8;
+        if ("ISO_8859_1".equals(fileEncoding)) {
+            charset = StandardCharsets.ISO_8859_1;
+        }
+        List<String> lines = Files.readAllLines(Paths.get(path), charset);
+        k = 1;
+
+    }
 
 }

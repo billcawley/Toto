@@ -9,6 +9,8 @@ import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.controller.LoginController;
+import com.azquo.spreadsheet.controller.OnlineController;
+import com.azquo.spreadsheet.transport.UploadedFile;
 import org.apache.poi.openxml4j.opc.OPCPackage;
 import org.json.JSONObject;
 import org.json.XML;
@@ -49,6 +51,16 @@ public class ImportWizardController {
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
         // I assume secure until we move to proper spring security
         if (loggedInUser != null && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
+
+            String template = request.getParameter("template");
+            if (template!=null){
+                loggedInUser.getWizardInfo().setTemplateName(template);
+                loggedInUser.getWizardInfo().getTemplateParameters().put(ImportWizard.IMPORTFILENAMEREGEX,request.getParameter("regex"));
+                String toReturn  = ImportWizard.setTemplate(loggedInUser);
+                request.setAttribute(OnlineController.BOOK, loggedInUser.getWizardInfo().getPreprocessor());
+                return toReturn;
+            }
+
             String submit = request.getParameter("submit");
             if ("import".equals(submit)) {
                 try {
@@ -118,9 +130,10 @@ public class ImportWizardController {
                 String fileName = uploadFile.getOriginalFilename();
                 File moved = new File(SpreadsheetService.getHomeDir() + "/temp/" + System.currentTimeMillis() + fileName); // timestamp to stop file overwriting
                 uploadFile.transferTo(moved);
+                UploadedFile uploadedFile = new UploadedFile(moved.getAbsolutePath(), Collections.singletonList(uploadFile.getOriginalFilename()), false);
                 if (fileName.toLowerCase(Locale.ROOT).contains(".xls")) {
                     Map<String, WizardField> wizardFields = new LinkedHashMap<>();
-                    wizardInfo = new WizardInfo(fileName, null);
+                    wizardInfo = new WizardInfo(uploadedFile, null);
                     int lineCount = ImportWizard.readBook(moved, wizardFields, false, wizardInfo.getLookups());
                      wizardInfo.setFields(wizardFields);
                     wizardInfo.setLineCount(lineCount);
@@ -139,8 +152,9 @@ public class ImportWizardController {
                             data = data.replace("\n", "");//remove line feeds
                             jsonObject = new JSONObject(data);
                         }
+                        UploadedFile movedFile = new UploadedFile(moved.getAbsolutePath(), Collections.singletonList(moved.getName()), false);
 
-                        wizardInfo = new WizardInfo(moved.getName(), jsonObject);
+                        wizardInfo = new WizardInfo(movedFile, jsonObject);
                         loggedInUser.setWizardInfo(wizardInfo);
                     } catch (Exception e) {
                         model.put("error", "nothing to read");
@@ -149,7 +163,7 @@ public class ImportWizardController {
                 } else {
                     Map<String, String> fileNameParameters = new HashMap<>();
                     ImportService.addFileNameParametersToMap(moved.getName(), fileNameParameters);
-                    wizardInfo = new WizardInfo(fileName, null);
+                    wizardInfo = new WizardInfo(uploadedFile, null);
 
                     Map<String, WizardField> wizardFields = ImportWizard.readCSVFile(moved.getAbsolutePath(), fileNameParameters.get("fileencoding"));
                       wizardInfo.setFields(wizardFields);

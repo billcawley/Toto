@@ -514,7 +514,7 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
                             }
                             //detect from workbook name
                             String lcName = uploadedFile.getFileName().toLowerCase();
-                            if (!lcName.contains("=") && (lcName.contains("import templates") || lcName.contains("workbook processor") || lcName.contains("preprocessor") || lcName.contains("headings") || lcName.contains("lookups"))) {
+                            if (!lcName.contains("=") && (lcName.contains("import template") || lcName.contains("workbook processor") || lcName.contains("preprocessor") || lcName.contains("headings") || lcName.contains("lookups"))) {
                                 isImportTemplate = true;
                             }
                             boolean assignTemplateToDatabase = false;
@@ -558,10 +558,11 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
                             } else { // a straight upload, this is the only place that can deal with multiple files being selected for upload
                                 HttpSession session = request.getSession();
                                 boolean isSetup = ("on".equals(request.getParameter("setupFile")));
-                                Book book = Books.createBook("new book");
-                                Ranges.range(book).createSheet("Sheet1");
-                                request.setAttribute(OnlineController.BOOK, book); // set up a blank book in case this hits the ImportWizard...
-                                return handleImport(loggedInUser, session, model, userComment, uploadFiles, newdesign, isSetup);
+                                String result = handleImport(loggedInUser, session, model, userComment, uploadFiles, newdesign, isSetup);
+                                if (loggedInUser.getWizardInfo()!=null && loggedInUser.getWizardInfo().getPreprocessor()!=null){
+                                    request.setAttribute(OnlineController.BOOK, loggedInUser.getWizardInfo().getPreprocessor());
+                                }
+                                return result;
                             }
                         }
                     }
@@ -663,7 +664,7 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
                 uploadFile.transferTo(moved);
                 uploadedFiles.add(uf);
                 if (isSetup) {
-                    return ImportWizard.uploadTheFile(loggedInUser,uf);
+                    return ImportWizard.setup(loggedInUser,model, uf);
 
                 }
             }
