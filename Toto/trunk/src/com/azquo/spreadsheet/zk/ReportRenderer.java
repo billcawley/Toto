@@ -1008,30 +1008,31 @@ public class ReportRenderer {
     public static void loadExternalData(Book book, LoggedInUser loggedInUser)throws Exception{
         loggedInUser.clearExternalData();
         List<ExternalDataRequest>externalDataRequests = ExternalDataRequestDAO.findForReportId(loggedInUser.getOnlineReport().getId());
-        for (ExternalDataRequest externalDataRequest:externalDataRequests){
-            boolean found = false;
-            Sheet sheet = null;
-            CellRegion cellRegion = null;
-            for (int i=0;i<book.getNumberOfSheets();i++){
-                sheet = book.getSheetAt(i);
-                if (sheet.getSheetName().equalsIgnoreCase(externalDataRequest.getSheetRangeName())){
-                    found = true;
-                    break;
+        for (ExternalDataRequest externalDataRequest:externalDataRequests) {
+            if (!externalDataRequest.getSheetRangeName().toLowerCase(Locale.ROOT).endsWith("chosen")) {
+                boolean found = false;
+                Sheet sheet = null;
+                CellRegion cellRegion = null;
+                for (int i = 0; i < book.getNumberOfSheets(); i++) {
+                    sheet = book.getSheetAt(i);
+                    if (sheet.getSheetName().equalsIgnoreCase(externalDataRequest.getSheetRangeName())) {
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    sheet = null;
+                    SName sourceName = book.getInternalBook().getNameByName(externalDataRequest.getSheetRangeName());
+                    if (sourceName != null) {
+                        sheet = book.getSheet(sourceName.getRefersToSheetName());
+                        cellRegion = sourceName.getRefersToCellRegion();
+                    }
+                }
+                if (sheet != null) {
+                    getExternalData(loggedInUser, externalDataRequest, sheet, cellRegion);
+                    book.getInternalBook().setAttribute(OnlineController.EXTERNALDATA, "true");
                 }
             }
-            if (!found){
-                sheet = null;
-                SName sourceName = book.getInternalBook().getNameByName(externalDataRequest.getSheetRangeName());
-                if (sourceName !=null){
-                    sheet = book.getSheet(sourceName.getRefersToSheetName());
-                    cellRegion = sourceName.getRefersToCellRegion();
-                }
-            }
-            if (sheet!=null) {
-                getExternalData(loggedInUser, externalDataRequest, sheet, cellRegion);
-                book.getInternalBook().setAttribute(OnlineController.EXTERNALDATA, "true");
-            }
-
         }
      }
 
@@ -1048,7 +1049,7 @@ public class ReportRenderer {
 
 
   private static void expandRange(CellRegion cellRegion, Sheet sheet, int rows){
-        if (cellRegion.getRowCount()>=rows) {
+        if (cellRegion.getRowCount()>=rows || cellRegion.getRowCount() > 2) {
             return;
         }
         int rowsToAdd = rows - cellRegion.getRowCount();
@@ -1087,9 +1088,10 @@ public class ReportRenderer {
             expandRange(cellRegion, sheet,data.size()-1);
             startRow = cellRegion.getRow();
             startCol = cellRegion.getColumn();
-            rowCount = data.size() - 1;
+            if (data.size()>1  || (data.size()==1 && data.get(0).size() > 1 ) ) {
+                startDataRow = 1;
+            }
             colCount = cellRegion.getCellCount();
-            startDataRow = 1;
         }
         if(rowCount==0){
             rowCount = data.size();
@@ -1100,7 +1102,7 @@ public class ReportRenderer {
         for (int rowNo = startDataRow; rowNo < rowCount; rowNo++){
             List<String> dataline = data.get(rowNo);
             for (int colNo = 0;colNo < colCount; colNo++){;
-                BookUtils.setValue(sheet.getInternalSheet().getCell(rowNo + startRow, colNo + startCol),dataline.get(colNo));
+                BookUtils.setValue(sheet.getInternalSheet().getCell(rowNo + startRow - startDataRow, colNo + startCol),dataline.get(colNo));
 
             }
         }
