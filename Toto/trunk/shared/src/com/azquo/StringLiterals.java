@@ -218,6 +218,7 @@ Attributes of the names in other cells can be referenced also
     // required to load Ed B GXB tracking. Essentially call an attribute something01 and if it's sequential and the attribute is imported multiple times it goes in as something01, something02, something03 etc rather than overwriting
     public static final String SEQUENTIALATTRIBUTE = "sequentialattribute";
 
+    public static final String ALL = "--ALL--";
 
 
 
