@@ -48,7 +48,7 @@
                 <td>
                     <label class="label">SQL to load data</label>
                 </td>
-                <td>
+                <td style="width:600px">
                     <div class="field">
                         <input class="input is-small" name="readSQL" id="readSQL" value="${readSQL}">
                     </div>
