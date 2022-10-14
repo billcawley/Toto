@@ -3414,7 +3414,7 @@
                                         (0, r.jsx)("div", {
                                             className: "az-card-actions",
                                             children: (0, r.jsx)(u.e, {
-                                                items: [{ label: "Delete", href: "/api/ManageReports?deleteId=" + e.id, icon: s.Z }],
+                                                items: [{ label: "Delete", href: "/api/ManageReports?deleteId=" + e.id+ "&newdesign=true", icon: s.Z }],
                                             }),
                                         }),
                                     ],
@@ -3804,6 +3804,7 @@
                         { label: "Backup/Maintenance", href: "/api/ManageDatabases/?newdesign=maintenance", icon: a },
                         { label: "Pending Uploads", href: "/api/ManageDatabases/?newdesign=pendinguploads", icon: s.Z },
                         { label: "Import Templates", href: "/api/ManageDatabases/?newdesign=importtemplates", icon: a },
+                        { label: "Logout", href: "/api/Login?logoff=true", icon: l.Z },
                     ],
                     h = [
                         //{ label: "Settings", href: "/settings", icon: a },
