@@ -3836,7 +3836,7 @@ ul {
 
 @media (min-width: 640px) {
     .az-table {
-        padding-bottom: 5rem; /* efc added so little menus keep visible*/
+        padding-bottom: 7rem; /* efc added so little menus keep visible*/
         border-radius: 0.5rem;
     }
 }
