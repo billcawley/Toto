@@ -167,6 +167,46 @@ public class CommonReportUtils {
             }
 
         }
+        while (query.contains(StringLiterals.ALL)){
+            //remove this clause
+            /*
+            possibilities
+              ....WHERE <condition containing ALL> ...
+              ....WHERE <other conditions> AND <condition containing ALL> ...
+              ....WHERE <condition containing ALL> AND <other conditions> ...
+             */
+            int allPos = query.indexOf(StringLiterals.ALL);
+            int wherePos = query.toLowerCase(Locale.ROOT).lastIndexOf(" where ",allPos);
+            int andPos = query.toLowerCase(Locale.ROOT).lastIndexOf(" and ", allPos);
+            int nextAndPos = query.toLowerCase(Locale.ROOT).indexOf(" and ", allPos);
+            int nextSpace = query.toLowerCase(Locale.ROOT).indexOf(" ", allPos);
+            int end = query.toLowerCase(Locale.ROOT).indexOf(";", allPos);
+            if (end < 0){
+                end = query.length();
+            }
+            if (nextAndPos > 0 && nextAndPos == nextSpace) {
+                end = nextAndPos + 4;
+            }else{
+                if (nextSpace > 0){
+                    end = nextSpace;
+                }
+            }
+            if(andPos > 0){
+                query = query.substring(0,andPos) + query.substring(end);
+            }else{
+                if (wherePos > 0){
+                    if (nextAndPos>0){
+                        query = query.substring(0, wherePos + 6) + query.substring(end);
+                    }else{
+                        query = query.substring(0, wherePos) + query.substring(end);
+                    }
+                }else{
+                    query = query.replace(StringLiterals.ALL, "%%");
+                }
+            }
+
+            query = query.replaceAll(StringLiterals.ALL,"%%");
+        }
         return query.trim().replace("  "," ");//remove double spaces
     }
 
