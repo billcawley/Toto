@@ -188,7 +188,7 @@ setInterval(function () {
 </script>
 <%@ include file="../includes/new_header.jsp" %>
 <div class="az-content">
-    <div class="az-topbar">
+    <span id="lockedResult"><c:if test="${not empty lockedResult}"><textarea class="public" style="height:60px;width:400px;font:10px monospace;overflow:auto;font-family:arial;background:#f58030;color:#fff;font-size:14px;border:0">${lockedResult}</textarea></c:if></span>    <div class="az-topbar">
         <div class="az-searchbar"  style="font-size : 1.5rem; margin: auto">${reportName}
         </div>
         <div class="az-topbar-menu">
