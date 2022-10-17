@@ -234,8 +234,8 @@ public class ManageReportsController {
                     if (externalConnector == null && readSQL != null && !readSQL.isEmpty()) {
                         error.append("no connector called " + connectorName + " is set up<br/>");
                     }
-                    if (externalConnector != null && (readSQL == null || !readSQL.toLowerCase(Locale.ROOT).startsWith("select "))) {
-                        error.append("the read SQL should start 'select ...'<br/>");
+                    if (externalConnector != null && (readSQL == null || (!readSQL.toLowerCase(Locale.ROOT).startsWith("select ") && !readSQL.startsWith("=")))) {
+                        error.append("the read SQL should start 'select ...' or '='<br/>");
                     }
                     String allowDelete = "n";
                     boolean isDelete = false;
