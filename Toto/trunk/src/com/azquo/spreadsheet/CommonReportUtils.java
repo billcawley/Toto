@@ -205,7 +205,6 @@ public class CommonReportUtils {
                 }
             }
 
-            query = query.replaceAll(StringLiterals.ALL,"%%");
         }
         return query.trim().replace("  "," ");//remove double spaces
     }
