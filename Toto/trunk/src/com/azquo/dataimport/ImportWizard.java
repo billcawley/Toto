@@ -432,12 +432,25 @@ public class ImportWizard {
     public static void createDB(LoggedInUser loggedInUser) throws Exception {
         WizardInfo wizardInfo = loggedInUser.getWizardInfo();
         ImportUtils.calcXL(wizardInfo, 0);
-        for (String field:wizardInfo.getFields().keySet()){
-            //fill in the rest of the calculated fields.
-            if (SPREADSHEETCALCULATION.equals(wizardInfo.getFields().get(field).getMatchedFieldName())){
-                savePreprocessor(loggedInUser);
-                wizardInfo.templateParameters.put("PREPROCESSOR", loggedInUser.getDatabase().getName() + " " + wizardInfo.getTemplateName() + " Preprocessor.xlsx");
-                calcSpreadsheetData(loggedInUser,wizardInfo.getLineCount());
+        wizardInfo.getExtraTemplateFields().put(wizardInfo.getTemplateName(),wizardInfo.getFields());
+        Set<String>templatesUsed = new HashSet<>();
+        boolean hasPreprocessor = false;
+        for (String template:wizardInfo.getExtraTemplateFields().keySet()) {
+            for (String field : wizardInfo.getFields().keySet()) {
+                WizardField wizardField = wizardInfo.getFields().get(field);
+                if (wizardField.getMatchedFieldName()!=null){
+                    templatesUsed.add(template);
+                }
+                //fill in the rest of the calculated fields.
+                if (templatesUsed.size() > 1 || SPREADSHEETCALCULATION.equals(wizardField.getMatchedFieldName())) {
+                    savePreprocessor(loggedInUser);
+                    wizardInfo.templateParameters.put("PREPROCESSOR", loggedInUser.getDatabase().getName() + " " + wizardInfo.getTemplateName() + " Preprocessor.xlsx");
+                    calcSpreadsheetData(loggedInUser, wizardInfo.getLineCount());
+                    hasPreprocessor = true;
+                    break;
+                }
+            }
+            if (hasPreprocessor){
                 break;
             }
         }
@@ -936,19 +949,43 @@ public class ImportWizard {
         }
         io.keikai.api.model.Sheet sheet = book.getSheetAt(0);
         WizardInfo wizardInfo = loggedInUser.getWizardInfo();
-        if (wizardInfo.getMatchFields()==null){
+         if (wizardInfo.getMatchFields()==null){
             return;
         }
-        SName inputRegion = BookUtils.getNameByName("az_Input", sheet);
+        wizardInfo.getExtraTemplateFields().put(wizardInfo.getTemplateName(),wizardInfo.getFields());
+         SName inputRegion = BookUtils.getNameByName("az_Input", sheet);
         int inputRowNo = inputRegion.getRefersToCellRegion().getRow();
         Map<String,SName> outputRegions = new HashMap<>();
         Map<String, Integer> outputRowNos = new HashMap<>();
-        for (String template:importTemplateData.getSheets().keySet()){
+        int maxOutputRow = 0;
+        for (String template:wizardInfo.getExtraTemplateFields().keySet()){
             SName outputRegion = BookUtils.getNameByName("az_Output" + template, sheet);
             if (outputRegion!=null){
                 int outputRowNo = outputRegion.getRefersToCellRegion().getRow();
                 outputRegions.put(template, outputRegion);
                 outputRowNos.put(template,outputRowNo);
+                if (outputRowNo > maxOutputRow){
+                    maxOutputRow = outputRowNo;
+                }
+            }else{
+                outputRowNos.put(template,0);
+            }
+        }
+        for (String template:wizardInfo.getExtraTemplateFields().keySet()){
+            if (outputRowNos.get(template)==0){
+                SName outputName = BookUtils.getNameByName("az_Output",book.getSheetAt(0));
+                CellRegion outputRegion = outputName.getRefersToCellRegion();
+                Range insertRange = Ranges.range(sheet, maxOutputRow+2, 0, maxOutputRow + 5, 0).toRowRange(); // insert at the 3rd row - should be rows to add - 1 as it starts at one without adding anything
+                CellOperationUtil.insertRow(insertRange);
+                insertRange.clearAll();
+                maxOutputRow +=4;
+                Ranges.range(book.getSheetAt(0), maxOutputRow, 0, maxOutputRow + 1, 0).toRowRange().createName("az_Output" + template);
+                SName newName = BookUtils.getNameByName("az_Output" + template, book.getSheetAt(0));
+                Range copySource = Ranges.range(sheet, outputRegion.getRow(), 0, outputRegion.getRow() + 1, 0).toRowRange();
+                Range targetRange = Ranges.range(sheet, maxOutputRow, 0, maxOutputRow + 1, 0).toRowRange();
+                CellOperationUtil.pasteSpecial(copySource, targetRange, Range.PasteType.FORMATS, Range.PasteOperation.NONE,false, false);
+                outputRowNos.put(template,maxOutputRow);
+                outputRegions.put(template,newName);
             }
         }
         int sourceCol = 0;
@@ -959,17 +996,29 @@ public class ImportWizard {
             sourceCol++;
 
         }
-        int targetCol = 0;
-        for (String template:outputRegions.keySet()) {
+         for (String template:outputRegions.keySet()) {
+             int targetCol = 0;
+             Map<String,WizardField>wizardFields = wizardInfo.getExtraTemplateFields().get(template);
             int outputRowNo = outputRowNos.get(template);
-            for (String field : wizardInfo.getExtraTemplateFields().get(template).keySet()) {
-                WizardField wizardField = wizardInfo.getFields().get(field);
+            ImportUtils.setKeikaiCell(sheet,outputRowNo - 1,0, "Output to " + template);
+            for (String field : wizardFields.keySet()) {
+                WizardField wizardField = wizardFields.get(field);
                 ImportUtils.setKeikaiCell(sheet, outputRowNo, targetCol, wizardField.getImportedName());
-                String formula = null;
+
+                SCell targetCell = sheet.getInternalSheet().getCell(outputRowNo + 1, targetCol);
+                if (targetCell!=null && targetCell.getType()==SCell.CellType.FORMULA){
+                    //clear old auto-formulae
+                    for(sourceCol = 0;sourceCol <wizardInfo.getMatchFields().size(); sourceCol++){
+                        if (targetCell.getFormulaValue().equals(autoFormula(inputRowNo, sourceCol))){
+                            targetCell.setValue(null);
+                            break;
+                        };
+                    }
+                }
 
                 if (wizardField.getMatchedFieldName() == null) {
-                    if (BookUtils.getValueAsString(sheet.getInternalSheet().getCell(outputRowNo + 1, targetCol)).length() > 0
-                            || sheet.getInternalSheet().getCell(outputRowNo + 1, targetCol).getType().equals(SCell.CellType.FORMULA)) {
+                      if (BookUtils.getValueAsString(targetCell).length() > 0
+                            || targetCell.getType().equals(SCell.CellType.FORMULA)) {
 
                         wizardField.setMatchedFieldName(SPREADSHEETCALCULATION);
                     }
@@ -977,21 +1026,19 @@ public class ImportWizard {
 
                 if (wizardField.getMatchedFieldName() != null && !SPREADSHEETCALCULATION.equals(wizardField.getMatchedFieldName())) {
                     sourceCol = ImportUtils.findColNo(wizardInfo.getMatchFields(), wizardField.getMatchedFieldName());
-                    if (sourceCol == -1) {
-                        throw new Exception("cannot find " + wizardField.getMatchedFieldName());
-                    }
-                    formula = "if(not(isblank(" + ImportUtils.cellAsString(inputRowNo + 1, sourceCol) + "))," + ImportUtils.cellAsString(inputRowNo + 1, sourceCol) + ",\"\")";
-                    SCell targetCell = sheet.getInternalSheet().getCell(outputRowNo + 1, targetCol);
-                    targetCell.setFormulaValue(formula);
-                } else {
-                    if (!SPREADSHEETCALCULATION.equals(wizardField.getMatchedFieldName())) {
-                        ImportUtils.setKeikaiCell(sheet, outputRowNo + 1, targetCol, formula);
+                    if (sourceCol >=0) {
+                        targetCell.setFormulaValue(autoFormula(inputRowNo,sourceCol));
                     }
                 }
                 targetCol++;
 
             }
         }
+    }
+
+    private static String autoFormula(int sourceRow, int sourceCol){
+        return "if(not(isblank(" + ImportUtils.cellAsString(sourceRow + 1, sourceCol) + "))," + ImportUtils.cellAsString(sourceRow + 1, sourceCol) + ",\"\")";
+
     }
 
     private static List<ImportWizardField> createMatchList(WizardInfo wizardInfo){
@@ -1383,7 +1430,7 @@ public class ImportWizard {
             }else{
                 wizardFields = createWizardFieldList(loggedInUser, nextStage, chosenField, chosenValue);
             }
-            Map<String, List<ImportWizardField>> fields = new HashMap<>();
+            Map<String, List<ImportWizardField>> fields = new LinkedHashMap<>();
             fields.put("field", wizardFields);
             String fieldInfo = jacksonMapper.writeValueAsString(fields);
             toReturn += fieldInfo;
@@ -1927,13 +1974,13 @@ public class ImportWizard {
         if (templateData == null) {
             templateData = new ArrayList<>();
         }
-        wizardInfo.setFields(new HashMap<>());
+        wizardInfo.setFields(new LinkedHashMap<>());
         int rows = 0;
         while (rows < templateData.size() && templateData.get(rows).size() > 0) {
             rows++;
         }
         if (rows < 2) return;
-        Map<String, WizardField> nameMap = new HashMap<>();
+        Map<String, WizardField> nameMap = new LinkedHashMap<>();
         Set<String> attributes = new HashSet<>();
         for (int col = 0; col < templateData.get(0).size(); col++) {
             //the top line is a comma separated list of options for that field - the first name is the original name
