@@ -610,6 +610,9 @@ public class BatchImporter implements Callable<Void> {
                 ImportCellWithHeading compCell;
                 expression = expression.trim();
                 int colIndex = compositeIndexResolver.getColumnIndexForHeading(expression);
+                if (colIndex==-1){
+                    colIndex = compositeIndexResolver.getColumnIndexForHeading("." + expression);//test for '.<attribute>'
+                }
                 if (colIndex != -1) {
                     compCell = cells.get(colIndex);
                 } else {
