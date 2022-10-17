@@ -158,8 +158,10 @@ public class DSImportService {
                     .withLineSeparator("\n");
             if (delimiter == '\t') {
                 schema = schema.withoutQuoteChar();
+            }else if(delimiter == ','){
+                schema = schema.withQuoteChar('"');
             }
-        /*
+         /*
         note : for encoding is it worth trying
         https://tika.apache.org/1.2/api/org/apache/tika/detect/AutoDetectReader.html
          */
@@ -412,7 +414,11 @@ public class DSImportService {
             // these will want the "pre . replaced with ; attribute" reference to a heading also I think, want to be able to say shop.address
             int index = 0;
             for (String heading : headings) {
+                if (heading.contains(";attribute ")){
+                    heading = "." + heading.substring(heading.indexOf(";attribute ") + 11);//so the heading for lookup becomes '.<attribute>'
+                }
                 String headingNameForLookUp = heading.contains(";") ? heading.substring(0, heading.indexOf(";")).trim() : heading.trim();
+
                 azquoHeadingCompositeLookup.put(headingNameForLookUp.toUpperCase(), index);
                 String assumption = uploadedFile.getParameter(headingNameForLookUp);
                 if (assumption != null) {
@@ -451,21 +457,33 @@ public class DSImportService {
                     StringBuilder replacedHeading = new StringBuilder();
                     boolean hasAttribute = false;
                     int charPos = 0;
+                    int firstLineEnd = heading.indexOf(";");
+                    if (firstLineEnd < 0){
+                        firstLineEnd = heading.length();
+                    }
                     for (char c : heading.toCharArray()) {
                         charPos++;
                         if (replacedHeading.toString().toLowerCase().endsWith("composition")) {
                             inComposition = true;
                         }
+
                         if (inComposition && !inStringLiteral && c == ';') {
                             inComposition = false;
                         }
                         if (c == '`') {
                             inStringLiteral = !inStringLiteral;
                         }
-                        if (charPos < heading.length() && c == '.' && !inStringLiteral && !inComposition && !hasAttribute) {
-                            replacedHeading.append(";attribute ");
-                            //in case attributes contain '.'
-                            hasAttribute = true;
+                        //LINE BELOW MODIFIED TO SUBSTITUTE ONLY ON FIRST CLAUSE, and only where there is another heading with the same prefix - Problem where heading name contains '.'
+                        if (charPos < firstLineEnd + 4 && c == '.' && !inStringLiteral && !inComposition && !hasAttribute) {
+                            for (String heading2:headings) {
+                                //allow for the possibility that the dot is just after a semi-colon
+
+                                if (!heading2.equals(heading) && heading2.toLowerCase(Locale.ROOT).startsWith(heading.toLowerCase(Locale.ROOT).substring(0, charPos-1).replace(";", "").trim())) {
+                                    replacedHeading.append(";attribute ");
+                                    hasAttribute = true;
+                                    break;
+                                }
+                            }
                         } else {
                             replacedHeading.append(c);
                         }
@@ -559,6 +577,8 @@ public class DSImportService {
                 .withLineSeparator("\n");
         if (delimiter == '\t') {
             schema = schema.withoutQuoteChar();
+        }else if(delimiter == ','){
+            schema = schema.withQuoteChar('"');
         }
         MappingIterator<String[]> lineIterator;
         if (uploadedFile.getParameter(FILEENCODING) != null) {
@@ -611,7 +631,7 @@ public class DSImportService {
     }
 
     private static String standardise(String value) {
-         return value.replace("\\\\n", " ").replace("\n", " ").replace(" ", "").replace("_", " ").toLowerCase(Locale.ROOT);
+         return value.replace("\\\\n", "").replace("\n", "").replace("\r", "").replace(" ", "").replace("_", "").toLowerCase(Locale.ROOT);
     }
 
 
@@ -763,7 +783,13 @@ public class DSImportService {
         // new format. Line number, the line itself and then a list of errors
         final Map<Integer, List<String>> linesRejected = new ConcurrentHashMap<>(); // track line numbers rejected
         final AtomicInteger noLinesRejected = new AtomicInteger(); // track no lines rejected
-        for (int lineNo = 0; lineNo < data.get(fieldList.get(0)).size(); lineNo++) {
+        int dataLines = 0;
+        for (int i=0;i<data.size();i++){
+            if (data.get(fieldList.get(i))!=null){
+                dataLines = data.get(fieldList.get(i)).size();
+            }
+        }
+        for (int lineNo = 0; lineNo < dataLines; lineNo++) {
             List<ImportCellWithHeading> importCellsWithHeading = new ArrayList<>();
             for (String field : modifiedHeadings.keySet()) {
                 ImmutableImportHeading heading = fieldLinks.get(field);
