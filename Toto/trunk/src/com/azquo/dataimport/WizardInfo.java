@@ -24,7 +24,7 @@ public class WizardInfo {
         this.importFile = importFile;
         this.importFileData = importFileData;
         this.fields = new LinkedHashMap<>();
-        this.extraTemplateFields = new HashMap<>();
+        this.extraTemplateFields = new LinkedHashMap<>();
         this.matchFields = null;
         this.lastDataField = null;
         this.lineCount = 0;
