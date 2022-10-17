@@ -10,6 +10,31 @@
             </div>
             <div class="az-section-body">
                 <div class="az-table">
+                    <form action="/api/ManageDatabases" method="post">
+                        <input type="hidden" name="newdesign" value="databases"/>
+
+
+
+                        <nav>
+                            Database Name
+                            <input type="text"
+                                   size="40"
+                                   name="createDatabase">
+                            &nbsp;
+
+                            <c:if test="${serverList == true}">
+                                Server
+                                <select name="databaseServerId">
+                                                <c:forEach items="${databaseServers}" var="databaseServer">
+                                                    <option value="${databaseServer.id}">${databaseServer.name}</option>
+                                                </c:forEach>
+                                </select>
+                            </c:if>
+
+                            &nbsp;<button type="submit">Create Database</button>
+                        </nav>
+                    </form>
+
                     <table>
                         <thead>
                         <tr>
