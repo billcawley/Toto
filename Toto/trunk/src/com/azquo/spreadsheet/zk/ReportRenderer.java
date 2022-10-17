@@ -87,7 +87,6 @@ public class ReportRenderer {
         }
         int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
         loggedInUser.setOnlineReport(OnlineReportDAO.findById(reportId));
-        loadExternalData(book,loggedInUser);
         Map<Sheet, String> sheetsToRename = new HashMap<>(); // the repeat sheet can require renaming the first "template" sheet but this seems to trip up ZK so do it at the end after all the expanding etc
         //String context = "";
         // why a sheet loop at the outside, why not just run all the names? Need to have a think . . .
@@ -256,7 +255,7 @@ public class ReportRenderer {
                     SName optionsRegion = BookUtils.getNameByName(StringLiterals.AZOPTIONS + region, sheet);
                     String optionsSource = "";
                     if (optionsRegion != null) {
-                        SCell optionsCell = BookUtils.getSnameCell(optionsRegion);
+                            SCell optionsCell = BookUtils.getSnameCell(optionsRegion);
                         optionsSource = optionsCell.getStringValue();
                     }
                     // better way to combine user region options from the sheet and report database
@@ -374,6 +373,7 @@ public class ReportRenderer {
                     }
                 }
             }
+            loadExternalData(book,loggedInUser);
             // after loading deal with lock stuff
             final List<CellsAndHeadingsForDisplay> sentForReport = loggedInUser.getSentForReport(reportId);
             StringBuilder lockWarnings = new StringBuilder();
@@ -1029,6 +1029,17 @@ public class ReportRenderer {
                     }
                 }
                 if (sheet != null) {
+                    if (externalDataRequest.getReadSQL().startsWith("=")){
+                        String sqlRange = externalDataRequest.getReadSQL().substring(1);
+                        SName sName = BookUtils.getNameByName(sqlRange, sheet);
+                        if (sName != null) {
+                            SCell sqlCell = BookUtils.getSnameCell(sName);
+                            String sql = sqlCell.getStringValue();
+                            if (sql!=null){
+                                externalDataRequest.setReadSQL(sql);
+                            }
+                        }
+                    }
                     getExternalData(loggedInUser, externalDataRequest, sheet, cellRegion);
                     book.getInternalBook().setAttribute(OnlineController.EXTERNALDATA, "true");
                 }
