@@ -45,7 +45,7 @@ class ZKComposerUtils {
             final Book newBook = Importers.getImporter().imports(new File((String) book.getInternalBook().getAttribute(OnlineController.BOOK_PATH)), "Report name");
             for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes over
                 // don't move zss internal stuff, it might interfere
-                if (!key.toLowerCase().contains("zss")){
+                if (!key.toLowerCase().contains("keikai")){
                     newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
                 }
             }
