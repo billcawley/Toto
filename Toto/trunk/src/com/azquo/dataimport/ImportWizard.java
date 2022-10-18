@@ -750,7 +750,8 @@ public class ImportWizard {
         // ok, run the check
         boolean firstLine = true;
         String[] fields = null;
-        while (lineIterator.hasNext()) {
+        int lineCount = 0;
+        while (lineIterator.hasNext() && lineCount++ < 10000) {
             if (firstLine) {
                 fields = lineIterator.next();
                 for (int count = 0; count < fields.length; count++)
