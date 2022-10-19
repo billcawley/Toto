@@ -560,94 +560,103 @@
                                         method: "POST",
                                         action: "/api/ManageDatabases",
                                         enctype: "multipart/form-data",
-                                        id : "uploadForm",
+                                        id: "uploadForm",
                                         children: (0, t.jsx)("div", {
                                             className: p()(["az-file-upload-control", {loading: i, logging: o}]),
-                                                children: (0, t.jsxs)("div", {
-                                                    children: [
-                                                        (0, t.jsx)("div", {
-                                                            className: "az-file-upload-database",
-                                                            children: (0, t.jsx)(g, {
-                                                                items: (0, z.Y)(b.UA, "name"),
-                                                                label: "Database",
-                                                                name: "database",
-                                                                onChange: N,
-                                                            }),
-                                                        }),
-                                                        (0, t.jsxs)("div", {
-                                                            className: "az-form-seperator",
-                                                            children: [
-                                                                (0, t.jsx)("div", {children: (0, t.jsx)("div", {})}),
-                                                                (0, t.jsx)("div", {
-                                                                    children: (0, t.jsx)("span", {children: "and"}),
-                                                                }),
-                                                            ],
-                                                        }),
-                                                        (0, t.jsxs)("div", {
-                                                            className: "az-file-upload-file",
-                                                            children: [
-                                                                (0, t.jsx)("div", {
-                                                                    children: [(0, t.jsxs)("label", {
-                                                                        htmlFor: "az-file-upload",
-                                                                        children: [
-                                                                            (0, t.jsx)("span", {
-                                                                                id : "selector",
-                                                                                children: "Select file",
-                                                                            }),
-                                                                            (0, t.jsx)("input", {
-                                                                                id: "az-file-upload",
-                                                                                name: "uploadFile",
-                                                                                type: "file",
-                                                                                onChange: function (e) {
-                                                                                    document.getElementById("selector").innerHTML = e.target.value.replace(/^.*[\\\/]/, "")
-                                                                                },
-                                                                            }),
-                                                                        ],
+                                            children: (0, t.jsxs)("div", {
+                                                children: [
+                                                    (0, t.jsx)("div", {
+                                                        children: "Databases"
 
-                                                                    }),
+                                                    }),
+                                                    (0, t.jsx)("select", {
+                                                        //defaultValue: n.child,
+                                                        name: "database",
+                                                        children: [
+                                                            b.UA.map(function (e) {
+                                                                return (0,
+                                                                    t.jsx)("option", {
+                                                                    value: e.name,
+                                                                    children: e.name
+                                                                }, e.name);
+                                                            }),
+                                                        ],
+                                                    }),
+                                                    (0, t.jsxs)("div", {
+                                                        className: "az-form-seperator",
+                                                        children: [
+                                                            (0, t.jsx)("div", {children: (0, t.jsx)("div", {})}),
+                                                            (0, t.jsx)("div", {
+                                                                children: (0, t.jsx)("span", {children: "and"}),
+                                                            }),
+                                                        ],
+                                                    }),
+                                                    (0, t.jsxs)("div", {
+                                                        className: "az-file-upload-file",
+                                                        children: [
+                                                            (0, t.jsx)("div", {
+                                                                children: [(0, t.jsxs)("label", {
+                                                                    htmlFor: "az-file-upload",
+                                                                    children: [
                                                                         (0, t.jsx)("span", {
-                                                                            children: "      Setup File  ",
+                                                                            id: "selector",
+                                                                            children: "Select file",
                                                                         }),
                                                                         (0, t.jsx)("input", {
-                                                                            name: "setupFile",
-                                                                            type: "checkbox",
+                                                                            id: "az-file-upload",
+                                                                            name: "uploadFile",
+                                                                            type: "file",
+                                                                            onChange: function (e) {
+                                                                                document.getElementById("selector").innerHTML = e.target.value.replace(/^.*[\\\/]/, "")
+                                                                            },
+                                                                        }),
+                                                                    ],
+
+                                                                }),
+                                                                    (0, t.jsx)("span", {
+                                                                        children: "      Setup File  ",
+                                                                    }),
+                                                                    (0, t.jsx)("input", {
+                                                                        name: "setupFile",
+                                                                        type: "checkbox",
+                                                                    }),
+                                                                ]
+                                                            }),
+                                                            (0, t.jsx)("p", {
+                                                                children:
+                                                                    [(0, t.jsxs)("div", {
+                                                                            className: "az-section-buttons",
+                                                                            children: (0, t.jsx)("button", {
+                                                                                value: "something",
+                                                                                onClick: function (e) {
+                                                                                    L(document.getElementById("selector").innerHTML);
+                                                                                    //document.getElementById("databaseHidden").value = document.getElementById("headlessui-combobox-input-:rg:").value;
+                                                                                    //alert("database hidden value set to : " + document.getElementById("headlessui-combobox-input-:rg:").value);
+                                                                                    document.getElementById("uploadForm").submit()
+                                                                                },
+                                                                                children: "Upload",
+                                                                            }),
+
+                                                                        },
+                                                                    ),
+
+
+                                                                        /*(0, t.jsx)("input", {
+                                                                            id: "databaseHidden",
+                                                                            name: "database",
+                                                                            type: "hidden"
+                                                                        }),*/
+                                                                        (0, t.jsx)("input", {
+                                                                            name: "newdesign",
+                                                                            type: "hidden",
+                                                                            value: "true"
                                                                         }),
                                                                     ]
-                                                                }),
-                                                                (0, t.jsx)("p", {
-                                                                    children:
-                                                                        [(0, t.jsxs)("div", {
-                                                                                className: "az-section-buttons",
-                                                                                children: (0, t.jsx)("button", {
-                                                                                    value: "something",
-                                                                                    onClick: function (e) {
-                                                                                        L(document.getElementById("selector").innerHTML);
-                                                                                        document.getElementById("databaseHidden").value = document.getElementById("headlessui-combobox-input-:rg:").value;
-                                                                                        document.getElementById("uploadForm").submit()
-                                                                                    },
-                                                                                    children: "Upload",
-                                                                                }),
+                                                            })
 
-                                                                            },
-                                                                        ),
-
-
-                                                                            (0, t.jsx)("input", {
-                                                                                id: "databaseHidden",
-                                                                                name: "database",
-                                                                                type: "hidden"
-                                                                            }),
-                                                                            (0, t.jsx)("input", {
-                                                                                name: "newdesign",
-                                                                                type: "hidden",
-                                                                                value: "true"
-                                                                            }),
-                                                                        ]
-                                                                })
-
-                                                            ],
-                                                        }),
-                                                    ],
+                                                        ],
+                                                    }),
+                                                ],
                                             }),
                                         }),
                                     }),
@@ -820,7 +829,7 @@
                                     (0, t.jsx)(D.K, {onChange: v, view: x}),
                                 ],
                             }),
-                            importError ? (            (0, t.jsxs)("div", {
+                            importError ? ((0, t.jsxs)("div", {
                                     className: "az-alert az-alert-error",
                                     children: (0, t.jsxs)("div", {
                                         children: [
@@ -833,7 +842,7 @@
                                         ]
                                     })
                                 })
-                            ) : importWarning ? (            (0, t.jsxs)("div", {
+                            ) : importWarning ? ((0, t.jsxs)("div", {
                                     className: "az-alert az-alert-warning",
                                     children: (0, t.jsxs)("div", {
                                         children: [
