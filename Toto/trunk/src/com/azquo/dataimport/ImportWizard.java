@@ -724,6 +724,7 @@ public class ImportWizard {
 
 
     public static Map<String, WizardField> readCSVFile1(String path, String fileEncoding) throws IOException {
+        System.out.println("reading CSV file");
         Map<Integer, WizardField> columnMap;
         //adaptes from 'getLinesWithValuesInColumn from dsImportService
         Charset charset = StandardCharsets.UTF_8;
@@ -904,10 +905,16 @@ public class ImportWizard {
 
     private static void loadPreprocessor(LoggedInUser loggedInUser)throws Exception{
         ImportTemplate importTemplate = ImportTemplateDAO.findForNameAndBusinessId(loggedInUser.getDatabase().getName() + " " + loggedInUser.getWizardInfo().getTemplateName() + " Preprocessor.xlsx", loggedInUser.getBusiness().getId());
-        if (importTemplate==null){
-            importTemplate = ImportTemplateDAO.findForName("Default Preprocessor.xlsx");
+        Book book = null;
+        if (importTemplate==null) {
+                book = Books.createBook("Default preprocessor.xlsx");
+                book.getInternalBook().createSheet("Preprocessor");
+                newRange(book,"az_input",6);
+                newRange(book,"az_output",12);
+        }else {
+
+            book = Importers.getImporter().imports(new File(SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.importTemplatesDir + importTemplate.getFilenameForDisk()), "Report name");
         }
-        Book book = Importers.getImporter().imports(new File(SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.importTemplatesDir + importTemplate.getFilenameForDisk()), "Report name");
         loggedInUser.getWizardInfo().setPreprocessor(book);
 
         SName outputName = BookUtils.getNameByName("az_Output",book.getSheetAt(0));
@@ -938,6 +945,14 @@ public class ImportWizard {
         fileNames.add(preprocessorName);
         UploadedFile uploadedFile = new UploadedFile(file.getPath(),fileNames,false);
         ImportService.uploadImportTemplate(uploadedFile,loggedInUser, "uploaded automatically");
+
+    }
+
+    private static void newRange(Book book, String rangeName, int row){
+        Range newRange = Ranges.range(book.getSheetAt(0), row, 0, row + 1,0).toRowRange(); // insert at the 3rd row - should be rows to add - 1 as it starts at one without adding anything
+        newRange.createName(rangeName);
+        io.keikai.api.model.CellStyle cellStyle = newRange.getCellStyle();
+        CellOperationUtil.applyBackColor(newRange,"#cccccc");
 
     }
 
@@ -1774,6 +1789,16 @@ public class ImportWizard {
 
     private static void createBasicReport(LoggedInUser loggedInUser)throws  Exception{
         WizardInfo wizardInfo= loggedInUser.getWizardInfo();
+        boolean hasData = false;
+        for (String field:wizardInfo.getFields().keySet()){
+            if (wizardInfo.getFields().get(field).getParent()!=null){
+                hasData = true;
+                break;
+            }
+        }
+        if (!hasData){
+            return;
+        }
         ImportTemplate basicReportTemplate = ImportTemplateDAO.findForName("Report Import Template.xlsx");
         if (basicReportTemplate==null){
             throw new Exception("No Basic Report Template loaded");
