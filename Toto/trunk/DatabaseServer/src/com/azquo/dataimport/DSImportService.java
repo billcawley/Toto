@@ -156,12 +156,16 @@ public class DSImportService {
             CsvSchema schema = csvMapper.schemaFor(String[].class)
                     .withColumnSeparator(delimiter)
                     .withLineSeparator("\n");
+            /* IT SEEMS THAT SQL EXPORTERS OFTEN AUTOMATICALLY ADD QUOTES EVEN WHEN THE DELIMITER IS TAB
             if (delimiter == '\t') {
                 schema = schema.withoutQuoteChar();
             }else if(delimiter == ','){
                 schema = schema.withQuoteChar('"');
             }
-         /*
+
+             */
+            schema = schema.withQuoteChar('"');
+           /*
         note : for encoding is it worth trying
         https://tika.apache.org/1.2/api/org/apache/tika/detect/AutoDetectReader.html
          */
@@ -575,11 +579,15 @@ public class DSImportService {
         CsvSchema schema = csvMapper.schemaFor(String[].class)
                 .withColumnSeparator(delimiter)
                 .withLineSeparator("\n");
+        /*
         if (delimiter == '\t') {
             schema = schema.withoutQuoteChar();
         }else if(delimiter == ','){
             schema = schema.withQuoteChar('"');
         }
+
+         */
+        schema = schema.withQuoteChar('"');
         MappingIterator<String[]> lineIterator;
         if (uploadedFile.getParameter(FILEENCODING) != null) {
             // so override file encoding.
