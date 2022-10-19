@@ -308,6 +308,7 @@
                         </div>
                     </div>
                     <div class="az-import-wizard-pagination" style="position:fixed;bottom:0px">
+                        <div id="error" class="az-alert az-alert-info">${error}</div>
                         <div>
                             <button class="az-wizard-button-back" onClick="loadLastStage()">Back
                             </button
@@ -424,6 +425,7 @@ lockresult: string
 
 
     function loadNextStage() {
+        document.getElementById("error").innerHTML = "";
         if (stage == 0) {//
             changed();
             showSpreadsheet();
@@ -434,6 +436,7 @@ lockresult: string
     }
 
     function loadLastStage() {
+        document.getElementById("error").innerHTML = "";
         nextStage = stage - 1;
         changed(null, null);
     }
@@ -535,9 +538,8 @@ lockresult: string
         let data = await azquoSend(params);
         json = await data.json();
         if(json.error > ""){
-            var errorDiv = document.getElementById("suggestions");
+            var errorDiv = document.getElementById("error");
             errorDiv.innerText = json.error;
-            document.getElementById("suggestionDiv").style.display = "block";
             return;
         }
         try{
