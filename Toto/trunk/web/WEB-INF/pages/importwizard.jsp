@@ -310,19 +310,12 @@
                     <div class="az-import-wizard-pagination" style="position:fixed;bottom:0px">
                         <div id="error" class="az-alert az-alert-info">${error}</div>
                         <div>
-                            <button class="az-wizard-button-back" onClick="loadLastStage()">Back
-                            </button
-                            >
-                            <button class="az-wizard-button-next" id="nextButton" onClick="loadNextStage()">Next
-                            </button>
-                            <button id="showdataButton" class="az-wizard-button-back"
-                                    onClick="showData()">Show Sample Output
-                            </button>
+                            <button class="az-wizard-button-back" onClick="loadLastStage()">Back </button>
+                            <button class="az-wizard-button-next" id="nextButton" onClick="loadNextStage()">Next </button>
+                            <button id="showdataButton" class="az-wizard-button-back"  onClick="showData()">Show Sample Output </button>
                             <form method="post" id="import" action="/api/ImportWizard">
                                 <input type="hidden" name="submit" value="import"/>
-                                <button style="display:none" id="importnow" class="az-wizard-button-next"
-                                        onClick="submit()">Import now!
-                                </button>
+                                <button style="display:none" id="importnow" class="az-wizard-button-next"  onClick="submit()">Import now!</button>
                             </form>
                         </div>
                     </div>
