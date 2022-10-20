@@ -215,6 +215,9 @@ public class ImportWizard {
                     if (elements.length < 3) {
                         wizardField.setType(null);
                     } else {
+                        if(elements[2].equals(KEYFIELDID)|| elements[2].equals(KEYFIELDNAME)){
+                            clearField(wizardField);
+                        }
                         wizardField.setType(elements[2]);
                     }
                 }
@@ -376,6 +379,9 @@ public class ImportWizard {
 
         if (wizardField.getChild() != null) {
             toReturn.append(";parent of " + wizardInfo.getFields().get(wizardField.getChild()).getName());
+            if (ImportUtils.areNumbers(wizardField.getValuesFound())){
+                toReturn.append(";language " +wizardField.getName() + "id");
+            }
         }
         if (wizardField.getAnchor() != null && !KEYFIELDID.equals(wizardField.getType())) {
             toReturn.append(";attribute of " + wizardInfo.getFields().get(wizardField.getAnchor()).getName());
@@ -1862,6 +1868,7 @@ public class ImportWizard {
         WizardInfo wizardInfo = loggedInUser.getWizardInfo();
         for (String field : wizardInfo.getFields().keySet()) {
             WizardField wizardField = wizardInfo.getFields().get(field);
+            setInterpretation(wizardInfo,wizardField);
             String def = wizardField.getImportedName() + ";" + wizardField.getName();
 
             if (wizardField.getSelect()) {
@@ -1925,7 +1932,7 @@ public class ImportWizard {
                     }
                 }
                 if (clauses[firstClause].equals(KEYFIELDID) || ImportUtils.isIdField(wizardInfo, field)) {
-                    modifiedHeading.append(";language " + field + ";child of " + fieldName);
+                    modifiedHeading.append(";language " + fieldName + "id;child of " + fieldName);
                     if (KEYFIELDID.equals(wizardField.getType())){
                         CommonReportUtils.getDropdownListForQuery(loggedInUser,"edit:create Imports->" + loggedInUser.getWizardInfo().getTemplateName()+ " Imports->Import from " + wizardInfo.getImportFile().getFileName());
 
@@ -1935,6 +1942,12 @@ public class ImportWizard {
                 String dataChild = getClause("parent of", clauses);
                 if (dataChild != null) {
                     modifiedHeading.append(";parent of " + dataChild);
+                    if (ImportUtils.areNumbers(wizardField.getValuesFound())){
+                        String langClause = ";language " + fieldName + "id";
+                        if (!modifiedHeading.toString().contains(langClause)){
+                            modifiedHeading.append(langClause);
+                        }
+                    }
                     String specialInstructions = wizardField.getSpecialInstructions().toLowerCase(Locale.ROOT);
                     if (specialInstructions==null || !(specialInstructions.startsWith("=") || specialInstructions.contains(";=")) ||specialInstructions.contains("composition")){
                         modifiedHeading.append(";default No " + fieldName);
@@ -1970,7 +1983,9 @@ public class ImportWizard {
                             modifiedHeading.append(";az=" + specialClause.substring(1));
 
                         }else{
-                            modifiedHeading.append(";" + specialClause);
+                            if (!modifiedHeading.toString().contains(specialClause)){
+                                modifiedHeading.append(";" + specialClause);
+                            }
                         }
                     }
                 }
@@ -2059,19 +2074,33 @@ public class ImportWizard {
                     if (row.get(col).contains(KEYFIELDID)){
                         String field = row.get(col - 2);
                         if (field !=null && wizardInfo.getFields().get(field) != null){
-                            wizardInfo.getFields().get(field).setType(KEYFIELDID);
-                        }
+                            WizardField wizardField = wizardInfo.getFields().get(field);
+                            clearField(wizardField);
+                            wizardField.setType(KEYFIELDID);
+                         }
                     }
                     if (row.get(col).contains(KEYFIELDNAME)){
                         String field = row.get(col - 2);
                         if (field !=null && wizardInfo.getFields().get(field) != null){
-                            wizardInfo.getFields().get(field).setType(KEYFIELDNAME);
+                            WizardField wizardField = wizardInfo.getFields().get(field);
+                            clearField(wizardField);
+                            wizardField.setType(KEYFIELDNAME);
+
                         }
                     }
                 }
             }
 
         }
+    }
+
+    private static  void clearField(WizardField wizardField){
+        wizardField.setType(null);
+        wizardField.setChild(null);
+        wizardField.setParent(null);
+        wizardField.setPeers(null);
+        wizardField.setAnchor(null);
+
     }
 
     private static void interpretClauses(LoggedInUser loggedInUser, String field) {
@@ -2119,7 +2148,7 @@ public class ImportWizard {
                     }
                     String anchor = ImportUtils.findFieldFromName(wizardInfo, wizardField.getAnchor());
                     wizardField.setAnchor(anchor);
-                    if (clauseData.equalsIgnoreCase("name")) {
+                    if (clauseData.equalsIgnoreCase("name")&& wizardField.getAnchor()!=null) {
                         clauseData = wizardInfo.getFields().get(wizardField.getAnchor()).getName() + " Name";
                         if (KEYFIELDID.equals(wizardInfo.getFields().get(anchor).getType())) {
                             wizardField.setType(KEYFIELDNAME);
@@ -2131,7 +2160,7 @@ public class ImportWizard {
                     addSpecialInstructions(wizardField, clause.substring(2));
                 } else if (clause.startsWith(StringLiterals.DATATYPE)) {
                     wizardField.setType(clauseData);
-                } else if (clause.startsWith(StringLiterals.LANGUAGE) && clauseData.startsWith(field)) {
+                } else if (clause.startsWith(StringLiterals.LANGUAGE) && clauseData.startsWith(wizardField.getName())) {
                     //ignore
 
                 } else if (clause.startsWith(StringLiterals.CHILDOF)) {
