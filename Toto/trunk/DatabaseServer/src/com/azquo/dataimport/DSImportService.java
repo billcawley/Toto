@@ -156,7 +156,7 @@ public class DSImportService {
             CsvSchema schema = csvMapper.schemaFor(String[].class)
                     .withColumnSeparator(delimiter)
                     .withLineSeparator("\n");
-            if (uploadedFile.getTemplateParameter("SCHEMA").equals("withquotes")){
+            if ("withquotes".equals(uploadedFile.getTemplateParameter("SCHEMA"))){
                 schema = schema.withQuoteChar('"');
             }else{
                 if (delimiter == '\t') {
