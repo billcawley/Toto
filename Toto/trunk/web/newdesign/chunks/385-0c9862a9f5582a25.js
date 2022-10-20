@@ -572,6 +572,7 @@
                                                     (0, t.jsx)("select", {
                                                         //defaultValue: n.child,
                                                         name: "database",
+                                                        style : {width : "100%"},
                                                         children: [
                                                             b.UA.map(function (e) {
                                                                 return (0,

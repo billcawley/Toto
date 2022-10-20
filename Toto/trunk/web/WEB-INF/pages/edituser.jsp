@@ -8,14 +8,14 @@
             <div class="az-section-heading">
                 <h3>Users</h3>
             </div>
-            <div class="az-section-body">
+            <div class="az-table">
                 <div>${error}</div>
                 <form action="/api/ManageUsers" method="post">
                     <input type="hidden" name="editId" value="${id}"/>
                     <input type="hidden" name="newdesign" value="true"/>
                     <!-- no business id -->
 
-                    <table class="az-table">
+                    <table>
                         <tbody>
                         <tr>
                             <td>
@@ -85,8 +85,13 @@
                             <td><input name="team" id="team" type="text" value="${team}"></td>
                         </tr>
                     </table>
-                    <button type="submit" name="submit" value="save" class="button is-small">Save
-                    </button>
+                    <nav>
+                        <div>
+                            <button type="submit" name="submit" value="save" class="button is-small">Save
+                            </button>
+                        </div>
+                        <div></div>
+                    </nav>
                 </form>
             </div>
         </div>

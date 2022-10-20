@@ -123,10 +123,18 @@ public class ManageExternalDatabaseConnectionsController {
                     }
                 }
                 AdminService.setBanner(model, loggedInUser);
+                if (request.getSession().getAttribute("newdesign") != null){
+                    return "editexternaldatabaseconnectionnew";
+                }
                 return "editexternaldatabaseconnection";
             }
             model.put("connections", AdminService.getExternalDatabaseConnectionListForBusinessWithBasicSecurity(loggedInUser));
             AdminService.setBanner(model, loggedInUser);
+
+            if (request.getSession().getAttribute("newdesign") != null){
+                return "manageexternaldatabaseconnectionsnew";
+            }
+
             return "manageexternaldatabaseconnections";
         }
     }
