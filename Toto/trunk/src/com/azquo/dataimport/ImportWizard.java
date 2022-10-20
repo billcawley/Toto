@@ -2252,11 +2252,12 @@ public class ImportWizard {
         }
         int rowNo = 8;
         wizardInfo.getTemplateParameters().put(ImportService.POSTPROCESSOR, "do " + wizardInfo.getTemplateName() + " Import");
+        wizardInfo.getTemplateParameters().put("schema","withquotes");
         ImportService.setCellValue(sheet, rowNo++, 0, "PARAMETERS");
         for (String templateParam:wizardInfo.getTemplateParameters().keySet()){
             ImportService.setCellValue(sheet, rowNo, 0, templateParam);
             ImportService.setCellValue(sheet,rowNo++,1, wizardInfo.getTemplateParameters().get(templateParam));
-        }
+          }
         int importTemplateId = loggedInUser.getDatabase().getImportTemplateId();
         ImportTemplate importTemplate = ImportTemplateDAO.findById(importTemplateId);
         String filePath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.importTemplatesDir + importTemplate.getFilenameForDisk();
