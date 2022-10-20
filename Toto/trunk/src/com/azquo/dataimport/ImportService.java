@@ -1156,11 +1156,70 @@ public final class ImportService {
             ImportTemplateData importTemplateData = getImportTemplateForUploadedFile(loggedInUser, uploadedFile, templateCache);
             if (importTemplateData != null) {
                 templateName = findRelevantTemplate(loggedInUser,uploadedFile, importTemplateData, templateName);
-                Map<String,String>templateParameters = new HashMap<>();
-                if (uploadedFile.getParameters() == null || uploadedFile.getParameters().size()==0) {
+                Map<String,String>templateParameters = getTemplateParameters(importTemplateData.getSheets().get(templateName));
+                if (templateParameters.get(PREPROCESSOR)!=null){
+                    preProcessor = templateParameters.get(PREPROCESSOR);
+                }
 
-                    templateParameters = getTemplateParameters(importTemplateData.getSheets().get(templateName)); // things like pre processor, file encoding etc
-                }else{
+
+                if (importVersion == null) {
+                    //Oct 22 - this code should be superceded by the lines above - recognising a template through a regex on the file name, but left here for historic reasons.
+                    //the lines above will not only affect templates where the parameter 'regex'  is set.
+                    // so, if there is no import version set can we derive it from the name?
+                    List<List<String>> fivl = sheetInfo(importTemplateData, "Filename Import Version Lookup");
+                    if (fivl != null) {
+                        boolean scanning = false;
+                        rows:
+                        for (List<String> row : fivl) {
+                            String firstCellValue = null;
+                            for (String cellValue : row) {
+                                if (!cellValue.isEmpty()) {
+                                    if (importVersion != null) {
+                                        //pick up the preprocessor from the cell to the right of the import version
+                                        preProcessor = cellValue;
+                                        break rows;
+                                    }
+                                    if (firstCellValue == null) {
+                                        firstCellValue = cellValue;
+                                    } else {
+                                        if (scanning) {
+                                            //amended by WFC to look for particular sheets in a book (book!sheet) and 'contains' - using '*' as wildcard
+                                            if (firstCellValue.contains("!")) {
+                                                int bookEnd = firstCellValue.indexOf("!");
+                                                String bookName = firstCellValue.substring(0, bookEnd).replace("'", "");
+                                                String sheetName = firstCellValue.substring(bookEnd + 1).replace("'", "");
+                                                if (uploadedFile.getFileNames().size() == 2 && nameCompare(uploadedFile.getFileNames().get(1), sheetName) && nameCompare(uploadedFile.getFileNames().get(0), bookName)) {
+                                                    importVersion = cellValue;
+
+                                                }
+                                            } else {
+                                                for (int i = uploadedFile.getFileNames().size() - 1; i >= 0; i--) {
+                                                    if (nameCompare(uploadedFile.getFileNames().get(i), firstCellValue)) {
+                                                        importVersion = cellValue;
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    if (importVersion != null) {
+                                        break rows;
+                                    }
+                                }
+                            }
+                            // EFC hacked in, this code needs to be rewritten
+                            if (importVersion != null) {
+                                break;
+                            }
+                            if ("startswith".equalsIgnoreCase(firstCellValue)) {
+                                scanning = true;
+                            }
+                        }
+                    }
+                }
+                // ok let's check here for the old style of import template as used by Ben Jones
+                templateParameters = new HashMap<>(); // things like pre processor, file encoding etc
+                if (preProcessor != null) {
                     templateParameters.put(PREPROCESSOR, preProcessor);
                 }
 
