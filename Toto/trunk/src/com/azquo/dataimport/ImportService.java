@@ -74,7 +74,6 @@ import javax.ws.rs.core.MultivaluedMap;
 import javax.xml.parsers.*;
 import java.io.*;
 import java.nio.charset.Charset;
-import java.nio.charset.CharsetDecoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.text.SimpleDateFormat;
@@ -1155,16 +1154,10 @@ public final class ImportService {
         if (uploadedFile!=null && !templateName.toLowerCase().startsWith("sets") && !importTemplateUsedAlready) {
             ImportTemplateData importTemplateData = getImportTemplateForUploadedFile(loggedInUser, uploadedFile, templateCache);
             if (importTemplateData != null) {
-                templateName = findRelevantTemplate(loggedInUser,uploadedFile, importTemplateData, templateName);
-                Map<String,String>templateParameters = getTemplateParameters(importTemplateData.getSheets().get(templateName));
-                if (templateParameters.get(PREPROCESSOR)!=null){
-                    preProcessor = templateParameters.get(PREPROCESSOR);
-                }
+                importVersion = findRelevantTemplate(loggedInUser,uploadedFile, importTemplateData, importVersion);
 
 
                 if (importVersion == null) {
-                    //Oct 22 - this code should be superceded by the lines above - recognising a template through a regex on the file name, but left here for historic reasons.
-                    //the lines above will not only affect templates where the parameter 'regex'  is set.
                     // so, if there is no import version set can we derive it from the name?
                     List<List<String>> fivl = sheetInfo(importTemplateData, "Filename Import Version Lookup");
                     if (fivl != null) {
@@ -1218,7 +1211,7 @@ public final class ImportService {
                     }
                 }
                 // ok let's check here for the old style of import template as used by Ben Jones
-                templateParameters = new HashMap<>(); // things like pre processor, file encoding etc
+                Map<String, String> templateParameters = new HashMap<>(); // things like pre processor, file encoding etc
                 if (preProcessor != null) {
                     templateParameters.put(PREPROCESSOR, preProcessor);
                 }
@@ -1248,7 +1241,7 @@ public final class ImportService {
                         hasImportModel = true;
                     }
                 } else {
-                    template = sheetInfo(importTemplateData, templateName);//case insensitive
+                    template = sheetInfo(importTemplateData, importVersion);//case insensitive
                 }
                 if (template != null) {
                     importSheetScan(template, null, standardHeadings, null, templateParameters, null);
@@ -1473,7 +1466,7 @@ public final class ImportService {
         // new thing - pre processor on the report server
         //override is the parameter is sent by the user
         preProcessor = uploadedFile.getParameter(PREPROCESSOR);
-        if (preProcessor == null && uploadedFile.getParameter(IMPORTVERSION)==null) {
+        if (preProcessor == null) {
             preProcessor = uploadedFile.getTemplateParameter(PREPROCESSOR);
         }
         if (preProcessor != null && !uploadedFile.getPath().endsWith("converted")) {
@@ -1866,7 +1859,6 @@ public final class ImportService {
                             mode = ImportSheetScanMode.PARAMETERS;
                             firstCellValue = null;
                         }
-
                     } else { // after the first cell when not headings
                         // yes extra cells will ovrride subsequent key pair values. Since this would be an incorrect sheet I'm not currently bothered by this
                         if (mode == ImportSheetScanMode.PARAMETERS && firstCellValue!=null &&  cellIndex==1) {
@@ -2277,28 +2269,6 @@ public final class ImportService {
 
         uploadedFile.setProcessingDuration(System.currentTimeMillis() - time);
         return uploadedFile;
-    }
-
-
-    public static boolean hasImportTemplate(LoggedInUser loggedInUser, UploadedFile uploadedFile){
-        try {
-            HashMap<String, ImportTemplateData> templateCache = new HashMap<>();
-            if (getImportTemplateForUploadedFile(loggedInUser, uploadedFile, templateCache) != null) {
-                for (String template:templateCache.keySet()){
-                    ImportTemplateData templateData = templateCache.get(template);
-                    for (String sheet:templateData.getSheets().keySet()){
-                        for (String fileName:uploadedFile.getFileNames()){
-                            if (fileName.toLowerCase(Locale.ROOT).startsWith((sheet.toLowerCase(Locale.ROOT)))){
-                                return true;
-                            }
-                        }
-                    }
-                }
-            }
-        }catch(Exception e){
-
-        }
-        return false;
     }
 
     public static ImportTemplateData getImportTemplateForUploadedFile(LoggedInUser loggedInUser, UploadedFile uploadedFile, HashMap<String, ImportTemplateData> templateCache) throws Exception {
