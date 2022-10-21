@@ -2642,10 +2642,15 @@ fr.close();
             CsvSchema schema = csvMapper.schemaFor(String[].class)
                     .withColumnSeparator(delimiter)
                     .withLineSeparator("\n");
-            if (delimiter == '\t') {
-                schema = schema.withoutQuoteChar();
-            }else if(delimiter == ','){
-                schema = schema.withQuoteChar('"');
+            String schemaParameter = uploadedFile.getTemplateParameter("schema");
+            if ("withquotes".equals(schemaParameter)){
+                schema =schema.withQuoteChar('"');
+            }else {
+                if (delimiter == '\t') {
+                    schema = schema.withoutQuoteChar();
+                } else if (delimiter == ',') {
+                    schema = schema.withQuoteChar('"');
+                }
             }
             int topRow = 0;
             org.apache.poi.ss.usermodel.Name topRowRegion = BookUtils.getName(ppBook, "az_toprow");
