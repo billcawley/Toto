@@ -531,6 +531,9 @@ public class ImportUtils {
 
     public static boolean areNumbers(List<String> values) {
         boolean found = false;
+        if (values==null){
+            return false;
+        }
         for (String value : values) {
             if (value.length() > 0 && !value.equalsIgnoreCase("null")) {
                 found = true;
