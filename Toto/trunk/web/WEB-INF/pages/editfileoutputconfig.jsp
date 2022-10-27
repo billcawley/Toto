@@ -6,12 +6,12 @@
     <main>
         <div class="az-users-view">
             <div class="az-section-heading">
-                <h3>Edit/New Connection</h3>
+                <h3>Edit/New File Output</h3>
             </div>
             <div class="az-table">
                 <div>${error}</div>
-                <form action="/api//ManageDatabaseConnections" method="post">
-                    <input type="hidden" name="editId" value="${id}"/>
+                <form action="/api/ManageDatabaseConnections" method="post">
+                    <input type="hidden" name="editFOId" value="${id}"/>
                     <table >
                         <tbody>
                         <tr>
@@ -21,11 +21,11 @@
                             <td>
                                 <input name="name" id="name" type="text" value="${name}">
                             </td>
-                            <td>Password</td>
                             <td>
-                                <input type="password" name="password" id="password"
-                                       type="password">
+                                User
                             </td>
+                            <td><input name="user" id="user" type="text"
+                                       value="${user}"></td>
                         </tr>
                         <tr>
                             <td>
@@ -34,18 +34,11 @@
                             <td>
                                 <input name="connectionString" id="connectionString" type="text" value="${connectionString}">
                             </td>
-                            <td>Database</td>
-                            <td><input name="database" id="database" type="text"
-                                       value="${database}"></td>
-                        </tr>
-                        <tr>
+                            <td>Password</td>
                             <td>
-                                User
+                                <input type="password" name="password" id="password"
+                                       type="password">
                             </td>
-                            <td><input name="user" id="user" type="text"
-                                       value="${user}"></td>
-                            <td></td>
-                            <td></td>
                         </tr>
                     </table>
                     <nav>

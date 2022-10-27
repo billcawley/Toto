@@ -220,6 +220,17 @@ public class StandardDAO {
                 ",`allow_delete` int(1) DEFAULT 0,PRIMARY KEY (`id`)) ENGINE=InnoDB AUTO_INCREMENT=120 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;", new HashMap<>());
 
 
+        // define a destination for data put through the pre processor. For SFTP for GB initially - the string can hopefully contain all the config - user/password optional if it's not practical
+        jdbcTemplate.update("CREATE TABLE IF NOT EXISTS `master_db`.`file_output_config` (" +
+                "`id` int(11) NOT NULL AUTO_INCREMENT" +
+                ",`business_id` int(11) NOT NULL" +
+                ",`name` varchar(255) COLLATE utf8_unicode_ci not null" +
+                ",`connection_string` varchar(511) COLLATE utf8_unicode_ci DEFAULT NULL" +
+                ",`user` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL" +
+                ",`password` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,PRIMARY KEY (`id`)) ENGINE=InnoDB AUTO_INCREMENT=120 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;", new HashMap<>());
+
+
+
 
         if (jdbcTemplate.queryForObject("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS\n" +
                 "    WHERE\n" +

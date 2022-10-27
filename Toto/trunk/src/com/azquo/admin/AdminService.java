@@ -237,6 +237,14 @@ this may now not work at all, perhaps delete?
         return toReturn;
     }
 
+    public static List<FileOutputConfig> getFileOutputConfigListForBusinessWithBasicSecurity(final LoggedInUser loggedInUser) {
+        List<FileOutputConfig> toReturn = null;
+        if (loggedInUser.getUser().isAdministrator()) {
+            toReturn = FileOutputConfigDAO.findForBusinessId(loggedInUser.getUser().getBusinessId());
+        }
+        return toReturn;
+    }
+
 
     public static List<OnlineReport> getReportList(final LoggedInUser loggedInUser, boolean webFormat) {
         List<OnlineReport> reportList = new ArrayList<>();
@@ -528,6 +536,14 @@ this may now not work at all, perhaps delete?
         return null;
     }
 
+    public static FileOutputConfig getFileOutputConfigById(int id, LoggedInUser loggedInUser) {
+        FileOutputConfig fileOutputConfig = FileOutputConfigDAO.findById(id);
+        if (fileOutputConfig != null && loggedInUser.getUser().getBusinessId() == fileOutputConfig.getBusinessId()) {
+            return fileOutputConfig;
+        }
+        return null;
+    }
+
     public static ExternalDatabaseConnection getExternalDatabaseConnectionByName(String name, LoggedInUser loggedInUser) {
         return ExternalDatabaseConnectionDAO.findForNameAndBusinessId(name, loggedInUser.getBusiness().getId());
     }
@@ -536,6 +552,13 @@ this may now not work at all, perhaps delete?
         ExternalDatabaseConnection externalDatabaseConnection = ExternalDatabaseConnectionDAO.findById(id);
         if (externalDatabaseConnection != null && loggedInUser.getUser().getBusinessId() == externalDatabaseConnection.getBusinessId()) {
             ExternalDatabaseConnectionDAO.removeById(externalDatabaseConnection);
+        }
+    }
+
+    public static void deleteFileOutputConfigById(int id, LoggedInUser loggedInUser) {
+        FileOutputConfig fileOutputConfig = FileOutputConfigDAO.findById(id);
+        if (fileOutputConfig != null && loggedInUser.getUser().getBusinessId() == fileOutputConfig.getBusinessId()) {
+            FileOutputConfigDAO.removeById(fileOutputConfig);
         }
     }
 
