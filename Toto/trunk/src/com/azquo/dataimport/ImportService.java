@@ -1770,7 +1770,7 @@ public final class ImportService {
         boolean hasParameters = false;
         for (List<String> row:templateData){
             if (hasParameters){
-                if (row.get(0)==null || row.get(0).length()==0 || row.size() < 2){
+                if (row.isEmpty() || row.get(0)==null || row.get(0).length()==0 || row.size() < 2){
                     return toReturn;
                 }
                 toReturn.put(row.get(0).toLowerCase(Locale.ROOT), row.get(1));
