@@ -219,6 +219,18 @@
                                                     children: [
                                                         (0, t.jsx)("button", {
                                                             onClick: function () {
+                                                                location.href='/api/ManageReports?createnewreport=tobeentered'
+                                                            },
+                                                            children: "New",
+                                                        }),
+                                                    ],
+                                                }),
+                                            }),
+                                            (0, t.jsx)("div", {
+                                                children: (0, t.jsxs)(t.Fragment, {
+                                                    children: [
+                                                        (0, t.jsx)("button", {
+                                                            onClick: function () {
                                                                 return o(a - 1);
                                                             },
                                                             disabled: u < 2,

@@ -55,15 +55,11 @@
                                 <td>${template.notes}</td>
                                 <td>${template.dateCreated}</td>
                                 <td>
-                                    <a href="/api/ManageDatabases?deleteTemplateId=${template.id}#4"
+                                    <a href="/api/ManageDatabases?deleteTemplateId=${template.id}&newdesign=importtemplates"
                                        onclick="return confirm('Are you sure you want to delete ${template.templateName}?')"
-                                       class="button is-small" title="Delete ${template.templateName}"><span
-                                            class="fa fa-trash"
-                                            title="Delete"></span>
-                                    </a>
-                                    <a href="/api/DownloadImportTemplate?importTemplateId=${template.id}#4"
-                                       class="button is-small" title="Download"><span class="fa fa-download"
-                                                                                      title="Download"></span> </a>
+                                       >Delete
+                                    </a>&nbsp;
+                                    <a href="/api/DownloadImportTemplate?importTemplateId=${template.id}&newdesign=importtemplates">Download</a>
                                 </td>
                             </tr>
                         </c:forEach>

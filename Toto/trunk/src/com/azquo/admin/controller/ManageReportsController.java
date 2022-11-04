@@ -123,6 +123,9 @@ public class ManageReportsController {
             if (createNewReport!=null){
                 model.put("id", "0");
                 model.put("databasesSelected",databaseList(loggedInUser,0));
+                if (request.getSession().getAttribute("newdesign" )!= null){
+                    return "editreport";
+                }
 
                 return "editreport2";
             }
@@ -132,8 +135,15 @@ public class ManageReportsController {
             }
             if (deleteId != null) {
                 AdminService.removeReportByIdWithBasicSecurity(loggedInUser, Integer.parseInt(deleteId));
-                model.put("reports", AdminService.getReportList(loggedInUser, true));
+                List<OnlineReport> reportList = AdminService.getReportList(loggedInUser, true);
+                model.put("reports", reportList);
                 AdminService.setBanner(model, loggedInUser);
+                if (request.getSession().getAttribute("newdesign" )!= null){
+                    prepareNewJavascript(reportList,servletContext, loggedInUser,model);
+                    model.put("pageUrl", "/reports");
+                    return "managereports";
+                }
+
                 return "managereports2";
             }
             if (menuAppearanceDeleteId != null) {
@@ -320,6 +330,10 @@ public class ManageReportsController {
                      model.put("menuappearances", MenuAppearanceDAO.findForReportId(reportId));
                     model.put("externaldatarequests", ExternalDataRequestDAO.findForReportId(reportId));
                     AdminService.setBanner(model, loggedInUser);
+                    if (request.getSession().getAttribute("newdesign" )!= null){
+                        return "editreport";
+                    }
+
                     return "editreport2";
                 }
             }
@@ -470,6 +484,10 @@ public class ManageReportsController {
                             db = AdminService.createDatabase(databaseName, loggedInUser, loggedInUser.getDatabaseServer());
                         } catch (Exception e) {
                             error.append("cannot create a default database</br>");
+                            if (request.getSession().getAttribute("newdesign" )!= null){
+                                return "editreport";
+                            }
+
                             return "editreport2";
                         }
                     }
@@ -492,6 +510,10 @@ public class ManageReportsController {
                         model.put("externaldatarequests", ExternalDataRequestDAO.findForReportId(editOr));
                     }
                     AdminService.setBanner(model, loggedInUser);
+                    if (request.getSession().getAttribute("newdesign" )!= null){
+                        return "editreport";
+                    }
+
                     return "editreport2";
                 }
                 if (iframe != null && iframe.length() > 0) {
