@@ -660,6 +660,7 @@ this may now not work at all, perhaps delete?
 
             OpenDatabaseDAO.removeForDatabaseId(db.getId());
             UploadRecordDAO.removeForDatabaseId(db.getId());
+            ImportScheduleDAO.removeForDatabaseId(db.getId());
             // zap the backups also
             String dbBackupsDirectory = DBCron.getDBBackupsDirectory(db);
             FileUtils.deleteDirectory(new File(dbBackupsDirectory));

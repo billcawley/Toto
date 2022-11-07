@@ -5,10 +5,14 @@ package com.azquo.dataimport;
  */
 
 import com.azquo.StringLiterals;
+import com.azquo.admin.database.Database;
+import com.azquo.admin.database.DatabaseDAO;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.rmi.RMIClient;
+import com.azquo.spreadsheet.CommonReportUtils;
 import com.azquo.spreadsheet.LoggedInUser;
+import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.transport.UploadedFile;
 import com.azquo.spreadsheet.zk.BookUtils;
@@ -16,6 +20,10 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.keikai.api.CellOperationUtil;
+import io.keikai.api.Range;
+import io.keikai.api.Ranges;
+import org.apache.poi.hssf.usermodel.HSSFCellStyle;
 import org.apache.poi.openxml4j.opc.OPCPackage;
 import org.apache.poi.xddf.usermodel.chart.XDDFChartData;
 import org.apache.poi.xddf.usermodel.chart.XDDFDataSource;
@@ -85,7 +93,7 @@ public class ReportWizard {
     public static String chooseSuitable(List<String> options, String currentChosen, String exclude){
         //looks for the nearest size based on log values.
         double optimum = Math.log(10);
-        if (exclude.length()>0 && exclude.equals(currentChosen)){
+        if (exclude!=null && exclude.length()>0 && exclude.equals(currentChosen)){
             return "";
         }
         String possible = "";
@@ -156,21 +164,15 @@ public class ReportWizard {
         if (!"sum".equals(function)){
             dataItem = function + "(" + dataItem + ")";
         }
-        setNamedRangeValue(book,"az_context1", dataItem, (short)0);
+        setNamedRangeValue(book,"az_contextData", dataItem, (short)0);
         String options = "";
         options += getLanguage(loggedInUser,"row", rows);
         options += getLanguage(loggedInUser,"column", columns);
-        setNamedRangeValue(book,"az_options1", options, (short)0);
+        setNamedRangeValue(book,"az_optionsData", options, (short)0);
         setNamedRangeValue(book,"az_ReportName", reportName,(short)0);
-        String tempPath =SpreadsheetService.getHomeDir() + "/temp/" + System.currentTimeMillis()+".xlsx"; // timestamp the upload to stop overwriting with a file with the same name is uploaded after
-        File tempFile = new File(tempPath); // timestamp the upload to stop overwriting with a file with the same name is uploaded after
-        tempFile.delete(); // to avoid confusion
-
-        OutputStream outputStream = new FileOutputStream(tempFile) ;
-        book.write(outputStream);
+        String tempPath = saveBook(book);
         UploadedFile uploadedFile = new UploadedFile(tempPath, Collections.singletonList(reportName+".xlsx"),false);
-
-        ImportService.uploadReport(loggedInUser,reportName,uploadedFile);
+         ImportService.uploadReport(loggedInUser,reportName,uploadedFile);
         OnlineReport or = OnlineReportDAO.findForNameAndBusinessId(reportName, loggedInUser.getBusiness().getId());
         if (or!=null){
             return or.getId();
@@ -180,9 +182,20 @@ public class ReportWizard {
 
     }
 
+    public static String saveBook(Workbook book)throws Exception{
+        String tempPath =SpreadsheetService.getHomeDir() + "/temp/" + System.currentTimeMillis()+".xlsx"; // timestamp the upload to stop overwriting with a file with the same name is uploaded after
+        File tempFile = new File(tempPath); // timestamp the upload to stop overwriting with a file with the same name is uploaded after
+        tempFile.delete(); // to avoid confusion
+
+        OutputStream outputStream = new FileOutputStream(tempFile) ;
+        book.write(outputStream);
+        return tempPath;
+
+    }
+
 
     private static int bookPrepare(Workbook book, String dimension, String dimName, int insertedLines){
-          int choiceRow = 4 + insertedLines;
+          int choiceRow = 3 + insertedLines;
 
         org.apache.poi.ss.usermodel.Sheet sheet = book.getSheetAt(0);
         int maxRow = sheet.getLastRowNum();
@@ -191,7 +204,11 @@ public class ReportWizard {
         String lastChoice = null;
         for (int i = 0;i<dimVals.length -1 ;i++){
             String choice = dimVals[i];
-            shiftRows(sheet, choiceRow, maxRow,1);
+            shiftRows(sheet, choiceRow+1, maxRow,1);
+            if (choiceRow > 3){
+                copyFormatDown(book, choiceRow - 1);
+            }
+
              org.apache.poi.ss.usermodel.Name choiceName = book.createName();
             String choiceString = StringLiterals.QUOTE + choice + StringLiterals.QUOTE + " " + StringLiterals.CHILDREN;
             if (lastChoice!=null ){
@@ -219,11 +236,12 @@ public class ReportWizard {
 
         }
 
-        setNamedRangeValue(book,"az_"+dimension+"headings1",  setName, choiceColor);
+        setNamedRangeValue(book,"az_"+dimension+"headingsData",  setName, choiceColor);
 
 
          return dimVals.length - 1;
     }
+
 
 
     private static void setNamedRangeValue(Workbook book, String rangeName, String cellValue, short color){
@@ -235,8 +253,27 @@ public class ReportWizard {
 
     }
 
+
+    private static void copyFormatDown(Workbook book, int row) {
+
+        Sheet sheet = book.getSheetAt(0);
+        for (Cell cell:sheet.getRow(row - 1)){
+               Cell newCell = sheet.getRow(row).createCell(cell.getColumnIndex());
+             // Copy style from old cell and apply to new cell
+                CellStyle newCellStyle = book.createCellStyle();
+                newCellStyle.cloneStyleFrom(cell.getCellStyle());
+                ;
+                newCell.setCellStyle(newCellStyle);
+
+
+            }
+      }
+
     private static void shiftRows(Sheet sheet, int startRow, int endRow, int rowCount) {
         sheet.shiftRows(startRow, endRow, rowCount, true, true);
+
+
+
         XSSFDrawing drawing = (XSSFDrawing) sheet.createDrawingPatriarch();
         List<XSSFChart> charts = drawing.getCharts();
         for (XSSFChart chart : charts) {
@@ -311,57 +348,87 @@ public class ReportWizard {
             cell = row.createCell(c);
         }
          cell.setCellValue(value);
+        /*
           if (color != 0){
               cell.getCellStyle().setFillPattern(FillPatternType.SOLID_FOREGROUND);
               cell.getCellStyle().setFillBackgroundColor(color);
 
         }
 
+
+         */
     }
     public static String handleRequest(HttpServletRequest request, LoggedInUser loggedInUser)throws Exception{
         final ObjectMapper jacksonMapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-        class Selection {
-            String selName;
-            List<String> selValues;
-
-            Selection(String selName, List<String> selValues) {
-                this.selName = selName;
-                this.selValues = selValues;
+         List<Database> databases = DatabaseDAO.findForBusinessId(loggedInUser.getBusiness().getId());
+        String databaseChosen = request.getParameter("databasechosen");
+        if (databaseChosen.length()>0){
+            LoginService.switchDatabase(loggedInUser,databaseChosen);
+        }else{
+            if (loggedInUser.getDatabase()!=null){
+                databaseChosen = loggedInUser.getDatabase().getName();
             }
         }
+        Map<String,List<String>> selections = new HashMap<>();
+        List<String>dbNames = new ArrayList<>();
+        if (databaseChosen.length()==0){
+            dbNames.add("");
+        }
+        for (Database dbase:databases){
+            if (dbase.getName().equals(databaseChosen)){
+                dbNames.add(dbase.getName() + " selected");
+            }else{
+                dbNames.add(dbase.getName());
+            }
 
+        }
+        selections.put("databases", dbNames);
+        if (databaseChosen.length()==0){
+            List<String> errors = Collections.singletonList("You need a database before you can create reports.");
+            selections.put("error", errors);
+            return jacksonMapper.writeValueAsString(selections) ;
+
+        }
+         List<String> dataValues = CommonReportUtils.getDropdownListForQuery(loggedInUser,"data level 2");
+
+        if (dataValues.size()==1 && dataValues.get(0).toLowerCase(Locale.ROOT).startsWith("error")){
+            List<String> errors = Collections.singletonList("database does not have any data values");
+            selections.put("error", errors);
+            return jacksonMapper.writeValueAsString(selections) ;
+
+        }
         String dataChosen = request.getParameter("datachosen");
+        if ((dataChosen==null || dataChosen.length()==0)&&dataValues.size()>0  ) {
+            dataChosen = dataValues.get(0);
+        }
         String functionChosen = removeSelected(request.getParameter("functionchosen"));
+
         if (functionChosen==null || functionChosen.length()==0){
             functionChosen = "sum";
         }
         String rowChosen = removeSelected(request.getParameter("rowchosen"));
         String columnChosen = removeSelected(request.getParameter("columnchosen"));
-        List<Selection> selections = new ArrayList<>();
-        if (dataChosen.length() > 0) {
+          if (dataChosen.length() > 0) {
 
-            List<String> setOptions = ReportWizard.getPossibleHeadings(loggedInUser, dataChosen);
+            List<String> setOptions = getPossibleHeadings(loggedInUser, dataChosen);
             if (setOptions==null){
                 throw new Exception("No data!");
             }
-            List<String> rowOptions = ReportWizard.createList(setOptions, rowChosen, "");
-            rowChosen = ReportWizard.chooseSuitable(setOptions, rowChosen, columnChosen);
+            List<String> rowOptions = createList(setOptions, rowChosen, "");
+            rowChosen = chooseSuitable(setOptions, rowChosen, columnChosen);
 
             if (dataChosen.toLowerCase(Locale.ROOT).contains("unit") && "sum".equals(functionChosen)){
                 functionChosen = "count";
 
             }
+            selections.put("datavalues", dataValues);
             List<String>functionOptions = getFunctionOptions(functionChosen);
-            Selection functions = new Selection("functions", functionOptions);
-            selections.add(functions);
-            Selection rows = new Selection("rows", rowOptions);
-            selections.add(rows);
-            List<String> columnOptions = ReportWizard.createList(setOptions, columnChosen, rowChosen);
-            Selection columns = new Selection("columns", columnOptions);
-            selections.add(columns);
-            Selection templates = new Selection("templates", ReportWizard.getTemplateList(loggedInUser));
-            selections.add(templates);
-        }
+            selections.put("functions", functionOptions);
+             selections.put("rows", rowOptions);
+             List<String> columnOptions = createList(setOptions, columnChosen, rowChosen);
+            selections.put("columns", columnOptions);
+            selections.put("templates", getTemplateList(loggedInUser));
+         }
 
         jacksonMapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
         String done = jacksonMapper.writeValueAsString(selections);

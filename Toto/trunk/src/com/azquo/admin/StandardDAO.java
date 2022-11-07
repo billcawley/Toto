@@ -220,6 +220,21 @@ public class StandardDAO {
                 ",`allow_delete` int(1) DEFAULT 0,PRIMARY KEY (`id`)) ENGINE=InnoDB AUTO_INCREMENT=120 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;", new HashMap<>());
 
 
+        jdbcTemplate.update("CREATE TABLE IF NOT EXISTS `master_db`.`import_schedule` (" +
+                        "`id` int(11) NOT NULL AUTO_INCREMENT," +
+                        "`name` varchar(255) COLLATE utf8_unicode_ci NOT NULL," +
+                        "`count` int(11) NOT NULL," +
+                        "`frequency` varchar(255) COLLATE utf8_unicode_ci NOT NULL," +
+                        "`next_date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP," +
+                        "`business_id` int(11) NOT NULL," +
+                        "`database_id` int(11) NOT NULL," +
+                        "`connector_id` int(11) NOT NULL," +
+                        "`user_id` int(11) NOT NULL," +
+                        "`sql` text COLLATE utf8_unicode_ci NOT NULL," +
+                        "`template_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL," +
+                        "`output_connector_id` int(11) NOT NULL," +
+                "`notes` text COLLATE utf8_unicode_ci NOT NULL) ENGINE=InnoDB AUTO_INCREMENT=101 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;", new HashMap<>());
+
         // define a destination for data put through the pre processor. For SFTP for GB initially - the string can hopefully contain all the config - user/password optional if it's not practical
         jdbcTemplate.update("CREATE TABLE IF NOT EXISTS `master_db`.`file_output_config` (" +
                 "`id` int(11) NOT NULL AUTO_INCREMENT" +

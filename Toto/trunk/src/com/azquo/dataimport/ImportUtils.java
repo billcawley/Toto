@@ -6,6 +6,7 @@ import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.transport.UploadedFile;
 import com.azquo.spreadsheet.zk.BookUtils;
+import io.keikai.api.model.Book;
 import io.keikai.api.model.Sheet;
 import io.keikai.model.SCell;
 import org.apache.commons.lang.math.NumberUtils;
@@ -740,13 +741,6 @@ public class ImportUtils {
     public static void setKeikaiCell(Sheet sheet, int row, int col, String value){
         SCell cell = sheet.getInternalSheet().getCell(row, col);
         BookUtils.setValue(cell, value);
-
-    }
-
-    public static void poiSetSingleCellRange(Workbook book, String rangeName, String value){
-        org.apache.poi.ss.usermodel.Name region = BookUtils.getName(book, rangeName);
-        AreaReference areaRef = new AreaReference(region.getRefersToFormula(), null);
-        book.getSheet(region.getSheetName()).getRow(areaRef.getFirstCell().getRow()).getCell(areaRef.getFirstCell().getCol()).setCellValue(value);
 
     }
 

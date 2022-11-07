@@ -412,9 +412,12 @@ public class ManageReportsController {
     private static void prepareNewJavascript(List<OnlineReport> reportList, ServletContext servletContext, LoggedInUser loggedInUser, ModelMap model){
         try {
             StringBuilder reportsList = new StringBuilder();
+
+
             for (OnlineReport or : reportList){
                 reportsList.append("new m({ id: " + or.getId() + ", name: \"" + or.getUntaggedReportName() + "\", database: \"" + or.getDatabase() + "\", author: \"" + or.getAuthor() + "\", description: \"" + or.getExplanation().replace("\n","").replace("\r","") + "\" }),\n");
             }
+
             InputStream resourceAsStream = servletContext.getResourceAsStream("/WEB-INF/includes/newappjavascript.js");
 
             StringBuilder importsList = new StringBuilder();

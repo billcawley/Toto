@@ -1,15 +1,24 @@
 package com.azquo.admin.controller;
 
 import com.azquo.admin.database.Database;
+import com.azquo.admin.onlinereport.OnlineReport;
+import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.dataimport.*;
 import com.azquo.spreadsheet.CommonReportUtils;
 import com.azquo.spreadsheet.LoggedInUser;
+import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.controller.LoginController;
+import com.azquo.spreadsheet.transport.UploadedFile;
+import io.keikai.api.Exporters;
+import io.keikai.api.Importers;
+import io.keikai.api.model.Book;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.zkoss.zk.ui.Sessions;
 
 import javax.servlet.http.HttpServletRequest;
+import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -40,15 +49,26 @@ public class ReportWizardController {
         // I assume secure until we move to proper spring security
         if (loggedInUser != null && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
             Database db = loggedInUser.getDatabase();
-            if (db==null){
-                model.put("error","You have not selected a database");
-                return "reportwizard";
+            List<OnlineReport> templates = OnlineReportDAO.findTemplatesForBusinessId(loggedInUser.getBusiness().getId());
+            if (templates.size() == 0){
+                //need at least one template
+                try {
+                    Book book1 = Importers.getImporter().imports(request.getServletContext().getResourceAsStream("/WEB-INF/BasicReportTemplate.xlsx"), "Report name");
+                    String filePath = SpreadsheetService.getHomeDir() + "/temp/" + System.currentTimeMillis() + "BasicReportTemplate.xlsx";                    // timestamp to stop file overwriting
+                    File moved = new File(filePath);
+                    Exporters.getExporter().export(book1,moved);
+                    UploadedFile uf = new UploadedFile(filePath,Collections.singletonList("Basic Report Template.xlsx"), false);
+                    ImportService.uploadReport(loggedInUser, "Basic Report Template", uf);
+
+                }catch (Exception e){
+                    model.put("error","No templates available");
+                }
+
             }
-            List<String> dataList = CommonReportUtils.getDropdownListForQuery(loggedInUser,"data level 2");
-            model.put("datavalues",dataList);
-            String submit = request.getParameter("submit");
+             String submit = request.getParameter("submit");
+            String database = request.getParameter("databases");
             if ("submit".equals(submit)){
-                String data = request.getParameter("data");
+                String data = request.getParameter("datavalues");
                 String function = request.getParameter("functions");
                 String rows = request.getParameter("rows");
                 String columns = request.getParameter("columns");

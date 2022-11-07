@@ -424,12 +424,15 @@ public class OnlineController {
                                             }
                                         }
                                     }
-                                    // todo, lock check here like execute
-                                    session.setAttribute(finalReportId + EXECUTE_FLAG, executeName); // pretty crude but should do it
-                                    Map<String, String> params = new HashMap<>();
-                                    params.put("Report", finalOnlineReport.getReportName());
-                                    loggedInUser.userLog(" Load report", params);
-                                    boolean saveResult = ReportRenderer.populateBook(book, valueId);
+                                    boolean saveResult = false;
+                                    if (loggedInUser.getDatabase()!=null) {
+                                        // todo, lock check here like execute
+                                        session.setAttribute(finalReportId + EXECUTE_FLAG, executeName); // pretty crude but should do it
+                                        Map<String, String> params = new HashMap<>();
+                                        params.put("Report", finalOnlineReport.getReportName());
+                                        loggedInUser.userLog(" Load report", params);
+                                        saveResult = ReportRenderer.populateBook(book, valueId);
+                                    }
                                     session.setAttribute(finalReportId + SAVE_FLAG, finalReadOnlyReport ? false :  saveResult);
                                 } else {
                                     loggedInUser.setImageStoreName(""); // legacy thing to stop null pointer, should be zapped after getting rid of aspose

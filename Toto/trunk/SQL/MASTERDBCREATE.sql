@@ -252,6 +252,32 @@ CREATE TABLE IF NOT EXISTS `pending_upload` (
                                               PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=120 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `importschedule`
+--
+
+CREATE TABLE IF NOT EXISTS `import_schedule` (
+                                      `id` int(11) NOT NULL AUTO_INCREMENT,
+                                      `name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+                                      `count` int(11) NOT NULL,
+                                      `frequency` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+                                      `next_date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                      `business_id` int(11) NOT NULL,
+                                      `database_id` int(11) NOT NULL,
+                                      `connector_id` int(11) NOT NULL,
+                                      `user_id` int(11) NOT NULL,
+                                      `sql` text COLLATE utf8_unicode_ci NOT NULL,
+                                      `template_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+                                      `output_connector_id` int(11) NOT NULL,
+                                      `notes` text COLLATE utf8_unicode_ci NOT NULL
+
+
+) ENGINE=InnoDB AUTO_INCREMENT=101 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+
+
 --
 -- Indexes for dumped tables
 --

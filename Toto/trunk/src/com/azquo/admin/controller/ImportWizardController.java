@@ -1,42 +1,18 @@
 package com.azquo.admin.controller;
 
-import com.azquo.admin.AdminService;
-import com.azquo.admin.database.Database;
-import com.azquo.admin.database.DatabaseServer;
-import com.azquo.admin.database.DatabaseServerDAO;
 import com.azquo.dataimport.*;
 import com.azquo.spreadsheet.LoggedInUser;
-import com.azquo.spreadsheet.LoginService;
-import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.controller.LoginController;
-import com.azquo.spreadsheet.controller.OnlineController;
-import com.azquo.spreadsheet.transport.UploadedFile;
-import org.apache.poi.openxml4j.opc.OPCPackage;
-import org.json.JSONObject;
-import org.json.XML;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
-import java.io.File;
-import java.io.FileInputStream;
-import java.nio.charset.Charset;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.text.SimpleDateFormat;
-import java.util.*;
 
 /**
- * Copyright (C) 2016 Azquo Ltd.
+ * Copyright (C) 2022 Azquo Holdings Ltd.
  * <p>
- * Created by cawley on 21/07/16.
  * <p>
- * Changed 03/10/2018 to use new backup system - old MySQL based one obsolete
- * <p>
- * todo - spinning cog on restoring
  */
 @Controller
 @RequestMapping("/ImportWizard")
@@ -51,16 +27,6 @@ public class ImportWizardController {
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
         // I assume secure until we move to proper spring security
         if (loggedInUser != null && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
-
-            String template = request.getParameter("template");
-            if (template!=null){
-                loggedInUser.getWizardInfo().setTemplateName(template);
-                loggedInUser.getWizardInfo().getTemplateParameters().put(ImportWizard.IMPORTFILENAMEREGEX,request.getParameter("regex"));
-                String toReturn  = ImportWizard.setTemplate(loggedInUser);
-                request.setAttribute(OnlineController.BOOK, loggedInUser.getWizardInfo().getPreprocessor());
-                return toReturn;
-            }
-
             String submit = request.getParameter("submit");
             if ("import".equals(submit)) {
                 try {
@@ -76,29 +42,6 @@ public class ImportWizardController {
                     return "importwizard";
                 }
             }
-            String database = request.getParameter("database");
-            if (database != null) {
-                try {
-                    LoginService.switchDatabase(loggedInUser, database);
-                } catch (Exception e) {
-                    model.put("error", "No such database: " + database);
-                    return "importwizard";
-                }
-            }
-            AdminService.setBanner(model, loggedInUser);
-            List<Database> databaseList = AdminService.getDatabaseListForBusinessWithBasicSecurity(loggedInUser);
-            List<String> databases = new ArrayList<>();
-            if (databaseList != null) {
-                for (Database db : databaseList) {
-                    databases.add(db.getName());
-                }
-            }
-            databases.add("New database");
-            model.put("databases", databases);
-            String selectedDatabase = "";
-            if (loggedInUser.getDatabase() != null) {
-                selectedDatabase = loggedInUser.getDatabase().getName();
-            }
 
             return "importwizard";
         } else {
@@ -106,88 +49,8 @@ public class ImportWizardController {
         }
     }
 
-    @RequestMapping(headers = "content-type=multipart/*")
-    public String handleRequest(ModelMap model, HttpServletRequest request
-            , @RequestParam(value = "uploadFile", required = false) MultipartFile uploadFile
 
-    ) {
-
-        StringBuffer error = new StringBuffer();
-        LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
-        // I assume secure until we move to proper spring security
-        if (loggedInUser == null || !loggedInUser.getUser().isAdministrator()) {
-            return "redirect:/api/Login";
-        }
-        WizardInfo wizardInfo;
-            if (uploadFile != null && !uploadFile.isEmpty()) {
-            //do we need to move it??
-            try {
-                String database = request.getParameter("database");
-                if (database==null){
-                    return "importWizard";
-                }
-                LoginService.switchDatabase(loggedInUser,database);
-                String fileName = uploadFile.getOriginalFilename();
-                File moved = new File(SpreadsheetService.getHomeDir() + "/temp/" + System.currentTimeMillis() + fileName); // timestamp to stop file overwriting
-                uploadFile.transferTo(moved);
-                UploadedFile uploadedFile = new UploadedFile(moved.getAbsolutePath(), Collections.singletonList(uploadFile.getOriginalFilename()), false);
-                if (fileName.toLowerCase(Locale.ROOT).contains(".xls")) {
-                    Map<String, WizardField> wizardFields = new LinkedHashMap<>();
-                    wizardInfo = new WizardInfo(uploadedFile, null);
-                    int lineCount = ImportWizard.readBook(moved, wizardFields, false, wizardInfo.getLookups());
-                     wizardInfo.setFields(wizardFields);
-                    wizardInfo.setLineCount(lineCount);
-                    loggedInUser.setWizardInfo(wizardInfo);
-
-                } else if (fileName.toLowerCase(Locale.ROOT).contains(".json") || fileName.toLowerCase(Locale.ROOT).contains(".xml")) {
-                    try {
-                        String data = new String(Files.readAllBytes(Paths.get(moved.getAbsolutePath())), Charset.defaultCharset());
-                        JSONObject jsonObject = null;
-                        if (moved.getAbsolutePath().toLowerCase(Locale.ROOT).endsWith(".xml")) {
-                            jsonObject = XML.toJSONObject(data);
-                        } else {
-                            if (data.charAt(0) == '[') {
-                                data = "{data:" + data + "}";
-                            }
-                            data = data.replace("\n", "");//remove line feeds
-                            jsonObject = new JSONObject(data);
-                        }
-                        UploadedFile movedFile = new UploadedFile(moved.getAbsolutePath(), Collections.singletonList(moved.getName()), false);
-
-                        wizardInfo = new WizardInfo(movedFile, jsonObject);
-                        loggedInUser.setWizardInfo(wizardInfo);
-                    } catch (Exception e) {
-                        model.put("error", "nothing to read");
-                        return "importwizard";
-                    }
-                } else {
-                    Map<String, String> fileNameParameters = new HashMap<>();
-                    ImportService.addFileNameParametersToMap(moved.getName(), fileNameParameters);
-                    wizardInfo = new WizardInfo(uploadedFile, null);
-
-                    Map<String, WizardField> wizardFields = ImportWizard.readCSVFile(moved.getAbsolutePath(), fileNameParameters.get("fileencoding"));
-                      wizardInfo.setFields(wizardFields);
-                    for (String field : wizardFields.keySet()) {
-                        WizardField wizardField = wizardFields.get(field);
-                        wizardInfo.setLineCount(wizardField.getValuesFound().size());
-                        break;
-                    }
-
-                    loggedInUser.setWizardInfo(wizardInfo);
-                }
-
-
-            } catch (Exception e) {
-                model.put("error", e.getMessage());
-                return "importwizard";
-            }
-
-
-        }
-        return "importwizard";
-
-    }
-}
+ }
 
 
 

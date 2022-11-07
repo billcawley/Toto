@@ -676,7 +676,12 @@ public final class ImportService {
     public static void uploadReport(LoggedInUser loggedInUser, String reportName, UploadedFile uploadedFile)throws Exception{
         uploadedFile.setDataModified(true); // ok so it's not technically data modified but the file has been processed correctly. The report menu will have been modified
         int businessId = loggedInUser.getUser().getBusinessId();
-        int databaseId = loggedInUser.getDatabase().getId();
+        int databaseId = 0;
+        String dbName = "No database";
+        if (loggedInUser.getDatabase()!=null){
+            databaseId = loggedInUser.getDatabase().getId();
+            dbName = loggedInUser.getDatabase().getName();
+        }
         String pathName = loggedInUser.getBusinessDirectory();
         // used to only overwrite if uploaded by this user, we;ll go back to replacing one for the same business
         //OnlineReport or = OnlineReportDAO.findForNameAndUserId(reportName, loggedInUser.getUser().getId());
@@ -699,7 +704,7 @@ public final class ImportService {
             or.setFilename(uploadedFile.getFileName()); // it might have changed, I don't think much else under these circumstances
             or.setUserId(loggedInUser.getUser().getId());
         } else {
-            or = new OnlineReport(0, LocalDateTime.now(), businessId, loggedInUser.getUser().getId(), loggedInUser.getDatabase().getName(), reportName, uploadedFile.getFileName(), "", "");
+            or = new OnlineReport(0, LocalDateTime.now(), businessId, loggedInUser.getUser().getId(), dbName, reportName, uploadedFile.getFileName(), "", "");
         }
         OnlineReportDAO.store(or); // store before or.getFilenameForDisk() or the id will be wrong!
        // List<org.apache.poi.ss.usermodel.Name> names = (List<Name>)book.getAllNames();
@@ -2232,7 +2237,7 @@ public final class ImportService {
              BusinessDAO.store(loggedInUser.getBusiness());
         }
 
-        if (assignToLoggedInUserDB) {
+        if (assignToLoggedInUserDB && loggedInUser.getDatabase()!=null) {
             Database database = loggedInUser.getDatabase();
             database.setImportTemplateId(importTemplate.getId());
             DatabaseDAO.store(database);

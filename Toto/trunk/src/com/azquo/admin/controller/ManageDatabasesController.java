@@ -517,11 +517,7 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
                             if (!lcName.contains("=") && (lcName.contains("import template") || lcName.contains("workbook processor") || lcName.contains("preprocessor") || lcName.contains("headings") || lcName.contains("lookups"))) {
                                 isImportTemplate = true;
                             }
-                            boolean assignTemplateToDatabase = false;
-                            if (database != null && !database.isEmpty() && !database.equalsIgnoreCase("none")) {
-                                LoginService.switchDatabase(loggedInUser, database); // could be blank now
-                                assignTemplateToDatabase = true;
-                            }
+                            assignDatabaseToUser(loggedInUser, database);
 
                             if (!isImportTemplate) {
                                 model.put("error", "That does not appear to be an import template.");
@@ -557,8 +553,7 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
 
                             } else { // a straight upload, this is the only place that can deal with multiple files being selected for upload
                                 HttpSession session = request.getSession();
-                                boolean isSetup = ("on".equals(request.getParameter("setupFile")));
-                                String result = handleImport(loggedInUser, session, model, userComment, uploadFiles, newdesign, isSetup);
+                                String result = handleImport(loggedInUser, session, model, userComment, uploadFiles, newdesign);
                                 if (loggedInUser.getWizardInfo()!=null && loggedInUser.getWizardInfo().getPreprocessor()!=null){
                                     request.setAttribute(OnlineController.BOOK, loggedInUser.getWizardInfo().getPreprocessor());
                                 }
@@ -570,9 +565,11 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
                     String exceptionError = e.getMessage();
                     e.printStackTrace();
                     model.put("error", exceptionError);
+                    return "managedatabases2";
                 }
             } else {
                 model.put("error", "Please select a file to upload");
+                return "managedatabases2";
             }
             List<Database> databaseList = AdminService.getDatabaseListForBusinessWithBasicSecurity(loggedInUser);
             List<DisplayDataBase> displayDataBases = new ArrayList<>();
@@ -644,10 +641,19 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
         } else {
             return "redirect:/api/Login";
         }
+
+    }
+
+    private static void assignDatabaseToUser(LoggedInUser loggedInUser, String database)throws Exception{
+
+        if (database != null && !database.isEmpty() && !database.equalsIgnoreCase("none")) {
+            LoginService.switchDatabase(loggedInUser, database); // could be blank now
+         }
+
     }
 
     // factored due to pending uploads, need to check the factoring after the prototype is done
-    private static String handleImport(LoggedInUser loggedInUser, HttpSession session, ModelMap model, String userComment, final MultipartFile[] uploadFiles, String newDesign, boolean isSetup) {
+    private static String handleImport(LoggedInUser loggedInUser, HttpSession session, ModelMap model, String userComment, final MultipartFile[] uploadFiles, String newDesign) {
         // need to add in code similar to report loading to give feedback on imports
         final List<UploadedFile> uploadedFiles = new ArrayList<>();
         UploadedFile uf = null;
@@ -663,10 +669,6 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
                 uf = new UploadedFile(filePath, Collections.singletonList(fileName), fileNameParams, false, false);
                 uploadFile.transferTo(moved);
                 uploadedFiles.add(uf);
-                if (isSetup) {
-                    return ImportWizard.setup(loggedInUser,model, uf);
-
-                }
             }
             new Thread(() -> {
                 List<UploadedFile> toSetInSession = new ArrayList<>();

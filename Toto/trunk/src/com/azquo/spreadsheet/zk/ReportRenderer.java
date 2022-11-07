@@ -1048,16 +1048,6 @@ public class ReportRenderer {
      }
 
 
-    private static Map<String,List<String>> loadExternalSelections(OnlineReport or, LoggedInUser loggedInUser)throws Exception{
-        Map<String,List<String>> toReturn = new HashMap<>();
-        loggedInUser.clearExternalData();
-        List<ExternalDataRequest> externalDataRequests = ExternalDataRequestDAO.findForReportId(or.getId());
-        for (ExternalDataRequest externalDataRequest:externalDataRequests) {
-            //TODO SPECIFY!
-        }
-        return toReturn;
-    }
-
 
   private static void expandRange(CellRegion cellRegion, Sheet sheet, int rows){
         if (cellRegion.getRowCount()>=rows || cellRegion.getRowCount() < 3) {

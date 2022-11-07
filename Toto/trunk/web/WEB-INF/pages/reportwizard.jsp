@@ -46,13 +46,16 @@ lockresult: string
 
 
          */
-        var dataChosen = getSelectedValue("data");
+        var databaseChosen = getSelectedValue("databases");
+        var dataChosen = getSelectedValue("datavalues");
         var functionValueChosen = getSelectedValue("functions");
         var rowValueChosen = getSelectedValue("rows");
         var colValueChosen = getSelectedValue("columns");
         var templateChosen = getSelectedValue("templates");
 
-        let params = "op=reportwizard&datachosen=" + encodeURIComponent(dataChosen)
+        let params = "op=reportwizard"
+            + "&databasechosen=" + encodeURIComponent(databaseChosen)
+            + "&datachosen=" + encodeURIComponent(dataChosen)
             + "&functionchosen=" + encodeURIComponent(functionValueChosen)
             + "&rowchosen=" + encodeURIComponent(rowValueChosen)
             + "&columnchosen=" + encodeURIComponent(colValueChosen)
@@ -60,42 +63,48 @@ lockresult: string
             + "&sessionid=${pageContext.session.id}";
         let data = await azquoSend(params);
         let json = await data.json();
-        if (json.error >"" ){
-            document.getElementById("instructions").innerText = json.error;
-            return;
-        }
         var rowValueChosen = "";
         var columnValueChosen = "";
-        for (var i = 0; i < json.length; i++) {
-            var returnedField = json[i].selName
-            //alert(returnedField);
-            var selections = '<select class="select" name="' + returnedField + '" id="' + returnedField + '" onchange=changed("' + returnedField + '",this)>';
-            var count = 0;
-            for (var optionValue of json[i].selValues) {
-                if (count++ < 50) {
-                    if (optionValue.endsWith(" selected")) {
-                        selections += '<option value="' + optionValue.substring(0, optionValue.length - 9) + '" selected>' + optionValue.substring(0, optionValue.length - 9) + '</option>';
-                    } else {
-                        selections += '<option value="' + optionValue + '">' + optionValue + '</option>';
+        for (var key in json) {
+            if (key=="error"){
+                document.getElementById("instructions").innerText = json.error;
+            }else {
+
+                if (json[key].length==1){
+                    selections=json[key] + '<input type="hidden" name="' + key + '" value="' + json[key] +'"">' ;
+                }else {
+                    var selections = '<select class="select" name="' + key + '" id="' + key + '" onchange=changed("' + key + '",this)>';
+                    var count = 0;
+                    for (var optionValue of json[key]) {
+                        if (count++ < 50) {
+                            if (optionValue.endsWith(" selected")) {
+                                selections += '<option value="' + optionValue.substring(0, optionValue.length - 9) + '" selected>' + optionValue.substring(0, optionValue.length - 9) + '</option>';
+                            } else {
+                                selections += '<option value="' + optionValue + '">' + optionValue + '</option>';
+                            }
+                        }
                     }
+                    selections += "</select>";
                 }
+                document.getElementById(key).innerHTML = selections;
             }
-            selections += "</select>";
-            document.getElementById(returnedField + "pan").innerHTML = selections;
         }
     }
 
 
     function getSelectedValue(rangeName) {
-        if (rangeName == "data" || document.getElementById(rangeName + "pan").innerHTML > "") {
-            var sel = document.getElementById(rangeName);
-            if(sel == null){
-                return document.getElementById("datavalue").value;
+        var sel = document.getElementById(rangeName);
+        if(sel.firstChild.options==null){
+            try{
+                return sel.innerText;
+            }catch(e){
+                return "";
             }
-            return sel.options[sel.selectedIndex].text;
         }
+        return sel.firstChild.options[sel.firstChild.selectedIndex].text;
         return "";
     }
+
 
 
 </script>
@@ -197,45 +206,37 @@ lockresult: string
                             <div class="az-table" id="fieldtable">
                                 <table class="az-table">
                                     <tr>
-                                        <td>1 Select the data you want to show
+                                        <td>1 Select the database
                                         </td>
-                                        <td>
-                                            <c:choose>
-                                                <c:when  test="${datavalues.size()==1}">
-                                                    <input type="hidden" name="datavalue" id="datavalue" value="${datavalues.get(0)}">
-                                                    ${datavalues.get(0)}
-                                                </c:when>
-                                                <c:otherwise>
-                                                    <select class="select" name="data" id="data" onchange=changed("data",this)>
-                                                        <option value=""></option>
-                                                        <c:forEach items="${datavalues}" var="datavalue">
-                                                            <option value="${datavalue}"
-                                                                    <c:if test="${datavalue.equals(datavalueselected)}"> selected </c:if>>${datavalue}</option>
-                                                        </c:forEach>
-                                                    </select>
-                                                </c:otherwise>
-                                            </c:choose>
-
-                                        </td style="width:400px">
-                                        <td> You can choose individual data items or sets of data items (from bottom of
-                                            list)
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td>2 ..and how to show it
-                                        </td>
-                                        <td>
-                                            <span id="functionspan"></span>
+                                        <td id="databases">
                                         </td>
                                         <td>
                                             Most data will be summed, but in some cases this is not appropriate
                                         </td>
                                     </tr>
                                     <tr>
-                                        <td>3 Select your row headings
+                                        <td>2 Select the data you want to show
+                                        </td>
+                                        <td id="datavalues">
+
+                                        </td>
+                                        <td> You can choose individual data items or sets of data items (from bottom of
+                                            list)
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>3 ..and how to show it
+                                        </td>
+                                        <td id="functions">
                                         </td>
                                         <td>
-                                            <span id="rowspan"></span>
+                                            Most data will be summed, but in some cases this is not appropriate
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>4 Select your row headings
+                                        </td>
+                                        <td id="rows">
                                         </td>
                                         <td>
                                             We will work out an appropriate way to show these if the number is large
@@ -243,10 +244,9 @@ lockresult: string
                                     </tr>
                                     <tr>
                                         <td>
-                                            4 Select the column headings
+                                            5 Select the column headings
                                         </td>
-                                        <td>
-                                            <span id="columnspan"></span>
+                                        <td id="columns">
                                         </td>
                                         <td>
                                             As above
@@ -254,17 +254,16 @@ lockresult: string
                                     </tr>
                                     <tr>
                                         <td>
-                                            5 Select a template
+                                            6 Select a template
                                         </td>
-                                        <td>
-                                            <span id="templatespan"></span>
+                                        <td id="templates">
                                         </td>
                                         <td>
                                             You can add your own templates if you want
                                         </td>
                                     </tr>
                                     <tr>
-                                        <td>6 Name your report
+                                        <td>7 Name your report
                                         </td>
                                         <td>
                                             <input name="reportName" type="text" value="Test report"/>
@@ -291,6 +290,7 @@ lockresult: string
 
 
 <script>
+    changed("database", getSelectedValue("databases"))
     if (${datavalues.size()==1}) {
         changed("datavalue", "${datavalues.get(0)}")
     }

@@ -15,6 +15,7 @@ public class ImportSuggestion
         String keyField = null;
         String keyFieldRoot = null;
         String keyFieldName = null;
+        List <String>peers = new ArrayList();
         int keyFieldCount = 0;
         boolean usDate = false;
         for (String field : wizardInfo.getFields().keySet()) {
@@ -22,6 +23,7 @@ public class ImportSuggestion
             if (ImportWizard.KEYFIELDID.equals(wizardField.getType())) {
                 keyField = field;
                 keyFieldName = wizardField.getName();
+                peers.add(field);
                 if(wizardField.getValuesFound() !=null){
                     keyFieldCount = wizardField.getValuesFound().size();
                 }else{
@@ -88,7 +90,7 @@ public class ImportSuggestion
                     //dates times, key fields
                     keyField = wizardInfo.getFields().keySet().iterator().next();
 
-                    if (ImportUtils.isIdField(wizardInfo,keyField)) {
+                    if (ImportUtils.isIdField(wizardInfo,keyField) && wizardInfo.getFields().get(keyField).getDistinctCount()==wizardInfo.getLineCount()) {
                         keyFieldRoot = keyField.toLowerCase(Locale.ROOT);
                         WizardField wizardField = wizardInfo.getFields().get(keyField);
                         wizardField.setType(ImportWizard.KEYFIELDID);
@@ -210,22 +212,65 @@ public class ImportSuggestion
                         }
                     } else {
                         //flat file suggestions
-                        parent = "Values";
-                        if (keyFieldName != null) {
-                            parent = keyFieldName + " Values";
-                        }
+                        parent = wizardInfo.getImportSchedule().getTemplateName() + " Values";
                         //suggestion.append("possible data fields are: ");
                         for (String field : wizardInfo.getFields().keySet()) {
                             WizardField wizardField = wizardInfo.getFields().get(field);
                             if (!ImportUtils.isIdField(wizardInfo, field) && !ImportUtils.isKeyField(wizardField) && ImportUtils.areNumbers(wizardField.getValuesFound())) {
                                 suggestions.add(wizardInfo.getFields().get(field).getName());
                                 wizardField.setParent(parent);
-                                if (keyFieldName != null) {
-                                    List<String> peers = new ArrayList<>();
-                                    peers.add(keyField);
-                                    wizardField.setPeers(peers);
+                                if (peers.size() > 0) {
+                                     wizardField.setPeers(peers);
                                 }
                                 suggestionReason = "These are the fields with all numeric values, which are not IDs.";
+                            }
+                         }
+                        if (suggestionReason.length()>0 && peers.size()==0){
+                            for (String field1:wizardInfo.getFields().keySet()){
+                                if (peers.size() > 0) {
+                                    break;
+                                }
+                               WizardField wizardField1 = wizardInfo.getFields().get(field1);
+                                boolean testing = false;
+                                for (String field2:wizardInfo.getFields().keySet()){
+                                    if (field2.equals(field1)){
+                                        testing = true;
+                                    }else{
+                                        if (testing && wizardField1.getParent()==null){
+                                            WizardField wizardField2 = wizardInfo.getFields().get(field2);
+                                            if (wizardField2.getParent()== null && wizardField1.getDistinctCount() * wizardField2.getDistinctCount() > wizardInfo.lineCount){
+                                                //test for distinct combos
+                                                Set<String> combos = new HashSet<>();
+                                                try {
+                                                    boolean duplicate = false;
+                                                    for (int i = 0; i < wizardInfo.getLineCount(); i++) {
+                                                          String val = wizardField1.getValuesFound().get(i) + " " + wizardField2.getValuesFound().get(i);
+                                                          if (combos.contains(val)){
+                                                              duplicate = true;
+                                                              break;
+                                                          }
+                                                          combos.add(val);
+                                                    }
+                                                    if (!duplicate) {
+                                                        peers.add(field1);
+                                                        peers.add(field2);
+                                                        break;
+                                                    }
+                                                }catch(Exception e){
+                                                }
+                                            }
+
+                                        }
+                                    }
+                                }
+                            }
+                            if (peers.size()>0){
+                                for (String field:wizardInfo.getFields().keySet()){
+                                    WizardField wizardField = wizardInfo.getFields().get(field);
+                                    if (wizardField.getParent()!=null){
+                                        wizardField.setPeers(peers);
+                                    }
+                                }
                             }
                         }
                         if (suggestionReason.length() == 0) {
@@ -239,7 +284,6 @@ public class ImportSuggestion
                                 }catch(Exception e){
 
                                 }
-                                List<String> peers = new ArrayList<>();
                                 peers.add(keyField);
                                 wizardField.setParent(parent);
                                 ;

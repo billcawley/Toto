@@ -60,8 +60,13 @@
 				</a>
 			</c:if>
 			<c:if test="${!developer}">
+				<a class="navbar-item is-tab${fn:startsWith(requestScope['javax.servlet.forward.path_info'], '/ManageImportSchedules') ? ' is-active' : ''}"
+				   href="/api/ManageImportSchedules" style="color: ${ribbonLinkColor}">Import Schedules
+				</a>
+			</c:if>
+			<c:if test="${!developer}">
 				<a class="navbar-item is-tab${fn:startsWith(requestScope['javax.servlet.forward.path_info'], '/ManageReportSchedules') ? ' is-active' : ''}"
-				   href="/api/ManageReportSchedules" style="color: ${ribbonLinkColor}">Schedules
+				   href="/api/ManageReportSchedules" style="color: ${ribbonLinkColor}">Report Schedules
 				</a>
 			</c:if>
 			<c:if test="${sessionScope.test != null}">
