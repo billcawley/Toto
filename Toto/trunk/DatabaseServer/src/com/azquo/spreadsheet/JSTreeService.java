@@ -180,7 +180,7 @@ public class JSTreeService {
                 }
             }
         } else {
-            return new JsonChildren(0, state, searchTerm, new ArrayList<>(), nameId,"");
+            return new JsonChildren("0", state, searchTerm, new ArrayList<>(), nameId,"");
         }
         if (searchTerm != null && !searchTerm.isEmpty() && childNodes.size() > 1) {// check for duplicate names and qualify them
             Set<String> allNames = HashObjSets.newMutableSet();
@@ -211,7 +211,7 @@ public class JSTreeService {
         } else {
             type = "child";
         }
-        return new JsonChildren(jsTreeId, state, text, childNodes, nameId,type);
+        return new JsonChildren(jsTreeId + "", state, text, childNodes, nameId,type);
     }
 
     public static String getNameAttribute(DatabaseAccessToken databaseAccessToken, String nameString, String attribute) throws Exception {

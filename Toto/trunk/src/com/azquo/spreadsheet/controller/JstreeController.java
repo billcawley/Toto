@@ -172,6 +172,12 @@ public class JstreeController {
                         final JsonChildren jsonChildren = RMIClient.getServerInterface(loggedInUser.getDatabaseServer().getIp())
                                 .getJsonChildren(loggedInUser.getDataAccessToken(), Integer.parseInt(jsTreeId), currentNode.nameId, parents.equals("true"),CommonReportUtils.replaceUserChoicesInQuery(loggedInUser,itemsChosen), attribute, hundredsMoreInt);
                         // Now, the node id management is no longer done server side, need to do it here, let logged in user assign each node id
+                        if (itemsChosen.length() > 0){
+                            if (jsonChildren.id.equals("0")){
+                                jsonChildren.id = "j1_1";// edd trying to hack updating the root properly
+                            }
+                        }
+
                         jsonChildren.children.forEach(loggedInUser::assignIdForJsTreeNode);
                         result = jacksonMapper.writeValueAsString(jsonChildren);
                     } else if (currentNode != null && currentNode.nameId != -1) { // assuming it is not null!

@@ -29,14 +29,14 @@ public class JsonChildren implements Serializable {
         }
     }
     // public for jackson to see them
-    public final int id;
+    public String id; // efc trying to hack this to a different string to make javascript behave
     public final Map<String, Boolean> state;
     public final String text;
     public final List<Node> children;
     public final int nameId;
     public final String type;
 
-    public JsonChildren(int id, Map<String, Boolean> state, String text, List<Node> children, int nameId, String type) {
+    public JsonChildren(String id, Map<String, Boolean> state, String text, List<Node> children, int nameId, String type) {
         this.id = id;
         this.state = state;
         this.text = text;
