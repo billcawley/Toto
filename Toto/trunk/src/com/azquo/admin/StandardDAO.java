@@ -233,7 +233,7 @@ public class StandardDAO {
                         "`sql` text COLLATE utf8_unicode_ci NOT NULL," +
                         "`template_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL," +
                         "`output_connector_id` int(11) NOT NULL," +
-                "`notes` text COLLATE utf8_unicode_ci NOT NULL) ENGINE=InnoDB AUTO_INCREMENT=101 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;", new HashMap<>());
+                "`notes` text COLLATE utf8_unicode_ci NOT NULL,PRIMARY KEY (`id`)) ENGINE=InnoDB AUTO_INCREMENT=101 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;", new HashMap<>());
 
         // define a destination for data put through the pre processor. For SFTP for GB initially - the string can hopefully contain all the config - user/password optional if it's not practical
         jdbcTemplate.update("CREATE TABLE IF NOT EXISTS `master_db`.`file_output_config` (" +
