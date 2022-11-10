@@ -287,7 +287,14 @@
                     window.open("/api/Showdata?chosen=" + itemsChosen, "_blank", "toolbar=no, status=no,scrollbars=yes, resizable=yes, top=150, left=200, width=600, height=600");
                 }
             }else {
-                window.parent.$['inspectOverlay']().tab(window.location + "&itemschosen=" + itemsChosen, 'Select Items');
+                const queryString = window.location.search;
+                const urlParams = new URLSearchParams(queryString);
+                if (urlParams.get('itemschosen')){
+                    // so we are in search, don't open a new tab
+                    $("#js-container").jstree(true).refresh_node(jstree.get_node("j1_1"));
+                } else {
+                    window.parent.$['inspectOverlay']().tab(window.location + "&itemschosen=" + itemsChosen, 'Select Items');
+                }
             }
         }
 
