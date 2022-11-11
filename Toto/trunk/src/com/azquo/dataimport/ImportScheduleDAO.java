@@ -20,7 +20,7 @@ import java.util.Map;
  */
 public class ImportScheduleDAO {
     // the default table name for this data.
-    private static String TABLENAME = "import_Schedule";
+    private static String TABLENAME = "import_schedule";
 
     // column names except ID which is in the superclass
     private static final String NAME = "name";
