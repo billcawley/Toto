@@ -3,6 +3,7 @@
     <properties maven-id="org.apache.commons:commons-vfs2:2.0" />
     <CLASSES>
       <root url="jar://$PROJECT_DIR$/lib/commons-vfs2-2.0.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/commons-logging-1.1.1.jar!/" />
       <root url="jar://$PROJECT_DIR$/lib/maven-scm-api-1.4.jar!/" />
       <root url="jar://$PROJECT_DIR$/lib/plexus-utils-1.5.6.jar!/" />
       <root url="jar://$PROJECT_DIR$/lib/maven-scm-provider-svnexe-1.4.jar!/" />

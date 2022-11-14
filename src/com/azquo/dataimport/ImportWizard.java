@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.csv.CsvMapper;
 import com.fasterxml.jackson.dataformat.csv.CsvParser;
 import com.fasterxml.jackson.dataformat.csv.CsvSchema;
-import com.sun.xml.internal.bind.api.impl.NameConverter;
 import io.keikai.api.*;
 import io.keikai.api.model.Book;
 import io.keikai.model.CellRegion;
