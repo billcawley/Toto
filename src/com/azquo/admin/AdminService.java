@@ -811,4 +811,9 @@ this may now not work at all, perhaps delete?
         }
     }
 
+    public static String sendFileToOutputConfig(File file, FileOutputConfig outputConfig){
+        String error = null;
+        return null;
+    }
+
 }

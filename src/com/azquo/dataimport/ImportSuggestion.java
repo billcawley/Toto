@@ -306,15 +306,15 @@ public class ImportSuggestion
                             WizardField wizardField = wizardInfo.getFields().get(field);
                             if (wizardField.getParent() != null) {
                                 parent = wizardField.getParent();
-                                dataPath = field.substring(0, field.lastIndexOf(ImportService.JSONFIELDDIVIDER + ""));
+                                dataPath = field.substring(0, field.lastIndexOf(Preprocessor.JSONFIELDDIVIDER + ""));
                                 break;
                             }
                         }
-                        while (dataPath.contains(ImportService.JSONFIELDDIVIDER)) {
+                        while (dataPath.contains(Preprocessor.JSONFIELDDIVIDER)) {
                             List<String> peersAtThisLevel = new ArrayList<>();
                             for (String field : wizardInfo.getFields().keySet()) {
                                 WizardField wizardField = wizardInfo.getFields().get(field);
-                                if (wizardField.getParent() == null && field.startsWith(dataPath) && !field.substring(dataPath.length() + 1).contains(ImportService.JSONFIELDDIVIDER) && wizardField.getDistinctCount() > 1) {
+                                if (wizardField.getParent() == null && field.startsWith(dataPath) && !field.substring(dataPath.length() + 1).contains(Preprocessor.JSONFIELDDIVIDER) && wizardField.getDistinctCount() > 1) {
                                     peersAtThisLevel.add(field);
                                 }
                             }
@@ -327,7 +327,7 @@ public class ImportSuggestion
                                     }
                                 }
                             }
-                            dataPath = dataPath.substring(0, dataPath.lastIndexOf(ImportService.JSONFIELDDIVIDER + ""));
+                            dataPath = dataPath.substring(0, dataPath.lastIndexOf(Preprocessor.JSONFIELDDIVIDER + ""));
                         }
                         String peerList = "";
                         if (potentialPeers.size() > 0) {

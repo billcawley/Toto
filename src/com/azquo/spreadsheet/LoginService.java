@@ -102,6 +102,8 @@ public class LoginService {
         if (db != null && db.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
             DatabaseServer databaseServer = DatabaseServerDAO.findById(db.getDatabaseServerId());
             loggedInUser.setDatabaseWithServer(databaseServer, db);
+        }else{
+            loggedInUser.setDatabaseWithServer(loggedInUser.getDatabaseServer(),null);
         }
     }
 }

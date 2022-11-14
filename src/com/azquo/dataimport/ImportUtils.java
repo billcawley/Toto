@@ -68,7 +68,7 @@ public class ImportUtils {
             fields = wizardInfo.getMatchFields();
         }
         for (String field : fields.keySet()) {
-            String fieldN = wizardInfo.getFields().get(field).getName();
+            String fieldN = fields.get(field).getName();
             if (fieldN.equalsIgnoreCase(fieldName.trim())) {
                 return field;
             }
@@ -162,7 +162,7 @@ public class ImportUtils {
             testItem = "*";
         }
         if (testField != null && testField.length() > 0 && !wizardInfo.getFields().get(testField).getAdded()) {
-            testItem = ImportService.JSONFIELDDIVIDER + testField + ImportService.JSONFIELDDIVIDER + testItem;
+            testItem = Preprocessor.JSONFIELDDIVIDER + testField + Preprocessor.JSONFIELDDIVIDER + testItem;
         } else {
             testItem = "";
         }
@@ -176,19 +176,19 @@ public class ImportUtils {
 
                     String suggestedName = field;
                     try {
-                        suggestedName = humaniseName(field.substring(field.lastIndexOf(ImportService.JSONFIELDDIVIDER) + 1));
+                        suggestedName = humaniseName(field.substring(field.lastIndexOf(Preprocessor.JSONFIELDDIVIDER) + 1));
                         String nameWithoutId = removeId(suggestedName);
                         if (reverseNames.get(nameWithoutId)==null){
                             suggestedName = nameWithoutId;
                         }
                         if (reverseNames.get(suggestedName) != null) { //if suggested names may be duplicates, grab a bit more string
                             String original = reverseNames.get(suggestedName);
-                            String originalSuggestion = original.substring(nthLastIndexOf(2, ImportService.JSONFIELDDIVIDER, original) + 1);
+                            String originalSuggestion = original.substring(nthLastIndexOf(2, Preprocessor.JSONFIELDDIVIDER, original) + 1);
                             originalSuggestion = humaniseName(originalSuggestion);
                             reverseNames.remove(suggestedName);
                             reverseNames.put(originalSuggestion, original);
                             wizardInfo.getFields().get(original).setName(originalSuggestion);
-                            suggestedName = field.substring(nthLastIndexOf(2, ImportService.JSONFIELDDIVIDER, field) + 1);
+                            suggestedName = field.substring(nthLastIndexOf(2, Preprocessor.JSONFIELDDIVIDER, field) + 1);
                         }
                     } catch (Exception e) {
                     }
@@ -236,7 +236,7 @@ public class ImportUtils {
                     error = errorFound;
                     break;
                 }
-                int divPos = fieldName.lastIndexOf(String.valueOf(ImportService.JSONFIELDDIVIDER));
+                int divPos = fieldName.lastIndexOf(String.valueOf(Preprocessor.JSONFIELDDIVIDER));
                 if (divPos < 0) {
                     error = errorFound;
                     break;
@@ -376,7 +376,7 @@ public class ImportUtils {
 
 
     public static String humaniseName(String name) {
-        name = name.replace("_", " ").replace(ImportService.JSONFIELDDIVIDER + "", " ");
+        name = name.replace("_", " ").replace(Preprocessor.JSONFIELDDIVIDER + "", " ");
         name = name.substring(0, 1).toUpperCase() + name.substring(1);
         return name;
 
@@ -412,7 +412,7 @@ public class ImportUtils {
         }
         if (tested) return found;
         for (String jsonName : jsonNames) {
-            String newPath = jsonPath + ImportService.JSONFIELDDIVIDER + jsonName;
+            String newPath = jsonPath + Preprocessor.JSONFIELDDIVIDER + jsonName;
             if (testItem.length() > 0 && fieldsFound.get(newPath.substring(1)) != null) {
                 fieldsFound.get(newPath.substring(1)).clear();
             }
@@ -442,7 +442,7 @@ public class ImportUtils {
                     } catch (Exception e2) {
 
                         String value = jsonNext.get(jsonName).toString().trim();
-                        if (value.length() > 0 && (testItem.equals(newPath + ImportService.JSONFIELDDIVIDER + value) || testItem.equals(newPath + ImportService.JSONFIELDDIVIDER + "*"))) {
+                        if (value.length() > 0 && (testItem.equals(newPath + Preprocessor.JSONFIELDDIVIDER + value) || testItem.equals(newPath + Preprocessor.JSONFIELDDIVIDER + "*"))) {
 
                             found = true;
                         }

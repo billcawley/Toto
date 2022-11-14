@@ -62,7 +62,7 @@ public class JstreeController {
 
         if (query != null){
             // items chosen = search, allow that to override the query on the first window
-            if (itemsChosen == null){
+             if (itemsChosen == null){
                 itemsChosen = query;
             }
 
@@ -170,7 +170,7 @@ public class JstreeController {
 
                         // the return type JsonChildren is designed to produce javascript that js tree understands
                         final JsonChildren jsonChildren = RMIClient.getServerInterface(loggedInUser.getDatabaseServer().getIp())
-                                .getJsonChildren(loggedInUser.getDataAccessToken(), Integer.parseInt(jsTreeId), currentNode.nameId, parents.equals("true"),CommonReportUtils.replaceUserChoicesInQuery(loggedInUser,itemsChosen), attribute, hundredsMoreInt);
+                                .getJsonChildren(loggedInUser.getDataAccessToken(), Integer.parseInt(jsTreeId), currentNode.nameId, parents.equals("true"),CommonReportUtils.replaceUserChoicesInQuery(loggedInUser,itemsChosen) + " limit 1000", attribute , hundredsMoreInt);
                         // Now, the node id management is no longer done server side, need to do it here, let logged in user assign each node id
                         if (itemsChosen.length() > 0){
                             if (jsonChildren.id.equals("0")){

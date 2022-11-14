@@ -27,11 +27,16 @@ public class ImportWizardController {
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
         // I assume secure until we move to proper spring security
         if (loggedInUser != null && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
-            String submit = request.getParameter("submit");
-            if ("import".equals(submit)) {
+            String importVal = request.getParameter("importbutton");
+            if ("import".equals(importVal)) {
                 try {
-                    ImportWizard.createDB(loggedInUser);
-                    return "redirect:/api/ReportWizard";
+                    ImportWizard.importFromFile(loggedInUser);
+                    if (loggedInUser.getWizardInfo().getMatchFields()!=null) {
+                        ImportService.importTheFile(loggedInUser, loggedInUser.getWizardInfo().getImportFile(), request.getSession(), null,"Import Schedule Update");
+                        return "redirect:/api/ManageReports";
+                    }else{
+                        return "redirect:/api/ReportWizard";
+                    }
                 } catch (Exception e) {
                     String err = e.getMessage();
                     int ePos = err.indexOf("Exception:");

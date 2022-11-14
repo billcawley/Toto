@@ -199,7 +199,7 @@ public class AzquoMemoryDBIndex {
 
     private static AtomicInteger getNamesWithAttributeContainingCount = new AtomicInteger(0);
 
-    public Set<Name> getNamesWithAttributeContaining(final String attributeName, String attributeValue) {
+    public Set<Name> getNamesWithAttributeContaining(final String attributeName, String attributeValue, int limit) {
         getNamesWithAttributeContainingCount.incrementAndGet();
         boolean endsWith = true;
         boolean startsWith = true;
@@ -211,7 +211,7 @@ public class AzquoMemoryDBIndex {
             startsWith = false;
             attributeValue = attributeValue.substring(1);
         }
-        return getNamesByAttributeValueWildcards(attributeName, attributeValue, startsWith, endsWith);
+        return getNamesByAttributeValueWildcards(attributeName, attributeValue, startsWith, endsWith, limit);
     }
 
     private static AtomicInteger getNamesWithAttributeStartingCount = new AtomicInteger(0);
@@ -229,12 +229,17 @@ public class AzquoMemoryDBIndex {
     private static AtomicInteger getNamesByAttributeValueWildcardsCount = new AtomicInteger(0);
 
     private Set<Name> getNamesByAttributeValueWildcards(final String attributeName, final String attributeValueSearch, final boolean startsWith, final boolean endsWith) {
+                return getNamesByAttributeValueWildcards(attributeName,attributeValueSearch,startsWith,endsWith,StringLiterals.FINDLIMIT);
+    }
+
+
+        private Set<Name> getNamesByAttributeValueWildcards(final String attributeName, final String attributeValueSearch, final boolean startsWith, final boolean endsWith, int limit) {
         getNamesByAttributeValueWildcardsCount.incrementAndGet();
         final Set<Name> names = HashObjSets.newMutableSet();
         if (attributeName.length() == 0) { // so just search for *any* attribute containing the thing
             for (String attName : nameByAttributeMap.keySet()) {
                 if (attName.length() > 0) {//not sure how a blank attribute name was created!
-                    names.addAll(getNamesByAttributeValueWildcards(attName, attributeValueSearch, startsWith, endsWith));
+                    names.addAll(getNamesByAttributeValueWildcards(attName, attributeValueSearch, startsWith, endsWith,limit));
                 }
                 // and when attribute name is blank we don't return for all attribute names, just the first that contains this
                 if (names.size() > 0) {
@@ -248,6 +253,7 @@ public class AzquoMemoryDBIndex {
         if (nameByAttributeMap.get(uctAttributeName) == null) {// we don't have that attribute at all
             return names;
         }
+        limit--;
         for (String attributeValue : nameByAttributeMap.get(uctAttributeName).keySet()) {
             if (startsWith && endsWith) { // the way the flags have been setup the logic is correct though it may look wrong * at the end sets up starts with, * at the beginning sets up ends with. Hence both contains.
                 if (attributeValue.contains(lctAttributeValueSearch)) {
@@ -262,7 +268,11 @@ public class AzquoMemoryDBIndex {
                     names.addAll(nameByAttributeMap.get(uctAttributeName).get(attributeValue));
                 }
             }
+            if (names.size()>limit){
+                return names;
+            }
         }
+
         return names;
     }
 
