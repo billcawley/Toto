@@ -171,6 +171,7 @@ public class ManageDatabasesController {
             , @RequestParam(value = "checkId", required = false) String checkId
             , @RequestParam(value = "deleteId", required = false) String deleteId
             , @RequestParam(value = "unloadId", required = false) String unloadId
+            , @RequestParam(value = "searchId", required = false) String searchId
             , @RequestParam(value = "toggleAutobackup", required = false) String toggleAutobackup
                                 // todo - address whether we're still using such parameters and associated functions
             , @RequestParam(value = "fileSearch", required = false) String fileSearch
@@ -237,6 +238,10 @@ public class ManageDatabasesController {
                 }
                 if (NumberUtils.isNumber(unloadId)) {
                     AdminService.unloadDatabaseWithBasicSecurity(loggedInUser, Integer.parseInt(unloadId));
+                }
+                if (NumberUtils.isNumber(searchId)) {
+                    model.put("databaseid", searchId);
+                    return "searchdatabase";
                 }
                 if (NumberUtils.isNumber(toggleAutobackup)) {
                     AdminService.toggleAutoBackupWithBasicSecurity(loggedInUser, Integer.parseInt(toggleAutobackup));
@@ -438,9 +443,6 @@ public class ManageDatabasesController {
 
         if (database != null && database.length()> 0) {
             request.getSession().setAttribute("lastSelected", database);
-        }else{
-            //FOR TESTING ONLY!
-            database = "test";
         }
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
         // I assume secure until we move to proper spring security
@@ -528,37 +530,30 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
                             model.put("error", e.getMessage());
                             e.printStackTrace();
                         }
-                    } else if (database != null) {
-                        if (database.isEmpty()) {
-                            model.put("error", "Please select a database");
-                        } else {
-                            // data file or zip. New thing - it can be added to the Pending Uploads manually
-                            // todo - security hole here, a developer could hack a file onto a different db by manually editing the database parameter. . .
-                            LoginService.switchDatabase(loggedInUser, database); // could be blank now
-                            if (team != null && uploadFiles.length == 1) { // Pending uploads
-                                String targetPath = SpreadsheetService.getFilesToImportDir() + "/tagged/" + System.currentTimeMillis() + uploadFile.getOriginalFilename();
-                                uploadFile.transferTo(new File(targetPath));
-                                // ok it's moved now make the pending upload record
-                                // todo - assign the database and team automatically!
-                                PendingUpload pendingUpload = new PendingUpload(0, loggedInUser.getUser().getBusinessId()
-                                        , LocalDateTime.now()
-                                        , null
-                                        , uploadFile.getOriginalFilename()
-                                        , targetPath
-                                        , loggedInUser.getUser().getId()
-                                        , -1
-                                        , loggedInUser.getDatabase().getId()
-                                        , null, team);
-                                PendingUploadDAO.store(pendingUpload);
+                    } else{
+                        // data file or zip. New thing - it can be added to the Pending Uploads manually
+                        // todo - security hole here, a developer could hack a file onto a different db by manually editing the database parameter. . .
+                        LoginService.switchDatabase(loggedInUser, database); // could be blank now
+                        if (team != null && uploadFiles.length == 1) { // Pending uploads
+                            String targetPath = SpreadsheetService.getFilesToImportDir() + "/tagged/" + System.currentTimeMillis() + uploadFile.getOriginalFilename();
+                            uploadFile.transferTo(new File(targetPath));
+                            // ok it's moved now make the pending upload record
+                            // todo - assign the database and team automatically!
+                            PendingUpload pendingUpload = new PendingUpload(0, loggedInUser.getUser().getBusinessId()
+                                    , LocalDateTime.now()
+                                    , null
+                                    , uploadFile.getOriginalFilename()
+                                    , targetPath
+                                    , loggedInUser.getUser().getId()
+                                    , -1
+                                    , loggedInUser.getDatabase().getId()
+                                    , null, team);
+                            PendingUploadDAO.store(pendingUpload);
 
-                            } else { // a straight upload, this is the only place that can deal with multiple files being selected for upload
-                                HttpSession session = request.getSession();
-                                String result = handleImport(loggedInUser, session, model, userComment, uploadFiles, newdesign);
-                                if (loggedInUser.getWizardInfo()!=null && loggedInUser.getWizardInfo().getPreprocessor()!=null){
-                                    request.setAttribute(OnlineController.BOOK, loggedInUser.getWizardInfo().getPreprocessor());
-                                }
-                                return result;
-                            }
+                        } else { // a straight upload, this is the only place that can deal with multiple files being selected for upload
+                            HttpSession session = request.getSession();
+                            String result = handleImport(loggedInUser, session, model, userComment, uploadFiles, newdesign);
+                            return result;
                         }
                     }
                 } catch (Exception e) { // now the import has it's on exception catching
@@ -591,7 +586,7 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
             // now preprocessor test - should this be factored? Can it bounce to a straight download? One thing at a time . . .
             // also the copied code todo
             if (preprocessorTest.length > 0) {
-                ImportService.preprocesorTest(preprocessorTest, model, loggedInUser);
+                 Preprocessor.preprocesorTest(preprocessorTest, model, loggedInUser);
             }
 
             model.put("databases", displayDataBases);

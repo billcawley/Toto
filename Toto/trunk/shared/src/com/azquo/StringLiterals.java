@@ -219,6 +219,8 @@ Attributes of the names in other cells can be referenced also
     public static final String SEQUENTIALATTRIBUTE = "sequentialattribute";
 
     public static final String ALL = "--ALL--";
+    //for name searches
+    public static final int FINDLIMIT = 10000000;
 
 
 

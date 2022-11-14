@@ -279,7 +279,8 @@ Created by IntelliJ IDEA.
                             <a href="/api/ManageDatabases?toggleAutobackup=${database.id}&ab=${database.autobackup}#1">${database.autobackup}</a><c:if
                                 test="${database.autobackup}">&nbsp;|&nbsp;<a href="/api/ManageDatabaseBackups?databaseId=${database.id}">view</a></c:if>
                         </td>
-                        <td><a href="/api/Jstree?op=new&database=${database.urlEncodedName}"
+                        <td><a href = "/api/ManageDatases?searchId=${database.id}"
+                            <!---<a href="/api/Jstree?op=new&database=${database.urlEncodedName}" --->
                                data-title="${database.urlEncodedName}" class="button is-small inspect"
                                title="Inspect"><span class="fa fa-eye" title="Inspect ${database.name}"></span></a></td>
                         <td><a href="/api/ManageDatabases?emptyId=${database.id}#1"

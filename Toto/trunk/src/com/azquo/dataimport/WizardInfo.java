@@ -12,6 +12,7 @@ public class WizardInfo {
     ImportSchedule importSchedule;
     Map<String, WizardField> fields;
     ImportTemplate importTemplate;
+    String currentTemplate; //if an import file splits onto more than one template, this is the template being viewed in the wizard.
     Map<String,Map<String,WizardField>> extraTemplateFields;
     Map<String,WizardField> matchFields;
     String lastDataField;
@@ -29,6 +30,7 @@ public class WizardInfo {
         this.importSchedule = null;
         this.fields = new LinkedHashMap<>();
         this.importTemplate = null;
+        this.currentTemplate = null;
         this.extraTemplateFields = new LinkedHashMap<>();
         this.matchFields = null;
         this.lastDataField = null;
@@ -61,6 +63,10 @@ public class WizardInfo {
     public ImportTemplate getImportTemplate(){return importTemplate; }
 
     public void setImportTemplate(ImportTemplate importTemplate){this.importTemplate = importTemplate; }
+
+    public String getCurrentTemplate(){return currentTemplate; }
+
+    public void setCurrentTemplate(String currentTemplate){this.currentTemplate = currentTemplate; }
 
     public Map<String,Map<String,WizardField>>getExtraTemplateFields(){return extraTemplateFields; }
 

@@ -15,6 +15,7 @@ import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.controller.CreateExcelForDownloadController;
 import com.azquo.spreadsheet.controller.LoginController;
+import com.azquo.spreadsheet.controller.OnlineController;
 import com.azquo.spreadsheet.transport.UploadedFile;
 import com.azquo.spreadsheet.zk.BookUtils;
 import net.snowflake.client.jdbc.internal.amazonaws.services.s3.transfer.Upload;
@@ -133,6 +134,9 @@ public class ManageImportSchedulesController {
                     if (toReturn.startsWith("error:"))       {
                         model.put("error", toReturn.substring(6));
                         return "editimportschedule";
+                    }
+                    if (loggedInUser.getWizardInfo()!=null && loggedInUser.getWizardInfo().getPreprocessor()!=null){
+                        request.setAttribute(OnlineController.BOOK, loggedInUser.getWizardInfo().getPreprocessor());
                     }
                     return toReturn;
 

@@ -94,7 +94,7 @@ class NameEditFunctions {
             try {
                 names = NameQueryParser.parseQuery(azquoMemoryDBConnection, setFormula.substring(4), languages, true);
             } catch (Exception e) {
-                names = new ArrayList<>(azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNamesWithAttributeContaining(languages.iterator().next(), setFormula.substring(4)));
+                names = new ArrayList<>(azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNamesWithAttributeContaining(languages.iterator().next(), setFormula.substring(4),StringLiterals.FINDLIMIT));
             }
             if (names != null) {
                 for (Name name : names) {

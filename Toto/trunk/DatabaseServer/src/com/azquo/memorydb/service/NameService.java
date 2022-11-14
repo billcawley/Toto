@@ -62,7 +62,41 @@ public final class NameService {
 
     private static AtomicInteger findContainingNameCount = new AtomicInteger(0);
 
+
+    static public ArrayList<Name> getNamesFromSetWithAttributeContaining(final AzquoMemoryDBConnection azquoMemoryDBConnection, String attribute, String searchString, Collection<Name> set, int limit) {
+        findContainingNameCount.incrementAndGet();
+        ArrayList<Name> namesFound = new ArrayList<Name>();
+        for (Name name : set) {
+            if (name.getAttribute(attribute).toLowerCase(Locale.ROOT).contains(searchString)) {
+                namesFound.add(name);
+                if (namesFound.size() == limit) {
+                    break;
+                }
+            }
+        }
+        if (namesFound.size() == 0){
+            for (Name name : set) {
+                for (String att : name.getAttributes().values()) {
+                    if (att.toLowerCase(Locale.ROOT).contains(searchString)) {
+                        namesFound.add(name);
+                        if (namesFound.size() == limit) {
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        return namesFound;
+    }
+
+
     static public ArrayList<Name> getNamesWithAttributeContaining(final AzquoMemoryDBConnection azquoMemoryDBConnection, String attribute, String searchString) {
+        return getNamesWithAttributeContaining(azquoMemoryDBConnection,attribute,searchString,10000000);
+    }
+
+
+        static public ArrayList<Name> getNamesWithAttributeContaining(final AzquoMemoryDBConnection azquoMemoryDBConnection, String attribute, String searchString, int limit) {
         findContainingNameCount.incrementAndGet();
         int languagePos = searchString.indexOf(StringLiterals.languageIndicator);
         if (languagePos > 0) {
@@ -76,10 +110,10 @@ public final class NameService {
         // new condition
         ArrayList<Name> namesList = new ArrayList<>(azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNamesForAttribute(attribute, searchString));
         if (namesList.size() == 0){
-            namesList =  new ArrayList<>(azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNamesWithAttributeContaining(attribute, searchString));
+            namesList =  new ArrayList<>(azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNamesWithAttributeContaining(attribute, searchString, limit));
         }
         if (namesList.size() == 0 && attribute.length() > 0) {
-            namesList = getNamesWithAttributeContaining(azquoMemoryDBConnection, "", searchString);//try all the attributes
+            namesList = getNamesWithAttributeContaining(azquoMemoryDBConnection, "", searchString, limit);//try all the attributes
         }
         namesList.sort(defaultLanguageCaseInsensitiveNameComparator);
         return namesList;
