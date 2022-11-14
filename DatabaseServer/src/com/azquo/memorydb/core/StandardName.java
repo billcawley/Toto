@@ -3,8 +3,8 @@ package com.azquo.memorydb.core;
 import com.azquo.StringLiterals;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.service.NameService;
-import com.google.common.collect.Lists;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
+import com.google.common.collect.Lists;
 
 import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;

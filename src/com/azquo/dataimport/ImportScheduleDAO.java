@@ -105,6 +105,15 @@ public class ImportScheduleDAO {
     }
 
 
+    public static List<ImportSchedule> findForDatabaseId(int databaseId) {
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(DATABASEID, databaseId);
+        return StandardDAO.findListWithWhereSQLAndParameters("  WHERE " + DATABASEID + " = :" + DATABASEID + " ORDER BY NAME", TABLENAME, importScheduleRowMapper, namedParams);
+    }
+
+
+
+
 
     public static ImportSchedule findById(int id) {
         return StandardDAO.findById(id, TABLENAME, importScheduleRowMapper);

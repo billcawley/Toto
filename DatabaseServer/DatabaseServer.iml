@@ -45,5 +45,6 @@
     <orderEntry type="module" module-name="poi" />
     <orderEntry type="module" module-name="poi-ooxml" />
     <orderEntry type="library" name="org.apache.xmlbeans:xmlbeans:4.0.0" level="project" />
+    <orderEntry type="library" name="google.guava" level="project" />
   </component>
 </module>

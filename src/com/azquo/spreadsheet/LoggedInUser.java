@@ -169,11 +169,11 @@ public class LoggedInUser implements Serializable {
     private final AtomicInteger lastJSTreeNodeId;
 
     private final Map<Integer, JsonChildren.Node> jsTreeLookupMap;
-
     // a bit hacky, I just want a place to put the last converted file. For Modus, won't support more than one file etc. Just make it work for the mo
     private String lastFile = null;
     private String lastFileName = null;
     private WizardInfo wizardInfo = null;
+    private List<String>searchCategories = null;
 
     // public allowing hack for xml scanning - need to sort - todo
     public LoggedInUser(final User user, DatabaseServer databaseServer, Database database, String imageStoreName, Business business) {
@@ -472,4 +472,8 @@ public class LoggedInUser implements Serializable {
     public void setWizardInfo(WizardInfo wizardInfo) {
         this.wizardInfo = wizardInfo;
     }
+
+    public List<String>getSearchCategories(){return searchCategories; };
+
+    public void setSearchCategories(List<String>searchCategories){this.searchCategories = searchCategories; }
 }

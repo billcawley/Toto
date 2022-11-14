@@ -1006,6 +1006,9 @@ public class ExcelController {
                 return ReportWizard.handleRequest(request,loggedInUser);
 
             }
+            if (op.equals("searchdatabase")){
+                return DatabaseSearchController.respondTo(request, loggedInUser);
+            }
         } catch (NullPointerException npe) {
             npe.printStackTrace();
             result = "null pointer, json passed?";

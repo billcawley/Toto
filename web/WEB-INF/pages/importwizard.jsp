@@ -13,6 +13,7 @@
 <script type="text/javascript">
     // this should be below the header??
     // new post ajax based on Keikai
+    var cancelledTemplate="";
 
     function postAjax(action) {
         //use window.fetch() API
@@ -314,8 +315,8 @@
                             <button class="az-wizard-button-next" id="nextButton" onClick="loadNextStage()">Next </button>
                             <button id="showdataButton" class="az-wizard-button-back"  onClick="showData()">Show Sample Output </button>
                             <form method="post" id="import" action="/api/ImportWizard">
-                                <input type="hidden" name="submit" value="import"/>
-                                <button style="display:none" id="importnow" class="az-wizard-button-next"  onClick="submit()">Import now!</button>
+                                <input type="hidden" name="importbutton" value="import"/>
+                                <button style="display:none" id="importnow" class="az-wizard-button-next"  onClick="formSubmit()">Import now!</button>
                             </form>
                         </div>
                     </div>
@@ -435,6 +436,19 @@ lockresult: string
     }
 
 
+    function checkDeleteTemplate(){
+        try{
+            var templateCell = document.getElementById("template-templatename");
+            if (templateCell.selectedIndex>0){
+                document.getElementById("deletetemplate").style.display = "block";
+                return;
+            }
+        }catch(e){
+
+        }
+        document.getElementById("deletetemplate").style.display = "none";
+    }
+
     async function azquoSend(params) {
         var host = sessionStorage.getItem("host");
         try {
@@ -526,7 +540,7 @@ lockresult: string
         params += "&stage=" + stage + "&nextstage=" + nextStage;
         var templateCell = document.getElementById("template-templatename");
         if (templateCell!=null){
-            params +="&template=" + templateCell.options[templateCell.selectedIndex].text
+            params +="&template=" + templateCell.options[templateCell.selectedIndex].text + "&canceltemplate=" + cancelledTemplate;
         }
         let data = await azquoSend(params);
         json = await data.json();
@@ -576,6 +590,7 @@ lockresult: string
             document.getElementById("showdataButton").style.display = "block";
 
         }
+        checkDeleteTemplate();
     }
 
     function isArray(what) {
@@ -629,7 +644,8 @@ lockresult: string
                                 if (heading.toUpperCase().trim() != "MATCHED NAME"){
                                     headingHTML += "<th style=\"min-width:150px\">" + heading + "</th>"
                                 }else{
-                                    headingHTML += setChoice("<th style=\"min-width:150px\">" + heading + " - template: TEMPLATENAME</th>", "template", "templatename", json.template);
+                                    headingHTML += setChoice("<th style=\"min-width:150px\">" + heading + " - template: TEMPLATENAME</th><th> <button id='deletetemplate' style='display:none' class='az-wizard-button-back' onClick='cancelTemplate()'>Cancel Template</button></th>", "template", "templatename", json.template);
+
                                 }
                             }
                             document.getElementById("fieldtable").innerHTML = headingHTML + "</tr></thead><tbody id=\"fields\"></tbody></table>";
@@ -688,6 +704,7 @@ lockresult: string
                 selectHTML += "\n<option value = \"" + selectOption + "\"" + selected + ">" + selectOption + "</option>";
             }
         }
+        selectHTML +="</select>";
         var fieldpos = elementOf(fieldcols, itemFact);
         if (fieldpos > 0) {
             itemHTML = itemHTML.replaceAll("VALUE" + fieldpos, selectHTML);
@@ -719,7 +736,7 @@ lockresult: string
         }
     }
 
-    function submit() {
+    function formSubmit() {
         changed(null, null);//to store away any changes
         document.getElementById("import").submit();
     }
@@ -779,6 +796,15 @@ lockresult: string
         document.getElementById("suggestions").innerHTML = "";
         document.getElementById("suggestionDiv").style.display = "none";
         document.getElementById("spreadsheetButtons").style.display = "none";
+
+    }
+
+    function cancelTemplate(){
+        var templateCell = document.getElementById("template-templatename");
+        cancelledTemplate = templateCell.options[templateCell.selectedIndex].text;
+        templateCell.selectedIndex = 0;
+        changed(null,null);
+
 
     }
 

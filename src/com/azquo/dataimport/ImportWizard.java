@@ -65,6 +65,7 @@ import static org.apache.poi.ss.usermodel.CellType.STRING;
 public class ImportWizard {
 
 
+    static final String AZOUTPUT = "az_Output";
 
     public static final String WIZARDFILENAME = "AzquoImportWizard";
 
@@ -79,8 +80,8 @@ public class ImportWizard {
 
         JSONtest(String field, String jsonField, String jsonPartner, String jsonValue, String testValue) {
             this.target = field;
-            int lastFieldPos = jsonField.lastIndexOf(ImportService.JSONFIELDDIVIDER);
-            this.source = ImportService.JSONFIELDDIVIDER + jsonField.substring(0, lastFieldPos);
+            int lastFieldPos = jsonField.lastIndexOf(Preprocessor.JSONFIELDDIVIDER);
+            this.source = Preprocessor.JSONFIELDDIVIDER + jsonField.substring(0, lastFieldPos);
             this.jsonField = jsonField.substring(lastFieldPos + 1);
             this.jsonPartner = jsonPartner;
             this.jsonValue = jsonValue;
@@ -437,29 +438,35 @@ public class ImportWizard {
         return "";
     }
 
-    public static void createDB(LoggedInUser loggedInUser) throws Exception {
+    public static void importFromFile(LoggedInUser loggedInUser) throws Exception {
         WizardInfo wizardInfo = loggedInUser.getWizardInfo();
-        ImportUtils.calcXL(wizardInfo, 0);
-        wizardInfo.getExtraTemplateFields().put(wizardInfo.getImportSchedule().getTemplateName(),wizardInfo.getFields());
+        if (wizardInfo.getMatchFields()==null){
+            ImportUtils.calcXL(wizardInfo, 0);
+        }
+        wizardInfo.getExtraTemplateFields().put(wizardInfo.getCurrentTemplate(),wizardInfo.getFields());
         Set<String>templatesUsed = new HashSet<>();
-        boolean hasPreprocessor = false;
-        for (String template:wizardInfo.getExtraTemplateFields().keySet()) {
-            for (String field : wizardInfo.getFields().keySet()) {
-                WizardField wizardField = wizardInfo.getFields().get(field);
-                if (wizardField.getMatchedFieldName()!=null){
-                    templatesUsed.add(template);
+        if (wizardInfo.getExtraTemplateFields().size()>1){
+            savePreprocessor(loggedInUser);
+        }else {
+            boolean hasPreprocessor = false;
+            for (String template : wizardInfo.getExtraTemplateFields().keySet()) {
+                for (String field : wizardInfo.getFields().keySet()) {
+                    WizardField wizardField = wizardInfo.getFields().get(field);
+                    if (wizardField.getMatchedFieldName() != null) {
+                        templatesUsed.add(template);
+                    }
+                    //fill in the rest of the calculated fields.
+                    if (templatesUsed.size() > 1 || SPREADSHEETCALCULATION.equals(wizardField.getMatchedFieldName())) {
+                        savePreprocessor(loggedInUser);
+                        wizardInfo.templateParameters.put("PREPROCESSOR", getDBName(loggedInUser) + " " + wizardInfo.getImportSchedule().getTemplateName() + " Preprocessor.xlsx");
+                        calcSpreadsheetData(loggedInUser, wizardInfo.getLineCount());
+                        hasPreprocessor = true;
+                        break;
+                    }
                 }
-                //fill in the rest of the calculated fields.
-                if (templatesUsed.size() > 1 || SPREADSHEETCALCULATION.equals(wizardField.getMatchedFieldName())) {
-                    savePreprocessor(loggedInUser);
-                    wizardInfo.templateParameters.put("PREPROCESSOR", loggedInUser.getDatabase().getName() + " " + wizardInfo.getImportSchedule().getTemplateName() + " Preprocessor.xlsx");
-                    calcSpreadsheetData(loggedInUser, wizardInfo.getLineCount());
-                    hasPreprocessor = true;
+                if (hasPreprocessor) {
                     break;
                 }
-            }
-            if (hasPreprocessor){
-                break;
             }
         }
         String dataField = null;
@@ -475,7 +482,7 @@ public class ImportWizard {
             setInterpretation(wizardInfo, wizardField);
             if (wizardField.getSelect() && wizardField.getInterpretation().length() > 0) {
                 if (!field.contains(" where ")) {
-                    pathsRequired.add(ImportService.JSONFIELDDIVIDER + field);
+                    pathsRequired.add(Preprocessor.JSONFIELDDIVIDER + field);
                 }
                 if (wizardInfo.getImportFileData() == null) {
                     flatfileData.put(field, wizardField.getValuesFound());
@@ -527,10 +534,10 @@ public class ImportWizard {
 
 
             }
-            if (ImportUtils.DATELANG.equals(wizardField.getType()) || ImportUtils.USDATELANG.equals(wizardField.getType())) {
+            if (wizardField.getSelect()  && (ImportUtils.DATELANG.equals(wizardField.getType()) || ImportUtils.USDATELANG.equals(wizardField.getType()))) {
                 flatfileData.put(field, ImportUtils.adjustDates(flatfileData.get(field), wizardField.getType()));
             }
-            if ("time".equals(wizardField.getType())) {
+            if (wizardField.getSelect() && "time".equals(wizardField.getType())) {
                 flatfileData.put(field, ImportUtils.adjustTImes(flatfileData.get(field)));
             }
         }
@@ -576,7 +583,7 @@ public class ImportWizard {
 
         String[] jsonNames = JSONObject.getNames(jsonNext);
         for (String jsonName : jsonNames) {
-            String newPath = jsonPath + ImportService.JSONFIELDDIVIDER + jsonName;
+            String newPath = jsonPath + Preprocessor.JSONFIELDDIVIDER + jsonName;
             if (inRequired(newPath, pathsRequired)) {
                 try {
                     JSONObject jsonObject = jsonNext.getJSONObject(jsonName);
@@ -595,7 +602,7 @@ public class ImportWizard {
             }
         }
         for (String jsonName : jsonNames) {
-            String newPath = jsonPath + ImportService.JSONFIELDDIVIDER + jsonName;
+            String newPath = jsonPath + Preprocessor.JSONFIELDDIVIDER + jsonName;
             if (inRequired(newPath, pathsRequired)) {
                 try {
                     JSONObject jsonObject = jsonNext.getJSONObject(jsonName);
@@ -961,32 +968,48 @@ public class ImportWizard {
     }
 
 
+    private static void clearPreprocessorOutput(WizardInfo wizardInfo, String toBeCleared){
+        try {
+            Book book = wizardInfo.getPreprocessor();
+            Range range = BookUtils.getFrontSheetRange(book, AZOUTPUT + toBeCleared);
+            if (range != null) {
+                range.toRowRange().clearAll();
+                book.getSheetAt(0).getInternalSheet().getCell(range.getRow() - 1, 0).clearValue();
+            }
+            book.getInternalBook().deleteName(BookUtils.getNameByName(AZOUTPUT + toBeCleared, book.getSheetAt(0)));
+            wizardInfo.getExtraTemplateFields().remove(toBeCleared);
+            wizardInfo.setCurrentTemplate(null);
+        }catch (Exception e){
+            //no template!
+        }
+    }
+
 
     private static void loadPreprocessor(LoggedInUser loggedInUser)throws Exception{
-        ImportTemplate importTemplate = ImportTemplateDAO.findForNameAndBusinessId(loggedInUser.getDatabase().getName() + " " + loggedInUser.getWizardInfo().getImportSchedule().getTemplateName() + " Preprocessor.xlsx", loggedInUser.getBusiness().getId());
-        Book book = null;
+         ImportTemplate  importTemplate = ImportTemplateDAO.findForNameAndBusinessId(getDBName(loggedInUser) + " " + loggedInUser.getWizardInfo().getImportSchedule().getTemplateName() + " Preprocessor.xlsx", loggedInUser.getBusiness().getId());
+         Book book = null;
         if (importTemplate==null) {
                 book = Books.createBook("Default preprocessor.xlsx");
                 book.getInternalBook().createSheet("Preprocessor");
                 newRange(book,"az_input",6);
-                newRange(book,"az_output",12);
+                newRange(book,AZOUTPUT,12);
         }else {
 
             book = Importers.getImporter().imports(new File(SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.importTemplatesDir + importTemplate.getFilenameForDisk()), "Report name");
         }
         loggedInUser.getWizardInfo().setPreprocessor(book);
 
-        SName outputName = BookUtils.getNameByName("az_Output",book.getSheetAt(0));
-        SName templateOutputName = BookUtils.getNameByName("az_Output" + loggedInUser.getWizardInfo().getImportSchedule().getTemplateName(), book.getSheetAt(0));
+        SName outputName = BookUtils.getNameByName(AZOUTPUT,book.getSheetAt(0));
+        SName templateOutputName = BookUtils.getNameByName(AZOUTPUT + loggedInUser.getWizardInfo().getImportSchedule().getTemplateName(), book.getSheetAt(0));
         if (templateOutputName == null) {
             CellRegion outputRegion = outputName.getRefersToCellRegion();
-            Ranges.range(book.getSheetAt(0), outputRegion.getRow(), outputRegion.getColumn(), outputRegion.getLastRow(), outputRegion.getLastColumn()).createName("az_Output" + loggedInUser.getWizardInfo().getImportSchedule().getTemplateName());
+            Ranges.range(book.getSheetAt(0), outputRegion.getRow(), outputRegion.getColumn(), outputRegion.getLastRow(), outputRegion.getLastColumn()).createName(AZOUTPUT + loggedInUser.getWizardInfo().getImportSchedule().getTemplateName());
         }
     }
 
     private static void savePreprocessor(LoggedInUser loggedInUser)throws Exception{
         Exporter exporter = Exporters.getExporter();
-        String preprocessorName = loggedInUser.getDatabase().getName() + " " + loggedInUser.getWizardInfo().getImportSchedule().getTemplateName() + " Preprocessor.xlsx";
+        String preprocessorName = getDBName(loggedInUser) + " " + loggedInUser.getWizardInfo().getImportSchedule().getTemplateName() + " Preprocessor.xlsx";
         ImportTemplate importTemplate = ImportTemplateDAO.findForNameAndBusinessId(preprocessorName, loggedInUser.getBusiness().getId());
 
         if (importTemplate!=null){
@@ -1005,6 +1028,13 @@ public class ImportWizard {
         UploadedFile uploadedFile = new UploadedFile(file.getPath(),fileNames,false);
         ImportService.uploadImportTemplate(uploadedFile,loggedInUser, "uploaded automatically");
 
+    }
+
+    private static String getDBName(LoggedInUser loggedInUser){
+        if (loggedInUser.getDatabase()!=null){
+            return loggedInUser.getDatabase().getName();
+        }
+        return "unassigned";
     }
 
     private static void newRange(Book book, String rangeName, int row){
@@ -1027,14 +1057,36 @@ public class ImportWizard {
          if (wizardInfo.getMatchFields()==null){
             return;
         }
-        wizardInfo.getExtraTemplateFields().put(wizardInfo.getImportSchedule().getTemplateName(),wizardInfo.getFields());
-         SName inputRegion = BookUtils.getNameByName("az_Input", sheet);
+         //check that we have data showing, and that all outputs are loaded....
+         for (String field:wizardInfo.getMatchFields().keySet()){
+             WizardField wizardField = wizardInfo.getMatchFields().get(field);
+             if (wizardField.getValueFound() == null && wizardField.getValuesFound().size() > 0){
+                 ImportUtils.getDataValuesFromFile(loggedInUser.getWizardInfo(), field,wizardField.getValuesFound().get(0));
+
+             }
+        }
+         String currentTemplate = wizardInfo.getCurrentTemplate();
+        wizardInfo.getExtraTemplateFields().put(wizardInfo.getCurrentTemplate(),wizardInfo.getFields());
+        for (SName name:book.getInternalBook().getNames()){
+            if (name.getName().toLowerCase().startsWith(AZOUTPUT.toLowerCase(Locale.ROOT))){
+                String templatePage = name.getName().substring(AZOUTPUT.length());
+                if (templatePage.length()> 0 && wizardInfo.getExtraTemplateFields().get(templatePage)==null){
+                    wizardInfo.setCurrentTemplate(templatePage);
+                    interpretTemplateData(loggedInUser, importTemplateData.getSheets().get(templatePage));
+                    wizardInfo.getExtraTemplateFields().put(wizardInfo.getCurrentTemplate(),wizardInfo.getFields());
+                }
+            }
+        }
+        wizardInfo.setCurrentTemplate(currentTemplate);
+        wizardInfo.setFields(wizardInfo.getExtraTemplateFields().get(currentTemplate));
+
+        SName inputRegion = BookUtils.getNameByName("az_Input", sheet);
         int inputRowNo = inputRegion.getRefersToCellRegion().getRow();
         Map<String,SName> outputRegions = new HashMap<>();
         Map<String, Integer> outputRowNos = new HashMap<>();
         int maxOutputRow = 0;
         for (String template:wizardInfo.getExtraTemplateFields().keySet()){
-            SName outputRegion = BookUtils.getNameByName("az_Output" + template, sheet);
+            SName outputRegion = BookUtils.getNameByName(AZOUTPUT + template, sheet);
             if (outputRegion!=null){
                 int outputRowNo = outputRegion.getRefersToCellRegion().getRow();
                 outputRegions.put(template, outputRegion);
@@ -1048,14 +1100,14 @@ public class ImportWizard {
         }
         for (String template:wizardInfo.getExtraTemplateFields().keySet()){
             if (outputRowNos.get(template)==0){
-                SName outputName = BookUtils.getNameByName("az_Output",book.getSheetAt(0));
+                SName outputName = BookUtils.getNameByName(AZOUTPUT,book.getSheetAt(0));
                 CellRegion outputRegion = outputName.getRefersToCellRegion();
                 Range insertRange = Ranges.range(sheet, maxOutputRow+2, 0, maxOutputRow + 5, 0).toRowRange(); // insert at the 3rd row - should be rows to add - 1 as it starts at one without adding anything
                 CellOperationUtil.insertRow(insertRange);
                 insertRange.clearAll();
                 maxOutputRow +=4;
-                Ranges.range(book.getSheetAt(0), maxOutputRow, 0, maxOutputRow + 1, 0).toRowRange().createName("az_Output" + template);
-                SName newName = BookUtils.getNameByName("az_Output" + template, book.getSheetAt(0));
+                Ranges.range(book.getSheetAt(0), maxOutputRow, 0, maxOutputRow + 1, 0).toRowRange().createName(AZOUTPUT + template);
+                SName newName = BookUtils.getNameByName(AZOUTPUT + template, book.getSheetAt(0));
                 Range copySource = Ranges.range(sheet, outputRegion.getRow(), 0, outputRegion.getRow() + 1, 0).toRowRange();
                 Range targetRange = Ranges.range(sheet, maxOutputRow, 0, maxOutputRow + 1, 0).toRowRange();
                 CellOperationUtil.pasteSpecial(copySource, targetRange, Range.PasteType.FORMATS, Range.PasteOperation.NONE,false, false);
@@ -1126,7 +1178,7 @@ public class ImportWizard {
             for (String field:wizardInfo.getFields().keySet()){
                 WizardField wizardField = wizardInfo.getFields().get(field);
                 if (!SPREADSHEETCALCULATION.equals(wizardField.getMatchedFieldName()) && wizardField.getValuesFound()!=null && wizardField.getValuesFound().size()>0){
-                    ImportUtils.getDataValuesFromFile(wizardInfo,wizardField.getMatchedFieldName(),wizardField.getValuesFound().get(0));
+                    wizardField.setValueFound(wizardInfo.getMatchFields().get(wizardField.getMatchedFieldName()).getValueFound());
                 }
             }
             Map<String,String> allMatches = getAllMatches(wizardInfo);
@@ -1449,8 +1501,31 @@ public class ImportWizard {
         int stage = Integer.parseInt(request.getParameter("stage"));
         int nextStage = Integer.parseInt(request.getParameter("nextstage"));
         String fieldsInfo = request.getParameter("fields");
+        String template = request.getParameter("template");
+        String cancelledTemplate = request.getParameter("canceltemplate");
         if (wizardInfo.getMatchFields()!=null){
-           if("spreadsheet calculate".equals(chosenField)) {
+            if (template==null || template.length()==0) {
+                template = wizardInfo.getImportSchedule().getTemplateName();
+            }
+            if (cancelledTemplate!=null && cancelledTemplate.length()>0){
+                clearPreprocessorOutput(wizardInfo,cancelledTemplate);
+            }
+
+            if (template!=null && template.length()> 0 && !template.equals(wizardInfo.getCurrentTemplate())){
+                Map<String,Map<String,WizardField>> extraTemplateFields = wizardInfo.getExtraTemplateFields();
+                if (wizardInfo.getCurrentTemplate()!=null){
+                    extraTemplateFields.put(wizardInfo.getCurrentTemplate(), wizardInfo.getFields());
+                }
+                Map<String, WizardField> newFields = extraTemplateFields.get(template);
+                if (newFields==null){
+                    interpretTemplateData(loggedInUser, importTemplateData.getSheets().get(template));
+
+                }else{
+                    wizardInfo.setFields(newFields);
+                }
+                wizardInfo.setCurrentTemplate(template);
+            }
+            if("spreadsheet calculate".equals(chosenField)) {
                 int lines = wizardInfo.getLineCount();
                 if (lines > 100) {
                     lines = 100;
@@ -1460,9 +1535,11 @@ public class ImportWizard {
 
             nextStage = MATCHSTAGE;
             stage = MATCHSTAGE;
+
         }
+
         if (stage!=NAMESTAGE && chosenField!=null && chosenField.length()>0){
-            chosenField = ImportUtils.findFieldFromName(wizardInfo,chosenField);
+            chosenField = ImportUtils.findFieldFromName(wizardInfo,chosenField, wizardInfo.getMatchFields()!=null);
         }
 
         if(chosenValue==null || chosenValue.length()==0){
@@ -1503,11 +1580,15 @@ public class ImportWizard {
             toReturn += fieldInfo;
             Map<String,List<String>> templateMap=new HashMap<>();
             List<String>templates = new ArrayList<>();
+            String origTemplate = wizardInfo.getImportSchedule().getTemplateName();
+            templates.add(origTemplate);
             for (String template1:importTemplateData.getSheets().keySet()){
-                if (template1.equals(wizardInfo.getImportSchedule().getTemplateName())){
-                    templates.add(template1 + " selected");
-                }else{
-                    templates.add(template1);
+                if (!template1.equals(origTemplate)) {
+                     if (template1.equals(template)) {
+                        templates.add(template1 + " selected");
+                    } else {
+                        templates.add(template1);
+                    }
                 }
             }
             templateMap.put("template",templates);
@@ -1526,7 +1607,7 @@ public class ImportWizard {
         io.keikai.api.model.Sheet sheet = book.getSheetAt(0);
         SName inputRegion = BookUtils.getNameByName("az_Input", sheet);
         int inputRow = inputRegion.getRefersToCellRegion().getRow() + 1;
-        SName outputRegion = BookUtils.getNameByName("az_Output", sheet);
+        SName outputRegion = BookUtils.getNameByName(AZOUTPUT, sheet);
         int outputRow = outputRegion.getRefersToCellRegion().getRow() + 1;
         boolean hasCalc = false;
         int count=0;
@@ -1580,16 +1661,14 @@ public class ImportWizard {
         try {
             WizardInfo wizardInfo = loggedInUser.getWizardInfo();
             ImportTemplate importTemplate = null;
-            String dbName = "unallocated";
-            if (loggedInUser.getDatabase() !=null) {
-                dbName = loggedInUser.getDatabase().getName();
+             if (loggedInUser.getDatabase() !=null) {
                 int importTemplateId = loggedInUser.getDatabase().getImportTemplateId();
                 if (importTemplateId > 0) {
                     importTemplate = ImportTemplateDAO.findById(importTemplateId);
                 }
             }
             if (importTemplate==null){
-                String templateName = dbName + " Import Templates.xlsx";
+                String templateName = getDBName(loggedInUser) + " Import Templates.xlsx";
                 importTemplate = ImportTemplateDAO.findForName(templateName);
                 if (importTemplate==null) {
                     Workbook book = new XSSFWorkbook();
@@ -1610,13 +1689,13 @@ public class ImportWizard {
             String templateName = wizardInfo.getImportSchedule().getTemplateName();
             Sheet sheet = book.createSheet(templateName); // literals not best practice, could it be factored between this and the xlsx file?
             int rowNo = 0;
-            List<List<String>>templateContents = importTemplateData.getSheets().get(wizardInfo.getImportSchedule().getTemplateName());
+            List<List<String>>templateContents = importTemplateData.getSheets().get(templateName);
             if (templateContents!=null) {
                 for (List<String> row : templateContents) {
                     int colNo = 0;
                     for (String cell : row) {
                         if (cell != null && cell.length() > 0) {
-                            ImportService.setCellValue(sheet, rowNo, colNo++, cell);
+                            Preprocessor.setCellValue(sheet, rowNo, colNo++, cell);
                         }else{
                             colNo++;
                         }
@@ -1627,17 +1706,17 @@ public class ImportWizard {
             if (rowNo < 8){
                 rowNo=8;
             }
-            ImportService.setCellValue(sheet, rowNo++, 0, "PARAMETERS");
+            Preprocessor.setCellValue(sheet, rowNo++, 0, "PARAMETERS");
             for (String templateParam:wizardInfo.getTemplateParameters().keySet()){
-                ImportService.setCellValue(sheet, rowNo, 0, templateParam);
-                ImportService.setCellValue(sheet,rowNo++,1, wizardInfo.getTemplateParameters().get(templateParam));
+                Preprocessor.setCellValue(sheet, rowNo, 0, templateParam);
+                Preprocessor.setCellValue(sheet,rowNo++,1, wizardInfo.getTemplateParameters().get(templateParam));
             }
             String filePath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.importTemplatesDir + importTemplate.getFilenameForDisk();
 
             FileOutputStream out = new FileOutputStream(filePath);
             book.write(out);
             out.close();
-            interpretTemplateData(loggedInUser, importTemplateData.getSheets().get(wizardInfo.getImportSchedule().getTemplateName()));
+            interpretTemplateData(loggedInUser, importTemplateData.getSheets().get(templateName));
             return uploadTheFile(loggedInUser, wizardInfo.getImportFile(), importTemplateData);
 
         }catch(Exception e){
@@ -1802,9 +1881,10 @@ public class ImportWizard {
         if (!hasData || !hasKeyField){
             return;
         }
+        String templateName = wizardInfo.getImportSchedule().getTemplateName();
         Book book = Importers.getImporter().imports(servletContext.getResourceAsStream("/WEB-INF/BasicReportTemplate.xlsx"), "Report name");
-        BookUtils.setNameValue(book,"az_ReportName", wizardInfo.getImportSchedule().getTemplateName() + " Import");
-        BookUtils.setNameValue(book,"az_ImportChoice", "`" + wizardInfo.getImportSchedule().getTemplateName() + " Imports` children");
+        BookUtils.setNameValue(book,"az_ReportName", templateName + " Import");
+        BookUtils.setNameValue(book,"az_ImportChoice", "`" + templateName + " Imports` children");
         BookUtils.setNameValue(book,"az_RowHeadingsData","`[import]` children sorted");
         SName region = BookUtils.getNameByName("az_ColumnHeadingsData", book.getSheetAt(0));
         SSheet sheet = book.getSheetAt(0).getInternalSheet();
@@ -1833,7 +1913,7 @@ public class ImportWizard {
         }
         SName dataRegion = BookUtils.getNameByName("az_DataRegionData",book.getSheetAt(0));
 
-        String tempPath = SpreadsheetService.getHomeDir() + "/temp/" + System.currentTimeMillis() + wizardInfo.getImportSchedule().getTemplateName()+"ReportTemplate.xlsx"; // timestamp to stop file overwriting
+        String tempPath = SpreadsheetService.getHomeDir() + "/temp/" + System.currentTimeMillis() + templateName+"ReportTemplate.xlsx"; // timestamp to stop file overwriting
         File tempLocation = new File(tempPath);
         tempLocation.delete();
         FileOutputStream os = new FileOutputStream(tempLocation);
@@ -1841,7 +1921,7 @@ public class ImportWizard {
         exporter.export(book,os);
         os.close();
         UploadedFile uf = new UploadedFile(tempPath,Collections.singletonList("Basic Report Template.xlsx"), false);
-        ImportService.uploadReport(loggedInUser, wizardInfo.getImportSchedule().getTemplateName() + " Import", uf);
+        ImportService.uploadReport(loggedInUser, templateName + " Import", uf);
 
 
 
@@ -1919,10 +1999,11 @@ public class ImportWizard {
 
                     }
                 }
+                String templateName = loggedInUser.getWizardInfo().getImportSchedule().getTemplateName();
                 if (clauses[firstClause].equals(KEYFIELDID) || ImportUtils.isIdField(wizardInfo, field)) {
                     modifiedHeading.append(";language " + fieldName + "id;child of " + fieldName);
                     if (KEYFIELDID.equals(wizardField.getType())){
-                        CommonReportUtils.getDropdownListForQuery(loggedInUser,"edit:create Imports->" + loggedInUser.getWizardInfo().getImportSchedule().getTemplateName()+ " Imports->Import from " + wizardInfo.getImportFile().getFileName());
+                        CommonReportUtils.getDropdownListForQuery(loggedInUser,"edit:create Imports->" + templateName + " Imports->Import from " + wizardInfo.getImportFile().getFileName());
 
                         modifiedHeading.append(",Import from " + wizardInfo.getImportFile().getFileName());
                     }
@@ -1985,6 +2066,9 @@ public class ImportWizard {
             }
         }
         saveTemplate(loggedInUser, modifiedHeadings);
+        if (wizardInfo.getMatchFields()!=null){
+            return;
+        }
         createBasicReport(loggedInUser);
         //now take off the fields to ignore.
         for (String field : wizardInfo.getFields().keySet()) {
@@ -2004,6 +2088,9 @@ public class ImportWizard {
             templateData = new ArrayList<>();
         }
         wizardInfo.setFields(new LinkedHashMap<>());
+        if (wizardInfo.getCurrentTemplate()==null){
+            wizardInfo.setCurrentTemplate(wizardInfo.getImportSchedule().getTemplateName());
+        }
         int rows = 0;
         while (rows < templateData.size() && templateData.get(rows).size() > 0) {
             rows++;
@@ -2220,9 +2307,9 @@ public class ImportWizard {
         for (String field : wizardInfo.getFields().keySet()) {
             WizardField wizardField = wizardInfo.getFields().get(field);
 
-            ImportService.setCellValue(sheet, row, col, ImportUtils.lookupList(field,wizardInfo.getLookups()));//a comma separated list
-            ImportService.setCellValue(sheet, row, col + 1, wizardField.getName());
-            ImportService.setCellValue(sheet, row++, col + 2, wizardField.getInterpretation());
+            Preprocessor.setCellValue(sheet, row, col, ImportUtils.lookupList(field,wizardInfo.getLookups()));//a comma separated list
+            Preprocessor.setCellValue(sheet, row, col + 1, wizardField.getName());
+            Preprocessor.setCellValue(sheet, row++, col + 2, wizardField.getInterpretation());
         }
         col = 0;
         for (String field : modifieldHeadings.keySet()) {
@@ -2233,23 +2320,28 @@ public class ImportWizard {
                     //create a comme separated list of potential column names
                     clause = ImportUtils.lookupList(ImportUtils.standardise(clause), wizardInfo.getLookups());
                 }
-                ImportService.setCellValue(sheet, rowNo++, col, clause);
+                Preprocessor.setCellValue(sheet, rowNo++, col, clause);
             }
             col++;
 
-            //ImportService.setCellValue(sheet,0, col++, modifieldHeadings.get(field));
+            //Preprocessor.setCellValue(sheet,0, col++, modifieldHeadings.get(field));
         }
         int rowNo = 8;
         wizardInfo.getTemplateParameters().put(ImportService.POSTPROCESSOR, "do " + wizardInfo.getImportSchedule().getTemplateName() + " Import");
         wizardInfo.getTemplateParameters().put("schema","withquotes");
-        ImportService.setCellValue(sheet, rowNo++, 0, "PARAMETERS");
+        Preprocessor.setCellValue(sheet, rowNo++, 0, "PARAMETERS");
         for (String templateParam:wizardInfo.getTemplateParameters().keySet()){
-            ImportService.setCellValue(sheet, rowNo, 0, templateParam);
-            ImportService.setCellValue(sheet,rowNo++,1, wizardInfo.getTemplateParameters().get(templateParam));
-          }
-        int importTemplateId = loggedInUser.getDatabase().getImportTemplateId();
-        ImportTemplate importTemplate = ImportTemplateDAO.findById(importTemplateId);
-        String filePath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.importTemplatesDir + importTemplate.getFilenameForDisk();
+            Preprocessor.setCellValue(sheet, rowNo, 0, templateParam);
+            Preprocessor.setCellValue(sheet,rowNo++,1, wizardInfo.getTemplateParameters().get(templateParam));
+        }
+        String templateFileName = "unassigned import templates.xlsx";
+        if (loggedInUser.getDatabase()!=null) {
+            int importTemplateId = loggedInUser.getDatabase().getImportTemplateId();
+            ImportTemplate importTemplate = ImportTemplateDAO.findById(importTemplateId);
+            templateFileName = importTemplate.getFilenameForDisk();
+
+        }
+        String filePath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.importTemplatesDir + templateFileName;
 
         FileOutputStream out = new FileOutputStream(filePath);
         book.write(out);

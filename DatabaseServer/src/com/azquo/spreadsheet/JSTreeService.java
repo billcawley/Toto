@@ -114,8 +114,19 @@ public class JSTreeService {
 
     // Ok this now won't deal with the jstree ids (as it should not!), that can be dealt with on the front end
     public static JsonChildren getJsonChildren(DatabaseAccessToken databaseAccessToken, int jsTreeId, int nameId, boolean parents, String searchTerm, String language, int hundredMore) {
-        int childrenLimit = (hundredMore + 1) * 100;
         AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
+        int limit = StringLiterals.FINDLIMIT;// there probably should be some sort of limit - 10 million is arbitrary.
+        int limitPos = searchTerm.toLowerCase(Locale.ROOT).indexOf(" limit ");
+        if (limitPos >= 0){
+            String limitString = searchTerm.substring(limitPos + 7).trim();
+            try{
+                limit = Integer.parseInt(limitString);
+                searchTerm = searchTerm.substring(0, limitPos);
+            }catch (Exception e){
+                //carry on
+            }
+        }
+        int childrenLimit = (hundredMore + 1) * 100;
         Map<String, Boolean> state = new HashMap<>();
         state.put("opened", true);
         String text = "";
@@ -130,8 +141,27 @@ public class JSTreeService {
                     children = NameQueryParser.parseQuery(azquoMemoryDBConnection, searchTerm);
                 } catch (Exception e) {//carry on
                 }
-                if (children == null || children.size() == 0) {
-                    children = NameService.getNamesWithAttributeContaining(azquoMemoryDBConnection, language, searchTerm);
+                if (children == null || children.size() !=1) {
+                    if (searchTerm.contains(StringLiterals.MEMBEROF)) {
+                        //used in DatabaseSearch
+                        int mPos = searchTerm.indexOf(StringLiterals.MEMBEROF);
+                        try {
+                            children = NameQueryParser.parseQuery(azquoMemoryDBConnection, searchTerm);
+                        }catch(Exception e) {
+                        }
+                        try{
+                            if (children.size() != 1) {
+                                Name setName = NameService.findByName(azquoMemoryDBConnection, searchTerm.substring(0, mPos));
+                                searchTerm = searchTerm.substring(mPos + StringLiterals.MEMBEROF.length());
+                                children = NameService.getNamesFromSetWithAttributeContaining(azquoMemoryDBConnection, language, searchTerm, setName.getChildren(), limit);
+                            }
+                        } catch (Exception e) {
+                            return null;
+                        }
+                    }
+                }else{
+
+                    children = NameService.getNamesWithAttributeContaining(azquoMemoryDBConnection, language, searchTerm, limit);
                 }
             }
         } else if (name != null) { // typically on open
@@ -168,11 +198,14 @@ public class JSTreeService {
                 if (!language.equals(StringLiterals.DEFAULT_DISPLAY_NAME)){
                     childText += (" (" + child.getDefaultDisplayName() + ")");
                 }
-
-                childNodes.add(new JsonChildren.Node(-1, childText, childrenBoolean, child.getId(), name != null ? name.getId() : 0));
+                //cut off names to 100 chars
+                if (childText.length()>100){
+                    childText = childText.substring(0,100);
+                }
+                childNodes.add(new JsonChildren.Node(-1,childText,childrenBoolean, child.getId(), name != null ? name.getId() : 0));
                 count++;
             }
-            if (name != null) { // if it's not top then we add non DEFAULT_DISPLAY_NAME attributes to the bottom of the list
+            if (jsTreeId > 0 && name != null) { // if it's not top then we add non DEFAULT_DISPLAY_NAME attributes to the bottom of the list - BUT NOT ON searchdatabase
                 for (String attName : name.getAttributes().keySet()) {
                     if (!attName.equals(language)) {
                         childNodes.add(new JsonChildren.Node(-1, attName + ":" + name.getAttributes().get(attName), false, name.getId(), name.getId()));

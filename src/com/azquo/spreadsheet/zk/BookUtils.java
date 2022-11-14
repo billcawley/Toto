@@ -269,6 +269,16 @@ java.lang.IllegalStateException: is ERROR, not the one of [STRING, BLANK]
         return names;
     }
 
+    public static Range getFrontSheetRange(Book book, String name)throws Exception{
+        CellRegion region = getNameByName(name, book);
+        if (region==null){
+            return null;
+        }
+        return Ranges.range(book.getSheetAt(0),region.getRow(), region.getColumn(), region.getLastRow(), region.getColumn());
+
+
+    }
+
     static String getCellString(Sheet sheet, int r, int c) {//this is the same routine as in ImportService, so one is redundant, but I'm not sure which (WFC)
         Range range = Ranges.range(sheet, r, c);
         CellData cellData = range.getCellData();
@@ -386,6 +396,17 @@ java.lang.IllegalStateException: is ERROR, not the one of [STRING, BLANK]
             }
         }
         return null;
+    }
+
+
+    public static List<org.apache.poi.ss.usermodel.Name> getNamesStarting(org.apache.poi.ss.usermodel.Workbook book, String stringName) {
+        List<org.apache.poi.ss.usermodel.Name > names = new ArrayList<>();
+        for (org.apache.poi.ss.usermodel.Name name : book.getAllNames()) {
+            if (name.getNameName().toLowerCase(Locale.ROOT).startsWith(stringName.toLowerCase(Locale.ROOT)) && !name.isHidden()) { // hidden names can interfere with things! We only care about what is visible
+                names.add(name);
+            }
+        }
+        return names;
     }
 
     public static org.apache.poi.ss.usermodel.Name getName(org.apache.poi.ss.usermodel.Sheet sheet, String stringName) {

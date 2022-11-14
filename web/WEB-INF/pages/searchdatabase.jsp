@@ -11,36 +11,8 @@
 
 <div class="az-content" id="setup">
     <div class="az-topbar">
-        <button>
-            <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke-width="2"
-                    stroke="currentColor"
-                    aria-hidden="true"
-            >
-                <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h8m-8 6h16"></path>
-            </svg>
-        </button>
         <div class="az-searchbar">
             <div>
-                <div>
-                    <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke-width="2"
-                            stroke="currentColor"
-                            aria-hidden="true"
-                    >
-                        <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                        ></path>
-                    </svg>
-                </div>
                 <input name="query" id="query" placeholder="Search" type="text" value=""/>
             </div>
         </div>
@@ -52,10 +24,10 @@
                     <div class="az-section-body">
                         <table>
                             <tr>
-                                <td>
+                                <td style="min-width:400px;vertical-align:top">
                                     <div class="az-table" id="fieldtable"> </div>
                                 </td>
-                                <td>
+                                <td style="min-width:400px;vertical-align:top">
                                     <div class="az-table" id="searchitem"></div>
                                 </td>
                             </tr>
@@ -119,10 +91,13 @@ lockresult: string
     }
 
 
+    function itemSelected(nameId){
+        changed("",nameId);
+    }
 
     async function changed(query, nodeId) {
         let params = "op=searchdatabase&sessionid=${pageContext.session.id}";
-        params += "&query=" + encodeURIComponent(query)+"&id=" + nodeId;
+        params += "&query=" + encodeURIComponent(query)+"&nameId=" + nodeId;
         let data = await azquoSend(params);
         json = await data.json();
         if(json.error > ""){
@@ -130,21 +105,22 @@ lockresult: string
             errorDiv.innerText = json.error;
             return;
         }
-        if (json.queryresult > ""){
-            handleQueryresult(json.queryresult);
+        if (query > ""){
+            handleQueryResult(json);
         }
-        if (json.details > ""){
+        if (nodeId > 0){
             handleDetails(json);
         }
     }
 
     function handleQueryResult(jsonItem){
         var itemsHTML = "";
-        for (var topNameId =0;topNameId < jsonItem.length;topNameId++){
-            var element = jsonItem[topNameId];
-            itemsHTML += showSet(element.topName,element.found, true);
+        for (var topName in jsonItem){
+            var element = jsonItem[topName];
+            itemsHTML += showSet(topName,element.children, true);
         }
         document.getElementById("fieldtable").innerHTML = itemsHTML;
+        document.getElementById("searchitem").innerHTML = "";
 
     }
 
@@ -152,24 +128,51 @@ lockresult: string
     function handleDetails(json) {
 
 
-        var itemsHTML = showSet("Parents", json.parents, false);
-        itemsHTML = showSet(json.name, json.details);
+
+        var itemsHTML ="<div class='az-report-card'>" + showSet("Parents", json.parents.children, false);
+        itemsHTML += showDetails(json.details);
+        itemsHTML += showSet("Children", json.children.children, false);
+        document.getElementById("searchitem").innerHTML = itemsHTML + "</div>";
+    }
 
 
-        itemsHTML += showSet("Children", json.children, false);
-        document.getElementById("searchitem").innerHTML = itemsHTML;
+
+    function showDetails(jsonDetails){
+        var name = jsonDetails.attributes.DEFAULT_DISPLAY_NAME;
+        if (name.indexOf("\n")>0){
+            name = name.replaceAll("\n","<br/>");
+        }
+        var itemHTML = "<div class='az-card-data'>" + name +"</div>\n";
+
+        for (var att in jsonDetails.attributes){
+            if (att!="DEFAULT_DISPLAY_NAME"){
+                itemHTML +="<div class='az-attribute'>" + att + ":" + jsonDetails.attributes[att] + "</div>\n";
+
+            }
+        }
+        for (var info in jsonDetails){
+            if (info != "attributes" && info != "id" && info != "name"){
+                itemHTML += "<div class='az-extraInfo'>" + info + ":" + jsonDetails[info] + "</div>";
+            }
+        }
+        return itemHTML;
+
+
+
     }
 
     function showSet(setName, setElements){
-        itemsHTML += "<div class='az-heading'>" + setName + "</div>\n";
+        var itemHTML = "<div class='az-searchpanel-search-results-list'>\n";
+        if (setName > "")
+            itemHTML += "<h2>" +  setName + "</h2>\n";
+        if (setElements.length == 0){
+            return "";
+        }
         for (var element of setElements){
-            if (element.id > ""){
-                itemsHTML += "<div class='az-founditem' onClick='itemSelected(" + element.id + ")'>"+element.name + "</div>\n";
-            }else{
-                itemsHTML +="<div class='az-attribute'>" + element.name + ":" + element.value + "</div>\n";
-            }
+            itemHTML += "<div class='active' onClick='itemSelected(" + element.nameId + ")'>"+element.text.replaceAll("\n","<br/>") + "</div>\n";
 
         }
+        return itemHTML + "</div>";
 
     }
 
