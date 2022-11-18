@@ -42,6 +42,7 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Copyright (C) 2016 Azquo Ltd.
@@ -352,14 +353,17 @@ public class ManageImportSchedulesController {
             for (Database d : databaseList) {
                 databasesList.append("new d({ id: "+ d.getId() +", name: \"" + d.getName() + "\", date: 0 }),"); // date jammed as zero for the mo, does the JS use it?
             }
+            String resource = new BufferedReader(  new InputStreamReader(resourceAsStream, StandardCharsets.UTF_8))
+                    .lines()
+                    .collect(Collectors.joining("\n"));
 
-            model.put("newappjavascript", IOUtils.toString(resourceAsStream, StandardCharsets.UTF_8)
+            model.put("newappjavascript", "// " +  resource
                     .replace("###IMPORTSLIST###", importsList.toString())
                     .replace("###DATABASESLIST###", databasesList.toString())
-                    .replace("###IMPORTSCHEDULESLIST###", importSchedulesList.toString()));
+                    .replace("###REPORTSLIST###", importSchedulesList.toString()));
 
 
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }

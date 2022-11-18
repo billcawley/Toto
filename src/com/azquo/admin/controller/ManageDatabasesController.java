@@ -63,6 +63,7 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import io.keikai.api.model.Book;
 
@@ -392,11 +393,15 @@ public class ManageDatabasesController {
 
                 try {
                     InputStream resourceAsStream = servletContext.getResourceAsStream("/WEB-INF/includes/newappjavascript.js");
-                    model.put("newappjavascript", IOUtils.toString(resourceAsStream, StandardCharsets.UTF_8)
+                    String resource = new BufferedReader(  new InputStreamReader(resourceAsStream, StandardCharsets.UTF_8))
+                            .lines()
+                            .collect(Collectors.joining("\n"));
+
+                    model.put("newappjavascript", "//" + resource
                             .replace("###IMPORTSLIST###", jsImportsList.toString())
                             .replace("###DATABASESLIST###", databasesList.toString())
                             .replace("###REPORTSLIST###", reportsList.toString()));
-                } catch (IOException e) {
+                } catch (Exception e) {
                     e.printStackTrace();
                 }
                 if (model.get("error") != null){

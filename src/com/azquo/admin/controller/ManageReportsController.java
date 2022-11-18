@@ -34,14 +34,12 @@ import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Copyright (C) 2016 Azquo Ltd.
@@ -437,14 +435,17 @@ public class ManageReportsController {
             for (Database d : databaseList) {
                 databasesList.append("new d({ id: "+ d.getId() +", name: \"" + d.getName() + "\", date: 0 }),"); // date jammed as zero for the mo, does the JS use it?
             }
+            String resource = new BufferedReader(  new InputStreamReader(resourceAsStream, StandardCharsets.UTF_8))
+                    .lines()
+                    .collect(Collectors.joining("\n"));
 
-            model.put("newappjavascript", IOUtils.toString(resourceAsStream, StandardCharsets.UTF_8)
+            model.put("newappjavascript", "// " +  resource
                     .replace("###IMPORTSLIST###", importsList.toString())
                     .replace("###DATABASESLIST###", databasesList.toString())
                     .replace("###REPORTSLIST###", reportsList.toString()));
 
 
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
 
