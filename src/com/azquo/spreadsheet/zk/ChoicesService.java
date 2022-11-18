@@ -583,7 +583,7 @@ public class ChoicesService {
             if (chosen.contains("`.`")){
                 DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
                 try{
-                    chosen = RMIClient.getServerInterface(databaseAccessToken.getServerIp()).getNameAttribute(databaseAccessToken, chosen.substring(chosen.indexOf("`"), chosen.indexOf("`.`")), chosen.substring( chosen.indexOf("`.`") + 3, chosen.lastIndexOf("`")));
+                    chosen = RMIClient.getServerInterface(databaseAccessToken.getServerIp()).getNameAttribute(databaseAccessToken, 0,chosen.substring(chosen.indexOf("`"), chosen.indexOf("`.`")), chosen.substring( chosen.indexOf("`.`") + 3, chosen.lastIndexOf("`")));
                 } catch (Exception e){
                     chosen = e.getMessage(); // I guess give them a clue when it doesn't work
                 }

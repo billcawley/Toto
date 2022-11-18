@@ -547,7 +547,7 @@ public class OnlineController {
             SFTPUtilities.copyFileToDatabaseServer(sourceFile.getInputStream(), destinationPath);
         }
         DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
-        String imageList = RMIClient.getServerInterface(databaseAccessToken.getServerIp()).getNameAttribute(databaseAccessToken, loggedInUser.getImageStoreName(), "uploaded images");
+        String imageList = RMIClient.getServerInterface(databaseAccessToken.getServerIp()).getNameAttribute(databaseAccessToken,0, loggedInUser.getImageStoreName(), "uploaded images");
         if (imageList != null) {//check if it's already in the list
             String[] images = imageList.split(",");
             for (String image : images) {

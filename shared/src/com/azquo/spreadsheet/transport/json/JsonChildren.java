@@ -18,16 +18,32 @@ public class JsonChildren implements Serializable {
         public String text; // also not final as I may need to qualify after setting
         public final boolean children;
         public int nameId; // I had to add these two in so that the client side knows about the name ids which it needs to keep track of
-        int parentNameId;
+        public int parentNameId;
+        public String parentName;
+        public String sortName;
 
-        public Node(int id, String text, boolean children, int nameId, int parentNameId) {
+        public Node(int id, String text, boolean children, int nameId, int parentNameId, String parentName) {
             this.id = id;
             this.text = text;
             this.children = children;
             this.nameId = nameId;
             this.parentNameId = parentNameId;
+            this.parentName = parentName;
+            this.sortName = "";
         }
+
+        public Node(int id, String text, boolean children, int nameId, int parentNameId, String parentName, String sortName) {
+            this.id = id;
+            this.text = text;
+            this.children = children;
+            this.nameId = nameId;
+            this.parentNameId = parentNameId;
+            this.parentName = parentName;
+            this.sortName = sortName;
+        }
+
     }
+
     // public for jackson to see them
     public String id; // efc trying to hack this to a different string to make javascript behave
     public final Map<String, Boolean> state;
@@ -35,6 +51,7 @@ public class JsonChildren implements Serializable {
     public final List<Node> children;
     public final int nameId;
     public final String type;
+
 
     public JsonChildren(String id, Map<String, Boolean> state, String text, List<Node> children, int nameId, String type) {
         this.id = id;
@@ -44,4 +61,5 @@ public class JsonChildren implements Serializable {
         this.nameId = nameId;
         this.type = type;
     }
+
 }

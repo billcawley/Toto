@@ -589,7 +589,7 @@ public class ReportExecutor {
                 int quotePos = result.indexOf(QUOTE);
                 int secondQPos = result.indexOf("`.`");
                 int thirdQPos = result.indexOf(QUOTE, secondQPos + 4);
-                result = RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).getNameAttribute(loggedInUser.getDataAccessToken(), result.substring(quotePos+1,secondQPos), result.substring(secondQPos+3,thirdQPos));
+                result = RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).getNameAttribute(loggedInUser.getDataAccessToken(), 0, result.substring(quotePos+1,secondQPos), result.substring(secondQPos+3,thirdQPos));
             }catch(Exception e){
                 throw new Exception("Error - 'if' requires an attribute - as in `<name>`.`<Attribute>`");
             }
