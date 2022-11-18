@@ -276,6 +276,15 @@ CREATE TABLE IF NOT EXISTS `import_schedule` (
 
 ) ENGINE=InnoDB AUTO_INCREMENT=101 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS `roled` (
+                                                `id` int(11) NOT NULL AUTO_INCREMENT,
+                                                `business_id` int(11) NOT NULL,
+                                                `role_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+                                                `json_details` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+                                                 PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=120 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+-- --------------------------------------------------------
 
 
 --

@@ -298,8 +298,16 @@ public class StandardDAO {
 
 
         StandardDAO.jdbcTemplate = jdbcTemplate; // I realise that this is "naughty", see comments at the top.
-}
 
+
+           jdbcTemplate.update("CREATE TABLE IF NOT EXISTS `master_db`.`role` (\n" +
+                   "                                              `id` int(11) NOT NULL AUTO_INCREMENT,\n" +
+                   "                                              `business_id` int(11) NOT NULL,\n" +
+                   "                                              `role_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,\n" +
+                   "                                              `json_detail` varchar(255) COLLATE utf8_unicode_ci NOT NULL,\n" +
+                   "                                              PRIMARY KEY (`id`)\n" +
+                   ") ENGINE=InnoDB AUTO_INCREMENT=120 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;\n", new HashMap<>());
+}
 
 
 
