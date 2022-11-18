@@ -9,6 +9,64 @@
     response.setHeader("Cache-Control", "no-store, no-cache");
 %>
 
+<style>
+    table.az-search, td {
+
+        border-color:#333333;
+        vertical-align:top;
+        min-width:400px;
+        font-weight: normal;
+    }
+    table.az-search, th {
+        border-color:#333333;
+        vertical-align:top;
+        min-width:400px;
+        font-weight: bold;
+    }
+    .az-searchitem {
+        margin-left: 0.5rem;
+        margin-right: 0.5rem;
+        line-height: 1.25rem;
+        --tw-text-opacity: 1;
+        text-decoration: underline;
+    }
+
+    .az-sortheading{
+        color:#004444;
+    }
+
+
+    .az-foundlist {
+        color: rgb(55 65 81 / var(--tw-text-opacity));
+        font-size:11px;
+    }
+
+    .itemselected {
+        color: #880000;
+        margin: 5px;
+        font-size:20px;
+        border:0px;
+    }
+
+    .az-attributetable .action
+    {
+        width:auto;
+        text-align:right;
+        white-space: nowrap;
+        font-size:11px;
+    }
+    .az-attributetable   {
+        border-collapse:collapse;
+        border-spacing:0;
+        width:1%;
+        font-size:11px;
+    }
+
+
+
+
+</style>
+
 <div class="az-content" id="setup">
     <div class="az-topbar">
         <div class="az-searchbar">
@@ -18,24 +76,25 @@
         </div>
     </div>
     <main>
-        <div class="az-import-wizard-view">
-            <div class="az-import-wizard">
-                <div class="az-import-wizard-main">
-                    <div class="az-section-body">
-                        <table>
-                            <tr>
-                                <td style="min-width:400px;vertical-align:top">
-                                    <div class="az-table" id="fieldtable"> </div>
-                                </td>
-                                <td style="min-width:400px;vertical-align:top">
-                                    <div class="az-table" id="searchitem"></div>
-                                </td>
-                            </tr>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <table class="az-search">
+            <tr>
+                <th>
+                    Search results
+                </th>
+                <th>Chosen item
+                </th>
+            </tr>
+            <tr>
+
+                <td>
+                    <div class="az-list" id="fieldtable"> </div>
+                </td>
+                <td>
+                    <div class="itemselected" id="itemselected"></div>
+                    <div class="az-list" id="children"></div>
+                </td>
+            </tr>
+        </table>
         <div id="error">${error}</div>
     </main>
 </div>
@@ -120,57 +179,85 @@ lockresult: string
             itemsHTML += showSet(topName,element.children, true);
         }
         document.getElementById("fieldtable").innerHTML = itemsHTML;
-        document.getElementById("searchitem").innerHTML = "";
+        document.getElementById("itemselected").innerHTML = "";
+        document.getElementById("children").innerHTML = "";
 
     }
 
 
     function handleDetails(json) {
-
-
-
-        var itemsHTML ="<div class='az-report-card'>" + showSet("Parents", json.parents.children, false);
-        itemsHTML += showDetails(json.details);
-        itemsHTML += showSet("Children", json.children.children, false);
-        document.getElementById("searchitem").innerHTML = itemsHTML + "</div>";
+        document.getElementById("itemselected").innerHTML = showDetails(json);
+        document.getElementById("children").innerHTML = showSet("", json.children.children, false);
     }
 
 
 
-    function showDetails(jsonDetails){
+    function showDetails(json){
+
+        var jsonDetails = json.details;
         var name = jsonDetails.attributes.DEFAULT_DISPLAY_NAME;
         if (name.indexOf("\n")>0){
             name = name.replaceAll("\n","<br/>");
         }
-        var itemHTML = "<div class='az-card-data'>" + name +"</div>\n";
+
+        var itemHTML = "<div>" + name +"</div><table class='az-attributetable'>\n";
+        itemHTML+="<div class='namedetailsinner'><div style='font-size:11px;line-height=15px'>";
+
+        if (json.parents.children.length > 0) {
+            for (var parent of json.parents.children) {
+                if (parent.parentNameId > 0) {
+                    itemHTML += oneLine("az-parent", parent.parentName, parent.text, parent.nameId);
+                }
+            }
+        }
+
 
         for (var att in jsonDetails.attributes){
             if (att!="DEFAULT_DISPLAY_NAME"){
-                itemHTML +="<div class='az-attribute'>" + att + ":" + jsonDetails.attributes[att] + "</div>\n";
+                itemHTML += oneLine("az-attribute",att,jsonDetails.attributes[att], 0);
 
             }
         }
         for (var info in jsonDetails){
             if (info != "attributes" && info != "id" && info != "name"){
-                itemHTML += "<div class='az-extraInfo'>" + info + ":" + jsonDetails[info] + "</div>";
+                itemHTML += oneLine("az-attribute",info, jsonDetails[info], 0);
             }
         }
+        itemHTML += "</table></div>\n";
         return itemHTML;
 
 
 
     }
 
-    function showSet(setName, setElements){
-        var itemHTML = "<div class='az-searchpanel-search-results-list'>\n";
+    function oneLine(type, name,value, nameId){
+        if (nameId==0){
+            return "<tr class='" + type + "'><td>" + name + "</td><td>" + value + "</td></tr>";
+
+        }
+        return "<tr><td class='" + type + "'>" + name + "</td><td class='az-searchitem' onClick='itemSelected(" + nameId + ")' >"+value + "</td></tr>\n";
+
+    }
+
+    function showSet(setName, setElements, truncate){
+        var itemHTML = "<div class='az-foundlist'>\n";
         if (setName > "")
-            itemHTML += "<h2>" +  setName + "</h2>\n";
+            itemHTML += "<h2 style='font-size:18px'>" +  setName + "</h2>\n";
         if (setElements.length == 0){
             return "";
         }
         for (var element of setElements){
-            itemHTML += "<div class='active' onClick='itemSelected(" + element.nameId + ")'>"+element.text.replaceAll("\n","<br/>") + "</div>\n";
-
+            var eol = element.text.indexOf("\n");
+            var text = element.text;
+            if (truncate){
+                if (eol > 0){
+                    text = text.substring(0,eol);
+                }
+            }
+            if (element.sortName> ""){
+                itemHTML +="<div class='az-sortheading'>" + element.sortName + "</div>";
+            }
+            itemHTML += "<div class='az-searchitem' onClick='itemSelected(" + element.nameId + ")' >"+text.replaceAll("\n","<br/>") + "</div>\n";
         }
         return itemHTML + "</div>";
 
