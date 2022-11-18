@@ -11,7 +11,7 @@ import com.azquo.spreadsheet.transport.json.NameJsonRequest;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.net.URLEncoder;
-import org.apache.commons.lang.math.NumberUtils;
+
 import org.apache.log4j.Logger;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
@@ -21,9 +21,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Copyright (C) 2016 Azquo Ltd.
@@ -62,20 +60,12 @@ public class DatabaseSearchController {
                 LoginService.switchDatabase(loggedInUser, database);
             }
             // todo - clean up the logic here
-            String result = "";
-
-            int hundredsMoreInt = 0;
-                     List<Database> databases = DatabaseDAO.findForBusinessId(loggedInUser.getBusiness().getId());
-                    if (databases.size()>=1){
-                        LoginService.switchDatabase(loggedInUser,databases.get(0).getName());
-                    }
-                    try{
-                        loggedInUser.setSearchCategories(CommonReportUtils.getDropdownListForQuery(loggedInUser,"TOPNAMES"));
-                    }catch(Exception e){
-                        model.put("error","No database chosen");
-                    }
-                    return "searchdatabase";
-             // seems to be the logic from before, if children/new then don't do the function. Not sure why . . .
+            try{
+                loggedInUser.setSearchCategories(CommonReportUtils.getDropdownListForQuery(loggedInUser,"TOPNAMES"));
+            }catch(Exception e){
+                model.put("error","No database chosen");
+            }
+            return "searchdatabase";
         } catch (Exception e) {
             return ImportWizard.errorToJson(e.getMessage());
         }
@@ -117,10 +107,34 @@ public class DatabaseSearchController {
                 JsonChildren jsonChildren = RMIClient.getServerInterface(loggedInUser.getDatabaseServer().getIp())
                         .getJsonChildren(loggedInUser.getDataAccessToken(), -1, nameId, false, " limit 100", StringLiterals.DEFAULT_DISPLAY_NAME, hundredsMoreInt);
                 ;
+                List<JsonChildren.Node> newList = new ArrayList<>();
+                String dateAttribute = null;
+                for (String searchCategory:loggedInUser.getSearchCategories()){
+                    if (searchCategory.toLowerCase(Locale.ROOT).endsWith("date")){
+                        dateAttribute = searchCategory;
+                        break;
+                    }
+                }
+                if (dateAttribute!=null) {
+                    for (JsonChildren.Node node : jsonChildren.children) {
+                            String sortName = RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).getNameAttribute(loggedInUser.getDataAccessToken(), node.nameId, node.text, dateAttribute);
+
+                            newList.add(new JsonChildren.Node(node.id, node.text, node.children, node.nameId, node.parentNameId, node.parentName, sortName));//adding in a sort name based on date.  This can be programmed through 'Role'
+                     }
+                    jsonChildren = new JsonChildren(jsonChildren.id, jsonChildren.state, jsonChildren.text, newList, jsonChildren.nameId, jsonChildren.type);
+                }
                 result.put("children", jsonChildren);
                 jsonChildren = RMIClient.getServerInterface(loggedInUser.getDatabaseServer().getIp())
                         .getJsonChildren(loggedInUser.getDataAccessToken(), -1, nameId, true, " limit 100", StringLiterals.DEFAULT_DISPLAY_NAME, hundredsMoreInt);
                 ;
+
+                 newList = new ArrayList<>();
+                for (JsonChildren.Node node:jsonChildren.children){
+                    if (loggedInUser.getSearchCategories().contains(node.parentName)){
+                          newList.add(node);
+                    }
+                }
+                jsonChildren = new JsonChildren(jsonChildren.id, jsonChildren.state, jsonChildren.text, newList, jsonChildren.nameId, jsonChildren.type);
                 result.put("parents", jsonChildren);
                 return jacksonMapper.writeValueAsString(result);
 
