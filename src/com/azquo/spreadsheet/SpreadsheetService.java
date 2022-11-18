@@ -270,7 +270,7 @@ public class SpreadsheetService {
             DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
             for (String dependentName:dependentNames){
                 try {
-                    String definition = RMIClient.getServerInterface(databaseAccessToken.getServerIp()).getNameAttribute(databaseAccessToken, dependentName, StringLiterals.DEFINITION);
+                    String definition = RMIClient.getServerInterface(databaseAccessToken.getServerIp()).getNameAttribute(databaseAccessToken, 0, dependentName, StringLiterals.DEFINITION);
                     //now we have both the target name, and the definition, create the set
                     CommonReportUtils.resolveQuery(loggedInUser, definition + " as " + StringLiterals.QUOTE + dependentName + StringLiterals.QUOTE,null);
                 }catch (Exception e){
@@ -625,7 +625,7 @@ public class SpreadsheetService {
     public static Map<String, String> getImageList(LoggedInUser loggedInUser) throws Exception {
         Map<String, String> images = new HashMap<>();
         DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
-        String imageList = RMIClient.getServerInterface(databaseAccessToken.getServerIp()).getNameAttribute(databaseAccessToken, loggedInUser.getImageStoreName(), "uploaded images");
+        String imageList = RMIClient.getServerInterface(databaseAccessToken.getServerIp()).getNameAttribute(databaseAccessToken, 0, loggedInUser.getImageStoreName(), "uploaded images");
         if (imageList != null) {
             String[] imageArray = imageList.split(",");
             for (String image : imageArray) {

@@ -123,7 +123,7 @@ public interface RMIInterface extends Remote {
 
     void deleteNode(DatabaseAccessToken dataAccessToken, int nameId) throws RemoteException;
 
-    String getNameAttribute(DatabaseAccessToken dataAccessToken, String nameString, String attribute) throws RemoteException;
+    String getNameAttribute(DatabaseAccessToken dataAccessToken, int nameId, String nameString, String attribute) throws RemoteException;
 
     void setNameAttribute(DatabaseAccessToken dataAccessToken, String nameString, String attribute, String attVal) throws RemoteException;
 

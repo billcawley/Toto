@@ -75,7 +75,7 @@ public class JSTreeService {
         Name newName = NameService.findOrCreateNameInParent(connectionFromAccessToken, "newnewnew", name, true);
         newName.setAttributeWillBePersisted(StringLiterals.DEFAULT_DISPLAY_NAME, "New node",connectionFromAccessToken);
         connectionFromAccessToken.persist();
-        return new JsonChildren.Node(-1, "New node", false, newName.getId(), nameId);
+        return new JsonChildren.Node(-1, "New node", false, newName.getId(), nameId, null);
     }
 
     // left it pretty simple
@@ -113,7 +113,7 @@ public class JSTreeService {
     }
 
     // Ok this now won't deal with the jstree ids (as it should not!), that can be dealt with on the front end
-    public static JsonChildren getJsonChildren(DatabaseAccessToken databaseAccessToken, int jsTreeId, int nameId, boolean parents, String searchTerm, String language, int hundredMore) {
+    public static JsonChildren getJsonChildren(DatabaseAccessToken databaseAccessToken, int jsTreeId, int nameId, boolean findParents, String searchTerm, String language, int hundredMore) {
         AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
         int limit = StringLiterals.FINDLIMIT;// there probably should be some sort of limit - 10 million is arbitrary.
         int limitPos = searchTerm.toLowerCase(Locale.ROOT).indexOf(" limit ");
@@ -131,30 +131,28 @@ public class JSTreeService {
         state.put("opened", true);
         String text = "";
         Collection<Name> children = new ArrayList<>();
+        List<JsonChildren.Node> childNodes = new ArrayList<>();
         Name name = nameId > 0 ? NameService.findById(azquoMemoryDBConnection, nameId) : null;
         if (jsTreeId == 0 && name == null) {// will be true on the initial call
             text = "Azquo Sets";
             if (searchTerm == null || searchTerm.length() == 0) {// also true on the initial call
                 children = NameService.findTopNames(azquoMemoryDBConnection, language);// hence we get the top names, OK
             } else {
-                try {
-                    children = NameQueryParser.parseQuery(azquoMemoryDBConnection, searchTerm);
-                } catch (Exception e) {//carry on
+                if (!searchTerm.contains(StringLiterals.MEMBEROF)){
+                    try {
+                        children = NameQueryParser.parseQuery(azquoMemoryDBConnection, searchTerm);
+                    } catch (Exception e) {//carry on
+                    }
                 }
                 if (children == null || children.size() !=1) {
                     if (searchTerm.contains(StringLiterals.MEMBEROF)) {
                         //used in DatabaseSearch
                         int mPos = searchTerm.indexOf(StringLiterals.MEMBEROF);
-                        try {
-                            children = NameQueryParser.parseQuery(azquoMemoryDBConnection, searchTerm);
-                        }catch(Exception e) {
-                        }
                         try{
-                            if (children.size() != 1) {
-                                Name setName = NameService.findByName(azquoMemoryDBConnection, searchTerm.substring(0, mPos));
-                                searchTerm = searchTerm.substring(mPos + StringLiterals.MEMBEROF.length());
-                                children = NameService.getNamesFromSetWithAttributeContaining(azquoMemoryDBConnection, language, searchTerm, setName.getChildren(), limit);
-                            }
+                            Name setName = NameService.findByName(azquoMemoryDBConnection, searchTerm.substring(0, mPos));
+                            searchTerm = searchTerm.substring(mPos + StringLiterals.MEMBEROF.length());
+                            children = NameService.getNamesFromSetWithAttributeContaining(azquoMemoryDBConnection, language, searchTerm, setName.getChildren(), limit);
+
                         } catch (Exception e) {
                             return null;
                         }
@@ -166,15 +164,28 @@ public class JSTreeService {
             }
         } else if (name != null) { // typically on open
             text = name.getAttribute(language);
-            if (!language.equals(StringLiterals.DEFAULT_DISPLAY_NAME)){
+            if (!language.equals(StringLiterals.DEFAULT_DISPLAY_NAME)) {
                 text += (" (" + name.getDefaultDisplayName() + ")");
             }
-            if (parents) {
-                for (Name nameParent : name.getParents()) {
-                    if (nameParent != null) {//in case of corruption - this should not happen
-                        children.add(nameParent);
+            if (findParents) {
+                Collection<Name> parents = name.getParents();
+                if (jsTreeId==-1){
+                    parents = name.findAllParents();
+                }
+                for (Name parent : parents) {
+                    Collection<Name> grandParents = parent.getParents();
+                    if (grandParents.size() > 0) {
+                        for (Name grandParent:grandParents) {
+                            if (grandParent.getParents().size() == 0) {
+                                childNodes.add(new JsonChildren.Node(-1, parent.getDefaultDisplayName(), parent.getParents().size() > 0, parent.getId(), grandParent.getId(), grandParent.getDefaultDisplayName()));
+                            }
+                        }
+                     } else {
+                        childNodes.add(new JsonChildren.Node(-1, parent.getDefaultDisplayName(), parent.getParents().size() > 0, parent.getId(), 0, null));
                     }
                 }
+                return new JsonChildren(jsTreeId + "", state, text, childNodes, nameId,getChildrenType(parents,name));
+
             } else {
                 for (Name child : name.getChildren()) {
                     if (child != null) {
@@ -183,7 +194,7 @@ public class JSTreeService {
                 }
             }
         }
-        List<JsonChildren.Node> childNodes = new ArrayList<>();
+
         if (children.size() > 0 || (name != null && name.getAttributes().size() > 1)) {
             int count = 0;
             for (Name child : children) {
@@ -191,30 +202,31 @@ public class JSTreeService {
 //                boolean childrenBoolean = child.hasChildren() || child.hasValues() || child.getAttributes().size() > 1;
                 boolean childrenBoolean = child.hasChildren() || child.getAttributes().size() > 1;
                 if (count > childrenLimit) {
-                    childNodes.add(new JsonChildren.Node(-1, (children.size() - childrenLimit) + " more....", childrenBoolean, -1, -1));
+                    childNodes.add(new JsonChildren.Node(-1, (children.size() - childrenLimit) + " more....", childrenBoolean, -1, -1, null));
                     break;
                 }
                 String childText = child.getAttribute(language);
-                if (!language.equals(StringLiterals.DEFAULT_DISPLAY_NAME)){
+                if (!language.equals(StringLiterals.DEFAULT_DISPLAY_NAME)) {
                     childText += (" (" + child.getDefaultDisplayName() + ")");
                 }
                 //cut off names to 100 chars
-                if (childText.length()>100){
-                    childText = childText.substring(0,100);
+                if (childText.length() > 100) {
+                    childText = childText.substring(0, 100);
                 }
-                childNodes.add(new JsonChildren.Node(-1,childText,childrenBoolean, child.getId(), name != null ? name.getId() : 0));
+                childNodes.add(new JsonChildren.Node(-1, childText, childrenBoolean, child.getId(), name != null ? name.getId() : 0, name != null ? name.getDefaultDisplayName() : null));
                 count++;
             }
             if (jsTreeId > 0 && name != null) { // if it's not top then we add non DEFAULT_DISPLAY_NAME attributes to the bottom of the list - BUT NOT ON searchdatabase
                 for (String attName : name.getAttributes().keySet()) {
                     if (!attName.equals(language)) {
-                        childNodes.add(new JsonChildren.Node(-1, attName + ":" + name.getAttributes().get(attName), false, name.getId(), name.getId()));
+                        childNodes.add(new JsonChildren.Node(-1, attName + ":" + name.getAttributes().get(attName), false, name.getId(), name.getId(), name.getDefaultDisplayName()));
                     }
                 }
             }
         } else {
-            return new JsonChildren("0", state, searchTerm, new ArrayList<>(), nameId,"");
+            return new JsonChildren("0", state, searchTerm, new ArrayList<>(), nameId, "");
         }
+
         if (searchTerm != null && !searchTerm.isEmpty() && childNodes.size() > 1) {// check for duplicate names and qualify them
             Set<String> allNames = HashObjSets.newMutableSet();
             Set<String> duplicateNames = HashObjSets.newMutableSet();
@@ -232,6 +244,10 @@ public class JSTreeService {
                 }
             }
         }
+         return new JsonChildren(jsTreeId + "", state, text, childNodes, nameId,getChildrenType(children,name));
+    }
+
+    public static String getChildrenType(Collection<Name>children, Name name){
         String type;
         if (children.size() > 0) {
             type = "parent";
@@ -244,15 +260,25 @@ public class JSTreeService {
         } else {
             type = "child";
         }
-        return new JsonChildren(jsTreeId + "", state, text, childNodes, nameId,type);
+        return type;
+
     }
 
-    public static String getNameAttribute(DatabaseAccessToken databaseAccessToken, String nameString, String attribute) throws Exception {
-        AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
-        Name name = NameService.findByName(azquoMemoryDBConnection, nameString);
-        if (name != null) {
-            return name.getAttribute(attribute);
-        }
+    public static String getNameAttribute(DatabaseAccessToken databaseAccessToken, int nameId, String nameString, String attribute) throws Exception {
+        try {
+            AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
+            Name name = null;
+            if (nameId > 0) {
+                name = NameService.findById(azquoMemoryDBConnection, nameId);
+            } else {
+                name = NameService.findByName(azquoMemoryDBConnection, nameString);
+            }
+            if (name != null) {
+                return name.getAttribute(attribute);
+            }
+        }catch(Exception e){
+            //may arrive here if two or more names are found
+         }
         return null;
 
     }
