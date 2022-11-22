@@ -81,7 +81,7 @@
                                             test="${report.id == user.reportId}"> selected</c:if>>${report.reportName}</option>
                                 </c:forEach>
                             </select></td>
-                            <td>Team</td>
+                            <td>Role</td>
                             <td><input name="team" id="team" type="text" value="${team}"></td>
                         </tr>
                     </table>

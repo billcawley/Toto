@@ -2196,7 +2196,7 @@ public class ImportWizard {
                         for (String peer : peers) {
                             wizardField.getPeers().add(ImportUtils.findFieldFromName(wizardInfo, peer));
                             try {
-                                String parent = RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).getNameAttribute(loggedInUser.getDataAccessToken(), wizardField.getName(), "Data");
+                                String parent = RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).getNameAttribute(loggedInUser.getDataAccessToken(), 0, wizardField.getName(), "Data");
                                 if (parent==null){
                                     parent = wizardInfo.getImportSchedule().getTemplateName() + " Values";
                                 }

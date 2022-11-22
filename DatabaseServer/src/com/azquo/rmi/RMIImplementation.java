@@ -522,9 +522,9 @@ class RMIImplementation implements RMIInterface {
     }
 
     @Override
-    public String getNameAttribute(DatabaseAccessToken databaseAccessToken, String nameString, String attribute) throws RemoteException {
+    public String getNameAttribute(DatabaseAccessToken databaseAccessToken, int nameId, String nameString, String attribute) throws RemoteException {
         try {
-            return JSTreeService.getNameAttribute(databaseAccessToken, nameString, attribute);
+            return JSTreeService.getNameAttribute(databaseAccessToken, nameId, nameString, attribute);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }

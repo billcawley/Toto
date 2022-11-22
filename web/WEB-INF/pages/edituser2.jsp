@@ -80,7 +80,7 @@
                         <input class="input is-small" name="selections" id="selections" value="${selections}">
                     </div>
                     <div class="field">
-                        <label class="label">Team</label>
+                        <label class="label">Role</label>
                         <input class="input is-small" name="team" id="team" value="${team}">
                     </div>
                 </td>

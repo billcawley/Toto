@@ -101,7 +101,7 @@ public class JstreeController {
                         result = "true";
                     }
                 } else {
-                    JsonChildren.Node currentNode = new JsonChildren.Node(-1, null, false, -1, -1);
+                    JsonChildren.Node currentNode = new JsonChildren.Node(-1, null, false, -1, -1,null);
                     if ("true".equals(jsTreeId)) {
                         currentNode = loggedInUser.getFromJsTreeLookupMap(parentInt);
                     } else if (jsTreeId == null || jsTreeId.equals("#") || jsTreeId.equals("j1_1")) { // EFC - I don't know where j1_1 came from but it seems to be used when updating the root list
