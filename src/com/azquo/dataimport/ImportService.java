@@ -228,7 +228,13 @@ public final class ImportService {
 
         String fileName = uploadedFile.getFileName();
         String originalFilePath = uploadedFile.getPath();
-        Path tempFile = Files.createTempFile(fileName.substring(0, fileName.length() - 4) + "_", fileName.substring(fileName.length() - 4));
+        int dotPos = fileName.lastIndexOf(".");
+        if (dotPos < 0){
+             dotPos = fileName.length();
+        }else{
+            dotPos++;
+        }
+        Path tempFile = Files.createTempFile(fileName.substring(0, dotPos) + "_", fileName.substring(dotPos));
         tempFile.toFile().deleteOnExit();
         Files.copy(Paths.get(uploadedFile.getPath()), tempFile, StandardCopyOption.REPLACE_EXISTING);
         uploadedFile.setPath(tempFile.toString()); // I'm now allowing adjustment of paths like this - having the object immutable became impractical
@@ -1789,6 +1795,7 @@ public final class ImportService {
 
 
     private static String findRelevantTemplate(LoggedInUser loggedInUser, UploadedFile uploadedFile, ImportTemplateData importTemplateData, String currentTemplateName){
+        Map<String,String>possibles = new HashMap<>();
         for (String sheet:importTemplateData.getSheets().keySet()) {
             Map<String,String>templateParameters = getTemplateParameters(importTemplateData.getSheets().get(sheet));
             String regexAsString = templateParameters.get(ImportWizard.IMPORTFILENAMEREGEX);
@@ -1796,15 +1803,23 @@ public final class ImportService {
                 Pattern p = Pattern.compile(regexAsString);
                 Matcher m = p.matcher(uploadedFile.getFileName().toLowerCase(Locale.ROOT));
                 if (m.find()) {
-                    setupImportAndDataNames(loggedInUser, sheet, uploadedFile, importTemplateData.getSheets().get(sheet));
-                    return sheet;
-                }
+                    possibles.put(regexAsString, sheet);
+                   }
+            }
+         }
+        //find the match with the longest regex (e.g.  'note' and 'notestack' may both match.
+        if (possibles.size() == 0){
+            return currentTemplateName;
+        }
+        String found = "";
+        for (String possible:possibles.keySet()){
+            if (possible.length()> found.length()){
+                found = possible;
             }
         }
-
-
-        return currentTemplateName;
-
+        String sheet = possibles.get(found);
+        setupImportAndDataNames(loggedInUser, sheet, uploadedFile, importTemplateData.getSheets().get(sheet));
+        return possibles.get(found);
     }
 
     private static void setupImportAndDataNames(LoggedInUser loggedInUser, String templateName, UploadedFile uploadedFile, List<List<String>>templateSheetData){

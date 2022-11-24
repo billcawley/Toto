@@ -10,19 +10,24 @@
 %>
 
 <style>
+
+    .az-attname {
+        width:100%;
+    }
+
     table.az-search, td {
 
-        border-color:#333333;
-        vertical-align:top;
-        min-width:400px;
+        border-color: #333333;
+        vertical-align: top;
         font-weight: normal;
     }
+
     table.az-search, th {
-        border-color:#333333;
-        vertical-align:top;
-        min-width:400px;
+        border-color: #333333;
+        vertical-align: top;
         font-weight: bold;
     }
+
     .az-searchitem {
         margin-left: 0.5rem;
         margin-right: 0.5rem;
@@ -31,38 +36,33 @@
         text-decoration: underline;
     }
 
-    .az-sortheading{
-        color:#004444;
+    .az-sortheading {
+        color: #004444;
     }
 
 
-    .az-foundlist {
-        color: rgb(55 65 81 / var(--tw-text-opacity));
-        font-size:11px;
+
+    .az-itemfound {
+        border-bottom:2px;
+        height:400px;
+        width:400px;
+        overflow:auto;
     }
 
-    .itemselected {
-        color: #880000;
-        margin: 5px;
-        font-size:20px;
-        border:0px;
-    }
 
-    .az-attributetable .action
-    {
-        width:auto;
-        text-align:right;
+    .az-attributetable .action {
+        width: auto;
+        text-align: right;
         white-space: nowrap;
-        font-size:11px;
-    }
-    .az-attributetable   {
-        border-collapse:collapse;
-        border-spacing:0;
-        width:1%;
-        font-size:11px;
+        font-size: 11px;
     }
 
-
+    .az-attributetable {
+        border-collapse: collapse;
+        border-spacing: 0;
+        width: 1%;
+        font-size: 11px;
+    }
 
 
 </style>
@@ -70,13 +70,23 @@
 <div class="az-content" id="setup">
     <div class="az-topbar">
         <div class="az-searchbar">
-            <div>
-                <input name="query" id="query" placeholder="Search" type="text" value=""/>
-            </div>
+            <table>
+                <tr>
+                    <td>
+                        <div>
+                            <input name="query" id="query" placeholder="Search" type="text" value=""/>
+                        </div>
+                    </td>
+                    <td>
+                        Filters: <span id="az-filters"></span>
+                    </td>
+                </tr>
+            </table>
         </div>
     </div>
     <main>
-        <table class="az-search">
+        <table class="az-table">
+            <tbody>
             <tr>
                 <th>
                     Search results
@@ -84,52 +94,56 @@
                 <th>Chosen item
                 </th>
             </tr>
-            <tr>
+            <tr class="az-foundlist">
 
-                <td>
-                    <div class="az-list" id="fieldtable"> </div>
+                <td class="az-foundlist">
+                    <div id="fieldtable"></div>
                 </td>
-                <td>
-                    <div class="itemselected" id="itemselected"></div>
+                <td class="az-foundlist">
+                    <div  id="itemselected" style="display:block"></div>
                     <div class="az-list" id="children"></div>
                 </td>
             </tr>
+            </tbody>
         </table>
         <div id="error">${error}</div>
     </main>
 </div>
 
-<script>
 
+<script>
 
     /*
 
-rowHeadingsSource: string[][],
-columnHeadingsSource: string[][],
-columnHeadings: string[][],
-rowHeadings: string[][],
-context: string[][],
-data: string[][],
-highlight: boolean[][],
-comments: string[][]
-options: string,
-lockresult: string
-     */
+    rowHeadingsSource: string[][],
+    columnHeadingsSource: string[][],
+    columnHeadings: string[][],
+    rowHeadings: string[][],
+    context: string[][],
+    data: string[][],
+    highlight: boolean[][],
+    comments: string[][]
+    options: string,
+    lockresult: string
+    */
 
     var json = null;
-    setInterval(function() { spotChange(); }, 100);
+    var quote = "`";
+    setInterval(function () {
+        spotChange();
+    }, 100);
     var lastValue = "";
+    var filters = [];
+    var filterHTML = '&nbsp&nbsp<span class="close"><span class="fa fa-close" onClick="removeFilter(\'FILTER\')">FILTERSHOWN</span>'
+    changed("", 0);
 
 
-    function spotChange(){
-        if(document.getElementById("query").value!=lastValue){
+    function spotChange() {
+        if (document.getElementById("query").value != lastValue) {
             lastValue = document.getElementById("query").value;
-            if (lastValue > ""){
-                changed(lastValue,0);
-            }
+            changed(lastValue, 0);
         }
     }
-
 
 
     async function azquoSend(params) {
@@ -142,7 +156,7 @@ lockresult: string
                 },
                 body: params
             });
-            //console.log(data)
+//console.log(data)
             return data;
         } catch (e) {
             console.log(e)
@@ -150,33 +164,62 @@ lockresult: string
     }
 
 
-    function itemSelected(nameId){
-        changed("",nameId);
+    function itemSelected(nameId) {
+        changed("", nameId);
     }
 
     async function changed(query, nodeId) {
+        //enclose all values in quotes to avoid confusion
+        query = quote + query + quote;
+        if (filters.length > 0) {
+            for (var filter of filters) {
+                var colonPos = filter.indexOf(":");
+                query += "&" + quote + filter.substring(0,colonPos) + quote + quote + filter.substring(colopPos + 1) + quote;
+            }
+        }
         let params = "op=searchdatabase&sessionid=${pageContext.session.id}";
-        params += "&query=" + encodeURIComponent(query)+"&nameId=" + nodeId;
+        params += "&query=" + encodeURIComponent(query) + "&nameId=" + nodeId;
         let data = await azquoSend(params);
         json = await data.json();
-        if(json.error > ""){
+        if (json.error > "") {
             var errorDiv = document.getElementById("error");
             errorDiv.innerText = json.error;
             return;
         }
-        if (query > ""){
+        if (nodeId == 0) {
             handleQueryResult(json);
-        }
-        if (nodeId > 0){
+        } else {
             handleDetails(json);
         }
+        showFilters();
     }
 
-    function handleQueryResult(jsonItem){
+    function showFilters(){
+
+        filters.sort();
+        var filtersHTML = "";
+        var filterVar = "";
+        var filterVal = "";
+        for (var filter of filters) {
+            filterVal = filter.substring(filter.indexOf(":") + 1);
+            var filtershown = filter;
+            if (filter.substring(0,filter.indexOf(":"))!=filterVar){
+                filtershown = filterVal;
+
+            }
+            filterVar = filter.substring(0,filter.indexOf(":"));
+
+            filtersHTML += filterHTML.replace("FILTERSHOWN", filter).replaceAll("FILTER", filter);
+        }
+        document.getElementById("az-filters").innerHTML = filtersHTML;
+
+    }
+
+    function handleQueryResult(jsonItem) {
         var itemsHTML = "";
-        for (var topName in jsonItem){
+        for (var topName in jsonItem) {
             var element = jsonItem[topName];
-            itemsHTML += showSet(topName,element.children, true);
+            itemsHTML += showSet(topName, element.children, true);
         }
         document.getElementById("fieldtable").innerHTML = itemsHTML;
         document.getElementById("itemselected").innerHTML = "";
@@ -191,17 +234,16 @@ lockresult: string
     }
 
 
-
-    function showDetails(json){
+    function showDetails(json) {
 
         var jsonDetails = json.details;
         var name = jsonDetails.attributes.DEFAULT_DISPLAY_NAME;
-        if (name.indexOf("\n")>0){
-            name = name.replaceAll("\n","<br/>");
+        if (name.indexOf("\n") > 0) {
+            name = name.replaceAll("\n", "<br/>");
         }
 
-        var itemHTML = "<div>" + name +"</div><table class='az-attributetable'>\n";
-        itemHTML+="<div class='namedetailsinner'><div style='font-size:11px;line-height=15px'>";
+        var itemHTML = "<div class='az-itemfound'>" + name + "</div><table class='az-attributetable'>\n";
+        itemHTML += "<div style='font-size:11px;line-height=15px'>";
 
         if (json.parents.children.length > 0) {
             for (var parent of json.parents.children) {
@@ -212,52 +254,71 @@ lockresult: string
         }
 
 
-        for (var att in jsonDetails.attributes){
-            if (att!="DEFAULT_DISPLAY_NAME"){
-                itemHTML += oneLine("az-attribute",att,jsonDetails.attributes[att], 0);
+        for (var att in jsonDetails.attributes) {
+            if (att != "DEFAULT_DISPLAY_NAME") {
+                itemHTML += oneLine("az-attribute", att, jsonDetails.attributes[att], 0);
 
             }
         }
-        for (var info in jsonDetails){
-            if (info != "attributes" && info != "id" && info != "name"){
-                itemHTML += oneLine("az-attribute",info, jsonDetails[info], 0);
+        for (var info in jsonDetails) {
+            if (info != "attributes" && info != "id" && info != "name") {
+                itemHTML += oneLine("az-attribute", info, jsonDetails[info], 0);
             }
         }
-        itemHTML += "</table></div>\n";
+        itemHTML += "</table>\n";
         return itemHTML;
 
 
-
     }
 
-    function oneLine(type, name,value, nameId){
-        if (nameId==0){
-            return "<tr class='" + type + "'><td>" + name + "</td><td>" + value + "</td></tr>";
+    function oneLine(type, name, value, nameId) {
+        if (nameId == 0) {
+            return "<tr class='" + type + "'><td>" + name + "</td><td class='az-attname'>" + value + "</td></tr>";
 
         }
-        return "<tr><td class='" + type + "'>" + name + "</td><td class='az-searchitem' onClick='itemSelected(" + nameId + ")' >"+value + "</td></tr>\n";
+        return "<tr class='az-searchitem' onClick='newFilter(\"" + name + "\",\"" + value + "\")'><td>" + name + "</td><td class='az-attname'>" + value + "</td></tr>\n";
 
     }
 
-    function showSet(setName, setElements, truncate){
-        var itemHTML = "<div class='az-foundlist'>\n";
+    function newFilter(name, value) {
+        var filterString = name + ":" + value;
+        const index = filters.indexOf(filterString);
+        if (index >=0){
+            return;
+        }
+        filters.push(filterString);
+        showFilters();
+        changed("",0);
+    }
+
+    function removeFilter(name){
+        const index = filters.indexOf(name);
+        if (index > -1) { // only splice array when item is found
+            filters.splice(index, 1); // 2nd parameter means remove one item only
+        }
+        showFilters();
+        changed("",0);
+    }
+
+    function showSet(setName, setElements, truncate) {
+        var itemHTML = "<div>\n";
         if (setName > "")
-            itemHTML += "<h2 style='font-size:18px'>" +  setName + "</h2>\n";
-        if (setElements.length == 0){
+            itemHTML += "<h2 style='font-size:18px'>" + setName + "</h2><br/>\n";
+        if (setElements.length == 0) {
             return "";
         }
-        for (var element of setElements){
+        for (var element of setElements) {
             var eol = element.text.indexOf("\n");
             var text = element.text;
-            if (truncate){
-                if (eol > 0){
-                    text = text.substring(0,eol);
+            if (truncate) {
+                if (eol > 0) {
+                    text = text.substring(0, eol);
                 }
             }
-            if (element.sortName> ""){
-                itemHTML +="<div class='az-sortheading'>" + element.sortName + "</div>";
+            if (element.sortName > "") {
+                itemHTML += "<div class='az-sortheading'>" + element.sortName + "</div>";
             }
-            itemHTML += "<div class='az-searchitem' onClick='itemSelected(" + element.nameId + ")' >"+text.replaceAll("\n","<br/>") + "</div>\n";
+            itemHTML += "<p onClick='itemSelected(" + element.nameId + ")' >" + text.replaceAll("\n", "<br/>") + "</p>\n";
         }
         return itemHTML + "</div>";
 

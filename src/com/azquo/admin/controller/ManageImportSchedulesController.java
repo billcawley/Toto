@@ -312,7 +312,7 @@ public class ManageImportSchedulesController {
             if (newdesign!=null) {
                 prepareNewJavascript(servletContext, loggedInUser, model);
                 model.put("pageUrl", "/reports");
-                return "manageimportschedulesnew";
+                return "manageimportschedules";
             }
             model.put("importschedules",ImportScheduleDAO.findForBusinessId(loggedInUser.getBusiness().getId()));
             return "manageimportschedules";

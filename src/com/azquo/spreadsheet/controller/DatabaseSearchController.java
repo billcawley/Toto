@@ -61,7 +61,10 @@ public class DatabaseSearchController {
             }
             // todo - clean up the logic here
             try{
-                loggedInUser.setSearchCategories(CommonReportUtils.getDropdownListForQuery(loggedInUser,"TOPNAMES"));
+               loggedInUser.setSearchCategories(RMIClient.getServerInterface(loggedInUser.getDatabaseServer().getIp())
+                        .getJsonChildren(loggedInUser.getDataAccessToken(), 0, 0, false, StringLiterals.TOPNAMES, StringLiterals.DEFAULT_DISPLAY_NAME, 0).children);
+
+
             }catch(Exception e){
                 model.put("error","No database chosen");
             }
@@ -90,16 +93,17 @@ public class DatabaseSearchController {
                 //blank
             }
 
-            if (query != null && query.length() > 0) {
-                for (String topName : loggedInUser.getSearchCategories()) {
+            if (query != null && query.length() > 2) {
+                for (JsonChildren.Node topName : loggedInUser.getSearchCategories()) {
+                   String att = RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).getNameAttribute(loggedInUser.getDataAccessToken(), 0, topName.text, "searchable");
+                  if (att==null || !att.equalsIgnoreCase("false")) {
+                      // the return type JsonChildren is designed to produce javascript that js tree understands.  Insert 'topname' condition.
+                      final JsonChildren jsonChildren = RMIClient.getServerInterface(loggedInUser.getDatabaseServer().getIp())
+                              .getJsonChildren(loggedInUser.getDataAccessToken(), 0, nameId, false,  query + "&" + StringLiterals.QUOTE + topName.text + "``` limit 20", StringLiterals.DEFAULT_DISPLAY_NAME, hundredsMoreInt);
+                      // Now, the node id management is no longer done server side, need to do it here, let logged in user assign each node id
 
-
-                    // the return type JsonChildren is designed to produce javascript that js tree understands
-                    final JsonChildren jsonChildren = RMIClient.getServerInterface(loggedInUser.getDatabaseServer().getIp())
-                            .getJsonChildren(loggedInUser.getDataAccessToken(), 0, nameId, false, topName + StringLiterals.MEMBEROF + query + " limit 20", StringLiterals.DEFAULT_DISPLAY_NAME, hundredsMoreInt);
-                    // Now, the node id management is no longer done server side, need to do it here, let logged in user assign each node id
-
-                    result.put(topName, jsonChildren);
+                      result.put(topName.text, jsonChildren);
+                  }
                 }
                 return jacksonMapper.writeValueAsString(result);
             } else if (nameId > 0) {
@@ -109,9 +113,9 @@ public class DatabaseSearchController {
                 ;
                 List<JsonChildren.Node> newList = new ArrayList<>();
                 String dateAttribute = null;
-                for (String searchCategory:loggedInUser.getSearchCategories()){
-                    if (searchCategory.toLowerCase(Locale.ROOT).endsWith("date")){
-                        dateAttribute = searchCategory;
+                for (JsonChildren.Node searchCategory:loggedInUser.getSearchCategories()){
+                    if (searchCategory.text.toLowerCase(Locale.ROOT).endsWith("date")){
+                        dateAttribute = searchCategory.text;
                         break;
                     }
                 }
@@ -130,7 +134,7 @@ public class DatabaseSearchController {
 
                  newList = new ArrayList<>();
                 for (JsonChildren.Node node:jsonChildren.children){
-                    if (loggedInUser.getSearchCategories().contains(node.parentName)){
+                    if (checkInCategories(jsonChildren, node.parentName)){
                           newList.add(node);
                     }
                 }
@@ -139,12 +143,25 @@ public class DatabaseSearchController {
                 return jacksonMapper.writeValueAsString(result);
 
 
+            }else{
+                //Show the categories
+                  JsonChildren jsonChildren = new JsonChildren("",null,"Categories", loggedInUser.getSearchCategories(),0,"");
+                  result.put("categories", jsonChildren);
+                return jacksonMapper.writeValueAsString(result);
             }
-            return null;
         } catch (Exception e) {
             return ImportWizard.errorToJson(e.getMessage());
 
         }
+    }
+
+    private static boolean checkInCategories(JsonChildren jsonChildren, String toTest){
+        for (JsonChildren.Node node:jsonChildren.children){
+            if (node.text.equals(toTest)) {
+                return true;
+            }
+        }
+        return false;
     }
 
 }

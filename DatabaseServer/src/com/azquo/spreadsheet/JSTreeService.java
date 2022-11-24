@@ -4,6 +4,7 @@ import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.StringLiterals;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.TreeNode;
+import com.azquo.memorydb.core.AzquoMemoryDBIndex;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.Value;
 import com.azquo.memorydb.service.NameQueryParser;
@@ -54,6 +55,44 @@ public class JSTreeService {
             values += getTotalValues(child);
         }
         return values;
+    }
+
+    private static Collection<Name> getFilterSet(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String,Set<String>>filters){
+        Collection<Name> filterSet = new HashSet<>();
+        for (String filter:filters.keySet()){
+            try {
+
+                Collection<Name> thisFilterSet = new HashSet<>();
+                for (String filterVal:filters.get(filter)){
+                    Collection<Name> filterNames;
+                    if (filterVal.length()==0){
+                        filterNames = NameQueryParser.parseQuery(azquoMemoryDBConnection, filter);
+                        thisFilterSet.addAll(filterNames.iterator().next().getChildren());
+                    }else {
+                        Name parentName = NameService.findByName(azquoMemoryDBConnection, filter);
+                        //this search can accept more than one name....
+                        filterNames = azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNamesForAttributeNamesAndParent(Collections.singletonList(StringLiterals.DEFAULT_DISPLAY_NAME),filterVal, parentName);
+                        for (Name filterName:filterNames){
+                            if (filterName.getAttribute(filter)!=null){
+                                thisFilterSet.addAll(filterName.findAllChildren());
+
+                            }
+                        }
+                    }
+                }
+                if (filterSet.size()==0){
+                    filterSet = thisFilterSet;
+                }else{
+                    filterSet.retainAll(thisFilterSet);
+                    if (filterSet.size()==0){
+                        return filterSet;
+                    }
+                }
+            }catch(Exception e){
+                return filterSet;
+            }
+        }
+        return filterSet;
     }
 
     // was about 40 lines before jackson though the class above is of course important. Changing name to details not structure which implies many levels.
@@ -112,6 +151,13 @@ public class JSTreeService {
         return names.isEmpty() ? "" : AzquoCellResolver.getUniqueName(azquoMemoryDBConnection, names.iterator().next(), Collections.EMPTY_LIST);
     }
 
+    private static String firstString(String toSplit){
+        if (toSplit.charAt(0)!=StringLiterals.QUOTE){
+            return toSplit;
+        }
+        return toSplit.substring(1, toSplit.indexOf(StringLiterals.QUOTE, 1));
+    }
+
     // Ok this now won't deal with the jstree ids (as it should not!), that can be dealt with on the front end
     public static JsonChildren getJsonChildren(DatabaseAccessToken databaseAccessToken, int jsTreeId, int nameId, boolean findParents, String searchTerm, String language, int hundredMore) {
         AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
@@ -126,32 +172,66 @@ public class JSTreeService {
                 //carry on
             }
         }
-        int childrenLimit = (hundredMore + 1) * 100;
+        Map <String,Set<String>> filters = new HashMap<>();
+        if (searchTerm.startsWith(StringLiterals.QUOTE+"")){
+            String queryString = searchTerm;
+            searchTerm = firstString(queryString);
+            queryString = queryString.substring(searchTerm.length() + 2);
+             String lastFilterName = "";
+            while (queryString.length()>0){
+                //querystring is &`<name>``<value>`&`<name.....
+                String filterName = firstString(queryString.substring(1));
+                queryString = queryString.substring(filterName.length() + 3);
+                String filterValue = firstString(queryString);
+                queryString = queryString.substring(filterValue.length() + 2);
+
+                if (!filterName.equals(lastFilterName)) {
+                    filters.put(filterName, new HashSet<>());
+                }
+                filters.get(filterName).add(filterValue);
+                lastFilterName = filterName;
+
+            }
+
+        }
+
+          int childrenLimit = (hundredMore + 1) * 100;
         Map<String, Boolean> state = new HashMap<>();
         state.put("opened", true);
         String text = "";
         Collection<Name> children = new ArrayList<>();
         List<JsonChildren.Node> childNodes = new ArrayList<>();
+        Collection<Name>filterSet=new HashSet<>();
+        if (filters.size()>0){
+            filterSet = getFilterSet(azquoMemoryDBConnection,filters);
+            if (filterSet.size()==0){
+                return null;
+            }
+        }
         Name name = nameId > 0 ? NameService.findById(azquoMemoryDBConnection, nameId) : null;
         if (jsTreeId == 0 && name == null) {// will be true on the initial call
             text = "Azquo Sets";
             if (searchTerm == null || searchTerm.length() == 0) {// also true on the initial call
-                children = NameService.findTopNames(azquoMemoryDBConnection, language);// hence we get the top names, OK
+                if (filters.size() == 0) {
+                    children = NameService.findTopNames(azquoMemoryDBConnection, language);// hence we get the top names, OK
+                }else{
+                    children = filterSet;
+                }
             } else {
                 if (!searchTerm.contains(StringLiterals.MEMBEROF)){
                     try {
                         children = NameQueryParser.parseQuery(azquoMemoryDBConnection, searchTerm);
+                        if (filterSet.size()>0){
+                            children.retainAll(filterSet);
+                        }
                     } catch (Exception e) {//carry on
                     }
                 }
                 if (children == null || children.size() !=1) {
-                    if (searchTerm.contains(StringLiterals.MEMBEROF)) {
+                    if (filterSet.size() > 0) {
                         //used in DatabaseSearch
-                        int mPos = searchTerm.indexOf(StringLiterals.MEMBEROF);
                         try{
-                            Name setName = NameService.findByName(azquoMemoryDBConnection, searchTerm.substring(0, mPos));
-                            searchTerm = searchTerm.substring(mPos + StringLiterals.MEMBEROF.length());
-                            children = NameService.getNamesFromSetWithAttributeContaining(azquoMemoryDBConnection, language, searchTerm, setName.getChildren(), limit);
+                            children = NameService.getNamesFromSetWithAttributeContaining(azquoMemoryDBConnection, language, searchTerm, filterSet, limit);
 
                         } catch (Exception e) {
                             return null;
@@ -190,6 +270,9 @@ public class JSTreeService {
                 for (Name child : name.getChildren()) {
                     if (child != null) {
                         children.add(child);//see above - in case of corruption
+                    }
+                    if (filterSet.size() > 0){
+                        children.retainAll(filterSet);
                     }
                 }
             }

@@ -138,6 +138,8 @@ public class StringLiterals {
     public static final String AZIMPORTDATA = "az_importdata";
 
     public static final String TOPNAMES = "TOPNAMES";
+    public static final String TOPNAMES_TYPED = "TOPNAMES TYPED";//The data search is much faster if we detect the lists of names that are non-alphabetic,
+                                                                   // so that we do not need to search them. Type = true means thea the category needs searching for alphanumeric search strings
  /*
     These are heading clauses. Heading definitions can be in the data file but Azquo is setup to support data "as it comes".
     Hence when dealing with a new set of data the key is to set up sets and headings so that the system can load the data.

@@ -3797,6 +3797,7 @@
                     f = [
                         { label: "Overview", href: "/api/ManageReports/?newdesign=overview", icon: i },
                         { label: "Reports", href: "/api/ManageReports/?newdesign=true", icon: o.Z },
+                        { label: "Search Database", href: "/api/SearchDatabase", icon: o.Z },
                         { label: "Imports", href: "/api/ManageDatabases/?newdesign=imports", icon: s.Z },
                                             { label: "Databases", href: "/api/ManageDatabases/?newdesign=databases", icon: u.Z },
                     { label: "Users", href: "/api/ManageUsers", icon: l.Z },

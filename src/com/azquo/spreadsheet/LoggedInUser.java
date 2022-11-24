@@ -173,7 +173,7 @@ public class LoggedInUser implements Serializable {
     private String lastFile = null;
     private String lastFileName = null;
     private WizardInfo wizardInfo = null;
-    private List<String>searchCategories = null;
+    private List<JsonChildren.Node> searchCategories = null;
 
     // public allowing hack for xml scanning - need to sort - todo
     public LoggedInUser(final User user, DatabaseServer databaseServer, Database database, String imageStoreName, Business business) {
@@ -473,7 +473,7 @@ public class LoggedInUser implements Serializable {
         this.wizardInfo = wizardInfo;
     }
 
-    public List<String>getSearchCategories(){return searchCategories; };
+    public List<JsonChildren.Node>getSearchCategories(){return searchCategories; };
 
-    public void setSearchCategories(List<String>searchCategories){this.searchCategories = searchCategories; }
+    public void setSearchCategories(List<JsonChildren.Node>searchCategories){this.searchCategories = searchCategories; }
 }
