@@ -1,5 +1,6 @@
 package com.azquo.admin.controller;
 
+import com.azquo.StringLiterals;
 import com.azquo.admin.AdminService;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseDAO;
@@ -47,7 +48,7 @@ public class RangeTestController {
             model.put("databases", AdminService.getDatabaseListForBusinessWithBasicSecurity(loggedInUser));
             List<String> dropdownListForQuery = CommonReportUtils.getDropdownListForQuery(loggedInUser, "`Data` children");
             model.put("topDataSet", dropdownListForQuery);
-            List<String> topNames = CommonReportUtils.getDropdownListForQuery(loggedInUser, "TOPNAMES - Data");
+            List<String> topNames = CommonReportUtils.getDropdownListForQuery(loggedInUser, StringLiterals.TOPNAMES + " - Data");
             model.put("topNames", topNames);
             model.put("dbname", loggedInUser.getDatabase().getName());
 
