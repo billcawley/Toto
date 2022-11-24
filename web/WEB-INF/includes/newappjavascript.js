@@ -3806,6 +3806,7 @@
                         { label: "Pending Uploads", href: "/api/ManageDatabases/?newdesign=pendinguploads", icon: s.Z },
                         { label: "Import Templates", href: "/api/ManageDatabases/?newdesign=importtemplates", icon: a },
                         { label: "External Connections", href: "/api/ManageDatabaseConnections", icon: a },
+                        ###SWITCHBUSINESS###
                         { label: "Logout", href: "/api/Login?logoff=true", icon: l.Z },
                     ],
                     h = [
@@ -4340,7 +4341,7 @@
                                     children: (0, i.jsxs)("div", {
                                         children: [
                                             (0, i.jsx)(m(), {
-                                                href: "/",
+                                                href: "/api/ManageReports/?newdesign=overview",
                                                 children: (0, i.jsx)("a", {
                                                     className: "az-sidebar-logo",
                                                     children: (0, i.jsx)("img", { src: y.wp }),

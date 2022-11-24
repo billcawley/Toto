@@ -400,7 +400,9 @@ public class ManageDatabasesController {
                     model.put("newappjavascript", "//" + resource
                             .replace("###IMPORTSLIST###", jsImportsList.toString())
                             .replace("###DATABASESLIST###", databasesList.toString())
-                            .replace("###REPORTSLIST###", reportsList.toString()));
+                            .replace("###REPORTSLIST###", reportsList.toString())
+                            .replace("###SWITCHBUSINESS###", request.getSession().getAttribute(LoginController.LOGGED_IN_USERS_SESSION) != null ? "{ label: \"Switch Business\", href: \"/api/Login?select=true\", icon: l.Z }," : "")
+                    );
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
