@@ -178,9 +178,27 @@
                             },
                             [l],
                         ),
+
                         (0, t.jsxs)("div", {
                             className: "az-table",
                             children: [
+                                (0, t.jsxs)("nav", {
+                                    children: [
+                                        (0, t.jsx)("div", {
+                                            children: (0, t.jsxs)(t.Fragment, {
+                                                children: [
+                                                    (0, t.jsx)("button", {
+                                                        onClick: function () {
+                                                            location.href='/api/ManageReports?createnewreport=tobeentered'
+                                                        },
+                                                        children: "New",
+                                                    }),
+                                                ],
+                                            }),
+                                        }),
+                                    ],
+                                }),
+
                                 (0, t.jsxs)("table", {
                                     children: [
                                         (0, t.jsx)("thead", {
@@ -214,18 +232,7 @@
                                                     ],
                                                 }),
                                             }),
-                                            (0, t.jsx)("div", {
-                                                children: (0, t.jsxs)(t.Fragment, {
-                                                    children: [
-                                                        (0, t.jsx)("button", {
-                                                            onClick: function () {
-                                                                location.href='/api/ManageReports?createnewreport=tobeentered'
-                                                            },
-                                                            children: "New",
-                                                        }),
-                                                    ],
-                                                }),
-                                            }),
+
                                             (0, t.jsx)("div", {
                                                 children: (0, t.jsxs)(t.Fragment, {
                                                     children: [
@@ -248,6 +255,8 @@
                                             }),
                                         ],
                                     }),
+
+
                             ],
                         })
                     );

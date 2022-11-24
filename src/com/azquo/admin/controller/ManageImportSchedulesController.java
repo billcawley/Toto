@@ -32,6 +32,7 @@ import org.zkoss.poi.openxml4j.opc.OPCPackage;
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
@@ -241,7 +242,7 @@ public class ManageImportSchedulesController {
                             ImportScheduleDAO.store(toEdit);
                         }
                        if (newdesign!=null) {
-                           prepareNewJavascript(servletContext, loggedInUser, model);
+                           prepareNewJavascript(request.getSession(), servletContext, loggedInUser, model);
                            model.put("pageUrl", "/reports");
                            return "manageimportschedulesnew";
                        }
@@ -310,7 +311,7 @@ public class ManageImportSchedulesController {
             }
             AdminService.setBanner(model, loggedInUser);
             if (newdesign!=null) {
-                prepareNewJavascript(servletContext, loggedInUser, model);
+                prepareNewJavascript(request.getSession(), servletContext, loggedInUser, model);
                 model.put("pageUrl", "/reports");
                 return "manageimportschedules";
             }
@@ -318,7 +319,7 @@ public class ManageImportSchedulesController {
             return "manageimportschedules";
         }
     }
-    private static void prepareNewJavascript(ServletContext servletContext, LoggedInUser loggedInUser, ModelMap model){
+    private static void prepareNewJavascript(HttpSession session, ServletContext servletContext, LoggedInUser loggedInUser, ModelMap model){
         try {
             StringBuilder importSchedulesList = new StringBuilder();
 
@@ -358,12 +359,18 @@ public class ManageImportSchedulesController {
                     .collect(Collectors.joining("\n"));
 
             model.put("newappjavascript", "// " +  resource
+            String resource = new BufferedReader(  new InputStreamReader(resourceAsStream, StandardCharsets.UTF_8))
+                    .lines()
+                    .collect(Collectors.joining("\n"));
+            model.put("newappjavascript", "// " +  resource
                     .replace("###IMPORTSLIST###", importsList.toString())
                     .replace("###DATABASESLIST###", databasesList.toString())
-                    .replace("###REPORTSLIST###", importSchedulesList.toString()));
+                    .replace("###REPORTSLIST###", importSchedulesList.toString())
+                    .replace("###SWITCHBUSINESS###", session.getAttribute(LoginController.LOGGED_IN_USERS_SESSION) != null ? "{ label: \"Switch Business\", href: \"/api/Login?select=true\", icon: l.Z }," : "")
+            );
 
 
-        } catch (Exception e) {
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }

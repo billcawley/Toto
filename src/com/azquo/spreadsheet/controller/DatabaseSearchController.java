@@ -149,6 +149,7 @@ public class DatabaseSearchController {
                   result.put("categories", jsonChildren);
                 return jacksonMapper.writeValueAsString(result);
             }
+            return null;
         } catch (Exception e) {
             return ImportWizard.errorToJson(e.getMessage());
 
