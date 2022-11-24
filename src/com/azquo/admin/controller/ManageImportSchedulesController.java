@@ -359,10 +359,6 @@ public class ManageImportSchedulesController {
                     .collect(Collectors.joining("\n"));
 
             model.put("newappjavascript", "// " +  resource
-            String resource = new BufferedReader(  new InputStreamReader(resourceAsStream, StandardCharsets.UTF_8))
-                    .lines()
-                    .collect(Collectors.joining("\n"));
-            model.put("newappjavascript", "// " +  resource
                     .replace("###IMPORTSLIST###", importsList.toString())
                     .replace("###DATABASESLIST###", databasesList.toString())
                     .replace("###REPORTSLIST###", importSchedulesList.toString())
@@ -370,7 +366,7 @@ public class ManageImportSchedulesController {
             );
 
 
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
