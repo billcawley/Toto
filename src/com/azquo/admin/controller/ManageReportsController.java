@@ -137,7 +137,7 @@ public class ManageReportsController {
                 model.put("reports", reportList);
                 AdminService.setBanner(model, loggedInUser);
                 if (request.getSession().getAttribute("newdesign" )!= null){
-                    prepareNewJavascript(reportList,servletContext, loggedInUser,model);
+                    prepareNewJavascript(request.getSession(), reportList,servletContext, loggedInUser,model);
                     model.put("pageUrl", "/reports");
                     return "managereports";
                 }
@@ -392,7 +392,7 @@ public class ManageReportsController {
 
 
             if (request.getSession().getAttribute("newdesign") != null){
-                prepareNewJavascript(reportList,servletContext, loggedInUser,model);
+                prepareNewJavascript(request.getSession(),reportList,servletContext, loggedInUser,model);
                 if ("overview".equals(request.getParameter("newdesign"))){
                     model.put("pageUrl", "/");
                     return "overview";
@@ -407,7 +407,7 @@ public class ManageReportsController {
         }
     }
 
-    private static void prepareNewJavascript(List<OnlineReport> reportList, ServletContext servletContext, LoggedInUser loggedInUser, ModelMap model){
+    private static void prepareNewJavascript(HttpSession session, List<OnlineReport> reportList, ServletContext servletContext, LoggedInUser loggedInUser, ModelMap model){
         try {
             StringBuilder reportsList = new StringBuilder();
 
@@ -442,7 +442,9 @@ public class ManageReportsController {
             model.put("newappjavascript", "// " +  resource
                     .replace("###IMPORTSLIST###", importsList.toString())
                     .replace("###DATABASESLIST###", databasesList.toString())
-                    .replace("###REPORTSLIST###", reportsList.toString()));
+                    .replace("###REPORTSLIST###", reportsList.toString())
+                    .replace("###SWITCHBUSINESS###", session.getAttribute(LoginController.LOGGED_IN_USERS_SESSION) != null ? "{ label: \"Switch Business\", href: \"/api/Login?select=true\", icon: l.Z }," : "")
+            );
 
 
         } catch (Exception e) {
@@ -563,7 +565,7 @@ public class ManageReportsController {
             model.put("reports", reportList);
             AdminService.setBanner(model, loggedInUser);
             if (request.getSession().getAttribute("newdesign" )!= null){
-                prepareNewJavascript(reportList,servletContext, loggedInUser,model);
+                prepareNewJavascript(request.getSession(),reportList,servletContext, loggedInUser,model);
                 model.put("pageUrl", "/reports");
                 return "managereports";
             }

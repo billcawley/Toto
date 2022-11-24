@@ -60,7 +60,7 @@
     <div class="az-layout">
         <div class="az-sidebar ${compact}">
             <div>
-                <a class="az-sidebar-logo" href="https://data.azquo.com/"><img
+                <a class="az-sidebar-logo" href="/api/ManageReports/?newdesign=overview"><img
                         src="/images/gbcornerlogo.png"></a>
                 <nav>
                     <div class="az-sidebar-primary">
@@ -248,7 +248,24 @@
                             <span>External Connections</span>
 
                         </a>
-
+                        <c:if test="${sessionScope.LOGGED_IN_USERS_SESSION != null}">
+                            <a class="group " rel="noopener noreferrer" href="/api/Login?select=true"
+                            ><svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke-width="2"
+                                    stroke="currentColor"
+                                    aria-hidden="true"
+                            >
+                                <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+                                ></path>
+                            </svg>
+                                <span>Switch Business</span></a>
+                        </c:if>
 
                         <a class="group " rel="noopener noreferrer" href="/api/Login?logoff=true"
                         ><svg
