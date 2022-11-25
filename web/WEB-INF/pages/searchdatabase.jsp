@@ -69,12 +69,12 @@
 
 <div class="az-content" id="setup">
     <div class="az-topbar">
-        <div class="az-searchbar">
+        <div class="az-searchpanel-search">
             <table>
                 <tr>
                     <td>
                         <div>
-                            <input name="query" id="query" placeholder="Search" type="text" value=""/>
+                            <input style="border-color:transparent" name="query" id="query" placeholder="Search" type="text" value=""/>
                         </div>
                     </td>
                     <td>
@@ -216,12 +216,16 @@
     }
 
     function handleQueryResult(jsonItem) {
-        var itemsHTML = "";
+        var itemsHTML = "<div>";
+        var itemsHTML = "<div>";
         for (var topName in jsonItem) {
             var element = jsonItem[topName];
-            itemsHTML += showSet(topName, element.children, true);
+            if (element!=null){
+
+                itemsHTML +=  showSet(topName, element.children, true) ;
+            }
         }
-        document.getElementById("fieldtable").innerHTML = itemsHTML;
+        document.getElementById("fieldtable").innerHTML = itemsHTML + "</div>";
         document.getElementById("itemselected").innerHTML = "";
         document.getElementById("children").innerHTML = "";
 
@@ -288,7 +292,7 @@
         }
         filters.push(filterString);
         showFilters();
-        changed("",0);
+        changed(lastValue,0);
     }
 
     function removeFilter(name){
@@ -297,11 +301,11 @@
             filters.splice(index, 1); // 2nd parameter means remove one item only
         }
         showFilters();
-        changed("",0);
+        changed(lastValue,0);
     }
 
     function showSet(setName, setElements, truncate) {
-        var itemHTML = "<div>\n";
+        var itemHTML = "";
         if (setName > "")
             itemHTML += "<h2 style='font-size:18px'>" + setName + "</h2><br/>\n";
         if (setElements.length == 0) {
@@ -311,8 +315,24 @@
             var eol = element.text.indexOf("\n");
             var text = element.text;
             if (truncate) {
-                if (eol > 0) {
-                    text = text.substring(0, eol);
+                text = text.replaceAll("\n"," ").replaceAll("\r","");
+                if (text.length > 60) {
+                    var foundPos = text.toLowerCase().indexOf(lastValue.toLowerCase());
+                    var startPos = 0;
+                    if (foundPos > 30) {
+                        startPos = text.indexOf(" ", foundPos - 30);
+                    }
+                    var endPos = text.length;
+                    if (endPos > startPos + 60) {
+                        endPos = startPos + 60;
+                    }
+                    text = text.substring(startPos, endPos);
+                    if (startPos > 0){
+                        text = "..." + text;
+                    }
+                    if (endPos < text.length){
+                        text = text + "...";
+                    }
                 }
             }
             if (element.sortName > "") {
@@ -320,7 +340,7 @@
             }
             itemHTML += "<p onClick='itemSelected(" + element.nameId + ")' >" + text.replaceAll("\n", "<br/>") + "</p>\n";
         }
-        return itemHTML + "</div>";
+        return itemHTML + "<br>";
 
     }
 

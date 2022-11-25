@@ -211,7 +211,7 @@ public class JSTreeService {
         Name name = nameId > 0 ? NameService.findById(azquoMemoryDBConnection, nameId) : null;
         if (jsTreeId == 0 && name == null) {// will be true on the initial call
             text = "Azquo Sets";
-            if (searchTerm == null || searchTerm.length() == 0) {// also true on the initial call
+            if (searchTerm == null || searchTerm.length() == 0 || searchTerm.equals(StringLiterals.TOPNAMES)) {// also true on the initial call
                 if (filters.size() == 0) {
                     children = NameService.findTopNames(azquoMemoryDBConnection, language);// hence we get the top names, OK
                 }else{
@@ -236,10 +236,9 @@ public class JSTreeService {
                         } catch (Exception e) {
                             return null;
                         }
+                    }else{
+                        children = NameService.getNamesWithAttributeContaining(azquoMemoryDBConnection, language, searchTerm, limit);
                     }
-                }else{
-
-                    children = NameService.getNamesWithAttributeContaining(azquoMemoryDBConnection, language, searchTerm, limit);
                 }
             }
         } else if (name != null) { // typically on open
@@ -249,19 +248,25 @@ public class JSTreeService {
             }
             if (findParents) {
                 Collection<Name> parents = name.getParents();
-                if (jsTreeId==-1){
-                    parents = name.findAllParents();
-                }
-                for (Name parent : parents) {
-                    Collection<Name> grandParents = parent.getParents();
-                    if (grandParents.size() > 0) {
-                        for (Name grandParent:grandParents) {
-                            if (grandParent.getParents().size() == 0) {
-                                childNodes.add(new JsonChildren.Node(-1, parent.getDefaultDisplayName(), parent.getParents().size() > 0, parent.getId(), grandParent.getId(), grandParent.getDefaultDisplayName()));
-                            }
+                if (jsTreeId>=0){
+                    for (Name parent:parents){
+                        if (parent!=null){
+                            childNodes.add(new JsonChildren.Node(-1, parent.getDefaultDisplayName(), parent.getParents().size() > 0, parent.getId(), 0, null));
                         }
-                     } else {
-                        childNodes.add(new JsonChildren.Node(-1, parent.getDefaultDisplayName(), parent.getParents().size() > 0, parent.getId(), 0, null));
+                    }
+                }else{
+                    parents = name.findAllParents();
+                    for (Name parent : parents) {
+                        Collection<Name> grandParents = parent.getParents();
+                        if (grandParents.size() > 0) {
+                            for (Name grandParent : grandParents) {
+                                if (grandParent != null && grandParent.getParents().size() == 0) {
+                                    childNodes.add(new JsonChildren.Node(-1, parent.getDefaultDisplayName(), parent.getParents().size() > 0, parent.getId(), grandParent.getId(), grandParent.getDefaultDisplayName()));
+                                }
+                            }
+                        } else {
+                            childNodes.add(new JsonChildren.Node(-1, parent.getDefaultDisplayName(), parent.getParents().size() > 0, parent.getId(), 0, null));
+                        }
                     }
                 }
                 return new JsonChildren(jsTreeId + "", state, text, childNodes, nameId,getChildrenType(parents,name));
@@ -292,9 +297,9 @@ public class JSTreeService {
                 if (!language.equals(StringLiterals.DEFAULT_DISPLAY_NAME)) {
                     childText += (" (" + child.getDefaultDisplayName() + ")");
                 }
-                //cut off names to 100 chars
-                if (childText.length() > 100) {
-                    childText = childText.substring(0, 100);
+                //cut off names to 5000 chars
+                if (childText.length() > 5000) {
+                    childText = childText.substring(0, 5000);
                 }
                 childNodes.add(new JsonChildren.Node(-1, childText, childrenBoolean, child.getId(), name != null ? name.getId() : 0, name != null ? name.getDefaultDisplayName() : null));
                 count++;

@@ -65,6 +65,7 @@ public final class NameService {
 
     static public ArrayList<Name> getNamesFromSetWithAttributeContaining(final AzquoMemoryDBConnection azquoMemoryDBConnection, String attribute, String searchString, Collection<Name> set, int limit) {
         findContainingNameCount.incrementAndGet();
+        searchString = searchString.toLowerCase(Locale.ROOT);
         ArrayList<Name> namesFound = new ArrayList<Name>();
         for (Name name : set) {
             if (name.getAttribute(attribute).toLowerCase(Locale.ROOT).contains(searchString)) {

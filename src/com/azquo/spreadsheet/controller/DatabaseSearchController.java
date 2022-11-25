@@ -119,7 +119,7 @@ public class DatabaseSearchController {
                         break;
                     }
                 }
-                if (dateAttribute!=null) {
+                if (dateAttribute!=null && jsonChildren.children.size() > 0) {
                     for (JsonChildren.Node node : jsonChildren.children) {
                             String sortName = RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).getNameAttribute(loggedInUser.getDataAccessToken(), node.nameId, node.text, dateAttribute);
 
