@@ -15,19 +15,11 @@
         width:100%;
     }
 
-    table.az-search, td {
 
-        border-color: #333333;
-        vertical-align: top;
-        font-weight: normal;
-    }
+    .az-list{
+        white-space:normal;
 
-    table.az-search, th {
-        border-color: #333333;
-        vertical-align: top;
-        font-weight: bold;
-    }
-
+     }
     .az-searchitem {
         margin-left: 0.5rem;
         margin-right: 0.5rem;
@@ -45,7 +37,8 @@
     .az-itemfound {
         border-bottom:2px;
         height:400px;
-        width:400px;
+        width:500px;
+        white-space:normal;
         overflow:auto;
     }
 
@@ -217,7 +210,6 @@
 
     function handleQueryResult(jsonItem) {
         var itemsHTML = "<div>";
-        var itemsHTML = "<div>";
         for (var topName in jsonItem) {
             var element = jsonItem[topName];
             if (element!=null){
@@ -234,7 +226,7 @@
 
     function handleDetails(json) {
         document.getElementById("itemselected").innerHTML = showDetails(json);
-        document.getElementById("children").innerHTML = showSet("", json.children.children, false);
+        document.getElementById("children").innerHTML = "<div>" + showSet("", json.children.children, false)+"</div>";
     }
 
 
@@ -246,7 +238,7 @@
             name = name.replaceAll("\n", "<br/>");
         }
 
-        var itemHTML = "<div class='az-itemfound'>" + name + "</div><table class='az-attributetable'>\n";
+        var itemHTML = "<div class='az-itemfound az-alert az-alert-info'><b>" + name + "</b></div><table class='az-attributetable'>\n";
         itemHTML += "<div style='font-size:11px;line-height=15px'>";
 
         if (json.parents.children.length > 0) {
@@ -280,7 +272,7 @@
             return "<tr class='" + type + "'><td>" + name + "</td><td class='az-attname'>" + value + "</td></tr>";
 
         }
-        return "<tr class='az-searchitem' onClick='newFilter(\"" + name + "\",\"" + value + "\")'><td>" + name + "</td><td class='az-attname'>" + value + "</td></tr>\n";
+        return "<tr class='az-searchitem' onClick='itemSelected(" + nameId + ")'><td>" + name + "</td><td class='az-attname'>" + value + "</td></tr>\n";
 
     }
 
