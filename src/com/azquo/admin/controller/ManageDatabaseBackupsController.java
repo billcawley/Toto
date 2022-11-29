@@ -100,7 +100,8 @@ public class ManageDatabaseBackupsController {
                             File zipDir = new File(file.getPath());
                             File[] files = zipDir.listFiles();
                             for (File f : files) { // should be just one!
-                                BackupService.loadDBBackup(loggedInUser, f, null, new StringBuilder(), true);
+                                // efc note - am forcing the database here to allow hacking in of a file from another DB, that is to say : ignore the name in the file
+                                BackupService.loadDBBackup(loggedInUser, f, databaseById.getName(), new StringBuilder(), true);
                             }
                             ZipUtil.unexplode(file);// first time using - hopefully it will put it back where it was!
                         } else {

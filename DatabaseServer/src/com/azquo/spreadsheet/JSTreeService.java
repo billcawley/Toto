@@ -298,7 +298,7 @@ public class JSTreeService {
                     childText += (" (" + child.getDefaultDisplayName() + ")");
                 }
                 //cut off names to 5000 chars
-                if (childText.length() > 5000) {
+                if (childText != null && childText.length() > 5000) {
                     childText = childText.substring(0, 5000);
                 }
                 childNodes.add(new JsonChildren.Node(-1, childText, childrenBoolean, child.getId(), name != null ? name.getId() : 0, name != null ? name.getDefaultDisplayName() : null));

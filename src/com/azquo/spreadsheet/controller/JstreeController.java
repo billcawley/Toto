@@ -202,6 +202,7 @@ public class JstreeController {
                 }
             } catch (Exception e) {
                 result = e.getMessage();
+                e.printStackTrace();
             }
             if (result == null) {
                 result = "\"no action taken\"";

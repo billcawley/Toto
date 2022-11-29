@@ -513,6 +513,7 @@ public class ZKComposer extends SelectorComposer<Component> {
     }
 
     private void showSaveButton(){
+        // todo - make work on new design
         Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"flex\";document.getElementById(\"restoreDataButton\").style.display=\"flex\";");
 
     }

@@ -199,6 +199,16 @@ setInterval(function () {
                 </button>
                 </div>
             </c:if>
+
+            <c:if test="${xml == true}">
+
+                <button class="az-button" type="button" onclick="postAjax('XML'); return false;" >
+                    Send XML
+                </button>
+
+
+            </c:if>
+
             <div class="az-dropdown">
                 <div>
                     <button id="headlessui-menu-button-:r0:" type="button" aria-haspopup="true" aria-expanded="false" onclick="window.open('/api/Jstree?op=new&database=${databaseName}')">
