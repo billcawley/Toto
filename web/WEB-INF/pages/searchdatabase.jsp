@@ -82,29 +82,31 @@
         </div>
     </div>
     <main>
-        <table class="az-table">
-            <thead>
-            <tr>
-                <th style="min-width:500px">
-                    Search results
-                </th>
-                <th>Chosen item
-                </th>
-            </tr>
-            </thead>
-            <tbody>
-            <tr class="az-foundlist">
+        <div class="az-table">
+            <table>
+                <thead>
+                <tr>
+                    <th style="min-width:500px">
+                        Search results
+                    </th>
+                    <th>Chosen item
+                    </th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr class="az-foundlist">
 
-                <td class="az-foundlist">
-                    <div id="fieldtable"></div>
-                </td>
-                <td class="az-foundlist">
-                    <div  id="itemselected" style="display:block"></div>
-                    <div class="az-list" id="children"></div>
-                </td>
-            </tr>
-            </tbody>
-        </table>
+                    <td class="az-foundlist">
+                        <div id="fieldtable"></div>
+                    </td>
+                    <td class="az-foundlist">
+                        <div  id="itemselected" style="display:block"></div>
+                        <div class="az-list" id="children"></div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
         <div id="error">${error}</div>
     </main>
 </div>
@@ -305,7 +307,7 @@
 
     function showFoundSet(setName, setElements) {
         var itemHTML = "";
-        itemHTML += "<table><thead><tr><th>" + setName + "</th></tr><thead>\n";
+        itemHTML += "<div class='az-table'><table><thead><tr><th>" + setName + "</th></tr></thead>\n";
         if (setElements.length == 0) {
             return "";
         }
@@ -333,7 +335,7 @@
             }
             itemHTML += "<tr><td><span onClick='itemSelected(" + element.nameId + ")' >" + text.replaceAll("\n", "<br/>") + "</span></td></tr>\n";
         }
-        return itemHTML + "</table>";
+        return itemHTML + "</table></div>";
 
     }
 
