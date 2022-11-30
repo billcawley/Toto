@@ -173,15 +173,18 @@ public class JSTreeService {
             }
         }
         Map <String,Set<String>> filters = new HashMap<>();
-        if (searchTerm.startsWith(StringLiterals.QUOTE+"")){
+        int filterParentId = 0;
+        boolean newQuery = false;
+        if (searchTerm.startsWith(StringLiterals.QUOTE+"") && searchTerm.contains("&") && searchTerm.contains("=")){ //new type of search
+            newQuery = true;
             String queryString = searchTerm;
             searchTerm = firstString(queryString);
             queryString = queryString.substring(searchTerm.length() + 2);
              String lastFilterName = "";
             while (queryString.length()>0){
-                //querystring is &`<name>``<value>`&`<name.....
+                //querystring is &`<name>`=`<value>`&`<name.....
                 String filterName = firstString(queryString.substring(1));
-                queryString = queryString.substring(filterName.length() + 3);
+                queryString = queryString.substring(filterName.length() + 4);
                 String filterValue = firstString(queryString);
                 queryString = queryString.substring(filterValue.length() + 2);
 
@@ -190,12 +193,21 @@ public class JSTreeService {
                 }
                 filters.get(filterName).add(filterValue);
                 lastFilterName = filterName;
+                if(filterParentId == 0){
+                    try {
+                        Name filter = NameService.findByName(azquoMemoryDBConnection, filterName);
+                        if (filter != null) {
+                            filterParentId = filter.getId();
+                        }
+                    }catch(Exception e){
+                        //should never get here...
+                    }
+                }
 
             }
 
         }
-
-          int childrenLimit = (hundredMore + 1) * 100;
+        int childrenLimit = (hundredMore + 1) * 100;
         Map<String, Boolean> state = new HashMap<>();
         state.put("opened", true);
         String text = "";
@@ -227,17 +239,18 @@ public class JSTreeService {
                     } catch (Exception e) {//carry on
                     }
                 }
-                if (children == null || children.size() !=1) {
+                if (newQuery && (children == null || children.size() !=1)) {
                     if (filterSet.size() > 0) {
+                        childrenLimit = limit;
                         //used in DatabaseSearch
                         try{
-                            children = NameService.getNamesFromSetWithAttributeContaining(azquoMemoryDBConnection, language, searchTerm, filterSet, limit);
+                            children = NameService.getNamesFromSetWithAttributeContaining(azquoMemoryDBConnection, language, searchTerm, filterSet, limit + 1);
 
                         } catch (Exception e) {
                             return null;
                         }
                     }else{
-                        children = NameService.getNamesWithAttributeContaining(azquoMemoryDBConnection, language, searchTerm, limit);
+                        children = NameService.getNamesWithAttributeContaining(azquoMemoryDBConnection, language, searchTerm, limit + 1);
                     }
                 }
             }
@@ -287,10 +300,15 @@ public class JSTreeService {
             int count = 0;
             for (Name child : children) {
                 // efc note - has values? I don't think this helps, it leaves nodes that look empty
-//                boolean childrenBoolean = child.hasChildren() || child.hasValues() || child.getAttributes().size() > 1;
+//               boolean childrenBoolean = child.hasChildren() || child.hasValues() || child.getAttributes().size() > 1
                 boolean childrenBoolean = child.hasChildren() || child.getAttributes().size() > 1;
                 if (count > childrenLimit) {
-                    childNodes.add(new JsonChildren.Node(-1, (children.size() - childrenLimit) + " more....", childrenBoolean, -1, -1, null));
+                    if (filterSet.size() == 0){
+                        childNodes.add(new JsonChildren.Node(-1, (children.size() - childrenLimit) + " more....", childrenBoolean, -1, -1, null));
+                    }else{
+                        childNodes.add(new JsonChildren.Node(-1,"more....", childrenBoolean, filterParentId, -1, null));
+
+                    }
                     break;
                 }
                 String childText = child.getAttribute(language);
@@ -298,10 +316,10 @@ public class JSTreeService {
                     childText += (" (" + child.getDefaultDisplayName() + ")");
                 }
                 //cut off names to 5000 chars
-                if (childText != null && childText.length() > 5000) {
+                if (childText!=null && childText.length() > 5000) {
                     childText = childText.substring(0, 5000);
                 }
-                childNodes.add(new JsonChildren.Node(-1, childText, childrenBoolean, child.getId(), name != null ? name.getId() : 0, name != null ? name.getDefaultDisplayName() : null));
+                childNodes.add(new JsonChildren.Node(-1, childText, childrenBoolean, child.getId(), name != null ? child.getId() : 0, child != null ? child.getDefaultDisplayName() : null));
                 count++;
             }
             if (jsTreeId > 0 && name != null) { // if it's not top then we add non DEFAULT_DISPLAY_NAME attributes to the bottom of the list - BUT NOT ON searchdatabase

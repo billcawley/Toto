@@ -99,7 +99,7 @@ public class DatabaseSearchController {
                   if (att==null || !att.equalsIgnoreCase("false")) {
                       // the return type JsonChildren is designed to produce javascript that js tree understands.  Insert 'topname' condition.
                       final JsonChildren jsonChildren = RMIClient.getServerInterface(loggedInUser.getDatabaseServer().getIp())
-                              .getJsonChildren(loggedInUser.getDataAccessToken(), 0, nameId, false,  query + "&" + StringLiterals.QUOTE + topName.text + "``` limit 20", StringLiterals.DEFAULT_DISPLAY_NAME, hundredsMoreInt);
+                              .getJsonChildren(loggedInUser.getDataAccessToken(), 0, nameId, false,  query + "&" + StringLiterals.QUOTE + topName.text + "`=`` limit 20", StringLiterals.DEFAULT_DISPLAY_NAME, hundredsMoreInt);
                       // Now, the node id management is no longer done server side, need to do it here, let logged in user assign each node id
 
                       result.put(topName.text, jsonChildren);

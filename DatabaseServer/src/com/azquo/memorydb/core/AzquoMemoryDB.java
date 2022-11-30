@@ -348,7 +348,7 @@ public final class AzquoMemoryDB {
         findTopNames2Count.incrementAndGet();
         final List<Name> toReturn = new ArrayList<>();
         for (Name name : nameByIdMap.values()) {
-            if (!name.hasParents()) {
+             if (name!=null && !name.hasParents()) {//I have not worked out how nulls get into the list, though I can see names that have no defaultdisplayname - _WFC
                 toReturn.add(name);
             }
         }

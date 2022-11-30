@@ -15,11 +15,15 @@
         width:100%;
     }
 
+    .az-foundlist table td {
+        padding:2px;
+    }
+
 
     .az-list{
         white-space:normal;
 
-     }
+    }
     .az-searchitem {
         margin-left: 0.5rem;
         margin-right: 0.5rem;
@@ -79,14 +83,16 @@
     </div>
     <main>
         <table class="az-table">
-            <tbody>
+            <thead>
             <tr>
-                <th>
+                <th style="min-width:500px">
                     Search results
                 </th>
                 <th>Chosen item
                 </th>
             </tr>
+            </thead>
+            <tbody>
             <tr class="az-foundlist">
 
                 <td class="az-foundlist">
@@ -167,7 +173,7 @@
         if (filters.length > 0) {
             for (var filter of filters) {
                 var colonPos = filter.indexOf(":");
-                query += "&" + quote + filter.substring(0,colonPos) + quote + quote + filter.substring(colopPos + 1) + quote;
+                query += "&" + quote + filter.substring(0,colonPos) + quote + "=" + quote + filter.substring(colopPos + 1) + quote;
             }
         }
         let params = "op=searchdatabase&sessionid=${pageContext.session.id}";
@@ -214,7 +220,7 @@
             var element = jsonItem[topName];
             if (element!=null){
 
-                itemsHTML +=  showSet(topName, element.children, true) ;
+                itemsHTML +=  showFoundSet(topName, element.children) ;
             }
         }
         document.getElementById("fieldtable").innerHTML = itemsHTML + "</div>";
@@ -226,7 +232,7 @@
 
     function handleDetails(json) {
         document.getElementById("itemselected").innerHTML = showDetails(json);
-        document.getElementById("children").innerHTML = "<div>" + showSet("", json.children.children, false)+"</div>";
+        document.getElementById("children").innerHTML = "<div>" + showSet("", json.children.children)+"</div>";
     }
 
 
@@ -296,37 +302,52 @@
         changed(lastValue,0);
     }
 
-    function showSet(setName, setElements, truncate) {
+
+    function showFoundSet(setName, setElements) {
         var itemHTML = "";
-        if (setName > "")
-            itemHTML += "<h2 style='font-size:18px'>" + setName + "</h2><br/>\n";
+        itemHTML += "<table><thead><tr><th>" + setName + "</th></tr><thead>\n";
         if (setElements.length == 0) {
             return "";
         }
         for (var element of setElements) {
             var eol = element.text.indexOf("\n");
             var text = element.text;
-            if (truncate) {
-                text = text.replaceAll("\n"," ").replaceAll("\r","");
-                if (text.length > 60) {
-                    var foundPos = text.toLowerCase().indexOf(lastValue.toLowerCase());
-                    var startPos = 0;
-                    if (foundPos > 30) {
-                        startPos = text.indexOf(" ", foundPos - 30);
-                    }
-                    var endPos = text.length;
-                    if (endPos > startPos + 60) {
-                        endPos = startPos + 60;
-                    }
-                    text = text.substring(startPos, endPos);
-                    if (startPos > 0){
-                        text = "..." + text;
-                    }
-                    if (endPos < text.length){
-                        text = text + "...";
-                    }
+            text = text.replaceAll("\n", " ").replaceAll("\r", "");
+            if (text.length > 60) {
+                var foundPos = text.toLowerCase().indexOf(lastValue.toLowerCase());
+                var startPos = 0;
+                if (foundPos > 30) {
+                    startPos = text.indexOf(" ", foundPos - 30);
+                }
+                var endPos = text.length;
+                if (endPos > startPos + 60) {
+                    endPos = startPos + 60;
+                }
+                text = text.substring(startPos, endPos);
+                if (startPos > 0) {
+                    text = "..." + text;
+                }
+                if (endPos < text.length) {
+                    text = text + "...";
                 }
             }
+            itemHTML += "<tr><td><span onClick='itemSelected(" + element.nameId + ")' >" + text.replaceAll("\n", "<br/>") + "</span></td></tr>\n";
+        }
+        return itemHTML + "</table>";
+
+    }
+
+
+    function showSet(setName, setElements) {
+        var itemHTML = "";
+        if (setName > "")
+            itemHTML += "<thead><tr><th>" + setName + "</th></tr><thead>/>\n";
+        if (setElements.length == 0) {
+            return "";
+        }
+        for (var element of setElements) {
+            var eol = element.text.indexOf("\n");
+            var text = element.text;
             if (element.sortName > "") {
                 itemHTML += "<div class='az-sortheading'>" + element.sortName + "</div>";
             }

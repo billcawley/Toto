@@ -112,6 +112,7 @@ public class ManageReportsController {
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
         if (request.getParameter("newdesign") != null || (loggedInUser != null && loggedInUser.getBusiness().isNewDesign())){
             request.getSession().setAttribute("newdesign", true);
+            AdminService.saveSystemData(loggedInUser);
         } else {
             request.getSession().removeAttribute("newdesign");
         }

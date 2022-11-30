@@ -10,12 +10,14 @@ import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.SpreadsheetService;
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.PropertyAccessor;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.io.FileUtils;
 import org.springframework.ui.ModelMap;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
+import java.io.*;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -41,6 +43,24 @@ import static com.azquo.dataimport.ImportService.*;
  * Note - most calls deal with security internally (isAdministrator) but not all, this really should be consistent
  */
 public class AdminService {
+
+
+    public static class ReactReport{
+        String author;
+        String database;
+        String description;
+        int id;
+        String name;
+
+        ReactReport(String author, String database, String description, int id, String name){
+            this.author = author;
+            this.database = database;
+            this.description = description;
+            this.id = id;
+            this.name = name;
+        }
+    }
+
 
     //private static final Logger logger = Logger.getLogger(AdminService.class);
 
@@ -821,6 +841,34 @@ this may now not work at all, perhaps delete?
             return e.getMessage();
         }
         return null;
+    }
+
+
+    public static void saveSystemData(LoggedInUser loggedInUser){
+        final ObjectMapper jacksonMapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        jacksonMapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
+
+        Map<String, Object> toSave = new HashMap<>();
+        List<OnlineReport> reports = getReportList(loggedInUser, true);
+        List<ReactReport> reactReports = new ArrayList<>();
+        for (OnlineReport report:reports){
+            reactReports.add(new ReactReport(report.getAuthor(), report.getDatabase(), report.getExplanation(), report.getId(), report.getUntaggedReportName()));
+        }
+        toSave.put("reports", reactReports);
+        //toSave.put("databases", getDatabaseListForBusinessWithBasicSecurity(loggedInUser));
+        try {
+            String info = jacksonMapper.writeValueAsString(toSave);
+           String dataPath = SpreadsheetService.getHomeDir() + "/temp/reactdata.json";
+           BufferedWriter writer = new BufferedWriter(new FileWriter(dataPath));
+           writer.write(info);
+           writer.close();
+        }catch(Exception e){
+            //something wrong...
+        }
+
+
+
+
     }
 
 }
