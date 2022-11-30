@@ -15,7 +15,7 @@
                         <form onsubmit="document.getElementById('working').style.display = 'block';"
                               action="/api/ManageDatabases" method="post"
                               enctype="multipart/form-data">
-                            <input type="hidden" name="newdesign" value="pendinguploads"/>
+                            <input type="hidden" name="newdesign" value="importtemplates"/>
                             <nav>
                                 Upload Template&nbsp;&nbsp;<input class="file-input is-small" type="file"
                                                                   name="uploadFile">
