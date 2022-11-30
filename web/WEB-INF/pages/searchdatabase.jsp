@@ -15,11 +15,6 @@
         width:100%;
     }
 
-    .az-foundlist table td {
-        padding:2px;
-    }
-
-
     .az-list{
         white-space:normal;
 
@@ -66,44 +61,47 @@
 
 <div class="az-content" id="setup">
     <div class="az-topbar">
-        <div class="az-searchpanel-search">
-            <table>
-                <tr>
-                    <td>
-                        <div>
-                            <input style="border-color:transparent" name="query" id="query" placeholder="Search" type="text" value=""/>
-                        </div>
-                    </td>
-                    <td>
-                        Filters: <span id="az-filters"></span>
-                    </td>
-                </tr>
-            </table>
+        <div class="az-searchbar">
+            <form action="#">
+                <div>
+                    <div>
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                    </div>
+                    <input name="query" id="query" placeholder="Search" type="text" value="">
+                </div>
+            </form>
+        </div>
+        <div class="az-topbar-menu">
+            <div>
+                Filters: <span id="az-filters"></span>
+            </div>
         </div>
     </div>
     <main>
         <div class="az-table">
             <table>
                 <thead>
-                <tr>
-                    <th style="min-width:500px">
-                        Search results
-                    </th>
-                    <th>Chosen item
-                    </th>
-                </tr>
+                    <tr>
+                        <th>
+                            Search results
+                        </th>
+                        <th>
+                            Chosen item
+                        </th>
+                    </tr>
                 </thead>
                 <tbody>
-                <tr class="az-foundlist">
-
-                    <td class="az-foundlist">
-                        <div id="fieldtable"></div>
-                    </td>
-                    <td class="az-foundlist">
-                        <div  id="itemselected" style="display:block"></div>
-                        <div class="az-list" id="children"></div>
-                    </td>
-                </tr>
+                    <tr>
+                        <td>
+                            <div id="fieldtable"></div>
+                        </td>
+                        <td>
+                            <div id="itemselected" style="display:block"></div>
+                            <div class="az-list" id="children"></div>
+                        </td>
+                    </tr>
                 </tbody>
             </table>
         </div>
@@ -217,15 +215,14 @@
     }
 
     function handleQueryResult(jsonItem) {
-        var itemsHTML = "<div>";
+        var itemsHtml = "";
         for (var topName in jsonItem) {
             var element = jsonItem[topName];
             if (element!=null){
-
                 itemsHTML +=  showFoundSet(topName, element.children) ;
             }
         }
-        document.getElementById("fieldtable").innerHTML = itemsHTML + "</div>";
+        document.getElementById("fieldtable").innerHTML = "<div class='az-table'>" + itemsHTML + "</div>";
         document.getElementById("itemselected").innerHTML = "";
         document.getElementById("children").innerHTML = "";
 
@@ -306,8 +303,8 @@
 
 
     function showFoundSet(setName, setElements) {
-        var itemHTML = "";
-        itemHTML += "<div class='az-table'><table><thead><tr><th>" + setName + "</th></tr></thead>\n";
+        var itemHtml = "";
+        var headerHtml = "<thead><tr><th>" + setName + "</th></tr></thead>\n";
         if (setElements.length == 0) {
             return "";
         }
@@ -335,7 +332,7 @@
             }
             itemHTML += "<tr><td><span onClick='itemSelected(" + element.nameId + ")' >" + text.replaceAll("\n", "<br/>") + "</span></td></tr>\n";
         }
-        return itemHTML + "</table></div>";
+        return "<table>" + headerHtml + itemHtml + "</table>";
 
     }
 
