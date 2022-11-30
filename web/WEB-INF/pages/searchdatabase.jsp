@@ -35,10 +35,8 @@
 
     .az-itemfound {
         border-bottom:2px;
-        height:400px;
         width:500px;
         white-space:normal;
-        overflow:auto;
     }
 
 
@@ -56,6 +54,11 @@
         font-size: 11px;
     }
 
+    .az-search-itemselected
+    {
+        display:block;
+        vertical-align:top;
+    }
 
 </style>
 
@@ -83,25 +86,25 @@
         <div class="az-table">
             <table>
                 <thead>
-                    <tr>
-                        <th>
-                            Search results
-                        </th>
-                        <th>
-                            Chosen item
-                        </th>
-                    </tr>
+                <tr>
+                    <th>
+                        Search results
+                    </th>
+                    <th>
+                        Chosen item
+                    </th>
+                </tr>
                 </thead>
                 <tbody>
-                    <tr>
-                        <td>
-                            <div id="fieldtable"></div>
-                        </td>
-                        <td>
-                            <div id="itemselected" style="display:block"></div>
-                            <div class="az-list" id="children"></div>
-                        </td>
-                    </tr>
+                <tr>
+                    <td>
+                        <div id="fieldtable"></div>
+                    </td>
+                    <td>
+                        <div id="itemselected" class="az-search-itemselected"></div>
+                        <div class="az-list" id="children"></div>
+                    </td>
+                </tr>
                 </tbody>
             </table>
         </div>
@@ -244,7 +247,7 @@
         }
 
         var itemHTML = "<div class='az-itemfound az-alert az-alert-info'><b>" + name + "</b></div><table class='az-attributetable'>\n";
-        itemHTML += "<div style='font-size:11px;line-height=15px'>";
+        itemHTML += "<div>";
 
         if (json.parents.children.length > 0) {
             for (var parent of json.parents.children) {
