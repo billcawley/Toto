@@ -31,7 +31,6 @@
 
     .az-itemfound {
         border-bottom:2px;
-        width:500px;
         white-space:normal;
     }
 
