@@ -66,6 +66,11 @@
         white-space: normal !important;
     }
 
+    .az-found-item
+    {
+        text-decoration: underline;
+    }
+
 </style>
 
 <div class="az-content" id="setup">
@@ -139,7 +144,7 @@
     var quote = "`";
     setInterval(function () {
         spotChange();
-    }, 1000);
+    }, 500);
     var lastValue = "";
     var filters = [];
     var filterHTML = '&nbsp&nbsp<span class="close"><span class="fa fa-close" onClick="removeFilter(\'FILTER\')">FILTERSHOWN</span>'
@@ -149,6 +154,7 @@
     function spotChange() {
         if (document.getElementById("query").value != lastValue) {
             lastValue = document.getElementById("query").value;
+        } else {
             changed(lastValue, 0);
         }
     }
@@ -200,6 +206,7 @@
             handleDetails(json);
         }
         showFilters();
+        window.scrollTo(0, 0);
     }
 
     function showFilters(){
@@ -339,7 +346,7 @@
                     text = text + "...";
                 }
             }
-            itemHTML += "<tr><td><span onClick='itemSelected(" + element.nameId + ")' >" + text.replaceAll("\n", "<br/>") + "</span></td></tr>\n";
+            itemHTML += "<tr><td><span class='az-found-item' onClick='itemSelected(" + element.nameId + ")' >" + text.replaceAll("\n", "<br/>") + "</span></td></tr>\n";
         }
         return "<table>" + headerHtml + itemHTML + "</table>";
 
