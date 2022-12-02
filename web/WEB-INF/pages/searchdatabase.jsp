@@ -15,10 +15,6 @@
         width:100%;
     }
 
-    .az-list{
-        white-space:normal;
-
-    }
     .az-searchitem {
         margin-left: 0.5rem;
         margin-right: 0.5rem;
@@ -58,6 +54,17 @@
     {
         display:block;
         vertical-align:top;
+        flex-direction:column;
+    }
+
+    .az-vertical-align-top
+    {
+        vertical-align: top;
+    }
+
+    .az-table tbody tr td p
+    {
+        white-space: normal !important;
     }
 
 </style>
@@ -84,7 +91,7 @@
     </div>
     <main>
         <div class="az-table">
-            <table>
+            <table class="az-vertical-align-top">
                 <thead>
                 <tr>
                     <th>
@@ -97,10 +104,10 @@
                 </thead>
                 <tbody>
                 <tr>
-                    <td>
+                    <td style='width:50%' class='az-vertical-align-top'>
                         <div id="fieldtable"></div>
                     </td>
-                    <td>
+                    <td class='az-vertical-align-top'>
                         <div id="itemselected" class="az-search-itemselected"></div>
                         <div class="az-list" id="children"></div>
                     </td>
@@ -133,7 +140,7 @@
     var quote = "`";
     setInterval(function () {
         spotChange();
-    }, 100);
+    }, 1000);
     var lastValue = "";
     var filters = [];
     var filterHTML = '&nbsp&nbsp<span class="close"><span class="fa fa-close" onClick="removeFilter(\'FILTER\')">FILTERSHOWN</span>'
@@ -218,7 +225,7 @@
     }
 
     function handleQueryResult(jsonItem) {
-        var itemsHtml = "";
+        var itemsHTML = "";
         for (var topName in jsonItem) {
             var element = jsonItem[topName];
             if (element!=null){
@@ -234,7 +241,7 @@
 
     function handleDetails(json) {
         document.getElementById("itemselected").innerHTML = showDetails(json);
-        document.getElementById("children").innerHTML = "<div>" + showSet("", json.children.children)+"</div>";
+        document.getElementById("children").innerHTML = "<div class='az-table'>" + showSet("", json.children.children)+"</div>";
     }
 
 
@@ -246,7 +253,7 @@
             name = name.replaceAll("\n", "<br/>");
         }
 
-        var itemHTML = "<div class='az-itemfound az-alert az-alert-info'><b>" + name + "</b></div><table class='az-attributetable'>\n";
+        var itemHTML = "<div><div class='az-itemfound az-alert az-alert-info'><b>" + name + "</b></div><table class='az-attributetable'>\n";
         itemHTML += "<div>";
 
         if (json.parents.children.length > 0) {
@@ -269,7 +276,7 @@
                 itemHTML += oneLine("az-attribute", info, jsonDetails[info], 0);
             }
         }
-        itemHTML += "</table>\n";
+        itemHTML += "</table></div>\n";
         return itemHTML;
 
 
@@ -306,7 +313,7 @@
 
 
     function showFoundSet(setName, setElements) {
-        var itemHtml = "";
+        var itemHTML = "";
         var headerHtml = "<thead><tr><th>" + setName + "</th></tr></thead>\n";
         if (setElements.length == 0) {
             return "";
@@ -335,27 +342,28 @@
             }
             itemHTML += "<tr><td><span onClick='itemSelected(" + element.nameId + ")' >" + text.replaceAll("\n", "<br/>") + "</span></td></tr>\n";
         }
-        return "<table>" + headerHtml + itemHtml + "</table>";
+        return "<table>" + headerHtml + itemHTML + "</table>";
 
     }
 
 
     function showSet(setName, setElements) {
+        if (setElements.length == 0) return "";
         var itemHTML = "";
-        if (setName > "")
+        if (setName > "") {
             itemHTML += "<thead><tr><th>" + setName + "</th></tr><thead>/>\n";
-        if (setElements.length == 0) {
-            return "";
-        }
+        } else itemHTML += "<thead><tr><th>Children</th></tr></thead>\n";
+        itemHTML += "<tbody>";
         for (var element of setElements) {
             var eol = element.text.indexOf("\n");
             var text = element.text;
             if (element.sortName > "") {
-                itemHTML += "<div class='az-sortheading'>" + element.sortName + "</div>";
+                itemHTML += "<tr><td> <b>" + element.sortName + "</b></td></tr>";
             }
-            itemHTML += "<p onClick='itemSelected(" + element.nameId + ")' >" + text.replaceAll("\n", "<br/>") + "</p>\n";
+            itemHTML += "<tr><td><p onClick='itemSelected(" + element.nameId + ")' >" + text.replaceAll("\n", "<br/>") + "</td></tr>\n";
         }
-        return itemHTML + "<br>";
+        itemHTML += "</tbody>";
+        return "<table>" + itemHTML + "</table>";
 
     }
 
