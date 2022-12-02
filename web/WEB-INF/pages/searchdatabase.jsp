@@ -83,7 +83,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                         </svg>
                     </div>
-                    <input name="query" id="query" placeholder="Search" type="text" value="">
+                    <input name="query" id="query" placeholder="Search" type="text" value="" onKeyDown='clearChange();'>
                 </div>
             </form>
         </div>
@@ -149,16 +149,28 @@
     var filters = [];
     var filterHTML = '&nbsp&nbsp<span class="close"><span class="fa fa-close" onClick="removeFilter(\'FILTER\')">FILTERSHOWN</span>'
     changed("", 0);
+    var changeComplete = false;
 
+    window.addEventListener('DOMContentLoaded', (event) => {
+        document.getElementById("query").focus();
+    });
 
     function spotChange() {
-        if (document.getElementById("query").value != lastValue) {
-            lastValue = document.getElementById("query").value;
-        } else {
-            changed(lastValue, 0);
+        if (!changeComplete)
+        {
+            if (document.getElementById("query").value != lastValue) {
+                lastValue = document.getElementById("query").value;
+            } else {
+                changeComplete = true;
+                changed(lastValue, 0);
+            }
         }
     }
 
+    function clearChange()
+    {
+        changeComplete = false;
+    }
 
     async function azquoSend(params) {
         var host = sessionStorage.getItem("host");
