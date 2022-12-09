@@ -209,6 +209,14 @@ setInterval(function () {
 
             </c:if>
 
+            <button id="saveDataButton" <c:if test="${showSave == false}"> style="display:none;"</c:if> class="az-button" type="button" onclick="postAjax('Save'); return false;" >
+                Save Data
+            </button>
+
+            <button id="restoreDataButton" <c:if test="${showSave == false}"> style="display:none;"</c:if> class="az-button" type="button" onclick="postAjax('RestoreSavedValues'); return false;" >
+                Restore Saved Values
+            </button>
+
             <div class="az-dropdown">
                 <div>
                     <button id="headlessui-menu-button-:r0:" type="button" aria-haspopup="true" aria-expanded="false" onclick="window.open('/api/Jstree?op=new&database=${databaseName}')">
