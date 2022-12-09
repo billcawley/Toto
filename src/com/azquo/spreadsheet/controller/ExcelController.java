@@ -3,6 +3,7 @@ package com.azquo.spreadsheet.controller;
 import com.azquo.SessionListener;
 import com.azquo.StringLiterals;
 import com.azquo.admin.AdminService;
+import com.azquo.admin.StorybookService;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseDAO;
 import com.azquo.admin.onlinereport.OnlineReport;
@@ -376,6 +377,20 @@ public class ExcelController {
                 reportName = java.net.URLDecoder.decode(reportName, "UTF-8");
                 loggedInUser.setOnlineReport(OnlineReportDAO.findForDatabaseIdAndName(loggedInUser.getDatabase().getId(), reportName.trim()));
             }
+
+            if ("storybook".equals(op)){
+                String page = request.getParameter("page");
+                int start = 0;
+                int count = 10;
+                try {
+                    start = Integer.parseInt(request.getParameter("start"));
+                    count = Integer.parseInt(request.getParameter("count"));
+                }catch (Exception e){
+
+                }
+                return StorybookService.getJson(loggedInUser,page);
+            }
+
 
             if (op.equals("multiuserstatus")) {
                 if (excelMultiUserConnections.get(sessionId) != null){
@@ -1046,7 +1061,7 @@ public class ExcelController {
         return false;
     }
 
-    private String jsonError(String error) {
+    public String jsonError(String error) {
         return "{\"error\":\"" + error + "\"}";
     }
 

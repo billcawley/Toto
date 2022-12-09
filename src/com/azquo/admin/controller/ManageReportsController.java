@@ -12,6 +12,7 @@ import com.azquo.dataimport.*;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.SpreadsheetService;
+import com.azquo.admin.StorybookService;
 import com.azquo.spreadsheet.controller.LoginController;
 import com.azquo.spreadsheet.transport.UploadedFile;
 import com.azquo.spreadsheet.zk.ReportAnalysis;
@@ -110,9 +111,16 @@ public class ManageReportsController {
         }
 
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
+        if (request.getParameter("storybook") != null){
+            model.put("mainmenu",StorybookService.getMainMenu());
+            model.put("secondarymenu", StorybookService.getSecondaryMenu());
+            model.put("icon", StorybookService.getIconList());
+            model.put("rootpath","/ManageReports?source=storybook");
+            model.put("selected","Overview");
+            return "overview2";
+        }
         if (request.getParameter("newdesign") != null || (loggedInUser != null && loggedInUser.getBusiness().isNewDesign())){
             request.getSession().setAttribute("newdesign", true);
-            //AdminService.saveSystemData(loggedInUser);
         } else {
             request.getSession().removeAttribute("newdesign");
         }

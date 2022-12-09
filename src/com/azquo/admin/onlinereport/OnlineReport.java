@@ -122,6 +122,10 @@ public class OnlineReport extends StandardEntity implements Serializable {
         return reportName.substring(0, pos);
     }
 
+    public String getName(){
+        return getUntaggedReportName();
+    }
+
     public String getAuthor() {
         int pos = reportName.indexOf(" uploaded by");
         if (pos < 0) return "";
