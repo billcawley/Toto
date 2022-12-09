@@ -1,4 +1,4 @@
-Npackage com.azquo.admin;
+package com.azquo.admin;
 
 import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseDAO;
