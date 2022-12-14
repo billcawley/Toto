@@ -1539,7 +1539,7 @@ public final class ImportService {
                     for (OutputFile outputFile:outputFiles){
                         uploadedFile.setPath(outputFile.outFile.getPath());
                         //reversion now - there may be multiple files....
-                        readPreparedFile(loggedInUser, uploadedFile, false,  pendingUploadConfig, templateCache);
+                        uploadedFile = readPreparedFile(loggedInUser, uploadedFile, false,  pendingUploadConfig, templateCache);
                      }
                     return uploadedFile;
                 } catch (Exception e) {
