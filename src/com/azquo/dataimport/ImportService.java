@@ -544,7 +544,7 @@ public final class ImportService {
             }
             // also just do a simple check on the file name.  Allow templates to be included in a setup bundle then directed correctly
             String lcName = uploadedFile.getFileName().toLowerCase();
-            if ((lcName.contains("import templates")  || lcName.contains(PREPROCESSOR) || lcName.contains(WORKBOOK_PROCESSOR) || lcName.contains("headings")) && !lcName.contains("=")) {
+            if ((lcName.contains("import templates")  || lcName.contains(PREPROCESSOR) || lcName.contains(WORKBOOK_PROCESSOR) || lcName.contains("metadata.")||lcName.contains("headings")) && !lcName.contains("=")) {
                 if ((loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
                     if (opcPackage != null) opcPackage.revert();
                     //preprocessors are not assigned to the file, import templates are assigned
@@ -1287,7 +1287,7 @@ public final class ImportService {
                         hasImportModel = true;
                     }
                 } else {
-                    template = sheetInfo(importTemplateData, importVersion);//case insensitive
+                    template = sheetInfo(importTemplateData, templateName);//case insensitive
                 }
                 if (template != null) {
                     importSheetScan(template, null, standardHeadings, null, templateParameters, null);
