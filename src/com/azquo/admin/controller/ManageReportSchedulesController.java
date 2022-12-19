@@ -1,6 +1,7 @@
 package com.azquo.admin.controller;
 
 import com.azquo.admin.AdminService;
+import com.azquo.admin.StorybookService;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseDAO;
 import com.azquo.admin.onlinereport.OnlineReport;
@@ -150,11 +151,7 @@ public class ManageReportSchedulesController {
             model.put("reports", AdminService.getReportList(loggedInUser, true));
             model.put("databases", databaseListForBusiness);
             AdminService.setBanner(model,loggedInUser);
-            if (request.getSession().getAttribute("newdesign") != null){
-                return "managereportschedules";
-            }
-
-            return "managereportschedules2";
+            return reportSchedulePage(loggedInUser, request);
         }
     }
 
@@ -225,14 +222,24 @@ public class ManageReportSchedulesController {
                 }
             }
             model.put("users", AdminService.getUserListForBusinessWithBasicSecurity(loggedInUser));
-            AdminService.setBanner(model, loggedInUser);
-            if (request.getSession().getAttribute("newdesign") != null){
-                return "managereportschedules";
-            }
-                return "managereportschedules2";
-        } else {
+            return reportSchedulePage(loggedInUser, request);
+         } else {
             return "redirect:/api/Login";
         }
+
+    }
+
+    private String reportSchedulePage(LoggedInUser loggedInUser, HttpServletRequest request){
+        if (request.getSession().getAttribute("newdesign") != null){
+            return "managereportschedules";
+        }
+        if (loggedInUser.getCurrentPageInfo()!=null){
+            loggedInUser.setCurrentPageInfo("page=ReportSchedules");
+            return "overview2";
+        }
+
+        return "managereportschedules2";
+
     }
 
 
