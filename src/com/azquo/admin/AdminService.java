@@ -17,6 +17,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.io.FileUtils;
 import org.springframework.ui.ModelMap;
 
+import javax.servlet.http.HttpServletRequest;
 import java.io.*;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -866,8 +867,26 @@ this may now not work at all, perhaps delete?
             //something wrong...
         }
 
+    }
 
+    public static String redirectPage(LoggedInUser loggedInUser, ModelMap model, HttpServletRequest request, String pagename) {
+         setBanner(model, loggedInUser);
+        if (request.getSession().getAttribute("newdesign") != null) {
+            return "manage" + pagename.toLowerCase(Locale.ROOT);
+        }
 
+        if (loggedInUser.getCurrentPageInfo()!=null){
+            StorybookService.loadMetaData(loggedInUser);
+            model.put("selected", pagename);
+            model.put("mainmenu", StorybookService.getMainMenu());
+            model.put("secondarymenu", StorybookService.getSecondaryMenu());
+            model.put("icon", StorybookService.getIconList());
+            model.put("rootpath","/ManageReports?source=storybook");
+            loggedInUser.setCurrentPageInfo("page=" + pagename);
+            return "overview2";
+        }
+
+        return "manage" + pagename.toLowerCase(Locale.ROOT) + "2";
 
     }
 
