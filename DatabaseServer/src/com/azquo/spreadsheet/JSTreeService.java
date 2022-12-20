@@ -243,7 +243,7 @@ public class JSTreeService {
                     if (filterSet.size() > 0) {
                         childrenLimit = limit;
                         //used in DatabaseSearch
-                        try{
+                        try {
                             children = NameService.getNamesFromSetWithAttributeContaining(azquoMemoryDBConnection, language, searchTerm, filterSet, limit + 1);
 
                         } catch (Exception e) {
@@ -252,6 +252,8 @@ public class JSTreeService {
                     }else{
                         children = NameService.getNamesWithAttributeContaining(azquoMemoryDBConnection, language, searchTerm, limit + 1);
                     }
+                }else if (!newQuery){
+                   children = NameService.getNamesWithAttributeContaining(azquoMemoryDBConnection, language, searchTerm, limit + 1);
                 }
             }
         } else if (name != null) { // typically on open
