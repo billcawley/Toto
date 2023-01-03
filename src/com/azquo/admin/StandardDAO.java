@@ -131,6 +131,7 @@ public class StandardDAO {
         jdbcTemplate.update("CREATE TABLE IF NOT EXISTS `master_db`.`user_activity` (" +
                 "`id` int(11) NOT NULL AUTO_INCREMENT" +
                 ",`business_id` int(11) NOT NULL" +
+                ",`database_id` int(11) NOT NULL" +
                 ",`user` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL" +
                 ",`activity` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL" +
                 ",`parameters` text COLLATE utf8_unicode_ci DEFAULT NULL,PRIMARY KEY (`id`)) ENGINE=InnoDB AUTO_INCREMENT=120 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;", new HashMap<>());
@@ -138,7 +139,7 @@ public class StandardDAO {
 
 
 
-        jdbcTemplate.update("DROP TABLE IF EXISTS `master_db`.`menuitem`",new HashMap<>());
+          jdbcTemplate.update("DROP TABLE IF EXISTS `master_db`.`menuitem`",new HashMap<>());
 
         jdbcTemplate.update("DROP TABLE IF EXISTS `master_db`.`importdata_usage`",new HashMap<>());
 
@@ -179,6 +180,16 @@ public class StandardDAO {
                 "      AND (column_name = \"ts\")", new HashMap<>(), Integer.class) == 0){
             jdbcTemplate.update("ALTER TABLE `master_db`.`user_activity` ADD `ts` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ;", new HashMap<>());
         }
+
+
+        if (jdbcTemplate.queryForObject("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS\n" +
+                "    WHERE\n" +
+                "      (table_name = \"user_activity\")\n" +
+                "      AND (table_schema = \"master_db\")\n" +
+                "      AND (column_name = \"database_id\")", new HashMap<>(), Integer.class) == 0){
+            jdbcTemplate.update("ALTER TABLE `master_db`.`user_activity` ADD `database_id` int(11) NOT NULL DEFAULT 0 ;", new HashMap<>());
+        }
+
 
         if (jdbcTemplate.queryForObject("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS\n" +
                 "    WHERE\n" +

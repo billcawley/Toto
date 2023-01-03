@@ -379,16 +379,7 @@ public class ExcelController {
             }
 
             if ("storybook".equals(op)){
-                String page = request.getParameter("page");
-                int start = 0;
-                int count = 10;
-                try {
-                    start = Integer.parseInt(request.getParameter("start"));
-                    count = Integer.parseInt(request.getParameter("count"));
-                }catch (Exception e){
-
-                }
-                return StorybookService.getJson(loggedInUser,page);
+                return StorybookService.getJson(loggedInUser);
             }
 
 

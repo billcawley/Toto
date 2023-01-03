@@ -1,6 +1,8 @@
 package com.azquo.admin.onlinereport;
 
 import com.azquo.admin.StandardEntity;
+import com.azquo.admin.business.BusinessDAO;
+import com.azquo.admin.database.DatabaseDAO;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -24,6 +26,7 @@ public class ReportSchedule extends StandardEntity {
     private String type;
     private String parameters;
     private String emailSubject;
+    private String database;
 
     public ReportSchedule(int id, String period, String recipients, LocalDateTime nextDue, int databaseId, int reportId, String type, String parameters, String emailSubject) {
         this.id = id;
@@ -35,6 +38,8 @@ public class ReportSchedule extends StandardEntity {
         this.type = type;
         this.parameters = parameters;
         this.emailSubject = emailSubject;
+        this.database = getDatabase();
+
     }
 
     public String getPeriod() {
@@ -105,4 +110,10 @@ public class ReportSchedule extends StandardEntity {
     public void setEmailSubject(String emailSubject) {
         this.emailSubject = emailSubject;
     }
+
+    public String getDatabase(){
+        return DatabaseDAO.findById(databaseId).getName();
+    }
+
+    public String getReport() {return OnlineReportDAO.findById(reportId).getName(); }
 }

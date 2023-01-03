@@ -32,6 +32,7 @@ public final class UserActivityDAO {
     // column names except ID which is in the superclass
 
     private static final String BUSINESSID = "business_id";
+    private static final String DATABASEID = "database_id";
     private static final String USER = "user";
     private static final String ACTIVITY = "activity";
     private static final String PARAMETERS = "parameters";
@@ -41,6 +42,7 @@ public final class UserActivityDAO {
         final Map<String, Object> toReturn = new HashMap<>();
         toReturn.put(StandardDAO.ID, userActivity.getId());
         toReturn.put(BUSINESSID, userActivity.getBusinessId());
+        toReturn.put(DATABASEID,userActivity.getDatabaseId());
         toReturn.put(USER, userActivity.getUser());
         toReturn.put(ACTIVITY,userActivity.getActivity());
         // rip off the attribute code for the moment
@@ -72,6 +74,7 @@ public final class UserActivityDAO {
 
                 return new UserActivity(rs.getInt(StandardDAO.ID)
                         , rs.getInt(BUSINESSID)
+                        , rs.getInt(DATABASEID)
                         , rs.getString(USER)
                         , rs.getString(ACTIVITY)
                         , parameters
@@ -98,6 +101,14 @@ public final class UserActivityDAO {
         namedParams.addValue(USER, user);
         return StandardDAO.findOneWithWhereSQLAndParameters(" WHERE " + BUSINESSID + " = :" + BUSINESSID + " and " + USER + " = :" + USER + " order by ts desc", TABLENAME, userActivityRowMapper, namedParams);
     }
+
+    public static List<UserActivity> findMostRecentPeportsForUserAndBusinessId(final int businessId, String user, int limit) {
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(BUSINESSID, businessId);
+        namedParams.addValue(USER, user);
+        return StandardDAO.findListWithWhereSQLAndParameters(" WHERE " + BUSINESSID + " = :" + BUSINESSID + " and " + USER + " = :" + USER + " and activity like '%Load report%' order by ts desc", TABLENAME, userActivityRowMapper, namedParams, 0, limit);
+    }
+
 
     public static List<UserActivity> findForUserAndBusinessId(final int businessId, String user, int from, int limit) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();

@@ -111,13 +111,15 @@ public class ManageReportsController {
         }
 
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
-        if (request.getParameter("storybook") != null){
-            model.put("mainmenu",StorybookService.getMainMenu());
-            model.put("secondarymenu", StorybookService.getSecondaryMenu());
-            model.put("icon", StorybookService.getIconList());
-            model.put("rootpath","/ManageReports?source=storybook");
-            model.put("selected","Overview");
-            return "overview2";
+        String table = request.getParameter("table");
+        if (table!=null){
+            return AdminService.redirectPage(loggedInUser, model, request, table);
+
+        }
+
+        if (request.getParameter("storybook")!=null){
+            loggedInUser.setCurrentPageInfo("page=Overview");
+            return AdminService.redirectPage(loggedInUser, model, request, "Overview");
         }
         if (request.getParameter("newdesign") != null || (loggedInUser != null && loggedInUser.getBusiness().isNewDesign())){
             request.getSession().setAttribute("newdesign", true);
