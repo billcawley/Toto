@@ -710,7 +710,7 @@ But can use a library?
                                 }
                             }
 
-                        } else if (!hasCalc && valuesHook.values != null && valuesHook.values.size() == 1 && (!locked.isTrue//if there's only one value, treat it as text (it may be text, or may include £,$,%)
+                        } else if (scaleHeadings.size()==0 && !hasCalc && valuesHook.values != null && valuesHook.values.size() == 1 && (!locked.isTrue//if there's only one value, treat it as text (it may be text, or may include £,$,%)
                                 || function == DataRegionHeading.FUNCTION.MAX
                                 || function == DataRegionHeading.FUNCTION.MIN
                                 || function == null)) { // locked conditional added back in by Edd, required or counts of one for example won't work. Also allowing null function to be a string now, logic added up here as a small refactor from a WFC change
