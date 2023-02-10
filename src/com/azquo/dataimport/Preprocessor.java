@@ -20,6 +20,7 @@ import org.apache.poi.openxml4j.opc.OPCPackage;
 import org.apache.poi.poifs.crypt.Decryptor;
 import org.apache.poi.poifs.crypt.EncryptionInfo;
 import org.apache.poi.poifs.filesystem.POIFSFileSystem;
+import org.apache.poi.ss.formula.BaseFormulaEvaluator;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.AreaReference;
 import org.apache.poi.ss.util.CellReference;
@@ -277,6 +278,11 @@ public class Preprocessor {
             List<String[]> backwardLines = new ArrayList<>();
             String[] lastline = null;
             int blankRows = 0;
+            if (fileNameAreaRef != null) {
+                setCellValue(inputSheet, fileNameAreaRef.getFirstCell().getRow(), fileNameAreaRef.getFirstCell().getCol(), fileName);
+            }
+            BaseFormulaEvaluator.evaluateAllFormulaCells(ppBook);
+
             while (lineIterator.hasNext() || backwardCount > 0) {
                 while (!isNewHeadings && lineNo < topRow && lineIterator.hasNext()) {
                     lineIterator.next();
@@ -416,10 +422,7 @@ public class Preprocessor {
                                 //System.out.println("setting parameter in sheet" + name.getNameName());
                             }
                         }
-                        if (fileNameAreaRef != null) {
-                            setCellValue(inputSheet, fileNameAreaRef.getFirstCell().getRow(), fileNameAreaRef.getFirstCell().getCol(), fileName);
-                        }
-                        //long t = System.currentTimeMillis();
+                         //long t = System.currentTimeMillis();
                         for (Name persistSource : persistNames.keySet()) {
                             evaluateAllFormulaCells(ppBook, persistSource);
                             AreaReference ar = new AreaReference(persistSource.getRefersToFormula(), null);
@@ -525,23 +528,20 @@ public class Preprocessor {
                 outputFile.writer.flush();
                 outputFile.writer.close();
             }
+            //debug lines below
+
+            //String outFile = "c:\\users\\test\\Downloads\\Corrupt.xlsx";
+            //File writeFile = new File(outFile);
+            //writeFile.delete(); // to avoid confusion
+
+            //OutputStream outputStream = new FileOutputStream(writeFile) ;
+            //ppBook.write(outputStream);
+
+
+            //end debug
 
 
             return outputFiles;
-            //opcPackage.revert();
-            //debug lines below
-            /*
-            outFile = "c:\\users\\test\\Downloads\\Corrupt.xlsx";
-            writeFile = new File(outFile);
-            writeFile.delete(); // to avoid confusion
-
-            OutputStream outputStream = new FileOutputStream(writeFile) ;
-            ppBook.write(outputStream);
-
-             */
-            //end debug
-
-            //opcPackage.revert();
 
         } catch (Exception e) {
             /*
@@ -947,6 +947,9 @@ public class Preprocessor {
 
 
     private static void clearRow(Row row) {
+        if (row==null) {
+            return;
+        }
         int lastCol = row.getLastCellNum();
         for (int col = 0; col <= lastCol; col++) {
             Cell cell = row.getCell(col);
