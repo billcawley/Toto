@@ -13,8 +13,8 @@
     <meta name="next-head-count" content="3"/>
     <link rel="icon" href="/favicon.png"/>
     <link rel="stylesheet" href="https://rsms.me/inter/inter.css"/>
-    <link rel="preload" href="/newdesign/css/2f78c51abf0b2164.css" as="style"/>
-    <link rel="stylesheet" href="/newdesign/css/2f78c51abf0b2164.css" data-n-g=""/>
+    <link rel="preload" href="/newdesign/css/storybook.css" as="style"/>
+    <link rel="stylesheet" href="/newdesign/css/storybook.css" data-n-g=""/>
     <noscript data-n-css=""></noscript>
 
     <script defer="" nomodule="" src="/newdesign/chunks/polyfills-0d1b80a048d4787e.js"></script>
