@@ -676,7 +676,7 @@
 
 
 
-    //under development
+    //UNDER DEVELOPMENT......
 
     <div class="az-alert-danger" id="error">${error}</div>
     <form id="edit" action="/api/ManageImportSchedules" method="post"  enctype="multipart/form-data">
