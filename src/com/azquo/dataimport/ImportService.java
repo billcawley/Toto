@@ -2394,14 +2394,14 @@ public final class ImportService {
     public static ImportTemplateData getImportTemplateData(ImportTemplate importTemplate, LoggedInUser loggedInUser) throws Exception {
         if (importTemplate != null) {
             // chunks of this will be factored off later when I want faster data file conversion
-            ImportTemplateData importTemplateData = new ImportTemplateData();
-            // I'm not supporting xls templates
+             // I'm not supporting xls templates
             System.out.println("template path : " + SpreadsheetService.getHomeDir() + dbPath + loggedInUser.getBusinessDirectory() + importTemplatesDir + importTemplate.getFilenameForDisk());
             OPCPackage opcPackage = OPCPackage.open(new File(SpreadsheetService.getHomeDir() + dbPath + loggedInUser.getBusinessDirectory() + importTemplatesDir + importTemplate.getFilenameForDisk()));
             // we're going to event based reading, it will bypass errors that can jam poi
-            XSSFReader xssfReader = new XSSFReader(opcPackage);
-            ReadOnlySharedStringsTable strings = new ReadOnlySharedStringsTable(opcPackage);
-            StylesTable styles = xssfReader.getStylesTable();
+            return readTemplateFile(opcPackage);
+        }
+        return null;
+    }
 
             // grab merges, hope this won't "cost" on big sheets
             /*
@@ -2419,26 +2419,31 @@ do {
 fr.close();
 
              */
-            XSSFReader.SheetIterator iter = (XSSFReader.SheetIterator) xssfReader.getSheetsData();
-            Map<String, List<String>> mergesMap = new HashMap<>();
-            while (iter.hasNext()) {
-                InputStream stream = iter.next();
-                InputSource sheetSource = new InputSource(stream);
-                SAXParserFactory saxFactory = SAXParserFactory.newInstance();
-                ArrayList<String> merges = new ArrayList<>();
-                try {
-                    SAXParser saxParser = saxFactory.newSAXParser();
-                    XMLReader sheetParser = saxParser.getXMLReader();
-                    sheetParser.setContentHandler(new MergedCellsHandler(merges));
-                    sheetParser.parse(sheetSource);
-                } catch (ParserConfigurationException e) {
-                    throw new RuntimeException("SAX parser appears to be broken - " + e.getMessage());
-                }
-                if (!merges.isEmpty()) {
-                    mergesMap.put(iter.getSheetName(), merges);
-                }
-                stream.close();
-            }
+   public static ImportTemplateData readTemplateFile(OPCPackage opcPackage)throws Exception{
+       ImportTemplateData importTemplateData = new ImportTemplateData();
+       XSSFReader xssfReader = new XSSFReader(opcPackage);
+       ReadOnlySharedStringsTable strings = new ReadOnlySharedStringsTable(opcPackage);
+       StylesTable styles = xssfReader.getStylesTable();
+       XSSFReader.SheetIterator iter = (XSSFReader.SheetIterator) xssfReader.getSheetsData();
+       Map<String, List<String>> mergesMap = new HashMap<>();
+       while (iter.hasNext()) {
+           InputStream stream = iter.next();
+           InputSource sheetSource = new InputSource(stream);
+           SAXParserFactory saxFactory = SAXParserFactory.newInstance();
+           ArrayList<String> merges = new ArrayList<>();
+           try {
+               SAXParser saxParser = saxFactory.newSAXParser();
+               XMLReader sheetParser = saxParser.getXMLReader();
+               sheetParser.setContentHandler(new MergedCellsHandler(merges));
+               sheetParser.parse(sheetSource);
+           } catch (ParserConfigurationException e) {
+               throw new RuntimeException("SAX parser appears to be broken - " + e.getMessage());
+           }
+           if (!merges.isEmpty()) {
+               mergesMap.put(iter.getSheetName(), merges);
+           }
+           stream.close();
+       }
 
 /*            iter = (XSSFReader.SheetIterator) xssfReader.getSheetsData();
             while (iter.hasNext()) {
@@ -2448,40 +2453,38 @@ fr.close();
                 System.out.println(IOUtils.toString(stream));
                 stream.close();
             }*/
-            iter = (XSSFReader.SheetIterator) xssfReader.getSheetsData();
-            while (iter.hasNext()) {
-                StringListsEventDataRecipient stringListsEventDataRecipient = new StringListsEventDataRecipient();
-                InputStream stream = iter.next();
-                processSheet(styles, strings, stream, mergesMap.get(iter.getSheetName()), stringListsEventDataRecipient);
-                stream.close();
-                importTemplateData.getSheets().put(iter.getSheetName().trim(), stringListsEventDataRecipient.getData());
-            }
-            // ok now the names
+       iter = (XSSFReader.SheetIterator) xssfReader.getSheetsData();
+       while (iter.hasNext()) {
+           StringListsEventDataRecipient stringListsEventDataRecipient = new StringListsEventDataRecipient();
+           InputStream stream = iter.next();
+           processSheet(styles, strings, stream, mergesMap.get(iter.getSheetName()), stringListsEventDataRecipient);
+           stream.close();
+           importTemplateData.getSheets().put(iter.getSheetName().trim(), stringListsEventDataRecipient.getData());
+       }
+       // ok now the names
 
-            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-            DocumentBuilder builder = factory.newDocumentBuilder();
+       DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+       DocumentBuilder builder = factory.newDocumentBuilder();
 //        System.out.println(IOUtils.toString(xssfReader.getWorkbookData()));
-            Document workbookXML = builder.parse(xssfReader.getWorkbookData());
-            workbookXML.getDocumentElement().normalize(); // probably fine on smaller XML, don't want to do on the big stuff
-            NodeList nList = workbookXML.getElementsByTagName("definedName");
-            for (int temp = 0; temp < nList.getLength(); temp++) {
-                Node nNode = nList.item(temp);
-                if (nNode.getNodeType() == Node.ELEMENT_NODE) {
-                    Element eElement = (Element) nNode;
-                    String nameName = eElement.getAttribute("name");
-                    if (nameName != null) {
-                        importTemplateData.putName(nameName, eElement.getTextContent());
-                    }
-                    //System.out.println("name : "  + eElement.getAttribute("name"));
-                    //System.out.println("address : " + eElement.getTextContent());
-                }
-            }
-            // due to windows paranoia, keep an eye on this. Might cause files to be write locked
-            opcPackage.revert();
-            return importTemplateData;
-        }
-        return null;
-    }
+       Document workbookXML = builder.parse(xssfReader.getWorkbookData());
+       workbookXML.getDocumentElement().normalize(); // probably fine on smaller XML, don't want to do on the big stuff
+       NodeList nList = workbookXML.getElementsByTagName("definedName");
+       for (int temp = 0; temp < nList.getLength(); temp++) {
+           Node nNode = nList.item(temp);
+           if (nNode.getNodeType() == Node.ELEMENT_NODE) {
+               Element eElement = (Element) nNode;
+               String nameName = eElement.getAttribute("name");
+               if (nameName != null) {
+                   importTemplateData.putName(nameName, eElement.getTextContent());
+               }
+               //System.out.println("name : "  + eElement.getAttribute("name"));
+               //System.out.println("address : " + eElement.getTextContent());
+           }
+       }
+       // due to windows paranoia, keep an eye on this. Might cause files to be write locked
+       opcPackage.revert();
+       return importTemplateData;
+   }
 
     /*
         // note - am making these all lower case as we want case insensitive checks
