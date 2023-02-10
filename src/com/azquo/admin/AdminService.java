@@ -876,7 +876,6 @@ this may now not work at all, perhaps delete?
         }
 
         if (loggedInUser.getCurrentPageInfo()!=null){
-            StorybookService.loadMetaData(loggedInUser);
             model.put("selected", pagename);
             model.put("mainmenu", StorybookService.getMainMenu());
             model.put("secondarymenu", StorybookService.getSecondaryMenu());
