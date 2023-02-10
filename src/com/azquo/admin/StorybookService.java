@@ -1,26 +1,18 @@
 package com.azquo.admin;
 
-import com.azquo.admin.business.BusinessDAO;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseDAO;
 import com.azquo.admin.onlinereport.*;
-import com.azquo.admin.user.User;
 import com.azquo.admin.user.UserDAO;
 import com.azquo.dataimport.*;
 import com.azquo.spreadsheet.LoggedInUser;
-import com.azquo.spreadsheet.SpreadsheetService;
-import com.azquo.spreadsheet.controller.ExcelController;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import org.zkoss.zk.ui.Page;
+import org.apache.poi.openxml4j.opc.OPCPackage;
 
-import javax.xml.crypto.Data;
-import java.awt.*;
-import java.io.BufferedWriter;
-import java.io.FileWriter;
+import javax.servlet.http.HttpServletRequest;
 import java.time.format.DateTimeFormatter;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -28,7 +20,6 @@ import java.util.List;
 
 
 public class StorybookService {
-
 
     public static class DisplaySpec{
         Object records;
@@ -142,8 +133,8 @@ public class StorybookService {
 
 
 
-    public static String getJson(LoggedInUser loggedInUser) {
-        ImportTemplateData importTemplateData = loadMetaData(loggedInUser);
+    public static String getJson(LoggedInUser loggedInUser, HttpServletRequest request) {
+        ImportTemplateData importTemplateData = loadMetaData(loggedInUser, request);
         String page = loggedInUser.getCurrentPageInfo();
         if (page==null){
             page = "overview";
@@ -208,6 +199,7 @@ public class StorybookService {
 
 
     public static List<MenuItem> getMainMenu(){
+        //THIS IS TEMPORARY - SHOULD USE METADATA
         Map<String,String> icons = getIconList();
         List<MenuItem> menuItems = new ArrayList<>();
         menuItems.add(new MenuItem("Overview", "/api/ManageReports?table=Overview", icons.get("overview")));
@@ -218,6 +210,7 @@ public class StorybookService {
         menuItems.add(new MenuItem("Users", "/api/ManageReports?table=Users", icons.get("databases")));
         menuItems.add(new MenuItem(" Import Schedules", "/api/ManageReports?table=ImportSchedules", icons.get("imports")));
         menuItems.add(new MenuItem("Report Schedules", "/api/ManageReports?table=ReportSchedules",icons.get("imports")));
+        menuItems.add(new MenuItem("Log off", "/api/Login/?logoff=true",icons.get("imports")));
         return menuItems;
 
     }
@@ -229,9 +222,16 @@ public class StorybookService {
     }
 
 
-    public static ImportTemplateData loadMetaData(LoggedInUser loggedInUser){
+    public static ImportTemplateData loadMetaData(LoggedInUser loggedInUser, HttpServletRequest request){
         try {
+            //the metadata for each business can be loaded separately.   Maybe there should be metdata for databases....
             ImportTemplate importTemplate = ImportTemplateDAO.findForNameBeginningAndBusinessId(loggedInUser.getBusiness().getBusinessName() + " metadata.xlsx", loggedInUser.getUser().getBusinessId());
+            if (importTemplate==null){
+                // if there is no metadata, use default
+                OPCPackage opcPackage = OPCPackage.open(request.getSession().getServletContext().getResourceAsStream("/WEB-INF/Default Metadata.xlsx"));
+                return ImportService.readTemplateFile(opcPackage);
+
+            }
             return ImportService.getImportTemplateData(importTemplate, loggedInUser);
         }catch(Exception e){
             System.out.println(e.getStackTrace());

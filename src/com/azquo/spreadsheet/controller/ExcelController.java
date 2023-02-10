@@ -379,7 +379,7 @@ public class ExcelController {
             }
 
             if ("storybook".equals(op)){
-                return StorybookService.getJson(loggedInUser);
+                return StorybookService.getJson(loggedInUser, request);
             }
 
 
