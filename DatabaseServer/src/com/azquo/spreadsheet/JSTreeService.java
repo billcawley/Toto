@@ -252,7 +252,7 @@ public class JSTreeService {
                     }else{
                         children = NameService.getNamesWithAttributeContaining(azquoMemoryDBConnection, language, searchTerm, limit + 1);
                     }
-                }else if (!newQuery){
+                }else if (!newQuery && children.size() == 0){
                    children = NameService.getNamesWithAttributeContaining(azquoMemoryDBConnection, language, searchTerm, limit + 1);
                 }
             }
