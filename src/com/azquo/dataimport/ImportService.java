@@ -214,7 +214,7 @@ public final class ImportService {
                 loggedInUser.copyMode = true;
             }
             try {
-                System.out.println(ReportExecutor.runExecute(loggedInUser, pendingUploadConfig.getPendingDataClearCommand(), null, uploadedFile.getProvenanceId(), false));
+                System.out.println(ReportExecutor.runExecute(loggedInUser,  pendingUploadConfig.getPendingDataClearCommand(), null, uploadedFile.getProvenanceId(), false));
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -1162,6 +1162,7 @@ public final class ImportService {
                 uploadedFile.setIgnoreLines(pendingUploadConfig.getFileRejectLines());
             }
         }
+        loggedInUser.setLastFileName(uploadedFile.getFileName());
         String preProcessor = null;
         ImportSchedule importSchedule = findRelevantImportSchedule(loggedInUser, uploadedFile);
         String templateName = uploadedFile.getFileName().replace("\\","/");
@@ -1624,7 +1625,7 @@ public final class ImportService {
                 , loggedInUser.getUser().getName());
         // run any executes defined in the file
         // the 2d arrays should probably be removed from post processor but not just yet
-        List<List<List<String>>> systemData2DArrays = new ArrayList<>();
+        Map<String,List<List<List<String>>>> systemData2DArrays = new HashMap<>();
         if (uploadedFile.getTemplateParameter(POSTPROCESSOR) != null) {
             // set user choices to file params, could be useful to the execute
             for (String choice : uploadedFile.getParameters().keySet()) {
@@ -1648,7 +1649,7 @@ public final class ImportService {
             }
             loggedInUser.copyMode = true;
             try {
-                ReportExecutor.runExecute(loggedInUser, uploadedFile.getTemplateParameter(VALIDATION), systemData2DArrays, uploadedFile.getProvenanceId(), false);
+                ReportExecutor.runExecute(loggedInUser,  uploadedFile.getTemplateParameter(VALIDATION), systemData2DArrays, uploadedFile.getProvenanceId(), false);
             } catch (Exception e) {
                 loggedInUser.copyMode = false;
                 throw e;
@@ -1661,82 +1662,85 @@ public final class ImportService {
             // error descriptions. Leaving the warning lines as a map as they may not be added in order, will sort the lines and repackage after
             Map<Integer, UploadedFile.WarningLine> warningLineMap = new HashMap<>();
             //System.out.println("system 2d arrays : " + systemData2DArrays);
-            for (List<List<String>> systemData2DArray : systemData2DArrays) {
-                if (systemData2DArray.size() > 1) { // no point doing anything if it's not!
-                    Map<String, Map<String, String>> errorLines = new HashMap<>();
-                    String keyColumn = systemData2DArray.get(0).get(0); // that will define what we want to lookup in the file e.g. policy number
-                    ArrayList<String> errorHeadings = new ArrayList<>();
-                    if (!keyColumn.isEmpty()) {
-                        // ok there might be multiple columns of errors - the heading will include the short code in [] and the error may be specific to the line
-                        List<String> headings = systemData2DArray.get(0);
-                        for (int i = 1; i < headings.size(); i++) { // rest of the headings after the keyColumn
-                            if (headings.get(i).isEmpty()) {
-                                break;
+            if (systemData2DArrays.get(uploadedFile.getFileName())!=null) {
+                for (List<List<String>> systemData2DArray : systemData2DArrays.get(uploadedFile.getFileName())) {
+                    if (systemData2DArray.size() > 1) { // no point doing anything if it's not!
+                        Map<String, Map<String, String>> errorLines = new HashMap<>();
+                        String keyColumn = systemData2DArray.get(0).get(0); // that will define what we want to lookup in the file e.g. policy number
+                        ArrayList<String> errorHeadings = new ArrayList<>();
+                        if (!keyColumn.isEmpty()) {
+                            // ok there might be multiple columns of errors - the heading will include the short code in [] and the error may be specific to the line
+                            List<String> headings = systemData2DArray.get(0);
+                            for (int i = 1; i < headings.size(); i++) { // rest of the headings after the keyColumn
+                                if (headings.get(i).isEmpty()) {
+                                    break;
+                                }
+                                errorHeadings.add(headings.get(i));
                             }
-                            errorHeadings.add(headings.get(i));
-                        }
-                        for (int i = 1; i < systemData2DArray.size(); i++) {// start from the second row
-                            List<String> row = systemData2DArray.get(i);
-                            if (!row.get(0).isEmpty()) { // if there's nothing in the key column we can't look up the line
-                                int colIndex = 1;
-                                for (String errorHeading : errorHeadings) {
-                                    if (!row.get(colIndex).isEmpty()) {
-                                        errorLines.computeIfAbsent(row.get(0).toLowerCase(), t -> new HashMap<>()).put(errorHeading, row.get(colIndex));
+                            for (int i = 1; i < systemData2DArray.size(); i++) {// start from the second row
+                                List<String> row = systemData2DArray.get(i);
+                                if (!row.get(0).isEmpty()) { // if there's nothing in the key column we can't look up the line
+                                    int colIndex = 1;
+                                    for (String errorHeading : errorHeadings) {
+                                        if (!row.get(colIndex).isEmpty()) {
+                                            errorLines.computeIfAbsent(row.get(0).toLowerCase(), t -> new HashMap<>()).put(errorHeading, row.get(colIndex));
+                                        }
+                                        colIndex++;
                                     }
-                                    colIndex++;
                                 }
                             }
                         }
-                    }
-                    uploadedFile.addToErrorHeadings(errorHeadings);
-                    if (!errorLines.isEmpty()) { // then I need to find them. First thing to do is find the relevant column
-                        // going to try based on feedback in the processed file
-                        if (uploadedFile.getFileHeadings() != null) { // if we don't have the original set of headings we won't be able to check the file
-                            int index = 0;
-                            if ("lineno".equalsIgnoreCase(keyColumn)) {
-                                index = -1; // special case - the value IS the line number
-                                for (String errorKey : new HashSet<>(errorLines.keySet())) {
-                                    // worth an explanation, line no can hit other files so if it has a - in it then take the file name from before the -
-                                    // and then check the uploadedFile file name contains it otherwise ditch the error line
-                                    if (errorKey.contains("-")) {
-                                        Map<String, String> errorLine = errorLines.remove(errorKey);
-                                        if (uploadedFile.getFileName().toLowerCase().contains(errorKey.toLowerCase().substring(0, errorKey.indexOf("-")))) {
-                                            errorLines.put(errorKey.substring(errorKey.indexOf("-") + 1), errorLine);
+                        uploadedFile.addToErrorHeadings(errorHeadings);
+                        if (!errorLines.isEmpty()) { // then I need to find them. First thing to do is find the relevant column
+                            // going to try based on feedback in the processed file
+                            if (uploadedFile.getFileHeadings() != null) { // if we don't have the original set of headings we won't be able to check the file
+                                int index = 0;
+                                if ("lineno".equalsIgnoreCase(keyColumn)) {
+                                    index = -1; // special case - the value IS the line number
+                                    for (String errorKey : new HashSet<>(errorLines.keySet())) {
+                                        // worth an explanation, line no can hit other files so if it has a - in it then take the file name from before the -
+                                        // and then check the uploadedFile file name contains it otherwise ditch the error line
+                                        if (errorKey.contains("-")) {
+                                            Map<String, String> errorLine = errorLines.remove(errorKey);
+                                            errorLines.put(errorKey.substring(errorKey.lastIndexOf("-") + 1), errorLine);
+                                       //   if (uploadedFile.getFileName().toLowerCase().contains(errorKey.toLowerCase().substring(0, errorKey.indexOf("-")))) {
+                                       //       errorLines.put(errorKey.substring(errorKey.indexOf("-") + 1), errorLine);
+                                       //    }
                                         }
                                     }
-                                }
-                            } else {
-                                for (List<String> fileHeading : uploadedFile.getFileHeadings()) {
-//                            for (String subHeading : fileHeading) { // currently looking up against the model reference not the file reference
-                                    HeadingWithInterimLookup headingWithInterimLookup = uploadedFile.getHeadingsByFileHeadingsWithInterimLookup().get(fileHeading);
-                                    // so the current criteria - it's a heading which looked up something on the model and it's the lookup which is the name we're interested in. Import Model having the canonical name for their purposes
-                                    if (headingWithInterimLookup != null && headingWithInterimLookup.getInterimLookup() != null && headingWithInterimLookup.getInterimLookup().equalsIgnoreCase(keyColumn.trim())) {
-                                        // we have a winner
-                                        break;
-                                    }
-                                    index++;
-                                }
-                                // need a new criteria for the import wizard - try to match the heading straight, hopefully will not interfere with existing matching
-                                if (index == uploadedFile.getFileHeadings().size()) { // nothing found, try a straight match
-                                    index = 0;
+                                } else {
                                     for (List<String> fileHeading : uploadedFile.getFileHeadings()) {
-                                        if (!fileHeading.isEmpty() && fileHeading.get(0).equalsIgnoreCase(keyColumn.trim())) {
+//                            for (String subHeading : fileHeading) { // currently looking up against the model reference not the file reference
+                                        HeadingWithInterimLookup headingWithInterimLookup = uploadedFile.getHeadingsByFileHeadingsWithInterimLookup().get(fileHeading);
+                                        // so the current criteria - it's a heading which looked up something on the model and it's the lookup which is the name we're interested in. Import Model having the canonical name for their purposes
+                                        if (headingWithInterimLookup != null && headingWithInterimLookup.getInterimLookup() != null && headingWithInterimLookup.getInterimLookup().equalsIgnoreCase(keyColumn.trim())) {
+                                            // we have a winner
                                             break;
                                         }
                                         index++;
                                     }
+                                    // need a new criteria for the import wizard - try to match the heading straight, hopefully will not interfere with existing matching
+                                    if (index == uploadedFile.getFileHeadings().size()) { // nothing found, try a straight match
+                                        index = 0;
+                                        for (List<String> fileHeading : uploadedFile.getFileHeadings()) {
+                                            if (!fileHeading.isEmpty() && fileHeading.get(0).equalsIgnoreCase(keyColumn.trim())) {
+                                                break;
+                                            }
+                                            index++;
+                                        }
+                                    }
                                 }
-                            }
-                            if (index < uploadedFile.getFileHeadings().size()) { // then we found the relevant column
-                                // I'm going to go to the server code to look this up
-                                Map<Integer, LineIdentifierLineValue> linesWithValuesInColumn = RMIClient.getServerInterface(databaseServer.getIp()).getLinesWithValuesInColumn(uploadedFile, index, new HashSet<>(errorLines.keySet()));// new hash set to be serializable . . .
-                                // ok so we should now finally have the information we need across the two maps (linesWithValuesInColumn and errorLines)
-                                // What needs to go into a table is the line number, the line itself and error(s) for that line, there could be multiple errors for the line
-                                for (Integer key : linesWithValuesInColumn.keySet()) {
-                                    warningLineMap.computeIfAbsent(key, t -> new UploadedFile.WarningLine(key, keyColumn + ":" + linesWithValuesInColumn.get(key).getLineIdentifier(), linesWithValuesInColumn.get(key).getLineValue())).addErrors(errorLines.get(linesWithValuesInColumn.get(key).getLineIdentifier().toLowerCase()));
+                                if (index < uploadedFile.getFileHeadings().size()) { // then we found the relevant column
+                                    // I'm going to go to the server code to look this up
+                                    Map<Integer, LineIdentifierLineValue> linesWithValuesInColumn = RMIClient.getServerInterface(databaseServer.getIp()).getLinesWithValuesInColumn(uploadedFile, index, new HashSet<>(errorLines.keySet()));// new hash set to be serializable . . .
+                                    // ok so we should now finally have the information we need across the two maps (linesWithValuesInColumn and errorLines)
+                                    // What needs to go into a table is the line number, the line itself and error(s) for that line, there could be multiple errors for the line
+                                    for (Integer key : linesWithValuesInColumn.keySet()) {
+                                        warningLineMap.computeIfAbsent(key, t -> new UploadedFile.WarningLine(key, keyColumn + ":" + linesWithValuesInColumn.get(key).getLineIdentifier(), linesWithValuesInColumn.get(key).getLineValue())).addErrors(errorLines.get(linesWithValuesInColumn.get(key).getLineIdentifier().toLowerCase()));
+                                    }
+                                } else {
+                                    throw new Exception("unable to find " + keyColumn + " from validation in uploaded file");
                                 }
-                            } else {
-                                throw new Exception("unable to find " + keyColumn + " from validation in uploaded file");
                             }
                         }
                     }
