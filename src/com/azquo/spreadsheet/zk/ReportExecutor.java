@@ -71,16 +71,18 @@ public class ReportExecutor {
     static final String EXPORT = "az_Export";
 
     static class ExecInfo{
+        String uploadFileName;
         String exportPath;
         StringBuilder loopsLog;
-        List<List<List<String>>> systemData2DArrays;
+        Map<String,List<List<List<String>>>> systemData2DArrays;
         int provenanceId;
         int count;
         Map <String,String> defines;
         String logInset;
         int nextLine;
 
-        ExecInfo(StringBuilder loopsLog, List<List<List<String>>>systemData2DArrays,int provenanceId){
+        ExecInfo(String uploadFileName, StringBuilder loopsLog, Map<String,List<List<List<String>>>>systemData2DArrays,int provenanceId){
+            this.uploadFileName = null;
             this.exportPath = null;
             this.loopsLog = loopsLog;
             this.systemData2DArrays = systemData2DArrays;
@@ -100,7 +102,7 @@ public class ReportExecutor {
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
         loggedInUser.setBook(book);
         StringBuilder loops = new StringBuilder();
-        ExecInfo execInfo = new ExecInfo(loops,null, 0);
+        ExecInfo execInfo = new ExecInfo("book",loops,null, 0);
         boolean action = false;
         for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {
             Sheet sheet = book.getSheetAt(sheetNumber);
@@ -189,10 +191,10 @@ public class ReportExecutor {
     }
 
 
-    public static StringBuilder runExecute(LoggedInUser loggedInUser, String executeCommand, List<List<List<String>>> systemData2DArrays, int provenanceId, boolean persist) throws Exception {
+    public static StringBuilder runExecute(LoggedInUser loggedInUser,  String executeCommand, Map<String,List<List<List<String>>>> systemData2DArrays, int provenanceId, boolean persist) throws Exception {
 
         StringBuilder loops = new StringBuilder();
-        ExecInfo execInfo = new ExecInfo(loops,systemData2DArrays,provenanceId);
+        ExecInfo execInfo = new ExecInfo(loggedInUser.getLastFileName(), loops,systemData2DArrays,provenanceId);
         //Workbook workbook = new XSSFWorkbook();
         Book book = Books.createBook("workbook");
         SSheet sSheet = book.getInternalBook().createSheet("workspace");
@@ -392,7 +394,10 @@ public class ReportExecutor {
                 SName systemDataName = book.getInternalBook().getNameByName(SYSTEMDATA);
                 if (systemDataName != null && execInfo.systemData2DArrays != null) {
                     // gather debug info
-                    execInfo.systemData2DArrays.add(BookUtils.nameToStringLists(systemDataName));
+                    if (execInfo.systemData2DArrays.get(loggedInUser.getLastFileName())==null){
+                        execInfo.systemData2DArrays.put(loggedInUser.getLastFileName(), new ArrayList<>());
+                    }
+                    execInfo.systemData2DArrays.get(loggedInUser.getLastFileName()).add(BookUtils.nameToStringLists(systemDataName));
                 }
 
                 //stuff added by edd, need an option for the user to see these files for debug purposes
