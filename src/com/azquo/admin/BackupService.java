@@ -275,27 +275,33 @@ public class BackupService {
         JSONObject jReports = null;
         for (File f:files){
             if (f.getName().equalsIgnoreCase("report info")){
-                String data = new String(Files.readAllBytes(Paths.get(f.getAbsolutePath())));
-                jReports = new JSONObject(data);
-                Iterator<String> names = jReports.keys();
-                while (names.hasNext()){
-                    String name = names.next();
-                    JSONObject jReport = jReports.getJSONObject(name);
-                    String iFrame = findOneInFeatures(jReport,"iframe");
-                    if (iFrame!=null&& iFrame.length()>0){
-                        OnlineReport or = OnlineReportDAO.findForNameAndBusinessId(jReport.getString("name"),loggedInUser.getBusiness().getId());
-                        if (or!=null) {
-                            AdminService.removeReportByIdWithBasicSecurity(loggedInUser, or.getId());
+                try {
+                    String data = new String(Files.readAllBytes(Paths.get(f.getAbsolutePath())));
+                    jReports = new JSONObject(data);
+                    Iterator<String> names = jReports.keys();
+                    while (names.hasNext()){
+                        String name = names.next();
+                        JSONObject jReport = jReports.getJSONObject(name);
+                        String iFrame = findOneInFeatures(jReport,"iframe");
+                        if (iFrame!=null&& iFrame.length()>0){
+                            OnlineReport or = OnlineReportDAO.findForNameAndBusinessId(jReport.getString("name"),loggedInUser.getBusiness().getId());
+                            if (or!=null) {
+                                AdminService.removeReportByIdWithBasicSecurity(loggedInUser, or.getId());
 
+                            }
+                            or = new OnlineReport(0, LocalDateTime.now(), loggedInUser.getBusiness().getId(), loggedInUser.getUser().getId(), "", jReport.getString("name"), iFrame, findOneInFeatures(jReport,"explanation"), findOneInFeatures(jReport,"category"));
+                            OnlineReportDAO.store(or);
+                            AdminService.removeMenusAndDataRequests(or.getId());
+                            DatabaseReportLinkDAO.link(loggedInUser.getDatabase().getId(),or.getId());
                         }
-                        or = new OnlineReport(0, LocalDateTime.now(), loggedInUser.getBusiness().getId(), loggedInUser.getUser().getId(), "", jReport.getString("name"), iFrame, findOneInFeatures(jReport,"explanation"), findOneInFeatures(jReport,"category"));
-                        OnlineReportDAO.store(or);
-                        AdminService.removeMenusAndDataRequests(or.getId());
-                        DatabaseReportLinkDAO.link(loggedInUser.getDatabase().getId(),or.getId());
                     }
+                    break;
+                } catch (Exception e){
+                    // EFC note - this code exceptioning was stopping backs restoring on Ed Broking - very very annoying. Do NOT remove this catch!
+                    e.printStackTrace();
                 }
-                break;
-            }
+
+                }
         }
 
         // now reports

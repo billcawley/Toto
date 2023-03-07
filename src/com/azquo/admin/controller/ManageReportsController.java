@@ -122,7 +122,7 @@ public class ManageReportsController {
             return AdminService.redirectPage(loggedInUser, model, request, "Overview");
         }
         if (request.getParameter("newdesign") != null || (loggedInUser != null && loggedInUser.getBusiness().isNewDesign())){
-            request.getSession().setAttribute("newdesign", true);
+          request.getSession().setAttribute("newdesign", true);
         } else {
             request.getSession().removeAttribute("newdesign");
         }

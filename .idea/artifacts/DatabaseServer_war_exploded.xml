@@ -11,10 +11,8 @@
           <element id="module-output" name="poi-ooxml" />
         </element>
         <element id="directory" name="lib">
-          <element id="library" level="project" name="org.springframework:spring-jdbc:4.1.6.RELEASE" />
           <element id="library" level="project" name="org.apache.directory.studio:org.apache.commons.lang:2.6" />
           <element id="library" level="project" name="net.sourceforge.javacsv:javacsv:2.0" />
-          <element id="library" level="project" name="org.springframework:spring-webmvc:4.1.6.RELEASE" />
           <element id="library" level="project" name="log4j:log4j:1.2.17" />
           <element id="library" level="project" name="net.openhft:koloboke-impl-jdk8:0.6.7" />
           <element id="library" level="project" name="org.codehaus.groovy:groovy-all:2.4.3" />
@@ -28,6 +26,9 @@
           <element id="library" level="project" name="poi-ooxml-full-5.0.0" />
           <element id="library" level="project" name="Simple Logging Facade for Java:1.7.30" />
           <element id="library" level="project" name="org.apache.xmlbeans:xmlbeans:4.0.0" />
+          <element id="library" level="project" name="google.guava" />
+          <element id="library" level="project" name="org.springframework:spring-jdbc:4.1.6.RELEASE" />
+          <element id="library" level="project" name="org.springframework:spring-webmvc:4.1.6.RELEASE" />
         </element>
       </element>
     </root>

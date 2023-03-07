@@ -577,7 +577,7 @@ public class ReportRenderer {
     }
 
 
-    private static List<MenuAppearance> filtermenuAppearances(String submenuName, LoggedInUser loggedInUser, String searchReports){
+    public static List<MenuAppearance> filtermenuAppearances(String submenuName, LoggedInUser loggedInUser, String searchReports){
        List<MenuAppearance> menuAppearances= MenuAppearanceDAO.findForNameAndBusinessId(submenuName.toLowerCase(Locale.ROOT),loggedInUser.getBusiness().getId());
        Set<Integer> reportsFound = new HashSet<>();
        for (MenuAppearance menuAppearance:menuAppearances){
