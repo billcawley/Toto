@@ -64,6 +64,14 @@ public class JdbcTemplateUtils {
             e.printStackTrace();
             System.out.println("JDBC Error on " + sql);
             System.out.println("\ntrying again");
+            for (Object o : namedParams.getValues().values()){
+                if (o.toString().length() > 65_000){
+                    System.out.println();
+                    System.out.println("Length : " + o.toString().length());
+                    System.out.println();
+                    System.out.println(o);
+                }
+            }
             return jdbcTemplate.update(sql, namedParams); // if it fails again then fail and throw the exception
         }
     }
