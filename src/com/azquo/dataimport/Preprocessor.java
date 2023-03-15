@@ -582,12 +582,15 @@ public class Preprocessor {
         org.apache.poi.ss.usermodel.Name includesLineRegion = BookUtils.getName(ppBook, "az_includes");
 
         AreaReference includesAreaRef = null;
+        boolean hasIncludes = false;
         if (includesLineRegion != null) {
             includesAreaRef = new AreaReference(includesLineRegion.getRefersToFormula(), null);
             Sheet includesSheet = ppBook.getSheet(includesLineRegion.getSheetName());
 
             for (int inRow = includesAreaRef.getFirstCell().getRow(); inRow <= includesAreaRef.getLastCell().getRow(); inRow++) {
-                String sourceName = getCellValue(includesSheet, inRow, 0);
+                if (getCellValue(includesSheet,inRow,0).length()>0){
+                    hasIncludes = true;
+                }
                 String existingSheetName = getCellValue(includesSheet, inRow, 1);
                 if (existingSheetName.length() > 0) {
                     Sheet includeSheet = ppBook.getSheet(existingSheetName);
@@ -635,7 +638,9 @@ public class Preprocessor {
 
 
                     }
-                    poiLocaliseNames(includeBook);
+                    if (hasIncludes){
+                        poiLocaliseNames(includeBook);
+                    }
                     String insertName = includeBook.getSheetAt(0).getSheetName();
                     //TODO  Test for existing sheet with the name
                     Sheet newSheet = ppBook.createSheet(insertName);
