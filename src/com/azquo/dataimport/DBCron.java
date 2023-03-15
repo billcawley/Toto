@@ -449,7 +449,7 @@ public class DBCron {
     // EFC note 5th october 2022 - new tracking db as Ed Broking have finally movedd to GXB
     @Scheduled(cron = "0 */5 * * * *")// 5 minutes?
     public void extractEdBrokingTrackingData() throws Exception {
-        /* EFC note 21/10/22 - commenting due to emergency patch, uncomment when templates sorted on live
+        // EFC note 07/03/23 - I think templates are up, maybe have a go?
         synchronized (this) {
             String transNo = null;// may be added back in as a parameter later
             String trackingdb = SpreadsheetService.getTrackingDb();
@@ -566,8 +566,8 @@ public class DBCron {
                         }
                         bufferedWriter.close();
                     }*/
-                //}
-            //}
-        //}
+                }
+            }
+        }
     }
 }

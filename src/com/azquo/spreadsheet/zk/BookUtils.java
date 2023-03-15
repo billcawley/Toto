@@ -8,9 +8,11 @@ import com.azquo.spreadsheet.CommonReportUtils;
 import com.azquo.spreadsheet.LoggedInUser;
 import io.keikai.model.*;
 import org.apache.commons.lang.math.NumberUtils;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.usermodel.Row;
 import org.zkoss.poi.ss.usermodel.DateUtil;
 import org.zkoss.poi.ss.usermodel.Name;
-import org.zkoss.poi.ss.usermodel.Row;
 import org.zkoss.poi.ss.usermodel.Workbook;
 import org.zkoss.poi.ss.util.AreaReference;
 import org.zkoss.poi.ss.util.CellReference;
@@ -124,6 +126,16 @@ java.lang.IllegalStateException: is ERROR, not the one of [STRING, BLANK]
         }
     }
 
+    static String getRegionValue(org.apache.poi.ss.usermodel.Sheet sheet, String regionFormula) {
+        try {
+            AreaReference areaReference = new AreaReference(regionFormula);
+            return sheet.getRow(areaReference.getFirstCell().getRow()).getCell(areaReference.getFirstCell().getCol()).getStringCellValue();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "";
+        }
+    }
+
     // this works out case insensitive based on the API, Like Excel I think.
 
     public static CellRegion getCellRegionForSheetAndName(Sheet sheet, String name) {
@@ -147,16 +159,11 @@ java.lang.IllegalStateException: is ERROR, not the one of [STRING, BLANK]
         return sName.getBook().getSheetByName(sName.getRefersToSheetName()).getCell(sName.getRefersToCellRegion().getRow(), sName.getRefersToCellRegion().getColumn());
     }
 
-    public static CellReference getNameCell(Name sheetName) {
-        if (sheetName == null) return null;
-        AreaReference aref = new AreaReference(sheetName.getRefersToFormula());
-        return aref.getFirstCell();
-    }
-
-    public static org.apache.poi.ss.util.CellReference getNameCell(org.apache.poi.ss.usermodel.Name sheetName) {
+    public static Cell getNameCell(org.apache.poi.ss.usermodel.Name sheetName, org.apache.poi.ss.usermodel.Sheet sheet) {
         if (sheetName == null) return null;
         org.apache.poi.ss.util.AreaReference aref = new org.apache.poi.ss.util.AreaReference(sheetName.getRefersToFormula(), null); // try null on the spreadsheet version, wasn't used in older versions of the api
-        return aref.getFirstCell();
+            return sheet.getRow(aref.getFirstCell().getRow()).getCell(aref.getFirstCell().getCol());
+
     }
 
     public static String rangeToText(int row, int col) {
@@ -217,6 +224,41 @@ java.lang.IllegalStateException: is ERROR, not the one of [STRING, BLANK]
         if (NumberUtils.isNumber(sValue.trim())) {
             try {
                 sCell.setValue(Double.parseDouble(sValue.trim()));
+            } catch (Exception e) {
+                //isNumber seems to allow 100000L   so ignore the exception - it's not a number
+            }
+        }
+    }
+
+    public static void setValue(Cell cell, String sValue) {
+        //when setting Excel cell values we need to check  - in order - for times, dates and numbers in general
+        cell.setCellValue(sValue);
+        if (sValue==null || cell.getCellStyle().getDataFormatString().equals("@")) {
+            //if the cell is formatted as text, then don't try numbers
+            return;
+        }
+        try {
+            int colonPos = sValue.length() - 3;
+            if (sValue.charAt(colonPos) == ':') {
+                double hour = Double.parseDouble(sValue.substring(0, colonPos));
+                double minute = Double.parseDouble(sValue.substring(colonPos + 1));
+                cell.setCellValue((hour + minute / 60) / 24);
+                return;
+            }
+        } catch (Exception e) {
+            //not a time after all
+        }
+        String format = cell.getCellStyle().getDataFormatString();
+        if (format.toLowerCase().contains("m")) {//allow users to format their own dates.  All dates on file as values are yyyy-MM-dd
+            LocalDate date = ReportUtils.isADate(sValue);
+            if (date != null) {
+                cell.setCellValue(DateUtils.getDateFromLocalDateTime(date.atStartOfDay()));
+                return;
+            }
+        }
+        if (NumberUtils.isNumber(sValue.trim())) {
+            try {
+                cell.setCellValue(Double.parseDouble(sValue.trim()));
             } catch (Exception e) {
                 //isNumber seems to allow 100000L   so ignore the exception - it's not a number
             }
@@ -573,6 +615,130 @@ java.lang.IllegalStateException: is ERROR, not the one of [STRING, BLANK]
          }
          return false;
      }
+
+     // Edd work on converting to POI report rendering - reimplementing functions with different API calls
+
+    // duff names can cause all sorts of problems, best to zap them
+    static void removeNamesWithNoRegion(org.apache.poi.ss.usermodel.Workbook book) {
+        List<org.apache.poi.ss.usermodel.Name> toBeDeleted = new ArrayList<>();
+        for (org.apache.poi.ss.usermodel.Name name : book.getAllNames()) {
+            if (book.getSheet(name.getSheetName()) == null || (name.getRefersToFormula() == null)) {
+                toBeDeleted.add(name);
+            } else {
+                try {
+                    new org.apache.poi.ss.util.AreaReference(name.getRefersToFormula(), null); // EFC note - in keikai could just do a get region != null against the name. I hope this will do the equivalent
+                } catch (Exception e){
+                    toBeDeleted.add(name);
+                }
+            }
+        }
+        for (org.apache.poi.ss.usermodel.Name name : toBeDeleted){
+            book.removeName(name);
+        }
+    }
+
+    public static void sumifConverter(org.apache.poi.ss.usermodel.Workbook book){
+        for (int i=0;i<book.getNumberOfSheets();i++){
+            org.apache.poi.ss.usermodel.Sheet sheet = book.getSheetAt(i);
+            for (int rowNo = 0;rowNo <= sheet.getLastRowNum(); rowNo++){
+                Row row = sheet.getRow(rowNo);
+                if (row!=null){
+                    Iterator colIt = row.cellIterator();
+                    while (colIt.hasNext()){
+                        Cell cell = (Cell)colIt.next();
+                        if (cell.getCellType() == CellType.FORMULA){
+                            String cellFormula = cell.getCellFormula();
+                            int cursor = cellFormula.indexOf("SUM(IF");
+                            StringBuffer newCellFormula  = new StringBuffer();
+                            int lastCursor = 0;
+
+                            while (cursor >= 0){
+                                newCellFormula.append(cellFormula.substring(lastCursor,cursor));
+                                cursor +=7;
+
+                                Map<String,String>conditions=new HashMap<>();
+                                if(cellFormula.charAt(cursor)=='('){
+                                    cursor++;
+                                    int nextSumIf =  cellFormula.indexOf("SUM(IF", cursor);
+                                    if (nextSumIf< 0){
+                                        nextSumIf = cellFormula.length();
+                                    }
+                                    int equalPos = cellFormula.indexOf("=",cursor);
+                                    while (equalPos > 0 && equalPos < nextSumIf){
+                                        String condition = cellFormula.substring(cursor, equalPos);
+                                        int closebrackets = cellFormula.indexOf(")",equalPos);
+                                        if (closebrackets > 0){
+                                            conditions.put(condition,cellFormula.substring(equalPos+1,closebrackets));
+                                            cursor = closebrackets + 1;
+                                            if (cellFormula.substring(cursor,cursor+2).equals("*(")){
+                                                cursor+=2;
+                                            }
+                                            equalPos = cellFormula.indexOf("=",cursor);
+                                        }
+                                    }
+                                    cursor++;//to cover teh comma;
+                                    int closeBrackets = cellFormula.indexOf(")",cursor);
+                                    if (closeBrackets < 0) {
+                                        return; //formula not understood;
+                                    }
+                                    String target = cellFormula.substring(cursor,closeBrackets);
+                                    newCellFormula.append("SUMIFS(" + target);
+                                    for (String condition:conditions.keySet()){
+                                        newCellFormula.append(","+ condition+","+ conditions.get(condition));
+                                    }
+                                    newCellFormula.append(")");
+                                    lastCursor = closeBrackets + 2;
+
+                                }else{
+                                    int equalPos = cellFormula.indexOf("=",cursor);
+                                    if(equalPos < 0 ) {
+                                        return;
+                                    }
+                                    String condition = cellFormula.substring(cursor, equalPos);
+                                    int commaPos = cellFormula.indexOf(",",equalPos);
+                                    if (commaPos > 0){
+                                        conditions.put(condition,cellFormula.substring(equalPos+1,commaPos));
+                                        cursor = commaPos + 1;
+                                    }
+                                    int closeBrackets = cellFormula.indexOf(")", commaPos);
+                                    String target = cellFormula.substring(cursor,closeBrackets);
+                                    newCellFormula.append("SUMIF(" + target);
+                                    for (String cond:conditions.keySet()){
+                                        newCellFormula.append(","+ cond+","+ conditions.get(cond));
+                                    }
+                                    newCellFormula.append(")");
+                                    lastCursor = closeBrackets + 2;
+
+                                }
+
+                                cursor = cellFormula.indexOf("SUM(IF", lastCursor);
+                            }
+                            if (lastCursor>0){
+                                newCellFormula.append(cellFormula.substring(lastCursor));
+                                cell.setCellFormula(newCellFormula.toString());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    public static org.apache.poi.ss.usermodel.Name getNameByName(String name, org.apache.poi.ss.usermodel.Sheet sheet) {
+        List<? extends org.apache.poi.ss.usermodel.Name> allNames = sheet.getWorkbook().getAllNames();
+        for (org.apache.poi.ss.usermodel.Name possible : allNames) {
+            if (sheet.getSheetName().equals(possible.getSheetName()) && possible.getNameName().equalsIgnoreCase(name)) {
+                return possible;
+            }
+        }
+        return null;
+    }
+
+    public static void deleteSheet(org.apache.poi.ss.usermodel.Workbook book, int sheetNumber) {
+        book.removeSheetAt(sheetNumber);
+        removeNamesWithNoRegion(book);
+    }
+
 
 
 }

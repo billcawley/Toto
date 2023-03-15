@@ -1,32 +1,17 @@
 package com.azquo.dataimport;
 
-import com.agilecrm.api.APIManager;
 import com.azquo.*;
 import com.azquo.admin.business.BusinessDAO;
 import com.azquo.spreadsheet.CommonReportUtils;
-import com.azquo.spreadsheet.ExcelService;
 import com.azquo.spreadsheet.transport.HeadingWithInterimLookup;
-import com.azquo.spreadsheet.zk.ChoicesService;
-import com.fasterxml.jackson.databind.MappingIterator;
-import com.fasterxml.jackson.dataformat.csv.CsvMapper;
-import com.fasterxml.jackson.dataformat.csv.CsvParser;
-import com.fasterxml.jackson.dataformat.csv.CsvSchema;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.core.util.MultivaluedMapImpl;
-import io.keikai.api.AreaRef;
 import io.keikai.model.CellRegion;
-import io.keikai.model.SSheet;
 import net.lingala.zip4j.core.ZipFile;
 import org.apache.log4j.Logger;
 import org.apache.poi.poifs.crypt.Decryptor;
 import org.apache.poi.poifs.crypt.EncryptionInfo;
 import org.apache.poi.poifs.filesystem.POIFSFileSystem;
 import org.apache.poi.ss.usermodel.CellType;
-import org.apache.poi.xslf.usermodel.XSLFTextShape;
 import org.apache.poi.xssf.usermodel.*;
-import org.springframework.context.annotation.Import;
-import org.springframework.ui.ModelMap;
-import org.springframework.web.multipart.MultipartFile;
 import org.w3c.dom.*;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
@@ -47,7 +32,6 @@ import com.azquo.spreadsheet.controller.CreateExcelForDownloadController;
 import com.azquo.spreadsheet.transport.UploadedFile;
 import com.azquo.spreadsheet.zk.BookUtils;
 import com.azquo.spreadsheet.zk.ReportExecutor;
-import com.azquo.spreadsheet.zk.ReportRenderer;
 import com.csvreader.CsvWriter;
 import groovy.lang.GroovyShell;
 import groovy.lang.Script;
@@ -71,15 +55,12 @@ import io.keikai.api.Ranges;
 import io.keikai.api.model.CellData;
 
 import javax.servlet.http.HttpSession;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.MultivaluedMap;
 import javax.xml.parsers.*;
 import java.io.*;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.text.SimpleDateFormat;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -88,9 +69,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static org.apache.poi.ss.usermodel.CellType.*;
-import org.json.JSONArray;
-import org.json.JSONObject;
-import org.zkoss.zul.A;
 
 /**
  * Copyright (C) 2016 Azquo Ltd.
@@ -555,10 +533,10 @@ public final class ImportService {
             // on an upload file, should this file be flagged as one that moves with backups and is available for non admin users to download
             org.apache.poi.ss.usermodel.Name fileTypeRange = BookUtils.getName(book, StringLiterals.AZFILETYPE);
             if (fileTypeRange != null) {
-                CellReference sheetNameCell = BookUtils.getNameCell(fileTypeRange);
+                Cell sheetNameCell = BookUtils.getNameCell(fileTypeRange, book.getSheetAt(fileTypeRange.getSheetIndex()));
                 if (sheetNameCell != null) {
                     try {
-                        String fileType = book.getSheet(fileTypeRange.getSheetName()).getRow(sheetNameCell.getRow()).getCell(sheetNameCell.getCol()).getStringCellValue();
+                        String fileType = sheetNameCell.getStringCellValue();
                         if (fileType != null) {
                             // note - this means this will only kick in in s single XLSX upload not a zip of them
                             uploadedFile.setFileType(fileType);
@@ -575,9 +553,9 @@ public final class ImportService {
             org.apache.poi.ss.usermodel.Name reportRange = BookUtils.getName(book, StringLiterals.AZREPORTNAME);
             if (userComment!=null && userComment.startsWith("Report name = ") || reportRange != null) {
                 if (reportRange != null) {
-                    CellReference sheetNameCell = BookUtils.getNameCell(reportRange);
+                    Cell sheetNameCell = BookUtils.getNameCell(reportRange, book.getSheetAt(reportRange.getSheetIndex()));
                     if (sheetNameCell != null) {
-                        reportName = book.getSheet(reportRange.getSheetName()).getRow(sheetNameCell.getRow()).getCell(sheetNameCell.getCol()).getStringCellValue();
+                        reportName = sheetNameCell.getStringCellValue();
                     }
                 }else{
                     reportName = userComment.substring("Report name = ".length());

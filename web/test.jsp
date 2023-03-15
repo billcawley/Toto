@@ -325,14 +325,15 @@
     </div>
 </div>
 <div style="height: calc(100% - 100px);">
-    <kkjsp:spreadsheet
+    <!--kkjsp:spreadsheet
             id="myzss"  src="/home/edward/Downloads/chart example.xlsx" width="100%"
-            height="800px" maxVisibleRows="200" maxVisibleColumns="40" showSheetbar="true" showToolbar="true" showFormulabar="true" showContextMenu="true"/>    <!--    kkjsp:spreadsheet id="myzss"
-                            bookProvider="ZKAzquoBookProvider"
-                            apply="ZKComposer"
-                            width="1850px" height="900px"
-                            maxrows="1000" maxcolumns="80"
-                            showToolbar="true" showFormulabar="true" showContextMenu="true"/>-->
+            height="800px" maxVisibleRows="200" maxVisibleColumns="40" showSheetbar="true" showToolbar="true" showFormulabar="true" showContextMenu="true"/>-->
+    <kkjsp:spreadsheet id="myzss"
+                       bookProvider="com.azquo.spreadsheet.zk.TestBookProviderForJSP"
+                       apply="com.azquo.spreadsheet.zk.ZKComposer"
+                       height="100%"
+                       maxVisibleRows="500" maxVisibleColumns="200"
+                       showSheetbar="true" showToolbar="false" showFormulabar="true" showContextMenu="true"/>
 </div>
 </body>
 </html>

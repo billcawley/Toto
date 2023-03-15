@@ -59,11 +59,14 @@
 					Users
 				</a>
 			</c:if>
-			<c:if test="${!developer}">
+<!--
+EFC note - while
+
+<c:if test="${!developer}">
 				<a class="navbar-item is-tab${fn:startsWith(requestScope['javax.servlet.forward.path_info'], '/ManageImportSchedules') ? ' is-active' : ''}"
 				   href="/api/ManageImportSchedules" style="color: ${ribbonLinkColor}">Import Schedules
 				</a>
-			</c:if>
+			</c:if>-->
 			<c:if test="${!developer}">
 				<a class="navbar-item is-tab${fn:startsWith(requestScope['javax.servlet.forward.path_info'], '/ManageReportSchedules') ? ' is-active' : ''}"
 				   href="/api/ManageReportSchedules" style="color: ${ribbonLinkColor}">Report Schedules
