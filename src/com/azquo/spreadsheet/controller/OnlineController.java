@@ -3,13 +3,9 @@ package com.azquo.spreadsheet.controller;
 import com.azquo.DoubleAndOrString;
 import com.azquo.StringLiterals;
 import com.azquo.admin.AdminService;
-import com.azquo.admin.StorybookService;
-import com.azquo.admin.business.Business;
-import com.azquo.admin.business.BusinessDAO;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseDAO;
 import com.azquo.admin.database.DatabaseServer;
-import com.azquo.admin.database.DatabaseServerDAO;
 import com.azquo.admin.onlinereport.*;
 import com.azquo.dataimport.SFTPUtilities;
 import com.azquo.dataimport.ImportService;
@@ -362,16 +358,11 @@ public class OnlineController {
                         model.put("images", images);
                         model.addAttribute("pdfMerges", pdfMerges);
                         model.addAttribute("databaseName", loggedInUser.getDatabase().getName());
-                        model.addAttribute("mainmenu", StorybookService.getMainMenu());
-                        model.addAttribute("secondarymenu", StorybookService.getSecondaryMenu());
                         AdminService.setBanner(model, loggedInUser);
                         // todo - report list based off home menu? Doable?
                         model.put("reports", AdminService.getReportList(loggedInUser, true));
                            if (request.getParameter("newdesign") != null){
                             return "zsshowsheet";
-                        }
-                        if (loggedInUser.getCurrentPageInfo()!=null){
-                            return "zsshowsheet3";
                         }
                         return "zsshowsheet2";
                     }
@@ -467,7 +458,7 @@ public class OnlineController {
                     model.addAttribute("reportid", reportId); // why not? should block on refreshes then
                     // edd pasting in here to get the banner colour working
                     AdminService.setBanner(model,loggedInUser);
-                    if (request.getParameter("newdesign") != null|| loggedInUser.getCurrentPageInfo()!=null){
+                    if (request.getParameter("newdesign") != null){
                         return "zsloading";
                     }
                         return "zsloading2";

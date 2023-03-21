@@ -1,5 +1,6 @@
 package com.azquo.spreadsheet.controller;
 
+import com.azquo.admin.AdminService;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseDAO;
 import com.azquo.StringLiterals;
@@ -68,6 +69,7 @@ public class DatabaseSearchController {
             }catch(Exception e){
                 model.put("error","No database chosen");
             }
+            AdminService.setBanner(model, loggedInUser);
             return "searchdatabase";
         } catch (Exception e) {
             return ImportWizard.errorToJson(e.getMessage());

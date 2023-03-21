@@ -56,10 +56,6 @@
                 <td><a href="/api/Online?reportid=${report.id}&amp;database=${report.database}" target="_blank"> <span class="fa fa-table"></span>  ${report.reportName}</a></td>
                 <td>${report.explanation}</td>
                 <td>
-                    <c:if test="${sessionScope.test != null}">
-
-                    <a href="/api/ManageReports?editId=${report.id}"  title="Edit ${report.reportName}" class="button small fa fa-edit"></a>
-                    </c:if>
                     <a href="/api/ManageReports?deleteId=${report.id}" onclick="return confirm('Are you sure you want to delete ${report.reportName}?')" class="button is-small" title="Delete ${report.reportName}"><span class="fa fa-trash" title="Delete"></span> </a>
                     <a href="/api/DownloadTemplate?reportId=${report.id}" class="button is-small" title="Download"><span class="fa fa-download" title="Download"></span> </a>
                 </td>
@@ -67,9 +63,6 @@
         </c:forEach>
         <tr>
             <td></td>
-            <c:if test="${sessionScope.test != null}">
-                <td><a href="/api/ManageReports?createnewreport=tobeentered" target="_blank"> <span class="fa fa-table"></span> NEW REPORT</a></td>
-            </c:if>
         </tr>
         </tbody>
     </table>

@@ -3719,7 +3719,7 @@
                     s = n(1575),
                     u = n(1722),
                     l = "Do MMMM 'YY, h:mm a",
-                    c = "/images/gbcornerlogo.png",
+                    c = "###CORNERLOGO###",
                     d = "https://cherrett-digital.s3.amazonaws.com/example-selections.xlsx",
                     f = "https://view.officeapps.live.com/op/embed.aspx?src=" + d,
                     h = "https://cherrett-digital.s3.amazonaws.com/spinner.gif";
@@ -3802,12 +3802,12 @@
                         { label: "Imports", href: "/api/ManageDatabases/?newdesign=imports", icon: s.Z },
                                             { label: "Databases", href: "/api/ManageDatabases/?newdesign=databases", icon: u.Z },
                     { label: "Users", href: "/api/ManageUsers", icon: l.Z },
-                        { label: "Import Schedules", href: "/api/ManageImportSchedules?newdesign=true", icon: c.Z },
+                        //{ label: "Import Schedules", href: "/api/ManageImportSchedules?newdesign=true", icon: c.Z },
                         { label: "Report Schedules", href: "/api/ManageReportSchedules", icon: c.Z },
                         { label: "Backup/Maintenance", href: "/api/ManageDatabases/?newdesign=maintenance", icon: a },
                         { label: "Pending Uploads", href: "/api/ManageDatabases/?newdesign=pendinguploads", icon: s.Z },
                         { label: "Import Templates", href: "/api/ManageDatabases/?newdesign=importtemplates", icon: a },
-                        { label: "External Connections", href: "/api/ManageDatabaseConnections", icon: a },
+                        //{ label: "External Connections", href: "/api/ManageDatabaseConnections", icon: a },
                         ###SWITCHBUSINESS###
                         { label: "Logout", href: "/api/Login?logoff=true", icon: l.Z },
                     ],

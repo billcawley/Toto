@@ -11,7 +11,6 @@
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
 	<link rel="stylesheet" href="/sass/mystyles.css">
-	<link rel="stylesheet" href="/quickview/bulma-quickview.min.css">
 	<!-- <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css"> -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 	<!-- required for inspect - presumably zap at some point -->
@@ -47,12 +46,6 @@
 			   href="/api/ManageDatabases" style="color: ${ribbonLinkColor}">
 				Databases
 			</a>
-			<c:if test="${!developer&& sessionScope.test != null}">
-				<a class="navbar-item is-tab${fn:startsWith(requestScope['javax.servlet.forward.path_info'], '/ManageDatabaseConnections') ? ' is-active' : ''}"
-				   href="/api/ManageDatabaseConnections" style="color: ${ribbonLinkColor}">
-					Connections
-				</a>
-			</c:if>
 			<c:if test="${!developer}">
 				<a class="navbar-item is-tab${fn:startsWith(requestScope['javax.servlet.forward.path_info'], '/ManageUsers') ? ' is-active' : ''}"
 				   href="/api/ManageUsers" style="color: ${ribbonLinkColor}">
@@ -72,14 +65,10 @@ EFC note - while
 				   href="/api/ManageReportSchedules" style="color: ${ribbonLinkColor}">Report Schedules
 				</a>
 			</c:if>
-			<c:if test="${sessionScope.test != null}">
-				<a class="navbar-item is-tab${fn:startsWith(requestScope['javax.servlet.forward.path_info'], '/RangeTest') ? ' is-active' : ''}"
-				   href="/api/RangeTest" style="color: ${ribbonLinkColor}">Range Test (like new inspect)
-				</a>
-			</c:if>
 		</div>
 
 		<div class="navbar-end">
+			<a class="navbar-item is-tab" href="/api/ManageReports?newdesign=overview" style="color: ${ribbonLinkColor}">Beta</a>
 			<c:if test="${sessionScope.LOGGED_IN_USERS_SESSION != null}">
 				<a  class="navbar-item is-tab" href="/api/Login?select=true" style="color: ${ribbonLinkColor}"><!--Logged in under ${sessionScope.LOGGED_IN_USER_SESSION.user.businessName}. --><i class="fa-solid fa-sitemap"></i></a>
 			</c:if>
@@ -87,34 +76,3 @@ EFC note - while
 		</div>
 	</div>
 </nav>
-<c:if test="${reports != null && sessionScope.test != null}">
-<button class="button" data-show="quickview" data-target="quickviewDefault" style="
-	position: fixed;
-    top: 6%;
-"><i class="fa-solid fa-chevron-right"></i></button>
-
-<div id="quickviewDefault" class="quickview is-left" style="background-color: ${sideMenuColor}">
-	<header class="quickview-header">
-		<p style="color:${sideMenuLinkColor}" class="title">Reports</p>
-		<span class="delete" data-dismiss="quickview"></span>
-	</header>
-
-	<div class="quickview-body">
-		<div class="quickview-block">
-			<c:forEach items="${reports}" var="report">
-				<c:if test="${report.database != 'None'}">
-					<c:if test="${report.category != ''}">
-						<hr style="height: 0px">
-						&nbsp;&nbsp;<span style="color:${sideMenuLinkColor};text-decoration: underline">${report.category}</span>
-						<hr style="height: 0px">
-					</c:if>
-					<a href="/api/Online?reportid=${report.id}&amp;database=${report.database}"  style="color:${sideMenuLinkColor}">
-						&nbsp;&nbsp;&nbsp;&nbsp;${report.untaggedReportName}<br/>
-					</a>
-				</c:if>
-			</c:forEach>
-
-		</div>
-	</div>
-</div>
-</c:if>

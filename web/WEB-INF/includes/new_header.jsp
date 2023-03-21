@@ -13,6 +13,19 @@
     <meta name="next-head-count" content="3"/>
     <link rel="icon" href="/favicon.png"/>
     <link rel="stylesheet" href="https://rsms.me/inter/inter.css"/>
+    <style>
+        :root {
+            --buttonColour: ${buttonColour};
+            --headingsColour: ${headingsColour};
+            --ribbonBackgroundColour: ${ribbonBackgroundColour};
+            --ribbonTextColour: ${ribbonTextColour};
+            --ribbonIconColour: ${ribbonIconColour};
+            --logoBackgroundColour: ${logoBackgroundColour};
+        }
+
+
+    </style>
+
     <link rel="preload" href="/newdesign/css/2f78c51abf0b2164.css" as="style"/>
     <link rel="stylesheet" href="/newdesign/css/2f78c51abf0b2164.css" data-n-g=""/>
     <noscript data-n-css=""></noscript>
@@ -63,7 +76,7 @@
         <div class="az-sidebar ${compact}">
             <div>
                 <a class="az-sidebar-logo" href="/api/ManageReports/?newdesign=overview"><img
-                        src="/images/gbcornerlogo.png"></a>
+                        src="${cornerLogo}"></a>
                 <nav>
                     <div class="az-sidebar-primary">
                         <a class="group" rel="noopener noreferrer" href="/api/ManageReports/?newdesign=overview"
@@ -164,7 +177,7 @@
                                 ></path>
                             </svg>
                             <span>Users</span></a>
-                        <a class="group" rel="noopener noreferrer" href="/api/ManageImportSchedules?newdesign=true"
+                        <!--<a class="group" rel="noopener noreferrer" href="/api/ManageImportSchedules?newdesign=true"
                         >
                             <svg
                                     xmlns="http://www.w3.org/2000/svg"
@@ -180,7 +193,7 @@
                                         d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                                 ></path>
                             </svg>
-                            <span>Import Schedules</span></a>
+                            <span>Import Schedules</span></a>-->
                         <a class="group" rel="noopener noreferrer" href="/api/ManageReportSchedules"
                         >
                             <svg
@@ -255,7 +268,7 @@
                             <span>Import Templates</span>
 
                         </a>
-
+<!--
                         <a class="group" rel="noopener noreferrer" href="/api/ManageDatabaseConnections">
                             <svg
                                     xmlns="http://www.w3.org/2000/svg"
@@ -274,6 +287,25 @@
                             </svg>
                             <span>External Connections</span>
 
+                        </a> -->
+
+                        <a class="group" rel="noopener noreferrer" href="/api/ManageReports">
+                            <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke-width="2"
+                                    stroke="currentColor"
+                                    aria-hidden="true">
+                                <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                                ></path>
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            </svg>
+                            <span>Exit Beta</span>
                         </a>
                         <c:if test="${sessionScope.LOGGED_IN_USERS_SESSION != null}">
                             <a class="group " rel="noopener noreferrer" href="/api/Login?select=true"

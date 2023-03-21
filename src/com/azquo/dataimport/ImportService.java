@@ -533,10 +533,10 @@ public final class ImportService {
             // on an upload file, should this file be flagged as one that moves with backups and is available for non admin users to download
             org.apache.poi.ss.usermodel.Name fileTypeRange = BookUtils.getName(book, StringLiterals.AZFILETYPE);
             if (fileTypeRange != null) {
-                Cell sheetNameCell = BookUtils.getNameCell(fileTypeRange, book.getSheetAt(fileTypeRange.getSheetIndex()));
+                CellReference sheetNameCell = BookUtils.getNameCell(fileTypeRange);
                 if (sheetNameCell != null) {
                     try {
-                        String fileType = sheetNameCell.getStringCellValue();
+                        String fileType = book.getSheet(fileTypeRange.getSheetName()).getRow(sheetNameCell.getRow()).getCell(sheetNameCell.getCol()).getStringCellValue();
                         if (fileType != null) {
                             // note - this means this will only kick in in s single XLSX upload not a zip of them
                             uploadedFile.setFileType(fileType);
@@ -553,9 +553,9 @@ public final class ImportService {
             org.apache.poi.ss.usermodel.Name reportRange = BookUtils.getName(book, StringLiterals.AZREPORTNAME);
             if (userComment!=null && userComment.startsWith("Report name = ") || reportRange != null) {
                 if (reportRange != null) {
-                    Cell sheetNameCell = BookUtils.getNameCell(reportRange, book.getSheetAt(reportRange.getSheetIndex()));
+                    CellReference sheetNameCell = BookUtils.getNameCell(reportRange);
                     if (sheetNameCell != null) {
-                        reportName = sheetNameCell.getStringCellValue();
+                        reportName = book.getSheet(reportRange.getSheetName()).getRow(sheetNameCell.getRow()).getCell(sheetNameCell.getCol()).getStringCellValue();
                     }
                 }else{
                     reportName = userComment.substring("Report name = ".length());

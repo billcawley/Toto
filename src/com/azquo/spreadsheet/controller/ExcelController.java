@@ -3,7 +3,6 @@ package com.azquo.spreadsheet.controller;
 import com.azquo.SessionListener;
 import com.azquo.StringLiterals;
 import com.azquo.admin.AdminService;
-import com.azquo.admin.StorybookService;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseDAO;
 import com.azquo.admin.onlinereport.OnlineReport;
@@ -20,8 +19,6 @@ import com.azquo.spreadsheet.transport.json.ExcelRegionModification;
 import com.azquo.spreadsheet.zk.ChoicesService;
 import com.azquo.spreadsheet.zk.ReportExecutor;
 import com.azquo.spreadsheet.zk.ReportRenderer;
-import com.fasterxml.jackson.annotation.JsonAutoDetect;
-import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -377,11 +374,6 @@ public class ExcelController {
                 reportName = java.net.URLDecoder.decode(reportName, "UTF-8");
                 loggedInUser.setOnlineReport(OnlineReportDAO.findForDatabaseIdAndName(loggedInUser.getDatabase().getId(), reportName.trim()));
             }
-
-            if ("storybook".equals(op)){
-                return StorybookService.getJson(loggedInUser, request);
-            }
-
 
             if (op.equals("multiuserstatus")) {
                 if (excelMultiUserConnections.get(sessionId) != null){

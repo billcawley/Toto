@@ -397,11 +397,19 @@ public class ManageDatabasesController {
                             .lines()
                             .collect(Collectors.joining("\n"));
 
+                    String cornerLogo = loggedInUser.getBusiness().getCornerLogo();
+                    if (cornerLogo == null || cornerLogo.length() == 0) cornerLogo = loggedInUser.getBusiness().getLogo();
+                    if (cornerLogo != null){
+                        cornerLogo = AdminService.getLogoPath(cornerLogo);
+                    }
+                    if (cornerLogo == null || cornerLogo.length() == 0) cornerLogo = "/images/logo_dark_bg.png";
+
                     model.put("newappjavascript", "//" + resource
+                            .replace("###CORNERLOGO###", cornerLogo)
                             .replace("###IMPORTSLIST###", jsImportsList.toString())
                             .replace("###DATABASESLIST###", databasesList.toString())
                             .replace("###REPORTSLIST###", reportsList.toString())
-                            .replace("###SWITCHBUSINESS###", request.getSession().getAttribute(LoginController.LOGGED_IN_USERS_SESSION) != null ? "{ label: \"Switch Business\", href: \"/api/Login?select=true\", icon: l.Z }," : "")
+                            .replace("###SWITCHBUSINESS###", request.getSession().getAttribute(LoginController.LOGGED_IN_USERS_SESSION) != null ? "{ label: \"Exit Beta\", href: \"/api/ManageReports\", icon: a },{ label: \"Switch Business\", href: \"/api/Login?select=true\", icon: l.Z }," : "{ label: \"Exit Beta\", href: \"/api/ManageReports\", icon: l.Z },")
                     );
                 } catch (Exception e) {
                     e.printStackTrace();

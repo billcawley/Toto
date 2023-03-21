@@ -169,8 +169,6 @@ public class LoggedInUser implements Serializable {
     private final AtomicInteger lastJSTreeNodeId;
 
     private final Map<Integer, JsonChildren.Node> jsTreeLookupMap;
-    // a bit hacky, I just want a place to put the last converted file. For Modus, won't support more than one file etc. Just make it work for the mo
-    private String currentPageInfo = null;
     private String lastFile = null;
     private String lastFileName = null;
     private WizardInfo wizardInfo = null;
@@ -439,10 +437,6 @@ public class LoggedInUser implements Serializable {
         UserActivity ua = new UserActivity(0, businessId, dbId, user.getEmail(), activity, parameters);
         UserActivityDAO.store(ua);
     }
-
-    public String getCurrentPageInfo(){return currentPageInfo; }
-
-    public void setCurrentPageInfo(String currentPageInfo){ this.currentPageInfo = currentPageInfo; }
 
     public String getLastFile() {
         return lastFile;

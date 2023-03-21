@@ -1,22 +1,16 @@
 package com.azquo.admin.controller;
 
-import com.azquo.ExternalConnector;
 import com.azquo.admin.AdminService;
-import com.azquo.admin.BackupService;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseDAO;
-import com.azquo.admin.database.DatabaseServer;
-import com.azquo.admin.database.DatabaseServerDAO;
 import com.azquo.admin.onlinereport.*;
 import com.azquo.dataimport.*;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.SpreadsheetService;
-import com.azquo.admin.StorybookService;
 import com.azquo.spreadsheet.controller.LoginController;
 import com.azquo.spreadsheet.transport.UploadedFile;
 import com.azquo.spreadsheet.zk.ReportAnalysis;
-import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.math.NumberUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -25,8 +19,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 import org.zkoss.poi.hssf.usermodel.HSSFFont;
-import org.zkoss.poi.hssf.usermodel.HSSFWorkbook;
-import org.zkoss.poi.openxml4j.opc.OPCPackage;
 import org.zkoss.poi.ss.usermodel.*;
 import org.zkoss.poi.xssf.usermodel.XSSFWorkbook;
 
@@ -103,25 +95,8 @@ public class ManageReportsController {
             , @RequestParam(value = "deleteId", required = false) String deleteId
 
     ) {
-        if ("true".equalsIgnoreCase(request.getParameter("testmode"))){
-            request.getSession().setAttribute("test", "true");
-        }
-        if ("false".equalsIgnoreCase(request.getParameter("testmode"))){
-            request.getSession().removeAttribute("test");
-        }
-
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
-        String table = request.getParameter("table");
-        if (table!=null){
-            return AdminService.redirectPage(loggedInUser, model, request, table);
-
-        }
-
-        if (request.getParameter("storybook")!=null){
-            loggedInUser.setCurrentPageInfo("page=Overview");
-            return AdminService.redirectPage(loggedInUser, model, request, "Overview");
-        }
-        if (request.getParameter("newdesign") != null || (loggedInUser != null && loggedInUser.getBusiness().isNewDesign())){
+        if (request.getParameter("newdesign") != null){
           request.getSession().setAttribute("newdesign", true);
         } else {
             request.getSession().removeAttribute("newdesign");
@@ -449,12 +424,19 @@ public class ManageReportsController {
             String resource = new BufferedReader(  new InputStreamReader(resourceAsStream, StandardCharsets.UTF_8))
                     .lines()
                     .collect(Collectors.joining("\n"));
+            String cornerLogo = loggedInUser.getBusiness().getCornerLogo();
+            if (cornerLogo == null || cornerLogo.length() == 0) cornerLogo = loggedInUser.getBusiness().getLogo();
+            if (cornerLogo != null){
+                cornerLogo = AdminService.getLogoPath(cornerLogo);
+            }
+            if (cornerLogo == null || cornerLogo.length() == 0) cornerLogo = "/images/logo_dark_bg.png";
 
             model.put("newappjavascript", "// " +  resource
+                    .replace("###CORNERLOGO###", cornerLogo)
                     .replace("###IMPORTSLIST###", importsList.toString())
                     .replace("###DATABASESLIST###", databasesList.toString())
                     .replace("###REPORTSLIST###", reportsList.toString())
-                    .replace("###SWITCHBUSINESS###", session.getAttribute(LoginController.LOGGED_IN_USERS_SESSION) != null ? "{ label: \"Switch Business\", href: \"/api/Login?select=true\", icon: l.Z }," : "")
+                    .replace("###SWITCHBUSINESS###", session.getAttribute(LoginController.LOGGED_IN_USERS_SESSION) != null ? "{ label: \"Exit Beta\", href: \"/api/ManageReports\", icon: a },{ label: \"Switch Business\", href: \"/api/Login?select=true\", icon: l.Z }," : "{ label: \"Exit Beta\", href: \"/api/ManageReports\", icon: l.Z },")
             );
 
 

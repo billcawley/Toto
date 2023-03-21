@@ -1,7 +1,6 @@
 package com.azquo.admin.controller;
 
 import com.azquo.admin.AdminService;
-import com.azquo.admin.StorybookService;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseDAO;
 import com.azquo.admin.onlinereport.OnlineReport;
@@ -232,10 +231,6 @@ public class ManageReportSchedulesController {
     private String reportSchedulePage(LoggedInUser loggedInUser, HttpServletRequest request){
         if (request.getSession().getAttribute("newdesign") != null){
             return "managereportschedules";
-        }
-        if (loggedInUser.getCurrentPageInfo()!=null){
-            loggedInUser.setCurrentPageInfo("page=ReportSchedules");
-            return "overview2";
         }
 
         return "managereportschedules2";

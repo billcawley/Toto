@@ -6,7 +6,6 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title>${title} - Azquo</title>
 	<link rel="stylesheet" href="/css/bulma.css">
-	<link rel="stylesheet" href="/quickview/bulma-quickview.min.css">
 	<!-- <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css"> -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 	<!-- required for inspect - presumably zap at some point -->
@@ -80,38 +79,5 @@
 		</div>
 	</div>
 </nav>
-<c:if test="${reports != null && sessionScope.test != null}">
-<button class="button" data-show="quickview" data-target="quickviewDefault" style="
-	position: fixed;
-    top: 6%;
-        z-index: 34;
-"><i class="fa-solid fa-chevron-right"></i></button>
-
-<div id="quickviewDefault" class="quickview is-left" style="background-color: ${sideMenuColor}">
-	<header class="quickview-header">
-		<p style="color:${sideMenuLinkColor}" class="title">Reports</p>
-		<span class="delete" data-dismiss="quickview"></span>
-	</header>
-
-	<div class="quickview-body">
-		<div class="quickview-block">
-			<c:forEach items="${reports}" var="report">
-				<c:if test="${report.database != 'None'}">
-					<c:if test="${report.category != ''}">
-						<hr style="height: 0px">
-						&nbsp;&nbsp;<span style="color:${sideMenuLinkColor};text-decoration: underline">${report.category}</span>
-						<hr style="height: 0px">
-					</c:if>
-					<a href="/api/Online?reportid=${report.id}&amp;database=${report.database}&amp;permissionid=${report.untaggedReportName}"   style="color:${sideMenuLinkColor}">
-						&nbsp;&nbsp;&nbsp;&nbsp;${report.untaggedReportName}<br/>
-					</a>
-				</c:if>
-			</c:forEach>
-
-		</div>
-	</div>
-
-</div>
-</c:if>
 
 <span id="lockedResult"><c:if test="${not empty lockedResult}"><textarea class="public" style="height:60px;width:400px;font:10px monospace;overflow:auto;font-family:arial;background:#f58030;color:#fff;font-size:14px;border:0">${lockedResult}</textarea></c:if></span>

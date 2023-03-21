@@ -11,11 +11,11 @@ import org.apache.commons.lang.math.NumberUtils;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.util.CellReference;
 import org.zkoss.poi.ss.usermodel.DateUtil;
 import org.zkoss.poi.ss.usermodel.Name;
 import org.zkoss.poi.ss.usermodel.Workbook;
 import org.zkoss.poi.ss.util.AreaReference;
-import org.zkoss.poi.ss.util.CellReference;
 import io.keikai.api.Range;
 import io.keikai.api.Ranges;
 import io.keikai.api.model.Book;
@@ -59,6 +59,50 @@ public class BookUtils {
         return toReturn;
     }
 
+    static List<List<String>> nameToStringLists(org.apache.poi.ss.usermodel.Name sName, org.apache.poi.ss.usermodel.Name repeatRegion, org.apache.poi.ss.usermodel.Sheet sheet,  int rowOffset, int colOffset) {
+        List<List<String>> toReturn = new ArrayList<>();
+        if (sName == null) return toReturn;
+        // EFC note - this only applies in the case of repeat regions as called in teh report filler service, really this check should be out there
+        // the catch is that row headings might be in the region
+        org.apache.poi.ss.util.AreaReference ar = new org.apache.poi.ss.util.AreaReference(sName.getRefersToFormula(), null);
+        if (repeatRegion != null) {
+            //if sName is outside the repeat region, do not add on the row col offsets
+            org.apache.poi.ss.util.AreaReference repeat = new org.apache.poi.ss.util.AreaReference(repeatRegion.getRefersToFormula(), null);
+            if (ar.getFirstCell().getRow() < repeat.getFirstCell().getRow()
+                    || ar.getFirstCell().getRow() >= repeat.getFirstCell().getRow() + (repeat.getLastCell().getRow() - repeat.getFirstCell().getRow() + 1)
+                    || ar.getFirstCell().getCol() < repeat.getFirstCell().getCol()
+                    || ar.getFirstCell().getCol() >= repeat.getFirstCell().getCol() + (repeat.getLastCell().getCol() - repeat.getFirstCell().getCol() + 1)) {
+                rowOffset = 0;
+                colOffset = 0;
+            }
+        }
+        regionToStringList(toReturn, ar, sheet, rowOffset, colOffset);
+        return toReturn;
+    }
+
+    static void regionToStringList(List<List<String>> toReturn, org.apache.poi.ss.util.AreaReference region, org.apache.poi.ss.usermodel.Sheet sheet, int rowOffset, int colOffset) {
+        for (int rowIndex = region.getFirstCell().getRow() + rowOffset; rowIndex <= region.getLastCell().getRow() + rowOffset; rowIndex++) {
+            List<String> row = new ArrayList<>();
+            toReturn.add(row);
+            for (int colIndex = region.getFirstCell().getCol() + colOffset; colIndex <= region.getLastCell().getCol() + colOffset; colIndex++) {
+                Cell cell = sheet.getRow(rowIndex).getCell(colIndex);
+                if (cell != null) {
+                    // being paraniod? Necessary for POI? no api calls similar, commenting
+/*                    if (cell.getCellType() == CellType.FORMULA) {
+                        //System.out.println("doing the cell thing on " + cell);
+                        cell.getFormulaResultType();
+                        cell.clearFormulaResultCache();
+                    }*/
+                    // I assume non null cell has a non null string value, this may not be true. Also will I get another type of exception?
+                    row.add(getValueAsString(cell));
+                } else {
+                    row.add("");
+                }
+            }
+        }
+
+    }
+
     static void regionToStringList(List<List<String>> toReturn, CellRegion region, SSheet sheet, int rowOffset, int colOffset) {
         for (int rowIndex = region.getRow() + rowOffset; rowIndex <= region.getLastRow() + rowOffset; rowIndex++) {
             List<String> row = new ArrayList<>();
@@ -96,6 +140,42 @@ public class BookUtils {
                     if (numberGuess.equals("0")) numberGuess = "";
                     if (cell.getCellStyle().getDataFormat().contains("mm")) {
                         Date javaDate = DateUtil.getJavaDate((double) cell.getNumberValue());
+                        return new SimpleDateFormat("yyyy-MM-dd").format(javaDate);
+                    } else {
+                        return numberGuess+"";
+                    }
+                } catch (Exception e2) {
+                                /*
+                                todo, sort this
+java.lang.IllegalStateException: is ERROR, not the one of [STRING, BLANK]
+        at io.keikai.model.impl.AbstractCellAdv.checkFormulaResultType(AbstractCellAdv.java:71)
+        at io.keikai.model.impl.AbstractCellAdv.getStringValue(AbstractCellAdv.java:92)
+        at com.azquo.spreadsheet.zk.BookUtils.nameToStringLists(BookUtils.java:79)
+        at com.azquo.spreadsheet.zk.BookUtils.nameToStringLists(BookUtils.java:32)
+
+                                 */
+                }
+            }
+        }
+        return "";
+
+    }
+
+    // EFC note - converted - will it work??
+    public static String getValueAsString(Cell cell){
+        try {
+            // boolean required as sometimes there could be a leftover string value
+            return cell.getStringCellValue();
+        } catch (Exception e) {
+            if (cell.getCellType() != CellType.BLANK) {
+                try {
+                    String numberGuess = cell.getNumericCellValue() + "";
+                    if (numberGuess.endsWith(".0")) {
+                        numberGuess = numberGuess.substring(0, numberGuess.length() - 2);
+                    }
+                    if (numberGuess.equals("0")) numberGuess = "";
+                    if (cell.getCellStyle().getDataFormatString().contains("mm")) {
+                        Date javaDate = DateUtil.getJavaDate( cell.getNumericCellValue());
                         return new SimpleDateFormat("yyyy-MM-dd").format(javaDate);
                     } else {
                         return numberGuess+"";
@@ -159,10 +239,10 @@ java.lang.IllegalStateException: is ERROR, not the one of [STRING, BLANK]
         return sName.getBook().getSheetByName(sName.getRefersToSheetName()).getCell(sName.getRefersToCellRegion().getRow(), sName.getRefersToCellRegion().getColumn());
     }
 
-    public static Cell getNameCell(org.apache.poi.ss.usermodel.Name sheetName, org.apache.poi.ss.usermodel.Sheet sheet) {
+    public static CellReference getNameCell(org.apache.poi.ss.usermodel.Name sheetName) {
         if (sheetName == null) return null;
         org.apache.poi.ss.util.AreaReference aref = new org.apache.poi.ss.util.AreaReference(sheetName.getRefersToFormula(), null); // try null on the spreadsheet version, wasn't used in older versions of the api
-            return sheet.getRow(aref.getFirstCell().getRow()).getCell(aref.getFirstCell().getCol());
+        return aref.getFirstCell();
 
     }
 
@@ -467,6 +547,20 @@ java.lang.IllegalStateException: is ERROR, not the one of [STRING, BLANK]
 
     public static List<List<String>> replaceUserChoicesInRegionDefinition(LoggedInUser loggedInUser, SName rangeName, SName repeatRegion, int rowOffset, int colOffset) {
         List<List<String>> region = BookUtils.nameToStringLists(rangeName, repeatRegion, rowOffset, colOffset);
+        for (List<String> strings : region) {
+            for (int col = 0; col < strings.size(); col++) {
+                strings.set(col, CommonReportUtils.replaceUserChoicesInQuery(loggedInUser, strings.get(col)));
+            }
+        }
+        return region;
+    }
+
+    public static List<List<String>> replaceUserChoicesInRegionDefinition(LoggedInUser loggedInUser, org.apache.poi.ss.usermodel.Name rangeName, org.apache.poi.ss.usermodel.Sheet sheet) {
+        return replaceUserChoicesInRegionDefinition(loggedInUser, rangeName, null, sheet,0, 0);
+    }
+
+    public static List<List<String>> replaceUserChoicesInRegionDefinition(LoggedInUser loggedInUser, org.apache.poi.ss.usermodel.Name rangeName, org.apache.poi.ss.usermodel.Name repeatRegion, org.apache.poi.ss.usermodel.Sheet sheet,  int rowOffset, int colOffset) {
+        List<List<String>> region = BookUtils.nameToStringLists(rangeName, repeatRegion, sheet, rowOffset, colOffset);
         for (List<String> strings : region) {
             for (int col = 0; col < strings.size(); col++) {
                 strings.set(col, CommonReportUtils.replaceUserChoicesInQuery(loggedInUser, strings.get(col)));

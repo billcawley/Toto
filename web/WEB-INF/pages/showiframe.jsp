@@ -12,7 +12,6 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>${title} - Azquo</title>
-    <link rel="stylesheet" href="/quickview/bulma-quickview.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
@@ -60,40 +59,6 @@
     </div>
 </nav>
 
-<c:if test="${reports != null && sessionScope.test != null}">
-    <button class="button" data-show="quickview" data-target="quickviewDefault" style="
-	position: fixed;
-    top: 6%;
-        z-index: 34;
-"><i class="fa-solid fa-chevron-right"></i></button>
-
-    <div id="quickviewDefault" class="quickview is-left" style="background-color: ${sideMenuColor}">
-        <header class="quickview-header">
-            <p style="color:${sideMenuLinkColor}" class="title">Reports</p>
-            <span class="delete" data-dismiss="quickview"></span>
-        </header>
-
-        <div class="quickview-body">
-            <div class="quickview-block">
-                <c:forEach items="${reports}" var="report">
-                    <c:if test="${report.database != 'None'}">
-                        <c:if test="${report.category != ''}">
-                            <hr style="height: 0px">
-                            &nbsp;&nbsp;<span style="color:${sideMenuLinkColor};text-decoration: underline">${report.category}</span>
-                            <hr style="height: 0px">
-                        </c:if>
-                        <a href="/api/Online?reportid=${report.id}&amp;database=${report.database}"  style="color:${sideMenuLinkColor}">
-                            &nbsp;&nbsp;&nbsp;&nbsp;${report.untaggedReportName}<br/>
-                        </a>
-                    </c:if>
-                </c:forEach>
-
-            </div>
-        </div>
-    </div>
-</c:if>
-
-
 <script type="text/javascript">
 
     function inspectDatabase(){
@@ -120,14 +85,6 @@
 display:block;">
     </iframe>
 
-<c:if test="${reports != null && sessionScope.test != null}">
-    <script type="text/javascript" src="/quickview/bulma-quickview.min.js"></script>
-    <script>
-        window.addEventListener('DOMContentLoaded', (event) => {
-            var quickviews = bulmaQuickview.attach(); // quickviews now contains an array of all Quickview instances
-        });
-    </script>
-</c:if>
 
 </body>
 </html>

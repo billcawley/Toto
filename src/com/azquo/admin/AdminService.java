@@ -17,9 +17,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.io.FileUtils;
 import org.springframework.ui.ModelMap;
 
-import javax.servlet.http.HttpServletRequest;
 import java.io.*;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -273,7 +271,6 @@ this may now not work at all, perhaps delete?
         List<OnlineReport> reportList = new ArrayList<>();
         if (!loggedInUser.getUser().isAdministrator() && !loggedInUser.getUser().isDeveloper()) {
             if (webFormat) {
-                List<OnlineReport> reports = new ArrayList<>();
                 for (String report : loggedInUser.getReportIdDatabaseIdPermissions().keySet()) {
                     LoggedInUser.ReportIdDatabaseId reportIdDatabaseId = loggedInUser.getReportIdDatabaseIdPermissions().get(report);
                     if (reportIdDatabaseId.getSubmenuName()!=null) {
@@ -795,23 +792,60 @@ this may now not work at all, perhaps delete?
         if (ribbonColor == null || ribbonColor.length() == 0) ribbonColor = "#000000";
         String ribbonLinkColor = business.getRibbonLinkColor();
         if (ribbonLinkColor == null || ribbonLinkColor.length() == 0) ribbonLinkColor = bannerColor;
-        String sideMenuColor = business.getSideMenuColor();
-        if (sideMenuColor == null || sideMenuColor.length() == 0) sideMenuColor = "#FFFFFF";
-        String sideMenuLinkColor = business.getSideMenuLinkColor();
-        if (sideMenuLinkColor == null || sideMenuLinkColor.length() == 0) sideMenuLinkColor = bannerColor;
         String logo = business.getLogo();
         if (logo == null || logo.length() == 0) logo = "logo_admin.png";
         String cornerLogo = business.getCornerLogo();
         if (cornerLogo == null || cornerLogo.length() == 0) cornerLogo = logo;
-        model.addAttribute("bannerColor", bannerColor);
-        model.addAttribute("ribbonColor", ribbonColor);
-        model.addAttribute("ribbonLinkColor", ribbonLinkColor);
-        model.addAttribute("loadingColor", !"#000000".equals(ribbonColor) ? ribbonColor : bannerColor);
-        model.addAttribute("sideMenuColor", sideMenuColor);
-        model.addAttribute("sideMenuLinkColor", sideMenuLinkColor);
-        model.addAttribute("logo", getLogoPath(logo));
-        model.addAttribute("cornerLogo", getLogoPath(cornerLogo));
+        // old colours
+        model.addAttribute("bannerColor", bannerColor); // link colour, not sure what the banner was (login?)
+        model.addAttribute("ribbonColor", ribbonColor); // background of the top ribbon
+        model.addAttribute("ribbonLinkColor", ribbonLinkColor); // links in the ribbon
+        model.addAttribute("loadingColor", !"#000000".equals(ribbonColor) ? ribbonColor : bannerColor); // old header of the loading/importing log
+//        model.addAttribute("sideMenuColor", sideMenuColor);
+//        model.addAttribute("sideMenuLinkColor", sideMenuLinkColor);
+        model.addAttribute("logo", getLogoPath(logo)); // login and loading logo
+        model.addAttribute("cornerLogo", getLogoPath(cornerLogo));// top left logo
 
+        /* new design colour - will need RGB
+            --buttonColour: 249 115 22;
+            --headingsColour: 17 24 39;
+            --ribbonBackgroundColour: 234 88 12;
+            --ribbonTextColour: 255 237 213;
+            --ribbonIconColour: 254 215 170;
+            --logoBackgroundColour: 0 0 0;
+
+ed broking single colour #ed1b29 - banner colour
+         */
+
+        String buttonColour = "249 115 22";
+        String headingsColour = "17 24 39";
+        String ribbonBackgroundColour = "234 88 12";
+        String ribbonTextColour = "255 237 213";
+        String ribbonIconColour = "254 215 170";
+        String logoBackgroundColour = "0 0 0";
+
+        if(!"#F58030".equals(bannerColor)){ // we have to adjust
+            buttonColour = AdminService.convertToRGB(bannerColor);
+            ribbonBackgroundColour =  AdminService.convertToRGB(business.getSideMenuColor() != null ? business.getSideMenuColor() : bannerColor);
+            ribbonTextColour = "255 255 255";
+            ribbonIconColour = "255 255 255";
+        }
+        model.addAttribute("buttonColour", buttonColour);
+        model.addAttribute("headingsColour", headingsColour);
+        model.addAttribute("ribbonBackgroundColour", ribbonBackgroundColour);
+        model.addAttribute("ribbonTextColour", ribbonTextColour);
+        model.addAttribute("ribbonIconColour", ribbonIconColour);
+        model.addAttribute("logoBackgroundColour", logoBackgroundColour);
+
+    }
+
+    static String convertToRGB(String input){
+        if (input.startsWith("#")){ // then it needs converting
+            return Integer.valueOf( input.substring( 1, 3 ), 16 ) + " "
+                    + Integer.valueOf( input.substring( 3, 5 ), 16 ) + " "
+                    + Integer.valueOf( input.substring( 5, 7 ), 16 );
+        }
+        return input;
     }
 
 
@@ -868,25 +902,4 @@ this may now not work at all, perhaps delete?
         }
 
     }
-
-    public static String redirectPage(LoggedInUser loggedInUser, ModelMap model, HttpServletRequest request, String pagename) {
-         setBanner(model, loggedInUser);
-        if (request.getSession().getAttribute("newdesign") != null) {
-            return "manage" + pagename.toLowerCase(Locale.ROOT);
-        }
-
-        if (loggedInUser.getCurrentPageInfo()!=null){
-            model.put("selected", pagename);
-            model.put("mainmenu", StorybookService.getMainMenu());
-            model.put("secondarymenu", StorybookService.getSecondaryMenu());
-            model.put("icon", StorybookService.getIconList());
-            model.put("rootpath","/ManageReports?source=storybook");
-            loggedInUser.setCurrentPageInfo("page=" + pagename);
-            return "overview2";
-        }
-
-        return "manage" + pagename.toLowerCase(Locale.ROOT) + "2";
-
-    }
-
 }

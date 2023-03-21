@@ -131,7 +131,7 @@ public class ManageImportSchedulesController {
 
             if (NumberUtils.isDigits(editId)) {
                 ImportSchedule toEdit = ImportScheduleDAO.findById(Integer.parseInt(editId));
-                if ("test".equals(request.getParameter("action")) && editId !=null){
+                if ("test".equals(request.getParameter("action"))){
                       String toReturn = setupWizard(loggedInUser, uploadFile,toEdit);
                     if (toReturn.startsWith("error:"))       {
                         model.put("error", toReturn.substring(6));
@@ -357,12 +357,19 @@ public class ManageImportSchedulesController {
             String resource = new BufferedReader(  new InputStreamReader(resourceAsStream, StandardCharsets.UTF_8))
                     .lines()
                     .collect(Collectors.joining("\n"));
+            String cornerLogo = loggedInUser.getBusiness().getCornerLogo();
+            if (cornerLogo == null || cornerLogo.length() == 0) cornerLogo = loggedInUser.getBusiness().getLogo();
+            if (cornerLogo != null){
+                cornerLogo = AdminService.getLogoPath(cornerLogo);
+            }
+            if (cornerLogo == null || cornerLogo.length() == 0) cornerLogo = "/images/logo_dark_bg.png";
 
             model.put("newappjavascript", "// " +  resource
+                    .replace("###CORNERLOGO###", cornerLogo)
                     .replace("###IMPORTSLIST###", importsList.toString())
                     .replace("###DATABASESLIST###", databasesList.toString())
                     .replace("###REPORTSLIST###", importSchedulesList.toString())
-                    .replace("###SWITCHBUSINESS###", session.getAttribute(LoginController.LOGGED_IN_USERS_SESSION) != null ? "{ label: \"Switch Business\", href: \"/api/Login?select=true\", icon: l.Z }," : "")
+                    .replace("###SWITCHBUSINESS###", session.getAttribute(LoginController.LOGGED_IN_USERS_SESSION) != null ? "{ label: \"Exit Beta\", href: \"/api/ManageReports\", icon: a },{ label: \"Switch Business\", href: \"/api/Login?select=true\", icon: l.Z }," : "{ label: \"Exit Beta\", href: \"/api/ManageReports\", icon: l.Z },")
             );
 
 
