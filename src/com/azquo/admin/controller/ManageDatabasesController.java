@@ -196,7 +196,7 @@ public class ManageDatabasesController {
                 //if the error is a singleton, it causes a problem - ignore it at the moment.
             }
             if (importResult != null) {
-                results.append(formatUploadedFiles(importResult, -1, false, null));
+                results.append(formatUploadedFiles(importResult, -1, false, null,request.getSession()));
                 request.getSession().removeAttribute(ManageDatabasesController.IMPORTRESULT);
             }
             if ("1".equals(templateassign)) {
@@ -534,7 +534,7 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
                             if (!isImportTemplate) {
                                 model.put("error", "That does not appear to be an import template.");
                             } else {
-                                model.put("results", formatUploadedFiles(Collections.singletonList(ImportService.uploadImportTemplate(uploadedFile, loggedInUser, userComment)), -1, false, null));
+                                model.put("results", formatUploadedFiles(Collections.singletonList(ImportService.uploadImportTemplate(uploadedFile, loggedInUser, userComment)), -1, false, null, request.getSession()));
                             }
                         } catch (Exception e) {
                             model.put("error", e.getMessage());
@@ -719,7 +719,7 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
     }
 
     // as it says make something for users to read from a list of uploaded files.
-    public static String formatUploadedFiles(List<UploadedFile> uploadedFiles, int checkboxId, boolean noClickableHeadings, Set<String> comments) {
+    public static String formatUploadedFiles(List<UploadedFile> uploadedFiles, int checkboxId, boolean noClickableHeadings, Set<String> comments, HttpSession session) {
         StringBuilder errorList = new StringBuilder();
         StringBuilder toReturn = new StringBuilder();
         for (UploadedFile uploadedFile : uploadedFiles) {
@@ -952,7 +952,7 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
                     }
                 }
 
-                toReturn.append("<div style='overflow: auto;max-height:400px;width:90vw'><table style='font-size:90%'><thead><tr>");
+                toReturn.append("<div style='overflow: auto;max-height:400px;width:80vw'><table style='font-size:90%'><thead><tr>");
                 if (checkboxId != -1) {
                     toReturn.append("<th style='position: sticky; top: 0; z-index: 1;'>Load</th>");
                     toReturn.append("<th style='position: sticky; top: 0;'>Comment</th>");
@@ -1011,7 +1011,11 @@ Caused by: org.xml.sax.SAXParseException; systemId: file://; lineNumber: 28; col
                     toReturn.append("<tr>");
                     if (checkboxId != -1) {
                         toReturn.append("<td><div align=\"center\"><input type=\"checkbox\" name=\"" + checkboxId + "-" + warningLine.getLineNo() + "\" id=\"" + checkboxId + "-" + warningLine.getLineNo() + "\" /></div></td>");
-                        toReturn.append("<td nowrap><a href=\"#\" onclick=\"doComment('" + checkboxId + "-" + warningLine.getLineNo() + "'); return false;\">" + (comments != null && comments.contains(warningLine.getIdentifier()) ? "Edit" : "Add Comment") + "</a></td>");
+                        if (session != null && session.getAttribute("newdesign") != null){
+                            toReturn.append("<td nowrap><button onclick=\"doComment('" + checkboxId + "-" + warningLine.getLineNo() + "'); return false;\">" + (comments != null && comments.contains(warningLine.getIdentifier()) ? "Edit" : "Add Comment") + "</button></td>");
+                        } else {
+                            toReturn.append("<td nowrap><a href=\"#\" onclick=\"doComment('" + checkboxId + "-" + warningLine.getLineNo() + "'); return false;\">" + (comments != null && comments.contains(warningLine.getIdentifier()) ? "Edit" : "Add Comment") + "</a></td>");
+                        }
                     }
                     for (String error : errors) {
                         toReturn.append("<td nowrap>" + (warningLine.getErrors().containsKey(error) ? "<span style=\"background-color: #FFAAAA; color: #000000\">" + warningLine.getErrors().get(error) + "</span>" : "") + "</td>");

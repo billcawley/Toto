@@ -71,8 +71,7 @@
                             <td>${pendingupload.databaseName}</td>
                             <td>
                                 <a href="/api/DownloadFile?pendingUploadId=${pendingupload.id}"
-                                   class="button is-small" title="Download"><span
-                                        class="fa fa-download" title="Download"></span> </a></td>
+                                   class="button is-small" title="Download">Download</a></td>
                             <td>
 
 

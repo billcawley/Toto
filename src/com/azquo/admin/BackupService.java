@@ -433,7 +433,7 @@ public class BackupService {
                 }
             }
         }
-        toReturn.append(ManageDatabasesController.formatUploadedFiles(uploadedFiles, -1, false, null)).append("<br/>");
+        toReturn.append(ManageDatabasesController.formatUploadedFiles(uploadedFiles, -1, false, null, null)).append("<br/>");
 
 /*        long secondstaken = (System.currentTimeMillis() - time) / 1000;
         System.gc();

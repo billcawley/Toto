@@ -226,7 +226,7 @@ public final class ImportService {
             }
             // add to the uploaded list on the Manage Databases page
             // now jamming the import feedback in the comments
-            String comments = ManageDatabasesController.formatUploadedFiles(processedUploadedFiles, -1, true, null);
+            String comments = ManageDatabasesController.formatUploadedFiles(processedUploadedFiles, -1, true, null,session);
             if (comments.length() > 10_000) {
                 comments = comments.substring(0, 10_000) + " . . .";
             }

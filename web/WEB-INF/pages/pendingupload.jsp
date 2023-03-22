@@ -106,7 +106,7 @@
                 ${maintext}
                 <div class="az-table">
                     <nav>
-                        needs te working thing here??
+                        <!-- needs te working thing here?? -->
                         <button  onclick="dbCheck();return false;" type="button">OK</button>
                         <button  onclick="window.location.assign('/api/PendingUpload?id=${id}&reject=true')" type="button">Reject</button>
                         <button  onclick="window.location.assign('/api/${cancelUrl}')" type="button">Cancel</button>

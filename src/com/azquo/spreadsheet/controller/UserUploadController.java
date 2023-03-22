@@ -52,7 +52,7 @@ public class UserUploadController {
             @SuppressWarnings("unchecked")
             List<UploadedFile> importResult = (List<UploadedFile>) request.getSession().getAttribute(com.azquo.admin.controller.ManageDatabasesController.IMPORTRESULT);
             if (importResult != null) {
-                error.append(ManageDatabasesController.formatUploadedFiles(importResult, -1, false, null));
+                error.append(ManageDatabasesController.formatUploadedFiles(importResult, -1, false, null, null));
                 request.getSession().removeAttribute(com.azquo.admin.controller.ManageDatabasesController.IMPORTRESULT);
             }
 

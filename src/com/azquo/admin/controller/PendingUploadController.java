@@ -633,11 +633,17 @@ public class PendingUploadController {
                             maintext.append("<div align=\"center\"><input type=\"checkbox\" name=\"load-" + counter + "\" checked/></div>");
                         }
                         maintext.append("</td>");
+                        if (session.getAttribute("newdesign") != null ){
+                            maintext.append("<td><button title=\"Details\"  onclick=\"showHideDiv('details" + counter + "'); return false;\" >Details</button></td>");
+
+                        } else {
                             maintext.append("<td><a href=\"#\" class=\"button is-small\" title=\"Details\"  onclick=\"showHideDiv('details" + counter + "'); return false;\" >Details</a></td>");
+
+                        }
                         // there will be a
                         maintext.append("</tr>");
                         maintext.append("<tr>");
-                        maintext.append("<td colspan=\"4\"><div id=\"details" + counter + "\" style=\"overflow-x: auto;display : none\">" + ManageDatabasesController.formatUploadedFiles(Collections.singletonList(uploadedFile), counter, false, hasComments) + "</div></td>");
+                        maintext.append("<td colspan=\"4\"><div id=\"details" + counter + "\" style=\"overflow-x: auto;display : none\">" + ManageDatabasesController.formatUploadedFiles(Collections.singletonList(uploadedFile), counter, false, hasComments, session) + "</div></td>");
                         maintext.append("</tr>");
                         counter++;
                     }
