@@ -426,7 +426,7 @@ public class ManageReportsController {
                     .collect(Collectors.joining("\n"));
             String cornerLogo = loggedInUser.getBusiness().getCornerLogo();
             if (cornerLogo == null || cornerLogo.length() == 0) cornerLogo = loggedInUser.getBusiness().getLogo();
-            if (cornerLogo != null){
+            if (cornerLogo != null && ! cornerLogo.isEmpty()){
                 cornerLogo = AdminService.getLogoPath(cornerLogo);
             }
             if (cornerLogo == null || cornerLogo.length() == 0) cornerLogo = "/images/logo_dark_bg.png";
