@@ -194,9 +194,6 @@ public class LoginController {
 
                         }
                         if (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()) {
-                            if (loggedInUser.getBusiness().isNewDesign()){
-                                return "redirect:/api/ManageReports?newdesign=overview";
-                            }
                             return "redirect:/api/ManageReports";
                         } else {
                             return "redirect:/api/Online?reportid=1"; // redirect to menu, will need to be changed when we sort the parameters out
