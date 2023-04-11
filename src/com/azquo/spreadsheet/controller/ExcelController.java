@@ -3,6 +3,7 @@ package com.azquo.spreadsheet.controller;
 import com.azquo.SessionListener;
 import com.azquo.StringLiterals;
 import com.azquo.admin.AdminService;
+import com.azquo.admin.DisplayService;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseDAO;
 import com.azquo.admin.onlinereport.OnlineReport;
@@ -313,24 +314,8 @@ public class ExcelController {
                     return jsonError("incorrect login details");
                 } else {
                     //find existing if already logged in. And clean up any duplicates if they're there
-                    boolean newUser = true;
-                    // ok we might be logging on passing a session id if in the case of multi user selection - already logged in really but have to select the user
-                    // . Hence override the request session if session Id passed here
                     String currentSession = sessionId != null ? sessionId : request.getSession().getId();
-                    for (String existingSessionId : excelConnections.keySet()) {
-                        LoggedInUser existingUser = excelConnections.get(existingSessionId);
-                        if (existingUser.getUser().getId() == loggedInUser.getUser().getId()) {
-                            excelConnections.put(currentSession, existingUser);
-                            if (!existingSessionId.equals(currentSession)) {
-                                excelConnections.remove(existingSessionId);
-                            }
-                            loggedInUser = existingUser;
-                            newUser = false;
-                        }
-                    }
-                    if (newUser) {
-                        excelConnections.put(currentSession + "", loggedInUser);
-                    }
+                    DisplayService.recordConnection(excelConnections,loggedInUser, currentSession);
                     if (!loggedInUser.getUser().isAdministrator() && !loggedInUser.getUser().isDeveloper() && loggedInUser.getUser().getReportId() != 0) {// then we need to load in the permissions
                         // typically loading in the permissions would be done in online report controller. I'm going to paste relevant code here, it might be factored later
                         OnlineReport or = OnlineReportDAO.findById(loggedInUser.getUser().getReportId());

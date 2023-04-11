@@ -311,11 +311,12 @@ public class StandardDAO {
         StandardDAO.jdbcTemplate = jdbcTemplate; // I realise that this is "naughty", see comments at the top.
 
 
-           jdbcTemplate.update("CREATE TABLE IF NOT EXISTS `master_db`.`role` (\n" +
+           jdbcTemplate.update("CREATE TABLE IF NOT EXISTS `master_db`.`permissions` (\n" +
                    "                                              `id` int(11) NOT NULL AUTO_INCREMENT,\n" +
-                   "                                              `business_id` int(11) NOT NULL,\n" +
                    "                                              `role_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,\n" +
-                   "                                              `json_detail` varchar(255) COLLATE utf8_unicode_ci NOT NULL,\n" +
+                   "                                              `file_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,\n" +
+                   "                                              `field_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,\n" +
+                   "                                              `readonly` boolean DEFAULT FALSE,\n" +
                    "                                              PRIMARY KEY (`id`)\n" +
                    ") ENGINE=InnoDB AUTO_INCREMENT=120 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;\n", new HashMap<>());
 }
@@ -422,6 +423,15 @@ public class StandardDAO {
         Integer toReturn = jdbcTemplate.queryForObject(SQL_SELECT_ALL, new HashMap<>(), Integer.class);
         return toReturn != null ? toReturn : 0; // otherwise we'll get a null pointer boxing to int!
     }
+
+    public static List<String> findDistinctList(final String tableName, final String headingName) throws DataAccessException {
+        final String SQL_SELECT_ALL = "Select distinct `" + headingName + "` from `" + MASTER_DB + "`.`" + tableName + "`";
+        List<String> toReturn = jdbcTemplate.queryForList(SQL_SELECT_ALL, new HashMap<String,String>(), String.class);
+        return toReturn != null ? toReturn : new ArrayList<>(); // otherwise we'll get a null pointer boxing to int!
+    }
+
+
+
 
     public static NamedParameterJdbcTemplate getJdbcTemplate() {
         return jdbcTemplate;

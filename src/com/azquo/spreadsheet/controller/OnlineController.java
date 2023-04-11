@@ -142,8 +142,15 @@ public class OnlineController {
         try {
             //long startTime = System.currentTimeMillis();
             try {
-                LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
-                   if (loggedInUser == null) {
+                LoggedInUser loggedInUser;
+                String sessionId = request.getParameter("sessionid");
+                if (sessionId==null){
+                    loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
+                }else{
+                    loggedInUser = DisplayController.reactConnections.get(sessionId);
+                    LoginService.switchDatabase(loggedInUser,database);
+                }
+               if (loggedInUser == null) {
                        if (externalcall!=null){
                            request.getSession().setAttribute("externalcall", externalcall);
                        }
@@ -317,8 +324,13 @@ public class OnlineController {
                         session.removeAttribute(reportId + "error");// get rid of it from the session
                         return "utf8page"; // just return now, show the error and stop
                     }
-                    if (session.getAttribute(reportId) != null) {
-                        Book book = (Book) session.getAttribute(reportId);
+                    if (sessionId!=null || session.getAttribute(reportId) != null) {
+                        Book book;
+                        if (sessionId!=null){
+                            book = loadBook(loggedInUser,onlineReport,session,valueId,external,readOnlyReport,false,false);
+                        }else{
+                            book = (Book) session.getAttribute(reportId);
+                        }
                         request.setAttribute(OnlineController.BOOK, book); // push the rendered book into the request to be sent to the user
                         session.removeAttribute(reportId);// get rid of it from the session
                         // hmm, is putting attributes agains the book the way to go? I've used session in other places but it would be a pain for these two. Todo : standardise on something that makes sense.
@@ -361,9 +373,13 @@ public class OnlineController {
                         AdminService.setBanner(model, loggedInUser);
                         // todo - report list based off home menu? Doable?
                         model.put("reports", AdminService.getReportList(loggedInUser, true));
-                           if (request.getParameter("newdesign") != null){
-                            return "zsshowsheet";
+                        if (sessionId!=null){
+                            return "reactshowsheet";
                         }
+                        if (request.getParameter("newdesign") != null){
+                            return "zsshowsheet";//remove topbar and menu
+                        }
+
                         return "zsshowsheet2";
                     }
                     // ok now I need to set the sheet loading but on a new thread
@@ -384,63 +400,7 @@ public class OnlineController {
                                 boolean executeNow = executeMode;
                                 long oldHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
                                 String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + finalOnlineReport.getFilenameForDisk();
-                                Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
-                                if (external) {
-                                    // EFC : this is hacky - trying to head off bonza problems
-                                    ReportService.resolveQueries(book, loggedInUser);
-
-                                    String deflectReport = SpreadsheetService.findDeflects(loggedInUser, book);
-                                    if (deflectReport != null) {
-                                        OnlineReport or2 = OnlineReportDAO.findForNameAndBusinessId(deflectReport, loggedInUser.getUser().getBusinessId());
-                                        if (or2 != null) {
-                                            bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + or2.getFilenameForDisk();
-                                            book = Importers.getImporter().imports(new File(bookPath), "Report name");
-                                        }
-                                    }
-                                }
-                                book.getInternalBook().setAttribute(BOOK_PATH, bookPath);
-                                book.getInternalBook().setAttribute(LOGGED_IN_USER, loggedInUser);
-                                // todo, address allowing multiple books open for one user. I think this could be possible. Might mean passing a DB connection not a logged in one
-                                System.out.println("Loading report : " + finalOnlineReport.getReportName());
-                                book.getInternalBook().setAttribute(REPORT_ID, finalOnlineReport.getId());
-                                if (finalReadOnlyReport){
-                                    book.getInternalBook().setAttribute(READ_ONLY, "true");
-                                }
-                                if (!templateMode) {
-                                    boolean executeName = false;
-                                    // annoying, factor?
-                                    for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {
-                                        Sheet sheet = book.getSheetAt(sheetNumber);
-                                        List<SName> namesForSheet = BookUtils.getNamesForSheet(sheet);
-                                        for (SName sName : namesForSheet) {
-                                            if (sName.getName().equalsIgnoreCase(StringLiterals.EXECUTE)) {
-                                                executeName = true;
-                                            }
-                                            if (sName.getName().equalsIgnoreCase(StringLiterals.PREEXECUTE)) {
-                                                executeNow = true;
-                                            }
-                                        }
-                                    }
-                                    boolean saveResult = false;
-                                    if (loggedInUser.getDatabase()!=null) {
-                                        // todo, lock check here like execute
-                                        session.setAttribute(finalReportId + EXECUTE_FLAG, executeName); // pretty crude but should do it
-                                        Map<String, String> params = new HashMap<>();
-                                        params.put("Report", finalOnlineReport.getReportName());
-                                        loggedInUser.userLog(" Load report", params);
-                                        saveResult = ReportRenderer.populateBook(book, valueId);
-                                    }
-                                    session.setAttribute(finalReportId + SAVE_FLAG, finalReadOnlyReport ? false :  saveResult);
-                                } else {
-                                    loggedInUser.setImageStoreName(""); // legacy thing to stop null pointer, should be zapped after getting rid of aspose
-                                }
-
-                                if (executeNow) {
-                                    session.removeAttribute("ExecuteResult");
-                                    String execResult = ReportExecutor.runExecuteCommandForBook(book, StringLiterals.EXECUTE); // standard, there's the option to execute the contents of a different names
-                                    session.setAttribute("ExecuteResult", execResult);
-                                 }
-                                session.setAttribute(finalReportId + SAVE_FLAG, false); // no save button after an execute
+                                Book book = loadBook(loggedInUser, finalOnlineReport,session,valueId,external,finalReadOnlyReport,templateMode,executeNow);
                                 long newHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
                                 System.out.println();
                                 System.out.println(logDf.format(new Date()) + " - " + loggedInUser.getUser().getEmail() + " Heap cost to populate book : " + (newHeapMarker - oldHeapMarker) / mb);
@@ -711,6 +671,68 @@ public class OnlineController {
             return name.substring(StringLiterals.AZREPEATSCOPE.length()).toLowerCase();
         }
         return null;
+    }
+
+    private Book loadBook(LoggedInUser loggedInUser, OnlineReport finalOnlineReport, HttpSession session, int valueId, boolean external, boolean finalReadOnlyReport, boolean templateMode, boolean executeNow)throws Exception{
+        int finalReportId = finalOnlineReport.getId();
+        String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + finalOnlineReport.getFilenameForDisk();
+        Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
+        if (external) {
+            // EFC : this is hacky - trying to head off bonza problems
+            ReportService.resolveQueries(book, loggedInUser);
+
+            String deflectReport = SpreadsheetService.findDeflects(loggedInUser, book);
+            if (deflectReport != null) {
+                OnlineReport or2 = OnlineReportDAO.findForNameAndBusinessId(deflectReport, loggedInUser.getUser().getBusinessId());
+                if (or2 != null) {
+                    bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + or2.getFilenameForDisk();
+                    book = Importers.getImporter().imports(new File(bookPath), "Report name");
+                }
+            }
+        }
+        book.getInternalBook().setAttribute(BOOK_PATH, bookPath);
+        book.getInternalBook().setAttribute(LOGGED_IN_USER, loggedInUser);
+        // todo, address allowing multiple books open for one user. I think this could be possible. Might mean passing a DB connection not a logged in one
+        System.out.println("Loading report : " + finalOnlineReport.getReportName());
+        book.getInternalBook().setAttribute(REPORT_ID, finalOnlineReport.getId());
+        if (finalReadOnlyReport){
+            book.getInternalBook().setAttribute(READ_ONLY, "true");
+        }
+        if (!templateMode) {
+            boolean executeName = false;
+            // annoying, factor?
+            for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {
+                Sheet sheet = book.getSheetAt(sheetNumber);
+                List<SName> namesForSheet = BookUtils.getNamesForSheet(sheet);
+                for (SName sName : namesForSheet) {
+                    if (sName.getName().equalsIgnoreCase(StringLiterals.EXECUTE)) {
+                        executeName = true;
+                    }
+                    if (sName.getName().equalsIgnoreCase(StringLiterals.PREEXECUTE)) {
+                        executeNow = true;
+                    }
+                }
+            }
+            boolean saveResult = false;
+            if (loggedInUser.getDatabase()!=null) {
+                // todo, lock check here like execute
+                session.setAttribute(finalReportId + EXECUTE_FLAG, executeName); // pretty crude but should do it
+                Map<String, String> params = new HashMap<>();
+                params.put("Report", finalOnlineReport.getReportName());
+                loggedInUser.userLog(" Load report", params);
+                saveResult = ReportRenderer.populateBook(book, valueId);
+            }
+            session.setAttribute(finalReportId + SAVE_FLAG, finalReadOnlyReport ? false :  saveResult);
+        }
+
+        if (executeNow) {
+            session.removeAttribute("ExecuteResult");
+            String execResult = ReportExecutor.runExecuteCommandForBook(book, StringLiterals.EXECUTE); // standard, there's the option to execute the contents of a different names
+            session.setAttribute("ExecuteResult", execResult);
+        }
+        session.setAttribute(finalReportId + SAVE_FLAG, false); // no save button after an execute
+        return book;
+
     }
 
 }

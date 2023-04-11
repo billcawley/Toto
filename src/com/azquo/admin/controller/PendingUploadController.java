@@ -3,6 +3,7 @@ package com.azquo.admin.controller;
 import com.azquo.RowColumn;
 import com.azquo.StringLiterals;
 import com.azquo.admin.AdminService;
+import com.azquo.admin.DisplayService;
 import com.azquo.admin.database.*;
 import com.azquo.dataimport.*;
 import com.azquo.rmi.RMIClient;
@@ -589,6 +590,11 @@ public class PendingUploadController {
                     //maintext.append(ManageDatabasesController.formatUploadedFiles(Collections.singletonList(uploadedFile), false));
                     maintext.append("</thead>");
                     int counter = 0;
+                   if (loggedInUser.getBusiness().isNewDesign()) {
+                        DisplayService.compileUploadedFileResults(importResult, counter,  hasComments);
+
+
+                    }
                     for (UploadedFile uploadedFile : importResult) {
                         String quickFeedback = "";
                         if (uploadedFile.getError() != null) {
@@ -648,7 +654,7 @@ public class PendingUploadController {
                         counter++;
                     }
                     maintext.append("<table>");
-                    // need to jam in the import result, need better feedback than before
+                     // need to jam in the import result, need better feedback than before
                     model.put("maintext", maintext.toString());
                     if (session.getAttribute("newdesign") != null){
                         return "pendingupload";

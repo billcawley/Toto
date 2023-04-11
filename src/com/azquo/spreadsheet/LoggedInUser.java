@@ -46,6 +46,14 @@ public class LoggedInUser implements Serializable {
     public void setPendingUploadPermissions(Set<String> pendingUploadPermissions) {
         this.pendingUploadPermissions = pendingUploadPermissions;
     }
+    public Map<String,Object> getPermissions() {
+        return permissions;
+    }
+
+    public void setPermissions(Map<String,Object> permissions) {
+        this.permissions = permissions;
+    }
+
 
     // I don't care about equals and hashcode on these two currently
     public static class ReportIdDatabaseId {
@@ -159,7 +167,7 @@ public class LoggedInUser implements Serializable {
     private String preprocessorName;
 
     private Set<String> pendingUploadPermissions; // for users with status User to access the pending uploads but to be restricted to certain import template versions
-
+    private Map<String,Object> permissions; // read in to show menus etc for the user
 
     private static final String defaultRegion = "default-region";
     private static final String defaultSheet = "default-sheet";
@@ -169,10 +177,13 @@ public class LoggedInUser implements Serializable {
     private final AtomicInteger lastJSTreeNodeId;
 
     private final Map<Integer, JsonChildren.Node> jsTreeLookupMap;
+    // a bit hacky, I just want a place to put the last converted file. For Modus, won't support more than one file etc. Just make it work for the mo
+    private String currentPageInfo = null;
     private String lastFile = null;
     private String lastFileName = null;
     private WizardInfo wizardInfo = null;
     private List<JsonChildren.Node> searchCategories = null;
+    private TreeMap<String, String> pendingChanges = new TreeMap<>();
 
     // public allowing hack for xml scanning - need to sort - todo
     public LoggedInUser(final User user, DatabaseServer databaseServer, Database database, String imageStoreName, Business business) {
@@ -207,6 +218,7 @@ public class LoggedInUser implements Serializable {
         preprocessorLoaded = null;
         preprocessorName = null;
         pendingUploadPermissions = new HashSet<>();
+        permissions = null;
 
       }
 
@@ -438,6 +450,10 @@ public class LoggedInUser implements Serializable {
         UserActivityDAO.store(ua);
     }
 
+    public String getCurrentPageInfo(){return currentPageInfo; }
+
+    public void setCurrentPageInfo(String currentPageInfo){ this.currentPageInfo = currentPageInfo; }
+
     public String getLastFile() {
         return lastFile;
     }
@@ -483,4 +499,15 @@ public class LoggedInUser implements Serializable {
     public List<JsonChildren.Node>getSearchCategories(){return searchCategories; };
 
     public void setSearchCategories(List<JsonChildren.Node>searchCategories){this.searchCategories = searchCategories; }
+
+    public void addPendingChange(String field, String value){
+        this.pendingChanges.put(field,value);
+    }
+
+    public void clearPendingChanges(){
+        this.pendingChanges = new TreeMap<>();
+    }
+
+    public Map<String,String>getPendingChanges(){return this.pendingChanges;}
 }
+
