@@ -316,6 +316,8 @@ public class StandardDAO {
                    "                                              `role_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,\n" +
                    "                                              `file_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,\n" +
                    "                                              `field_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,\n" +
+                   "                                              `name_on_file` varchar(255) COLLATE utf8_unicode_ci NOT NULL,\n" +
+                   "                                              `field_type` varchar(255) COLLATE utf8_unicode_ci NOT NULL,\n" +
                    "                                              `readonly` boolean DEFAULT FALSE,\n" +
                    "                                              PRIMARY KEY (`id`)\n" +
                    ") ENGINE=InnoDB AUTO_INCREMENT=120 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;\n", new HashMap<>());
