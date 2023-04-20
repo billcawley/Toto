@@ -5,6 +5,7 @@ import com.azquo.admin.StandardDAO;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 
+import javax.servlet.http.HttpServletRequest;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.ZoneId;
@@ -26,21 +27,27 @@ public class PermissionsDAO {
 
     // column names except ID which is in the superclass
 
-    private static final String ROLENAME = "role_name";
     private static final String BUSINESSID = "business_id";
-    private static final String FILENAME = "file_name";
+    private static final String ROLENAME = "role_name";
+    private static final String SECTION = "section";
     private static final String FIELDNAME = "field_name";
+    private static final String NAMEONFILE = "name_on_file";
+    private static final String FIELDTYPE = "field_type";
+    private static final String FIELDVALUE = "field_value";
     private static final String READONLY = "readonly";
 
 
     public static Map<String, Object> getColumnNameValueMap(final Permissions permission) {
         final Map<String, Object> toReturn = new HashMap<>();
         toReturn.put(StandardDAO.ID, permission.getId());
-        toReturn.put(ROLENAME, permission.getRoleName());
         toReturn.put(BUSINESSID, permission.getBusinessId());
-        toReturn.put(FILENAME, permission.getRoleName());
-        toReturn.put(FIELDNAME, permission.getRoleName());
-        toReturn.put(READONLY, permission.getReadOnly());
+        toReturn.put(ROLENAME, permission.getRoleName());
+        toReturn.put(SECTION, permission.getSection());
+        toReturn.put(FIELDNAME, permission.getFieldName());
+        toReturn.put(NAMEONFILE, permission.getNameOnFile());
+        toReturn.put(FIELDTYPE, permission.getFieldType());
+        toReturn.put(FIELDVALUE,permission.getFieldValue());
+        toReturn.put(READONLY, permission.getIsReadOnly());
         return toReturn;
     }
 
@@ -49,11 +56,14 @@ public class PermissionsDAO {
         public Permissions mapRow(final ResultSet rs, final int row) throws SQLException {
             try {
                 return new Permissions(rs.getInt(StandardDAO.ID)
-                        , rs.getString(ROLENAME)
                         , rs.getInt(BUSINESSID)
-                        , rs.getString(FILENAME)
+                        , rs.getString(ROLENAME)
+                        , rs.getString(SECTION)
                         , rs.getString(FIELDNAME)
-                        , rs.getBoolean(READONLY)
+                        , rs.getString(NAMEONFILE)
+                        , rs.getString(FIELDTYPE)
+                        , rs.getString(FIELDVALUE)
+                        , rs.getString(READONLY)
                 );
             } catch (Exception e) {
                 e.printStackTrace();
@@ -64,18 +74,21 @@ public class PermissionsDAO {
 
     private static final PermissionsRowMapper permissionsRowMapper = new PermissionsRowMapper();
 
-    public static List<Permissions> findForRoleName(final String roleName) {
+    public static List<Permissions> findForRoleNameAndBusiness(final String roleName, int businessId) {
         //only used by the convert to Azquo_master;
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(ROLENAME, roleName);
-        return StandardDAO.findListWithWhereSQLAndParameters(" WHERE `" + ROLENAME + "` =:" + ROLENAME, TABLENAME, permissionsRowMapper, namedParams);
+        namedParams.addValue(BUSINESSID,businessId);
+        return StandardDAO.findListWithWhereSQLAndParameters(" WHERE `" + ROLENAME + "` =:" + ROLENAME + " AND `" + BUSINESSID + "` =:"+ BUSINESSID, TABLENAME, permissionsRowMapper, namedParams);
     }
 
-    public static void deleteForRoleName(final String roleName) {
+
+    public static void deleteForRoleNameAndBusinessId(final String roleName, int businessId) {
         //only used by the convert to Azquo_master;
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(ROLENAME, roleName);
-        StandardDAO.getJdbcTemplate().update("DELETE FROM " + StandardDAO.MASTER_DB + ".`" + TABLENAME + " WHERE `" + ROLENAME + "` =:" + ROLENAME, namedParams);
+        namedParams.addValue(BUSINESSID,businessId);
+        StandardDAO.getJdbcTemplate().update("DELETE FROM " + StandardDAO.MASTER_DB + ".`" + TABLENAME + " WHERE `" + ROLENAME + "` =:" + ROLENAME+ " AND `" + BUSINESSID + "` =:"+ BUSINESSID, namedParams);
     }
     public static Permissions findById(int id) {
         return StandardDAO.findById(id, TABLENAME, permissionsRowMapper);
@@ -90,7 +103,6 @@ public class PermissionsDAO {
     public static void store(Permissions permission) {
         StandardDAO.store(permission, TABLENAME, getColumnNameValueMap(permission));
     }
-
 
 
 }

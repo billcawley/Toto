@@ -313,12 +313,14 @@ public class StandardDAO {
 
            jdbcTemplate.update("CREATE TABLE IF NOT EXISTS `master_db`.`permissions` (\n" +
                    "                                              `id` int(11) NOT NULL AUTO_INCREMENT,\n" +
+                   "                                              `business_id` int(11),\n" +
                    "                                              `role_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,\n" +
-                   "                                              `file_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,\n" +
+                   "                                              `section` varchar(255) COLLATE utf8_unicode_ci NOT NULL,\n" +
                    "                                              `field_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,\n" +
                    "                                              `name_on_file` varchar(255) COLLATE utf8_unicode_ci NOT NULL,\n" +
                    "                                              `field_type` varchar(255) COLLATE utf8_unicode_ci NOT NULL,\n" +
-                   "                                              `readonly` boolean DEFAULT FALSE,\n" +
+                   "                                              `field_value` varchar(255) COLLATE utf8_unicode_ci NOT NULL,\n" +
+                   "                                              `readonly` varchar(255) COLLATE utf8_unicode_ci NOT NULL,\n" +
                    "                                              PRIMARY KEY (`id`)\n" +
                    ") ENGINE=InnoDB AUTO_INCREMENT=120 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;\n", new HashMap<>());
 }
@@ -431,8 +433,6 @@ public class StandardDAO {
         List<String> toReturn = jdbcTemplate.queryForList(SQL_SELECT_ALL, new HashMap<String,String>(), String.class);
         return toReturn != null ? toReturn : new ArrayList<>(); // otherwise we'll get a null pointer boxing to int!
     }
-
-
 
 
     public static NamedParameterJdbcTemplate getJdbcTemplate() {

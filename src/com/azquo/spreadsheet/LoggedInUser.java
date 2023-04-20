@@ -9,6 +9,7 @@ import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.onlinereport.UserActivity;
 import com.azquo.admin.onlinereport.UserActivityDAO;
+import com.azquo.admin.user.Permissions;
 import com.azquo.admin.user.User;
 import com.azquo.dataimport.ImportService;
 import com.azquo.dataimport.WizardInfo;
@@ -46,13 +47,7 @@ public class LoggedInUser implements Serializable {
     public void setPendingUploadPermissions(Set<String> pendingUploadPermissions) {
         this.pendingUploadPermissions = pendingUploadPermissions;
     }
-    public Map<String,Object> getPermissions() {
-        return permissions;
-    }
 
-    public void setPermissions(Map<String,Object> permissions) {
-        this.permissions = permissions;
-    }
 
 
     // I don't care about equals and hashcode on these two currently
@@ -167,7 +162,6 @@ public class LoggedInUser implements Serializable {
     private String preprocessorName;
 
     private Set<String> pendingUploadPermissions; // for users with status User to access the pending uploads but to be restricted to certain import template versions
-    private Map<String,Object> permissions; // read in to show menus etc for the user
 
     private static final String defaultRegion = "default-region";
     private static final String defaultSheet = "default-sheet";
@@ -218,7 +212,6 @@ public class LoggedInUser implements Serializable {
         preprocessorLoaded = null;
         preprocessorName = null;
         pendingUploadPermissions = new HashSet<>();
-        permissions = null;
 
       }
 

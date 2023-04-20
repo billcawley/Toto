@@ -5,10 +5,10 @@ import com.azquo.StringLiterals;
 import com.azquo.admin.controller.ManageDatabasesController;
 import com.azquo.admin.database.*;
 import com.azquo.admin.onlinereport.*;
+import com.azquo.admin.user.Permissions;
+import com.azquo.admin.user.PermissionsDAO;
 import com.azquo.admin.user.UserDAO;
 import com.azquo.dataimport.*;
-import com.azquo.rmi.RMIClient;
-import com.azquo.spreadsheet.CommonReportUtils;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.transport.HeadingWithInterimLookup;
@@ -18,22 +18,15 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import net.snowflake.client.jdbc.internal.org.checkerframework.checker.units.qual.C;
 import org.apache.commons.lang.math.NumberUtils;
-import org.apache.poi.openxml4j.opc.OPCPackage;
-import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.ss.usermodel.Workbook;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.multipart.MultipartFile;
-import org.zeroturnaround.zip.ZipUtil;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpSession;
-import java.io.IOException;
-import java.io.OutputStream;
+import javax.swing.tree.RowMapper;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -43,12 +36,15 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
 
 
 public class DisplayService {
 
+
+    public static class ARecord{
+        int id;
+        List<Object> fields;
+    }
 
     public static class Progress {
         public int rowNo;
@@ -70,23 +66,87 @@ public class DisplayService {
         }
     }
 
+    //menu items and the file names
+    public static final String REPORTS = "Reports";
+    public static final String REPORT = "Report";
+    public static final String IMPORT = "Import";
+    public static final String IMPORTS ="Imports";
+    public static final String PENDINGUPLOADS = "Pending Uploads";
+    public static final String PENDINGUPLOAD = "pending upload";
+    public static final String REPORTSHEDULES = "Report Schedules";
+    public static final String IMPORTSCHEDULES = "Import Schedules";
+    public static final String IMPORTSCHEDULE = "Import Schedule";
+    public static final String REPORTSHEDULE = "Report Schedule";
+    public static final String OVERVIEW = "Overview";
+    public static final String RECENTLYVIEWED = "Recently Viewed";
+    public static final String USERS = "Users";
+    public static final String USER = "User";
+    public static final String ROLES = "Roles";
+    // field info/heading info
+    public static final String MENU = "menu";
+    public static final String NAME = "name";
+    public static final String NAMEONFILE = "nameOnFile";
+    public static final String FIELDTYPE = "fieldtype";
+    public static final String FIELDVALUE="fieldValue";
+    public static final String READONLY = "readonly";
+    public static final String UPLOAD = "upload";
+    public static final String READWRITE = "ReadWrite";
+    public static final String EDIT = "Edit";
+    public static final String DELETE = "Delete";
+    public static final String VALIDATE = "Validate";
+    public static final String DOWNLOAD = "Download";
+    public static final String CHOICES = "choices";
+    public static final String CHECKBOX = "checkbox";
+    public static final String DATE = "date";
+    public static final String POPUPTYPE = "popuptype";
+    public static final String LIST = "list";
+    public static final String TABLE = "table";
+
+    //button text
+    public static final String SAVE = "save";
+    public static final String REJECT = "reject";
 
 
+    //json fields
+    public static final String SECTIONNAME = "sectionName";
+    public static final String RECORDCOUNT = "recordCount";
+    public static final String MAINMENU = "Main Menu";
+    public static final String SECTIONSTOSHOW = "sectionsToShow";
+    public static final String SECTION = "section";
+    public static final String TRUE = "true";
+    public static final String STRING = "string";
+    public static final String FALSE = "false";
+    public static final String SHOW = "show";
+    public static final String HEADINGS = "headings";
+    public static final String ACTION = "action";
+    public static final String THEME = "theme";
+    public static final String MENUS = "menus";
+    public static final String RECORDS = "records";
+    public static final String INDIVIDUAL = "individual";
+
+
+
+    //general use
+    public static final String ID = "id";
+    public static final String BLANK = "";
+    public static final String COMMA = ",";
+
+    //for pending uploads
+    public static final String LOAD = "load";
+    public static final String FILENAME = "fileName";
 
     public static class DisplaySpec {
-        Object records;
-        Object headings;
+        List<Object> records;
+        Map<String,EditFieldSpec> headings;
         List<String> buttons;
         List<String> dbNames;
         int recordsToShow;
-        List<Map<String,Object>>stages;
+        List<Map<String,String>>stages;
         int stageNo;
-        boolean showFilter;
         String allowNew;
-        String recordClass;
         String hRef;
 
-        public DisplaySpec(Object records, Object headings, List<String>buttons, List<Map<String,Object>>stages, int stageNo, List<String> dbNames, int recordsToShow, boolean showFilter, String allowNew, String recordClass, String hRef) {
+        public DisplaySpec(List<Object> records, Map<String,EditFieldSpec> headings, List<String>buttons, List<Map<String,String>>stages, int stageNo, List<String> dbNames, int recordsToShow,  String allowNew, String hRef) {
             this.records = records;
             this.headings = headings;
             this.buttons = buttons;
@@ -94,9 +154,7 @@ public class DisplayService {
             this.dbNames = dbNames;
             this.stageNo = stageNo;
             this.recordsToShow = recordsToShow;
-            this.showFilter = showFilter;
             this.allowNew = allowNew;
-            this.recordClass = recordClass;
             this.hRef = hRef;
           }
     }
@@ -121,15 +179,19 @@ public class DisplayService {
 
 
     public static class EditFieldSpec{
-        String displayName;
-        String type;
-        String nameOnFile;
+        String name;
+        String fieldtype;
+         String nameOnFile;
+        String fieldValue;
+        String readonly;
         List<String> choices;
 
-        EditFieldSpec(String displayName, String type, String nameOnFile, List<String>choices){
-            this.displayName = displayName;
-            this.type = type;
+        EditFieldSpec(String name, String fieldtype, String readonly, String nameOnFile, String fieldValue, List<String>choices){
+            this.name = name;
+            this.fieldtype = fieldtype;
+            this.readonly = readonly;
             this.nameOnFile = nameOnFile;
+            this.fieldValue = fieldValue;
             this.choices = choices;
         }
     }
@@ -163,7 +225,7 @@ public class DisplayService {
         List<UserActivity> reportsLoaded = UserActivityDAO.findMostRecentPeportsForUserAndBusinessId(loggedInUser.getUser().getBusinessId(), loggedInUser.getUser().getEmail(), 3);
         List<RecentlyViewed> recentlyViewed = new ArrayList<>();
         for (UserActivity reportLoaded : reportsLoaded) {
-            String reportName = reportLoaded.getParameters().get("Report");
+            String reportName = reportLoaded.getParameters().get(REPORT);
             recentlyViewed.add(new RecentlyViewed(reportName, DatabaseDAO.findById(reportLoaded.getDatabaseId()).getName(), reportLoaded.getTimeStamp(), OnlineReportDAO.findForNameAndBusinessId(reportName, loggedInUser.getBusiness().getId()).getId()));
         }
         return recentlyViewed;
@@ -175,11 +237,11 @@ public class DisplayService {
     }
 
     private static List<UploadRecord.UploadRecordForDisplay> loadImports(LoggedInUser loggedInUser) {
-        return AdminService.getUploadRecordsForDisplayForBusinessWithBasicSecurity(loggedInUser, "", false);//no auto loads
+        return AdminService.getUploadRecordsForDisplayForBusinessWithBasicSecurity(loggedInUser, BLANK, false);//no auto loads
     }
 
     private static List<PendingUpload.PendingUploadForDisplay> loadPendingUploads(LoggedInUser loggedInUser) {
-        return AdminService.getPendingUploadsForDisplayForBusinessWithBasicSecurity(loggedInUser, "", true, false);
+        return AdminService.getPendingUploadsForDisplayForBusinessWithBasicSecurity(loggedInUser, BLANK, true, false);
     }
 
 
@@ -190,72 +252,57 @@ public class DisplayService {
                 if (page.endsWith("s")){
                     page = page.substring(0,page.length()-1);
                 }
-                Map<String,Object> tables =(Map<String,Object>)loggedInUser.getPermissions().get("Table");
                 Map<String, Object> toReturn = new LinkedHashMap<>();
-                toReturn.put("menus", loggedInUser.getPermissions().get("Menus"));
-                toReturn.put("theme", loggedInUser.getPermissions().get("Theme"));
-                toReturn.put("action","show");
-                List<Object> recordsToShow = (List<Object>)loggedInUser.getPermissions().get("Records to show");
-                List<String> selectedRecordsToShow = new ArrayList<>();
-                Map<String,String>defaultShow = null;
-                Map<String,Map<String,String>> showParameters = new HashMap<>();
-                for (int i=0;i<recordsToShow.size();i++){
-                    Map<String,String> recordToShow = (Map<String,String>)recordsToShow.get(i);
-                    if (page.equalsIgnoreCase(recordToShow.get("Menu Item"))) {
-                        selectedRecordsToShow.add(recordToShow.get("Table name"));
-                        showParameters.put(recordToShow.get("Table name"),recordToShow);
-                    }
-                    if ("Default".equals(recordToShow.get("Menu Item"))){
-                        defaultShow = recordToShow;
-                    }
-                }
-                if (selectedRecordsToShow.size()==0){
-                    selectedRecordsToShow.add(page);
-                    showParameters.put(page,defaultShow);
-                }
-                toReturn.put("recordsToShow", selectedRecordsToShow);
-                Map<String,Object>tableList = (Map<String,Object>)toReturn.get("Table");
-                if (tableList ==null){
-                    tableList = new HashMap<>();
-                }
+                List<Map<String,String>> sections = DisplayData.getSectionstoShow(page);
+                List<String>sectionsToShow = new ArrayList<>();
                 List<String> buttons = new ArrayList<>();
-                List<Map<String,Object>> stages = new ArrayList<>();
+                List<Map<String,String>> stages = new ArrayList<>();
                 int stageNo = 0;
-                for (String tableName:selectedRecordsToShow) {
-                    Map<String,Object> headings = new LinkedHashMap<>();
+                Map<String,Object> tableList = new HashMap<>();
+                for (Map<String,String> section:sections) {
+                    String tableName =section.get(SECTIONNAME);
+                    String menuName = tableName;
+                    if (tableName.endsWith("s")){
+                        tableName = tableName.substring(0,tableName.length()-1);
+                    }
+                    if (EDIT.equals(version)) {
+
+                        sectionsToShow.add("Edit " + tableName);
+                    }else{
+                        sectionsToShow.add(tableName);
+                    }
+                    int recsPerPage = Integer.parseInt(section.get(RECORDCOUNT));
+                    stages = DisplayData.getStageInfo(tableName);
+                    Map<String,EditFieldSpec> headings = new LinkedHashMap<>();
                     try{
-                        //THIS TIRESOME ITERATION IS SIMPLY TO CONVER THE 'Number' attribute to a number.
-                        Map<String,Object> table = (Map<String,Object>)tables.get(tableName);
-                        if (table.get("Stages") !=null && stageNo == 0){
-                            List<Map<String,String>> stringStages = (List<Map<String,String>>)table.get("Stages");
-                            for (Map<String,String> stringStage:stringStages){
-                                Map<String,Object> stage = new HashMap<>();
-                                for (String field:stringStage.keySet()){
-                                    if (field.equals("Number")){
-                                        stage.put(field,Integer.parseInt(stringStage.get(field)));
-                                    }else{
-                                        stage.put(field,stringStage.get(field));
-                                    }
-                                }
-                                stages.add(stage);
+                        if (stages!=null & stageNo==0){
+                            stageNo++;
+                        }
+                        List<EditFieldSpec>sheetHeadings =getSectionPermissions(loggedInUser,tableName);
+
+
+                        for (EditFieldSpec sheetHeading:sheetHeadings){
+                            String fieldtype = sheetHeading.fieldtype;
+                            if (!version.equals(EDIT) && sheetHeading.readonly.equals(READWRITE)){
+                                sheetHeading.readonly = READONLY;
                             }
-
-
-                            stageNo=1;
-                        }
-                        if (stageNo > 0){
-                            table = (Map <String,Object>)table.get("Stage " + stageNo);
-                        }
-
-                        List<Map<String,Object>>sheetHeadings =(List<Map<String,Object>>)table.get(version + " Headings");
-                        for (Map<String,Object> sheetHeading:sheetHeadings){
-                            String type = (String)sheetHeading.get("fieldtype");
-                            if (type.equalsIgnoreCase("combo")) {
+                            if (sheetHeading.nameOnFile.equals(MENU)){
+                                List<String> choices = Arrays.asList(sheetHeading.fieldValue.split(COMMA));
+                                sheetHeading.choices = choices;
+                                sheetHeading.fieldtype=MENU;
+                            }
+           
+                            /*
+                            if (!readOnly && fieldtype.equalsIgnoreCase("combo")) {
                                 //find existing values as list
-                                List<String> options = StandardDAO.findDistinctList(page.toLowerCase(), (String)sheetHeading.get("nameOnFile"));
+                                List<String> options = StandardDAO.findDistinctList(page.toLowerCase(),sheetHeading.get("nameOnFile"));
                                 sheetHeading.put("choices", options);
                             }
-                            headings.put((String)sheetHeading.get("nameOnFile"), sheetHeading);
+                            */
+                            if (!version.equals(EDIT)|| !sheetHeading.nameOnFile.equals(MENU)){
+                                headings.put(sheetHeading.nameOnFile, sheetHeading);
+                            }
+
 
 
                         }
@@ -268,82 +315,105 @@ public class DisplayService {
                     for (Database database:databases){
                         dbNames.add(database.getName());
                     }
-                    Map<String,String> pageParas = showParameters.get(tableName);
-                    int recsPerPage = Integer.parseInt(pageParas.get("Count/Page"));
-                    boolean filter = pageParas.get("Filter").toUpperCase(Locale.ROOT).equals("TRUE");
-                    String displayType = pageParas.get("Display Type");
-                    String allowNew = pageParas.get("Allow New").toLowerCase();
-                    boolean recordsOnly = pageParas.get("Records Only").toUpperCase(Locale.ROOT).equals("TRUE");
-
-                    Object records = null;
-                    if ("Recently Viewed".equals(tableName)) {
-                        records =getRecentActivities(loggedInUser);
-
-                    } else if ("Report".equals(tableName)) {
-                        records = loadReports(loggedInUser);
-                    } else if ("Import".equals(tableName)) {
-                        records = loadImports(loggedInUser);
-                    } else if ("User".equals(tableName)) {
-                        records =(AdminService.getUserListForBusinessWithBasicSecurity(loggedInUser));
-                    } else if ("Import Schedule".equals(tableName)) {
-                        records=ImportScheduleDAO.findForBusinessId(loggedInUser.getBusiness().getId());
-                    } else if ("Report Schedule".equals(tableName)) {
-                        List<ReportSchedule> reportSchedules = new ArrayList<>();
-                        for (Database db : databases) {
-                            reportSchedules.addAll(ReportScheduleDAO.findForDatabaseId(db.getId()));
-                        }
-                        records =reportSchedules;
-                    } else if ("Pending Upload".equals(tableName)) {
-                        if (stageNo == 1) {
-                            records =loadPendingUploads(loggedInUser);
+                    String allowNew = FALSE;
+                    List<EditFieldSpec> permissions = getSectionPermissions(loggedInUser,MAINMENU);
+                    for (EditFieldSpec permission:permissions){
+                        if (permission.nameOnFile.equals(menuName)){
+                            if (!permission.readonly.equals(READONLY)){
+                                if (tableName.equals(REPORT) || tableName.equals(IMPORT)){
+                                    allowNew=UPLOAD;
+                                }else{
+                                    allowNew=EDIT;
+                                }
+                                break;
+                            }
                         }
                     }
-                    if (version.equals("Edit")){
-                        Map<String,Object> selected = new HashMap<>();
 
-                        if (id > 0) {
-                            for (Object record : (List<Object>) records) {
-                                Map<String, Object> fieldList = (Map<String, Object>) record;
-                                Object fieldId = fieldList.get("id");
-                                if ((int) fieldId == id) {
-                                    selected = fieldList;
-                                    break;
-                                }
+                    Object records = null;
+                    if (!version.equals(EDIT)) {
+                        if (RECENTLYVIEWED.equals(tableName)) {
+                            records = getRecentActivities(loggedInUser);
+
+                        } else if (REPORT.equals(tableName)) {
+                            records = loadReports(loggedInUser);
+                        } else if (IMPORT.equals(tableName)) {
+                            records = loadImports(loggedInUser);
+                        } else if (USER.equals(tableName)) {
+                            records = (AdminService.getUserListForBusinessWithBasicSecurity(loggedInUser));
+                        } else if (IMPORTSCHEDULE.equals(tableName)) {
+                            records = ImportScheduleDAO.findForBusinessId(loggedInUser.getBusiness().getId());
+                        } else if (REPORTSHEDULE.equals(tableName)) {
+                            List<ReportSchedule> reportSchedules = new ArrayList<>();
+                            for (Database db : databases) {
+                                reportSchedules.addAll(ReportScheduleDAO.findForDatabaseId(db.getId()));
+                            }
+                            records = reportSchedules;
+                        } else if (PENDINGUPLOADS.equals(menuName)) {
+                            if (stageNo == 1) {
+                                records = loadPendingUploads(loggedInUser);
                             }
                         }
-                        List<Map<String,EditFieldSpec>> newRecords = new ArrayList<>();
-                        for (String headingName:headings.keySet()){
-                            Map<String,Object> heading =(Map<String,Object>)headings.get(headingName);
-                            Map<String,EditFieldSpec> row = new HashMap<>();
-                            row.put("Name",new EditFieldSpec((String)heading.get("name"),"show","",null));
-                            String fieldValue = (String)selected.get(heading.get("name"));
-                            if (fieldValue==null){
-                                fieldValue = "";
+                        tableList.put(tableName, new DisplaySpec((List<Object>)records, headings, buttons, stages, stageNo, dbNames,  recsPerPage,  allowNew,  BLANK));
+                    }else{
+                        Map<String, Object> selected = new HashMap<>();
+                        String record = "";
+                        if (id > 0) {
+                            if (tableName.equals(USER)){
+                                record = UserDAO.findById(id).toString();
+                             }
+
+
+                        }
+
+                        List<Object> newRecords = new ArrayList<>();
+                        for (String headingName : headings.keySet()) {
+                            EditFieldSpec heading = headings.get(headingName);
+                            Map<String, Object> row = new HashMap<>();
+                            row.put(NAME, new EditFieldSpec(heading.name, STRING,READONLY, BLANK, heading.name, null));
+                            String value = extractName(record,heading.nameOnFile);
+                             //value is a temporary store for the choice list
+                            String choicelist = heading.fieldValue;
+                            heading.fieldValue = value;
+                            List<String> fieldChoices = Arrays.asList(choicelist.split(COMMA));
+                            if (choicelist.length() > 0 && fieldChoices.size()==1){
+                                if (choicelist.equals("database")) {
+                                       fieldChoices = dbNames;
+                                } else {
+                                    try {
+                                        fieldChoices = StandardDAO.findDistinctList(tableName, choicelist);
+                                    } catch(Exception e) {
+                                        fieldChoices = new ArrayList<>();
+                                    }
+                                }
+
+                            }
+                            if (choicelist.length() == 0){
+                                fieldChoices = new ArrayList<>();
                             }
 
-                            row.put("Value",new EditFieldSpec(fieldValue, (String)heading.get("type"),(String)heading.get("nameOnFile"), (List<String>)heading.get("choices")));
+
+
+                            row.put(FIELDVALUE,(Object)new EditFieldSpec(heading.name, heading.fieldtype,heading.readonly,heading.nameOnFile, value, fieldChoices));
                             newRecords.add(row);
 
 
                         }
-                        Map<String,Object> newHeadings = new LinkedHashMap();
-                        buttons.add("Save");
-                        buttons.add("Reject");
-                        Map<String,String> newHeading = new HashMap<>();
-                        newHeading.put("nameOnFile","Name");
-                        newHeadings.put("Name", newHeading);
-                        Map<String,String> newHeading2 = new HashMap<>();
-                        newHeading2.put("nameOnFile","Value");
-                        newHeadings.put("Value",newHeading2);
-                        tableList.put(tableName, new DisplaySpec(newRecords, newHeadings, buttons, stages, stageNo, dbNames,  newRecords.size(), filter, "false", "az-table", ""));
+                        Map<String,EditFieldSpec> newHeadings = new LinkedHashMap();
+                        buttons.add(SAVE);
+                        buttons.add(REJECT);
+                        EditFieldSpec newHeading = new EditFieldSpec(NAME,INDIVIDUAL,READONLY,null,null,null);
+                        newHeadings.put(NAME, newHeading);
+                         EditFieldSpec newHeading2 = new EditFieldSpec("Value",INDIVIDUAL,READONLY,null,null,null);
+                        newHeadings.put(FIELDVALUE,newHeading2);
+                        tableList.put("Edit " + tableName, new DisplaySpec(newRecords, newHeadings, buttons, stages, stageNo, dbNames,  newRecords.size(),  FALSE,  BLANK));
 
-                    }else{
-                        tableList.put(tableName, new DisplaySpec(records, headings, buttons, stages, stageNo, dbNames,  recsPerPage, filter, allowNew, "az-"+displayType, ""));
                     }
 
                 }
-                toReturn.put("table", tableList);
-                return reactVersion(toReturn,"show");
+                toReturn.put(SECTIONSTOSHOW, sectionsToShow);
+                toReturn.put(SECTION, tableList);
+                return reactVersion(loggedInUser,toReturn,SHOW);
             }
 
 
@@ -372,161 +442,38 @@ public class DisplayService {
             }
         }
         if (newUser) {
-            connections.put(currentSession + "", loggedInUser);
+            connections.put(currentSession + BLANK, loggedInUser);
         }
 
     }
 
-
-    public static List<MenuItem> getSecondaryMenu() {
-        return new ArrayList<>();
+    private static String extractName(String record, String heading){
+        int namepos = record.indexOf(" " + heading + "='");
+        if (namepos < 0) return "";
+        namepos += heading.length() + 3;
+        int endPos = record.indexOf("'", namepos);
+        if (endPos < 0) return "";
+        return record.substring(namepos, endPos);
     }
 
 
+    public static String compileUploadedFileResults(LoggedInUser loggedInUser, List<UploadedFile> uploadedFiles, int checkboxId, Set<String> comments) {
 
 
-
-
-
-
-    private static int firstCol(List<String> row) {
-        if (row == null) {
-            return -1;
-        }
-        for (int i = 0; i < row.size(); i++) {
-            if (row.get(i).length() > 0) {
-                return i;
-            }
-        }
-        return -1;
-    }
-
-    public static Map<String,Object> sheetInfoToObject(ImportTemplateData importTemplateData) {
-
-
-        List<List<String>> sheetData = new ArrayList<>();
-
-        for (String sheet : importTemplateData.getSheets().keySet()) {
-            for (List<String> row : importTemplateData.getSheets().get(sheet)) {
-                List<String> cleanRow = new ArrayList<>();
-                boolean hasData = false;
-                for (String cell : row) {
-                    if (cell.length() == 0 && hasData) {
-                        break;
-                    }
-                    cleanRow.add(cell);
-                    if (cell.length() > 0) {
-                        hasData = true;
-                    }
-                }
-                if (hasData) {
-                    sheetData.add(cleanRow);
-                }
-            }
-        }
-        Progress progress = new Progress(0, 0);
-        return makeObject(sheetData, progress);
-    }
-
-    private static Map<String,Object> makeObject( List<List<String>> sheetData, Progress progress) {
-
-        Map<String,Object> toReturn = new HashMap<>();
-
-        String title = null;
-        int baseLevel = progress.level;
-        List<String> list = new ArrayList<>();
-        while (progress.rowNo < sheetData.size()) {
-            List<String> row = sheetData.get(progress.rowNo);
-            int newLevel = firstCol(row);
-
-            if (newLevel < progress.level) {
-                break;
-            }
-            if (newLevel == progress.level && list.size() > 0){
-                toReturn.put(title,list);
-                list = new ArrayList<>();
-            }
-            List<String> nextRow = new ArrayList<>();
-            if (progress.rowNo < sheetData.size() - 1) {
-                nextRow = sheetData.get(progress.rowNo + 1);
-            }
-            int nextLevel = firstCol(nextRow);
-            if (newLevel == progress.level) {
-                title = row.get(newLevel);
-                progress.rowNo++;
-
-
-            } else {
-                List<Map<String,Object>> data = new ArrayList<>();
-                if (firstCol(row) > progress.level && firstCol(row) == firstCol(nextRow) && row.size() - newLevel == 2) {
-                   int inset = firstCol(row);
-                    Map<String,Object> map = new HashMap<>();
-                    while (progress.rowNo < sheetData.size() && firstCol(sheetData.get(progress.rowNo)) == inset && sheetData.get(progress.rowNo).size() == inset + 2){
-                         row = sheetData.get(progress.rowNo);
-                         map.put(row.get(inset), row.get(inset + 1));
-                         progress.rowNo++;
-                    }
-                    toReturn.put(title,map);
-
-                }else if (firstCol(row) > progress.level && firstCol(row) == firstCol(nextRow) && row.size() - newLevel > 2) {//NB TABLES MUST HAVE MORE THAN TWO COLUMNS - 1 = LIST  - 2 = MAPPINGT
-                    List<String> headings = row;
-                    while (progress.rowNo < sheetData.size() - 1 && firstCol(sheetData.get(progress.rowNo + 1)) == firstCol(headings) && sheetData.get(progress.rowNo + 1).size() <= headings.size()) {
-                        Map<String,Object> line = new HashMap<>();
-                        progress.rowNo++;
-                        row = sheetData.get(progress.rowNo);
-
-                        for (int i = newLevel; i < row.size(); i++) {
-                            String value = row.get(i);
-                            if (value.startsWith("menu:")){
-                                List<String>choices = Arrays.asList(value.substring(5).split(","));
-                                line.put("choices", choices);
-                                value = "menu";
-                            }
-                            line.put(headings.get(i),value);
-                        }
-                        data.add(line);
-                    }
-                    toReturn.put(title,data);
-                    list = new ArrayList<>();
-                    progress.rowNo++;
-                } else if (newLevel > progress.level) {
-                    if (nextLevel > newLevel){
-                        progress.level = newLevel;
-                        toReturn.put(title, makeObject(sheetData, progress));
-                        list = new ArrayList<>();
-                        progress.level = baseLevel;
-                    }else{
-                        list.add(row.get(newLevel));
-                        progress.rowNo++;
-                    }
-
-                }
-            }
-        }
-        if (list.size()>0){
-            toReturn.put(title,list);
-        }
-        return toReturn;
-    }
-
-
-
-
-
-    public static String compileUploadedFileResults(List<UploadedFile> uploadedFiles, int checkboxId, Set<String> comments) {
 
         List<Object> uploadMap = new ArrayList<>();
         Map<String,Object> headings = new LinkedHashMap<>();
+        addHeading(headings,LOAD,CHECKBOX +":true");
         int id = 0;;
         for (UploadedFile uploadedFile : uploadedFiles) {
             Map<String,Object> fieldList = new HashMap<>();
-            fieldList.put("id","" + (++id));
+            fieldList.put(ID,BLANK + (++id));
             StringBuilder sb = new StringBuilder();
             List<String> names = new ArrayList<>(uploadedFile.getFileNames()); // copy as I might change it
             boolean first = true;
             for (String name : names) {
                 if (!first) {
-                    sb.append(", ");
+                    sb.append(COMMA);
                 }
                 sb.append(name);
                 first = false;
@@ -534,8 +481,8 @@ public class DisplayService {
             if (uploadedFile.isConvertedFromWorksheet()) {
                 sb.append(" - Converted from worksheet");
             }
-            addHeading(headings,"File name","list","list");
-            fieldList.put("File name",sb.toString());
+            addHeading(headings,FILENAME,LIST);
+            fieldList.put(FILENAME,sb.toString());
             List<ErrorCount> errorList = new ArrayList<>();
             if (!uploadedFile.getErrorHeadings().isEmpty()) {
                 for (String errorHeading : uploadedFile.getErrorHeadings()) {
@@ -551,21 +498,21 @@ public class DisplayService {
                 for (ErrorCount eCount:errorList){
                     shownErrorList.add(eCount.errorName + ":" + eCount.errorCount);
                 }
-                addHeading(headings,"Error list", "list","list");
+                addHeading(headings,"Error list", LIST);
                 fieldList.put("Error list",shownErrorList);
             }
             List<String>showUploadParas = new ArrayList<>();
             for (String uPara:uploadedFile.getParameters().keySet()){
                 showUploadParas.add(uPara + ":" + uploadedFile.getParameters().get(uPara));
             }
-            addHeading(headings,"Upload Parameters", "list","list");
+            addHeading(headings,"Upload Parameters", LIST);
             fieldList.put("Upload Parameters",showUploadParas);
             List<String> timeMap = new ArrayList<>();
             timeMap.add("Time to process: " + uploadedFile.getProcessingDuration() + " ms");
             timeMap.add("Number of lines imported:" + uploadedFile.getNoLinesImported());
             timeMap.add("Number of values adjusted:"+ uploadedFile.getNoValuesAdjusted());
             timeMap.add("Number of names adjusted:"+uploadedFile.getNoNamesAdjusted());
-            addHeading(headings,"Actions", "list","list");
+            addHeading(headings,"Actions", LIST);
             fieldList.put("Actions", timeMap);
             Collection<List<String>> fileHeadings= new ArrayList<>();
             List<String>shownFileHeadings = new ArrayList<>();
@@ -580,12 +527,12 @@ public class DisplayService {
 
 
                 for (List<String> fileHeading : fileHeadings) {
-                    String heading = "";
+                    String heading = BLANK;
                     for (String subHeading : fileHeading) {
                         heading += subHeading.replaceAll("\n", " ") + " ";
                     }
                     shownFileHeadings.add(heading);
-                    String path = "";
+                    String path = BLANK;
                     HeadingWithInterimLookup headingWithInterimLookup = uploadedFile.getHeadingsByFileHeadingsWithInterimLookup().get(fileHeading);
                     if (headingWithInterimLookup != null) {
                         if (headingWithInterimLookup.getInterimLookup() != null) {
@@ -597,26 +544,26 @@ public class DisplayService {
                     }
                     headingsWithInterimLookupMap.add(heading+":"+path);
                 }
-                addHeading(headings,"Headings with interim lookup", "popup","popup");
+                addPopupHeading(headings,"Headings with interim lookup",LIST);
                 fieldList.put("Headings with interim lookup",headingsWithInterimLookupMap);
             }
 
             if (uploadedFile.getHeadingsNoFileHeadingsWithInterimLookup() != null) {
                 List<String> headingsNoFileHeadingsWithInterimLookup = new ArrayList<>();
                 for (HeadingWithInterimLookup headingWithInterimLookup : uploadedFile.getHeadingsNoFileHeadingsWithInterimLookup()) {
-                    String path = "";
+                    String path = BLANK;
                     if (headingWithInterimLookup.getInterimLookup() != null) { // it could be null now as we support a non file heading azquo heading on the Import Model sheet
                         path += headingWithInterimLookup.getInterimLookup() + " -> ";
                     }
                     path += headingWithInterimLookup.getHeading();
                     headingsNoFileHeadingsWithInterimLookup.add(path);
                 }
-                addPopupHeading(headings,"Headings no file headings with interim lookup", "list");
+                addPopupHeading(headings,"Headings no file headings with interim lookup", LIST);
                 fieldList.put("Headings no file headings with interim lookup", headingsNoFileHeadingsWithInterimLookup);
             }
 
             if (uploadedFile.getSimpleHeadings() != null) {
-                addPopupHeading(headings,"Simple headings", "list");
+                addPopupHeading(headings,"Simple headings", LIST);
                 fieldList.put("Simple headings",uploadedFile.getSimpleHeadings());
             }
 
@@ -632,29 +579,29 @@ public class DisplayService {
                 }
                 error += "<b>";
                 lineErrors.add(makeFileName(uploadedFile) + " " + error);
-                addHeading(headings,"Error line headings","list", "list");
+                addHeading(headings,"Error line headings",LIST);
                 fieldList.put("Error line headings",uploadedFile.getFileHeadings());
-                addHeading(headings,"Lines rejected","list", "list");
+                addHeading(headings,"Lines rejected",LIST);
                 fieldList.put("Lines rejected", uploadedFile.getLinesRejected());
             }
             if (uploadedFile.getPostProcessingResult() != null) {
-                addHeading(headings,"Post processing result", "list","list");
+                addHeading(headings,"Post processing result", LIST);
                 fieldList.put("Post processing result",uploadedFile.getPostProcessingResult());
 
             }
             Map<String, Object> warningLineMap = new HashMap<>();
-            List<Object> tableHeadings = new ArrayList<>();
-            tableHeadings.add(makeHeading("Load","CLICKBOX"));
+            Map<String,Object> tableHeadings = new LinkedHashMap<>();
+            tableHeadings.put(LOAD,makeHeading(LOAD, CHECKBOX + ":false"));
             for (ErrorCount error:errorList){
-                tableHeadings.add(makeHeading( error.errorName ,"show"));
+                tableHeadings.put(error.errorName,makeHeading( error.errorName ,SHOW));
 
             }
             for (String fieldName:shownFileHeadings){
-                tableHeadings.add(makeHeading(fieldName,"show"));
+                tableHeadings.put(fieldName,makeHeading(fieldName,SHOW));
 
             }
             Map<String,Object> warningLines = new HashMap<>();
-            warningLines.put("headings", tableHeadings);
+            warningLines.put(HEADINGS, tableHeadings);
             List<Map<String,String>> wData = new ArrayList<>();
             for (UploadedFile.WarningLine warningLine:uploadedFile.getWarningLines()){
                 Map<String,String> warningData = new HashMap<>();
@@ -673,7 +620,7 @@ public class DisplayService {
                     }
                     i++;
                 }
-                warningData.put("id",warningLine.getLineNo()+"");
+                warningData.put(ID,warningLine.getLineNo()+BLANK);
                 wData.add(warningData);
 
 
@@ -681,11 +628,11 @@ public class DisplayService {
 
             }
 
-            warningLines.put("records", wData);
+            warningLines.put(RECORDS, wData);
 
-            addPopupHeading(headings,"Warning lines", "table");
+            addPopupHeading(headings,"Warning lines", TABLE);
             fieldList.put("Warning lines", warningLines);
-            addHeading(headings,"Outcome", "list","list");
+            addHeading(headings,"Outcome", LIST);
             List<String>errors = new ArrayList<>();
             if (!uploadedFile.isDataModified()) {
                 if (uploadedFile.isNoData()) {
@@ -699,13 +646,13 @@ public class DisplayService {
 
 
             if (uploadedFile.getReportName() != null) {
-                addHeading(headings,"Outcome", "list","list");
+                addHeading(headings,"Outcome", LIST);
                 fieldList.put("Outcome", "Report uploaded : " + uploadedFile.getReportName());
 //                sb.append("Analysis : ").append(uploadedFile.getE()).append("\n<br/>");
             }
 
             if (uploadedFile.isImportTemplate()) {
-                addHeading(headings,"Outcome", "list","list");
+                addHeading(headings,"Outcome", LIST);
                 fieldList.put("Outcome","Import template uploaded");
             }
 
@@ -714,33 +661,48 @@ public class DisplayService {
 
         Map<String, Object> toReturn = new HashMap<>();
         Map<String,Object> article = new HashMap<>();
-        article.put("name", "Pending Upload");
-        article.put("stage",2);
+        article.put(NAME, PENDINGUPLOAD);
+        //article.put("stage",2);
         article.put("instructions","You can click on 'details' to see individual errors, When done, you can click below to load to the live database");
-        article.put("headings", headings);
-        article.put("records", uploadMap);
-        toReturn.put("table", article);
-        return reactVersion(toReturn,"show");
+        article.put(HEADINGS, headings);
+        article.put(RECORDS, uploadMap);
+        Map<String,Object>table = new HashMap<>();
+        article.put("stages", DisplayData.getStageInfo(PENDINGUPLOAD));
+        article.put("stageNo",2);
+        table.put(PENDINGUPLOAD, article);
+        toReturn.put(SECTION, table);
+        toReturn.put(SECTIONSTOSHOW, Collections.singletonList(PENDINGUPLOAD));
+        return reactVersion(loggedInUser, toReturn,SHOW);
 
+    }
+    private static Map<String,Object>makeHeading(String headingName, String type){
+        Map<String,Object> heading = new HashMap<>();
+        heading.put(NAMEONFILE, headingName);
+        heading.put(NAME, headingName);
+        heading.put(FIELDTYPE, type);
+        heading.put(READONLY,TRUE);
+        return heading;
     }
 
 
-    public static void addHeading(Map<String,Object>headings, String name, String fieldtype, String showtype){
+
+    public static void addHeading(Map<String,Object>headings, String name, String fieldtype){
+        boolean readOnly = true;
         if (headings.get(name)!=null){
             return;
         }
         List<String> choices = new ArrayList<>();
-        if (fieldtype.startsWith("menu:")){
-            choices = Arrays.asList(showtype.split(","));
-            showtype = "menu";
+        Map<String,Object> heading = new HashMap<>();
+        if (fieldtype.startsWith(CHECKBOX + ":")){
+            heading.put(FIELDVALUE, fieldtype.substring(9));
+            fieldtype = CHECKBOX;
         }
-        Map<String,String> heading = new HashMap<>();
-        heading.put("DisplayHeading", name);
-        heading.put("fieldtype", fieldtype);
-        heading.put("showtype", showtype);
-        heading.put("nameOnFile", name);
-        headings.put("Choices", choices);
-        headings.put(name,heading);
+        heading.put(NAME, name);
+        heading.put(FIELDTYPE, fieldtype);
+        heading.put(READONLY, readOnly);
+        heading.put(NAMEONFILE, name);
+        headings.put(CHOICES, choices);
+        headings.put(NAME,heading);
     }
 
 
@@ -749,15 +711,15 @@ public class DisplayService {
             return;
         }
         List<String> choices = new ArrayList<>();
-        Map<String,String> heading = new HashMap<>();
-        heading.put("DisplayHeading", name);
-        heading.put("type", "popup");
-        heading.put("popuptype", popupType);
-        heading.put("nameOnFile", name);
-        headings.put("Choices", choices);
+        Map<String,Object> heading = new HashMap<>();
+        heading.put(NAME, name);
+        heading.put(FIELDTYPE, "popup");
+        heading.put(READONLY, true);
+        heading.put(POPUPTYPE, popupType);
+        heading.put(NAMEONFILE, name);
+        heading.put(CHOICES, choices);
         headings.put(name,heading);
     }
-
 
 
     public static String makeFileName(UploadedFile uploadedFile) {
@@ -766,19 +728,41 @@ public class DisplayService {
             appendString.append(fileName + ".");
         }
         return appendString.toString();
-
     }
 
-    private static Map<String,String>makeHeading(String headingName, String type){
-        Map<String,String> heading = new HashMap<>();
-        heading.put("nameOnFile", headingName);
-        heading.put("DisplayHeading", headingName);
-        heading.put("type", type);
-        return heading;
+
+
+
+    static List<EditFieldSpec>getSectionPermissions(LoggedInUser loggedInUser, String section){
+        List<EditFieldSpec> permissionList = new ArrayList<>();
+        for (Permissions permission:getUserPermissions(loggedInUser)){
+            if (permission.getSection().equals(section)) {
+                EditFieldSpec onePermission = new EditFieldSpec(permission.getFieldName(),permission.getFieldType(),permission.getIsReadOnly(), permission.getNameOnFile(), permission.getFieldValue(),null);
+                permissionList.add(onePermission);
+            }
+        }
+        return permissionList;
     }
 
-    public static String reactVersion(Map<String,Object> items, String action){
-        items.put("action",action);
+    private static List<String>getMenuList(LoggedInUser loggedInUser, String menuName){
+        List<String>toReturn = new ArrayList<>();
+        List<EditFieldSpec> menuItems = getSectionPermissions(loggedInUser,menuName);
+        for (EditFieldSpec menuItem:menuItems){
+            toReturn.add(menuItem.name);
+        }
+        return toReturn;
+    }
+
+
+    public static String reactVersion(LoggedInUser loggedInUser, Map<String,Object> items, String action){
+        if (loggedInUser!=null) {
+            Map<String,Object> menuList = new HashMap<>();
+            menuList.put(MAINMENU, getMenuList(loggedInUser,MAINMENU));
+            menuList.put("Secondary Menu", getMenuList(loggedInUser,"Secondary Menu"));
+            items.put(MENUS, menuList);
+            items.put(THEME, getTheme(loggedInUser));
+        }
+        items.put(ACTION,action);
         Map<String,Object> data = new HashMap<>();
         data.put("data", items);
         final ObjectMapper jacksonMapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
@@ -790,6 +774,23 @@ public class DisplayService {
             return jsonError(e.getMessage());
         }
 
+    }
+
+    public static Map<String,String>getTheme(LoggedInUser loggedInUser) {
+
+        List<Permissions> permissionList = null;
+        if (loggedInUser!=null){
+            permissionList = PermissionsDAO.findForRoleNameAndBusiness(loggedInUser.getUser().getStatus(), loggedInUser.getBusiness().getId());
+        }else{
+            permissionList = DisplayData.defaultPermissions();
+        }
+        Map<String, String> theme = new HashMap<>();
+        for (Permissions permission : permissionList) {
+            if ("Display Theme".equals(permission.getSection())) {
+                theme.put(permission.getFieldName(), permission.getFieldValue());
+            }
+        }
+        return theme;
     }
 
 
@@ -907,7 +908,7 @@ public class DisplayService {
             Map<String, String> mapForFile = lookupValuesForFiles.get(file);
             int counter2 = 0;
             for (String heading : lookupHeadings) {
-                lookupValuesForFilesHTML.append("<input type=\"hidden\" name=\"" + counter + "-" + counter2 + "\" value=\"" + (mapForFile.get(heading) != null ? mapForFile.get(heading) : "") + "\"/>\n");
+                lookupValuesForFilesHTML.append("<input type=\"hidden\" name=\BLANK + counter + "-" + counter2 + "\" value=\BLANK + (mapForFile.get(heading) != null ? mapForFile.get(heading) : BLANK) + "\"/>\n");
                 counter2++;
             }
             counter++;
@@ -1175,13 +1176,13 @@ public class DisplayService {
                     if (maxHeadingsDepth > 1) {
                         for (int i = maxHeadingsDepth; i > 1; i--) {
                             row = sheet.createRow(rowIndex++);
-                            row.createCell(cellIndex++).setCellValue("");
-                            row.createCell(cellIndex++).setCellValue("");
+                            row.createCell(cellIndex++).setCellValue(BLANK);
+                            row.createCell(cellIndex++).setCellValue(BLANK);
                             for (List<String> headingCol : uploadedFile.getFileHeadings()) {
                                 if (headingCol.size() >= i) {
                                     row.createCell(cellIndex++).setCellValue(headingCol.get(headingCol.size() - i));// think that's right . . .
                                 } else {
-                                    row.createCell(cellIndex++).setCellValue("");
+                                    row.createCell(cellIndex++).setCellValue(BLANK);
                                 }
                             }
                         }
@@ -1193,7 +1194,7 @@ public class DisplayService {
                         if (!headingCol.isEmpty()) {
                             row.createCell(cellIndex++).setCellValue(headingCol.get(headingCol.size() - 1));// think that's right . . .
                         } else {
-                            row.createCell(cellIndex++).setCellValue("");
+                            row.createCell(cellIndex++).setCellValue(BLANK);
                         }
                     }
                 } else {
@@ -1325,7 +1326,7 @@ public class DisplayService {
                     // ok try to get comments now we have a line reference
                     // don't need to remove " from the identifier, it should have been zapped already
                     Comment comment = CommentDAO.findForBusinessIdAndIdentifierAndTeam(pu.getBusinessId(), uploadedFile.getIgnoreLines().get(lineNo), pu.getTeam());
-                    row.createCell(cellIndex++).setCellValue(comment != null ? comment.getText() : "");
+                    row.createCell(cellIndex++).setCellValue(comment != null ? comment.getText() : BLANK);
                     row.createCell(cellIndex++).setCellValue(lineNo);
                     String[] split = uploadedFile.getIgnoreLinesValues().get(lineNo).split("\t");
                     for (String cell : split) {
@@ -1349,7 +1350,7 @@ public class DisplayService {
             Row row;
             if (addHeadings) {
                 row = sheet.createRow(rowIndex++);
-                row.createCell(cellIndex).setCellValue("Line Warnings" + (paramsHeadings != null ? ", sorting rows below the headings is fine but please do not modify data outside the first two columns, this may confuse the system." : ""));
+                row.createCell(cellIndex).setCellValue("Line Warnings" + (paramsHeadings != null ? ", sorting rows below the headings is fine but please do not modify data outside the first two columns, this may confuse the system." : BLANK));
                 cellIndex = 0;
                 row = sheet.createRow(rowIndex++);
                 for (String error : errors) {
@@ -1368,13 +1369,13 @@ public class DisplayService {
                     if (maxHeadingsDepth > 1) {
                         for (int i = maxHeadingsDepth; i > 1; i--) {
                             row = sheet.createRow(rowIndex++);
-                            row.createCell(cellIndex++).setCellValue("");
-                            row.createCell(cellIndex++).setCellValue("");
+                            row.createCell(cellIndex++).setCellValue(BLANK);
+                            row.createCell(cellIndex++).setCellValue(BLANK);
                             for (List<String> headingCol : uploadedFile.getFileHeadings()) {
                                 if (headingCol.size() >= i) {
                                     row.createCell(cellIndex++).setCellValue(headingCol.get(headingCol.size() - i));// think that's right . . .
                                 } else {
-                                    row.createCell(cellIndex++).setCellValue("");
+                                    row.createCell(cellIndex++).setCellValue(BLANK);
                                 }
                             }
                         }
@@ -1405,7 +1406,7 @@ public class DisplayService {
                         if (!headingCol.isEmpty()) {
                             row.createCell(cellIndex++).setCellValue(headingCol.get(headingCol.size() - 1));// think that's right . . .
                         } else {
-                            row.createCell(cellIndex++).setCellValue("");
+                            row.createCell(cellIndex++).setCellValue(BLANK);
                         }
                     }
                 } else {
@@ -1440,10 +1441,10 @@ public class DisplayService {
 
             for (UploadedFile.WarningLine warningLine : uploadedFile.getWarningLines()) {
                 if (paramsHeadings != null) {
-                    row.createCell(cellIndex++).setCellValue(""); // empty load cell, expects a x or maybe anything?
+                    row.createCell(cellIndex++).setCellValue(BLANK); // empty load cell, expects a x or maybe anything?
                 }
-                String commentValue = "";
-                Comment comment = CommentDAO.findForBusinessIdAndIdentifierAndTeam(pu.getBusinessId(), warningLine.getIdentifier().replace("\"", ""), pu.getTeam());
+                String commentValue = BLANK;
+                Comment comment = CommentDAO.findForBusinessIdAndIdentifierAndTeam(pu.getBusinessId(), warningLine.getIdentifier().replace("\"",""), pu.getTeam());
                 if (comment != null) {
                     commentValue = comment.getText();
                 }
@@ -1451,13 +1452,13 @@ public class DisplayService {
                 if (paramsHeadings != null) {
                     row.createCell(cellIndex++).setCellValue(uploadedFile.getFileNamesAsString());
                     for (String param : paramsHeadings) {
-                        row.createCell(cellIndex++).setCellValue(uploadedFile.getParameter(param) != null ? uploadedFile.getParameter(param) : "");
+                        row.createCell(cellIndex++).setCellValue(uploadedFile.getParameter(param) != null ? uploadedFile.getParameter(param) : BLANK);
                     }
-                    row.createCell(cellIndex++).setCellValue(warningLine.getIdentifier().replace("\"", ""));
+                    row.createCell(cellIndex++).setCellValue(warningLine.getIdentifier().replace("\"", BLANK));
                 }
 
                 for (String error : errors) {
-                    row.createCell(cellIndex++).setCellValue(warningLine.getErrors().getOrDefault(error, ""));
+                    row.createCell(cellIndex++).setCellValue(warningLine.getErrors().getOrDefault(error, BLANK));
                 }
                 if (paramsHeadings != null) {
                     row.createCell(cellIndex++).setCellValue(fileIndex);
@@ -1482,6 +1483,22 @@ public class DisplayService {
     public static String jsonError(String error) {
         return "{\"error\":\"" + error + "\"}";
     }
+
+
+    public static List<Permissions> getUserPermissions(LoggedInUser loggedInUser) {
+        List<Permissions> permissions = PermissionsDAO.findForRoleNameAndBusiness(loggedInUser.getUser().getStatus(), loggedInUser.getBusiness().getId());
+        if ((permissions==null || permissions.size()==0) && loggedInUser.getUser().getStatus().equals("ADMINISTRATOR")){
+            permissions = DisplayData.defaultPermissions();
+            for (Permissions permission :permissions){
+                permission.setBusinessId(loggedInUser.getBusiness().getId());
+                PermissionsDAO.store(permission);
+            }
+        }
+        return permissions;
+
+
+    }
+
 
 
 }

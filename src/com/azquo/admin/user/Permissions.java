@@ -13,19 +13,25 @@ import java.time.LocalDateTime;
 public final class Permissions extends StandardEntity implements Serializable {
 
 
-    private String roleName;
     private int businessId;
-    String fileName;
-    String fieldName;
-    private boolean readOnly;
+    private String roleName;
+    private String section;
+    private String fieldName;
+    private String nameOnFile;
+    private String fieldType;
+    private String fieldValue;
+    private String isReadOnly;
 
-    public Permissions(int id, String roleName, int businessId, String fileName, String fieldName, boolean readOnly) {
+    public Permissions(int id, int businessId, String roleName, String section, String fieldName, String nameOnFile, String fieldType, String fieldValue, String isReadOnly) {
         this.id = id;
-        this.roleName = roleName;
         this.businessId = businessId;
-        this.fileName = fileName;
+        this.roleName = roleName;
+        this.section = section;
         this.fieldName = fieldName;
-        this.readOnly = readOnly;
+        this.nameOnFile = nameOnFile;
+        this.fieldType = fieldType;
+        this.fieldValue = fieldValue;
+        this.isReadOnly = isReadOnly;
     }
 
 
@@ -45,12 +51,12 @@ public final class Permissions extends StandardEntity implements Serializable {
         this.businessId = businessId;
     }
 
-    public String getFileName() {
-        return fileName;
+    public String getSection() {
+        return section;
     }
 
-    public void setFileName(String fileName) {
-        this.fieldName = fieldName;
+    public void setSection(String section) {
+        this.section = section;
     }
 
     public String getFieldName() {
@@ -61,12 +67,36 @@ public final class Permissions extends StandardEntity implements Serializable {
         this.fieldName = fieldName;
     }
 
-    public boolean getReadOnly() {
-        return readOnly;
+    public String getNameOnFile() {
+        return nameOnFile;
     }
 
-    public void setReadOnly(boolean readOnly) {
-        this.readOnly = readOnly;
+    public void setNameOnFile(String nameOnFile) {
+        this.nameOnFile = nameOnFile;
+    }
+
+    public String getFieldType() {
+        return fieldType;
+    }
+
+    public void setFieldType(String fieldType) {
+        this.fieldType = fieldType;
+    }
+
+    public String getFieldValue() {
+        return fieldValue;
+    }
+
+    public void setFieldValue(String fieldValue) {
+        this.fieldValue = fieldValue;
+    }
+
+    public String getIsReadOnly() {
+        return isReadOnly;
+    }
+
+    public void setIsReadOnly(String isReadOnly) {
+        this.isReadOnly = isReadOnly;
     }
 
 
@@ -76,9 +106,12 @@ public final class Permissions extends StandardEntity implements Serializable {
                 "id=" + id +
                 ", roleName=" + roleName +
                 ", businessId=" + businessId +
-                ", fileName=" + fileName +
+                ", section=" + section +
                 ", fieldName=" + fieldName +
-                ", readonly=" + readOnly +
+                ", nameOnFile=" + nameOnFile +
+                ", fieldType=" + fieldType +
+                ", fieldValue=" + fieldValue +
+                ", isReadonly=" + isReadOnly +
                 '}';
     }
 }

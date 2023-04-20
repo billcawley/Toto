@@ -2,6 +2,7 @@ package com.azquo.spreadsheet.controller;
 
 import com.azquo.SessionListener;
 import com.azquo.admin.AdminService;
+import com.azquo.admin.DisplayData;
 import com.azquo.admin.DisplayService;
 import com.azquo.admin.business.Business;
 import com.azquo.admin.business.BusinessDAO;
@@ -10,6 +11,8 @@ import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseDAO;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
+import com.azquo.admin.user.Permissions;
+import com.azquo.admin.user.PermissionsDAO;
 import com.azquo.admin.user.User;
 import com.azquo.admin.user.UserDAO;
 import com.azquo.dataimport.*;
@@ -79,12 +82,9 @@ public class DisplayController {
         if (op.length()==0) {
 
             //return theme only
-            ImportTemplateData importTemplateData = loadMetaData(null, request);
-            Map<String, Object> permissions = DisplayService.sheetInfoToObject(importTemplateData);
-            Map<String, String> theme = (Map<String, String>) permissions.get("Theme");
             Map<String,Object> items = new HashMap<>();
-            items.put("theme", theme);
-            return DisplayService.reactVersion(items,"show");
+            items.put("theme", DisplayService.getTheme(null));
+            return DisplayService.reactVersion(null, items,"show");
         }
         String fieldId = java.net.URLDecoder.decode(request.getParameter("fieldid"));
         String fieldValue = java.net.URLDecoder.decode(request.getParameter("fieldvalue"));
@@ -95,10 +95,7 @@ public class DisplayController {
                 List<LoggedInUser> users = LoginService.loginLoggedInUser(null, fieldId, fieldValue);
                 if (users.size() > 0) {
                     List<String>businessNames = new ArrayList<>();
-                         loggedInUser = users.get(0);
-                    ImportTemplateData importTemplateData = loadMetaData(loggedInUser, request);
-                    Map<String, Object> permissions = DisplayService.sheetInfoToObject(importTemplateData);
-                    loggedInUser.setPermissions(permissions);
+                    loggedInUser = users.get(0);
                     if (sessionId!=null){
                         reactConnections.put(sessionId,loggedInUser);
                     }
@@ -108,9 +105,9 @@ public class DisplayController {
                             businessNames.add(lu.getBusiness().getBusinessName());
                         }
                          toReturn.put("businesses",businessNames);
-                        toReturn.put("theme",permissions.get("Theme"));
+                        toReturn.put("theme",DisplayService.getTheme(loggedInUser));
                         toReturn.put("sessionid",request.getSession().getId());
-                        return DisplayService.reactVersion(toReturn,"show");
+                        return DisplayService.reactVersion(loggedInUser, toReturn,"show");
 
 
 
@@ -136,10 +133,8 @@ public class DisplayController {
                         if (lu.getBusiness().getBusinessName().equals(fieldValue)) {
                             loggedInUser = lu;
                             DisplayService.recordConnection(reactConnections, loggedInUser, sessionId);
-                            ImportTemplateData importTemplateData = loadMetaData(loggedInUser, request);
-                            Map<String, Object> permissions = DisplayService.sheetInfoToObject(importTemplateData);
-                            loggedInUser.setPermissions(permissions);
-                            if (sessionId!=null){
+                            List<Permissions> permissions =  DisplayService.getUserPermissions(loggedInUser);
+                             if (sessionId!=null){
                                 reactConnections.put(sessionId,loggedInUser);
                             }
                             fieldId = "action:";//to redisplay the dashboard
@@ -218,13 +213,11 @@ public class DisplayController {
                    table2.put("hRef", href);
                    Map<String,Object>section = new HashMap<>();
                    section.put("Report", table2);
-                   toReturn.put("table",section);
+                   toReturn.put("section",section);
                    List<String>recordsToShow = new ArrayList<>();
                    recordsToShow.add("Report");
-                   toReturn.put("recordsToShow",recordsToShow);
-;                   toReturn.put("theme", loggedInUser.getPermissions().get("Theme"));
-                   toReturn.put("menus", loggedInUser.getPermissions().get("Menus"));
-                   return DisplayService.reactVersion(toReturn,"show");
+                   toReturn.put("sectionsToShow",recordsToShow);
+;                  return DisplayService.reactVersion(loggedInUser,toReturn,"show");
                 }
                 if ("menu".equals(fieldName)) {
                     //SELECTIONS FROM DROPDOWN MENU ON A LINE
@@ -277,7 +270,8 @@ public class DisplayController {
                                 e.printStackTrace();
                                 return reactError(e.getMessage());
                             }
-                             return json;
+                            json = json.replaceAll("\\t","");
+                            return json;
                         }
 
 
@@ -304,7 +298,17 @@ public class DisplayController {
                             PendingUploadDAO.removeById(pendingUpload);
                             return DisplayService.getJson(loggedInUser,table,"Report",0);
                         }
-                    } else if ("button".equals(fieldName)) {
+
+                    }
+                    if ("user".equals(table)){
+                        if ("menu".equals(fieldName)){
+                          if ("Edit".equals(fieldValue)){
+                              return DisplayService.getJson(loggedInUser,"User","Edit",id);
+                          }
+                        }
+
+                    }
+                    else if ("button".equals(fieldName)) {
                         if ("save".equals(fieldValue)) {
                             String lastTable = "";
                             int lastId = 0;
@@ -387,14 +391,14 @@ public class DisplayController {
     public String reactDoNothing(){
         Map<String,Object>toReturn = new HashMap<>();
         toReturn.put("sessionid","");
-        return DisplayService.reactVersion(toReturn,"OK");
+        return DisplayService.reactVersion(null,toReturn,"OK");
     }
 
 
     public String reactError(String error) {
         Map<String,Object>toReturn = new HashMap<>();
         toReturn.put("sessionid","");
-          return DisplayService.reactVersion(toReturn,"error:" + error);
+          return DisplayService.reactVersion(null, toReturn,"error:" + error);
     }
 
     /*
@@ -459,28 +463,6 @@ public class DisplayController {
     }
 */
 
-
-    public static ImportTemplateData loadMetaData(LoggedInUser loggedInUser, HttpServletRequest request) {
-        try {
-            //the metadata for each business can be loaded separately.   Maybe there should be metdata for databases....
-            ImportTemplate importTemplate = null;
-            if (loggedInUser!=null){
-                importTemplate = ImportTemplateDAO.findForNameBeginningAndBusinessId(loggedInUser.getBusiness().getBusinessName() + " metadata.xlsx", loggedInUser.getUser().getBusinessId());
-            }
-            if (importTemplate == null) {
-                // if there is no metadata, use default
-                org.apache.poi.openxml4j.opc.OPCPackage opcPackage = OPCPackage.open(request.getSession().getServletContext().getResourceAsStream("/WEB-INF/Default Metadata.xlsx"));
-                return ImportService.readTemplateFile(opcPackage);
-
-            }
-            return ImportService.getImportTemplateData(importTemplate, loggedInUser);
-        } catch (Exception e) {
-            System.out.println(e.getStackTrace());
-        }
-        return null;
-
-
-    }
 
     public static LoggedInUser isLoggedIn(String sessionId){
        LoggedInUser lu = reactConnections.get(sessionId);
